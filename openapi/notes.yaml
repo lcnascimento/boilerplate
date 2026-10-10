@@ -48,9 +48,11 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateNoteRequest'
-            example:
-              title: Lista de compras
-              body: Leite, ovos e café.
+            examples:
+              default:
+                value:
+                  title: Lista de compras
+                  body: Leite, ovos e café.
       responses:
         '201':
           description: Nota criada.
@@ -58,11 +60,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Note'
-              example:
-                id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
-                title: Lista de compras
-                body: Leite, ovos e café.
-                created_at: '2026-10-10T19:30:00Z'
+              examples:
+                default:
+                  value:
+                    id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                    title: Lista de compras
+                    body: Leite, ovos e café.
+                    created_at: '2026-10-10T19:30:00Z'
         '400':
           $ref: '#/components/responses/InvalidInput'
         '500':
@@ -81,16 +85,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NoteList'
-              example:
-                notes:
-                  - id: note_01928f4e-9c10-7a4b-8d2e-3f4a5b6c7d8e
-                    title: Ideias para o fim de semana
-                    body: ''
-                    created_at: '2026-10-10T20:15:00Z'
-                  - id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
-                    title: Lista de compras
-                    body: Leite, ovos e café.
-                    created_at: '2026-10-10T19:30:00Z'
+              examples:
+                default:
+                  value:
+                    notes:
+                      - id: note_01928f4e-9c10-7a4b-8d2e-3f4a5b6c7d8e
+                        title: Ideias para o fim de semana
+                        body: ''
+                        created_at: '2026-10-10T20:15:00Z'
+                      - id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                        title: Lista de compras
+                        body: Leite, ovos e café.
+                        created_at: '2026-10-10T19:30:00Z'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -109,11 +115,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Note'
-              example:
-                id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
-                title: Lista de compras
-                body: Leite, ovos e café.
-                created_at: '2026-10-10T19:30:00Z'
+              examples:
+                default:
+                  value:
+                    id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                    title: Lista de compras
+                    body: Leite, ovos e café.
+                    created_at: '2026-10-10T19:30:00Z'
         '400':
           $ref: '#/components/responses/InvalidInput'
         '404':
@@ -144,7 +152,6 @@ components:
       description: Identificador da nota (`note_` seguido de um UUID v7).
       schema:
         $ref: '#/components/schemas/NoteID'
-      example: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
 
   schemas:
     NoteID:
@@ -260,30 +267,36 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/APIError'
-          example:
-            code: INVALID_INPUT
-            message: invalid input
-            retryable: false
-            details:
-              reasons:
-                - title is required
+          examples:
+            default:
+              value:
+                code: INVALID_INPUT
+                message: invalid input
+                retryable: false
+                details:
+                  reasons:
+                    - title is required
     NotFound:
       description: Nota inexistente.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/APIError'
-          example:
-            code: NOTE_NOT_FOUND
-            message: note not found
-            retryable: false
+          examples:
+            default:
+              value:
+                code: NOTE_NOT_FOUND
+                message: note not found
+                retryable: false
     InternalError:
       description: Falha inesperada no servidor.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/APIError'
-          example:
-            code: UNKNOWN
-            message: something went wrong
-            retryable: false
+          examples:
+            default:
+              value:
+                code: UNKNOWN
+                message: something went wrong
+                retryable: false
