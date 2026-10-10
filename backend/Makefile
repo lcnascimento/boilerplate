@@ -64,7 +64,7 @@ mocks:
 .PHONY: test
 test:
 	$(call in_modules,test,pkgs=$$($(PACKAGES)); \
-		if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -cover -coverprofile=coverage.out $$pkgs; fi)
+		if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -race -cover -coverprofile=coverage.out $$pkgs; fi)
 
 .PHONY: vuln-check
 vuln-check:
