@@ -1,0 +1,4 @@
+@import "@boilerplate/ui/globals.css";
+
+/* The ui package lives outside the app, so Tailwind must scan it too. */
+@source "../../../packages/ui/src";
