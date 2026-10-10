@@ -1,0 +1,4 @@
+{
+  "extends": "@boilerplate/typescript-config/library.json",
+  "include": ["src", "src/**/*.json", "*.config.ts"]
+}
