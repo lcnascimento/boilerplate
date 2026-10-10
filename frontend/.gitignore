@@ -16,6 +16,8 @@ storybook-static/
 # Testing
 coverage/
 __screenshots__/
+test-results/
+playwright-report/
 
 # Turborepo
 .turbo/
