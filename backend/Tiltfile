@@ -45,3 +45,6 @@ dc_resource(
 )
 
 # Each service adds its own include below.
+# example:begin
+include('./services/notes/Tiltfile')
+# example:end
