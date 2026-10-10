@@ -1,0 +1,62 @@
+name: ci-frontend
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".nvmrc"
+      - ".github/workflows/ci-frontend.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".nvmrc"
+      - ".github/workflows/ci-frontend.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm turbo run lint
+
+      - name: Typecheck
+        run: pnpm turbo run typecheck
+
+      - name: Unit tests
+        run: pnpm turbo run test --filter='!@boilerplate/ui'
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @boilerplate/ui exec playwright install --with-deps --only-shell chromium
+
+      - name: Story tests
+        run: pnpm turbo run test --filter=@boilerplate/ui
+
+      - name: Build
+        run: pnpm turbo run build
