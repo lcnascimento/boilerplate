@@ -1,0 +1,24 @@
+info:
+  name: ping
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{NOTES_HOST}}/ping"
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("responds pong", function () {
+          expect(res.getStatus()).to.equal(200);
+          expect(res.getBody().message).to.equal("pong");
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
