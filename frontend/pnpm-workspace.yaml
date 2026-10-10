@@ -5,8 +5,11 @@ packages:
 
 # pnpm 12 fails the install on any build script not listed here.
 allowBuilds:
+  # Verifies its platform binary; Storybook's builder depends on it.
+  esbuild: true
   # napi-postinstall only re-checks the prebuilt binding pnpm already installed.
   unrs-resolver: false
 
 minimumReleaseAgeExclude:
   - prettier@3.9.10
+  - lucide-react@1.55.0
