@@ -1,0 +1,22 @@
+{
+  "pt-BR": {
+    "home": "Início",
+    "preferences": "Preferências",
+    "navigation": "Navegação",
+    "breadcrumb": "Trilha de navegação",
+    "openUserMenu": "Abrir menu do usuário",
+    "welcomeTitle": "Bem-vindo ao Boilerplate",
+    "welcomeDescription": "Um ponto de partida para projetos pessoais: backend Go, frontend Next.js e observabilidade local.",
+    "toggleSidebar": "Recolher ou expandir a barra lateral"
+  },
+  "en": {
+    "home": "Home",
+    "preferences": "Preferences",
+    "navigation": "Navigation",
+    "breadcrumb": "Breadcrumb",
+    "openUserMenu": "Open user menu",
+    "welcomeTitle": "Welcome to Boilerplate",
+    "welcomeDescription": "A starting point for personal projects: Go backend, Next.js frontend and local observability.",
+    "toggleSidebar": "Collapse or expand the sidebar"
+  }
+}

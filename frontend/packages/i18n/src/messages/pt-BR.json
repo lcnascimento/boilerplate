@@ -1,0 +1,24 @@
+{
+  "common": {
+    "save": "Salvar",
+    "create": "Criar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "loading": "Carregando...",
+    "tryAgain": "Tentar novamente"
+  },
+  "errors": {
+    "generic": "Ocorreu um erro inesperado.",
+    "network": "Falha na conexão. Tente novamente.",
+    "notFound": "Página não encontrada.",
+    "teamNotified": "Nossa equipe foi notificada."
+  },
+  "validation": {
+    "required": "Campo obrigatório",
+    "minLength": "Mínimo de {min} caracteres",
+    "maxLength": "Máximo de {max} caracteres"
+  }
+}
