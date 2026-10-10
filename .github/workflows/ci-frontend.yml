@@ -1,6 +1,12 @@
 name: ci-frontend
 
 on:
+  workflow_call:
+    inputs:
+      bootstrap:
+        description: Shell command run at the repository root right after checkout.
+        type: string
+        default: ""
   pull_request:
     paths:
       - "frontend/**"
@@ -17,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-frontend-${{ github.ref }}-${{ inputs.bootstrap }}
   cancel-in-progress: true
 
 defaults:
@@ -29,6 +35,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # Set only when another workflow calls this one: the template's own CI
+      # passes `make init` / `make clean-example` here, then runs the checks.
+      - name: Bootstrap
+        if: inputs.bootstrap
+        working-directory: .
+        env:
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: bash -euo pipefail -c "$BOOTSTRAP"
 
       - uses: pnpm/action-setup@v6
         with:
@@ -50,13 +65,13 @@ jobs:
         run: pnpm turbo run typecheck
 
       - name: Unit tests
-        run: pnpm turbo run test --filter='!@boilerplate/ui'
+        run: pnpm turbo run test --filter='!./packages/ui'
 
       - name: Install Playwright Chromium
-        run: pnpm --filter @boilerplate/ui exec playwright install --with-deps --only-shell chromium
+        run: pnpm --filter ./packages/ui exec playwright install --with-deps --only-shell chromium
 
       - name: Story tests
-        run: pnpm turbo run test --filter=@boilerplate/ui
+        run: pnpm turbo run test --filter=./packages/ui
 
       - name: Build
         run: pnpm turbo run build
