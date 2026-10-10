@@ -3,7 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 const CI = Boolean(process.env.CI);
 
 // Its own port, so a `next dev` on 3000 (Tilt) is never reused by mistake.
-const WEB_PORT = 3100;
+// It must not clash with the observability stack (3010, 3100, 3200, ...).
+const WEB_PORT = 3001;
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 
 // e2e runs against the real stack: a production build of the web app and,
