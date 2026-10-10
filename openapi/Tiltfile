@@ -1,0 +1,14 @@
+# -*- mode: Python -*-
+
+# Scalar only runs when there is at least one service spec (*.yaml) here.
+# With zero services (after clean-example) this Tiltfile adds no resource.
+specs = [f for f in listdir('.') if f.endswith('.yaml')]
+
+if specs:
+    docker_compose('./docker-compose.yml')
+
+    dc_resource(
+        'scalar',
+        labels=['openapi'],
+        links=[link('http://localhost:8090', 'API reference')],
+    )
