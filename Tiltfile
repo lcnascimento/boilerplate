@@ -13,3 +13,5 @@ local_resource(
 #   include('./backend/Tiltfile')
 #   include('./openapi/Tiltfile')
 #   include('./frontend/Tiltfile')
+
+include('./backend/Tiltfile')
