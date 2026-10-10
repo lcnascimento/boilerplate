@@ -1,0 +1,29 @@
+name: ci-openapi
+
+on:
+  pull_request:
+    paths:
+      - "openapi/**"
+      - ".github/workflows/ci-openapi.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  vacuum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # vacuum's default ruleset is the recommended one. With zero services
+      # (after clean-example) there is no spec to lint, and the job passes.
+      - name: Lint OpenAPI specs
+        run: |
+          shopt -s nullglob
+          specs=(openapi/*.yaml)
+          if [ "${#specs[@]}" -eq 0 ]; then
+            echo "No service spec in openapi/, nothing to lint."
+            exit 0
+          fi
+          docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 \
+            lint --details --no-banner --no-style --no-update-check --github-annotations "${specs[@]}"

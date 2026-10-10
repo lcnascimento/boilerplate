@@ -1,0 +1,153 @@
+version: "2"
+
+run:
+  tests: true
+  timeout: 2m
+  issues-exit-code: 1
+
+linters:
+  default: fast
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - funlen
+    - gocritic
+    - godot
+    - godox
+    - goheader
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - loggercheck
+    - makezero
+    - misspell
+    - mnd
+    - musttag
+    - nakedret
+    - nilerr
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - promlinter
+    - reassign
+    - revive
+    - staticcheck
+    - tagliatelle
+    - testableexamples
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - wsl_v5
+  disable:
+    - depguard
+    - gomodguard # deprecated, replaced by gomodguard_v2
+    - wsl # deprecated, replaced by wsl_v5
+    - interfacebloat
+    - nilnil
+  settings:
+    lll:
+      line-length: 150
+    funlen:
+      ignore-comments: true
+      lines: 100
+      statements: 50
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - unnamedResult
+    misspell:
+      locale: US
+    gocyclo:
+      min-complexity: 16
+    cyclop:
+      max-complexity: 16
+    errcheck:
+      check-type-assertions: true # Report `a := b.(MyStruct)` when `a, ok := ...` should be.
+      check-blank: false # Report skipped checks:`num, _ := strconv.Atoi(numStr)`.
+      exclude-functions:
+        - (io.Closer).Close
+        - (*net/http.Response).Body.Close
+    govet:
+      disable:
+        - fieldalignment
+    nakedret:
+      max-func-lines: 1
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+          xml: camel
+          mapstructure: kebab
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    gomoddirectives:
+      replace-local: true
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - funlen
+          - lll
+          - errcheck
+          - forcetypeassert
+          - goconst
+          - dupl
+      - path: telemetry.go
+        linters:
+          - gochecknoinits
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - blank
+        - dot
+        - alias
+        - prefix(github.com/lcnascimento/)
+        - prefix(github.com/lcnascimento/boilerplate/backend/services/)
+        - localmodule
+      custom-order: true
+      no-inline-comments: true
+      no-prefix-comments: true
+    gofmt:
+      simplify: true
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
+        - pattern: "a[b:len(a)]"
+          replacement: "a[b:]"
+
+output:
+  formats:
+    text:
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true
