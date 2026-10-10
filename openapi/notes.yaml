@@ -1,0 +1,302 @@
+openapi: 3.1.0
+info:
+  title: Notes API
+  version: 1.0.0
+  summary: API do serviço de exemplo `notes`.
+  description: |
+    Serviço de exemplo do boilerplate: cria, lista, busca e exclui notas.
+
+    As notas ficam em memória e o repositório começa vazio a cada subida do
+    serviço. Não há edição nem paginação.
+
+    ## Erros
+
+    Toda resposta de erro usa o `APIError` do go-kit. O status HTTP vem do
+    tipo do erro:
+
+    | Status | Quando |
+    |--------|--------|
+    | `400`  | Corpo malformado ou entrada inválida. Os motivos vêm em `details.reasons`. |
+    | `404`  | Nota inexistente. |
+    | `500`  | Falha inesperada no servidor. |
+  contact:
+    name: lcnascimento
+    url: https://github.com/lcnascimento/boilerplate
+
+servers:
+  - url: http://localhost:8080
+    description: Local (Tilt)
+
+tags:
+  - name: Notes
+    description: Notas de texto com título e corpo.
+
+paths:
+  /notes/v1/notes:
+    post:
+      operationId: createNote
+      tags: [Notes]
+      summary: Criar uma nota
+      description: >
+        Cria uma nota com título obrigatório (até 120 caracteres) e corpo
+        opcional (até 10.000 caracteres). O servidor gera o `id` e o
+        `created_at`.
+      requestBody:
+        description: Título e corpo da nova nota.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+            examples:
+              default:
+                value:
+                  title: Lista de compras
+                  body: Leite, ovos e café.
+      responses:
+        '201':
+          description: Nota criada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+              examples:
+                default:
+                  value:
+                    id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                    title: Lista de compras
+                    body: Leite, ovos e café.
+                    created_at: '2026-10-10T19:30:00Z'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      operationId: listNotes
+      tags: [Notes]
+      summary: Listar as notas
+      description: >
+        Lista todas as notas, da mais nova para a mais antiga (por
+        `created_at`). Não há paginação.
+      responses:
+        '200':
+          description: Notas, da mais nova para a mais antiga.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteList'
+              examples:
+                default:
+                  value:
+                    notes:
+                      - id: note_01928f4e-9c10-7a4b-8d2e-3f4a5b6c7d8e
+                        title: Ideias para o fim de semana
+                        body: ''
+                        created_at: '2026-10-10T20:15:00Z'
+                      - id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                        title: Lista de compras
+                        body: Leite, ovos e café.
+                        created_at: '2026-10-10T19:30:00Z'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /notes/v1/notes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/NoteID'
+    get:
+      operationId: getNote
+      tags: [Notes]
+      summary: Buscar uma nota
+      description: Busca uma nota pelo `id`.
+      responses:
+        '200':
+          description: Nota encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+              examples:
+                default:
+                  value:
+                    id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                    title: Lista de compras
+                    body: Leite, ovos e café.
+                    created_at: '2026-10-10T19:30:00Z'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteNote
+      tags: [Notes]
+      summary: Excluir uma nota
+      description: Exclui uma nota pelo `id`. Excluir uma nota inexistente retorna `404`.
+      responses:
+        '204':
+          description: Nota excluída.
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    NoteID:
+      name: id
+      in: path
+      required: true
+      description: Identificador da nota (`note_` seguido de um UUID v7).
+      schema:
+        $ref: '#/components/schemas/NoteID'
+
+  schemas:
+    NoteID:
+      type: string
+      description: Identificador canônico da nota, `note_` seguido de um UUID v7.
+      pattern: '^note_[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+      examples:
+        - note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+
+    Note:
+      type: object
+      description: Uma nota. Não há `updated_at`, porque notas não são editadas.
+      properties:
+        id:
+          $ref: '#/components/schemas/NoteID'
+        title:
+          type: string
+          description: Título da nota.
+          minLength: 1
+          maxLength: 120
+          examples:
+            - Lista de compras
+        body:
+          type: string
+          description: Corpo da nota. Vazio quando a nota foi criada sem corpo.
+          maxLength: 10000
+          examples:
+            - Leite, ovos e café.
+        created_at:
+          type: string
+          format: date-time
+          description: Momento da criação, em RFC 3339.
+          examples:
+            - '2026-10-10T19:30:00Z'
+      required: [id, title, body, created_at]
+
+    NoteList:
+      type: object
+      description: Envelope da listagem de notas.
+      properties:
+        notes:
+          type: array
+          description: Notas ordenadas por `created_at`, da mais nova para a mais antiga.
+          examples:
+            - - id: note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f
+                title: Lista de compras
+                body: Leite, ovos e café.
+                created_at: '2026-10-10T19:30:00Z'
+          items:
+            $ref: '#/components/schemas/Note'
+      required: [notes]
+
+    CreateNoteRequest:
+      type: object
+      description: Dados para criar uma nota.
+      properties:
+        title:
+          type: string
+          description: Título da nota, obrigatório.
+          minLength: 1
+          maxLength: 120
+          examples:
+            - Lista de compras
+        body:
+          type: string
+          description: Corpo da nota, opcional.
+          maxLength: 10000
+          examples:
+            - Leite, ovos e café.
+      required: [title]
+
+    APIError:
+      type: object
+      description: >
+        Erro devolvido pelo `go-kit` (`httpserver/util.APIError`) em toda
+        resposta de erro.
+      properties:
+        code:
+          type: string
+          description: Código do erro, legível por máquina.
+          examples:
+            - INVALID_INPUT
+        message:
+          type: string
+          description: Mensagem do erro, legível por pessoas.
+          examples:
+            - invalid input
+        retryable:
+          type: boolean
+          description: Indica se repetir a mesma requisição pode dar certo.
+          examples:
+            - false
+        details:
+          type: object
+          description: Detalhes do erro. Só aparece quando há motivos a informar.
+          properties:
+            reasons:
+              type: array
+              description: Motivos do erro, todos de uma vez.
+              items:
+                type: string
+              examples:
+                - - title is required
+                  - body must be at most 10000 characters
+      required: [code, message, retryable]
+
+  responses:
+    InvalidInput:
+      description: >
+        Corpo malformado ou entrada inválida, como título ausente, título ou
+        corpo acima do limite, ou `id` fora do formato.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+          examples:
+            default:
+              value:
+                code: INVALID_INPUT
+                message: invalid input
+                retryable: false
+                details:
+                  reasons:
+                    - title is required
+    NotFound:
+      description: Nota inexistente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+          examples:
+            default:
+              value:
+                code: NOTE_NOT_FOUND
+                message: note not found
+                retryable: false
+    InternalError:
+      description: Falha inesperada no servidor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+          examples:
+            default:
+              value:
+                code: UNKNOWN
+                message: something went wrong
+                retryable: false
