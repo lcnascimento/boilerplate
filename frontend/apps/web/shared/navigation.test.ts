@@ -42,6 +42,15 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
+  // example:begin
+  it("links a feature route from its detail pages", () => {
+    expect(breadcrumbTrail("/notes/note_1")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      { href: "/notes", labelKey: "notes.title", current: false },
+    ]);
+  });
+  // example:end
+
   it("falls back to the home link on an unknown route", () => {
     expect(breadcrumbTrail("/does-not-exist")).toEqual([
       { href: "/", labelKey: "nav.home", current: false },

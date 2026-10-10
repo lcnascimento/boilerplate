@@ -1,4 +1,7 @@
 import nav from "./nav.json" with { type: "json" };
+// example:begin
+import notes from "./notes.json" with { type: "json" };
+// example:end
 import profile from "./profile.json" with { type: "json" };
 
 import type { Locale } from "@boilerplate/i18n";
@@ -11,6 +14,9 @@ import type { Locale } from "@boilerplate/i18n";
 export function appMessages(locale: Locale) {
   return {
     nav: nav[locale],
+    // example:begin
+    notes: notes[locale],
+    // example:end
     profile: profile[locale],
   };
 }

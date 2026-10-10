@@ -1,4 +1,11 @@
-import { House, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import {
+  House,
+  // example:begin
+  NotebookPen,
+  // example:end
+  SlidersHorizontal,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { AppMessages } from "@/shared/_messages";
 import type { Route } from "next";
@@ -25,6 +32,14 @@ interface NavRoute {
  */
 export const navRoutes = [
   { href: "/", labelKey: "nav.home", icon: House, area: "sidebar" },
+  // example:begin
+  {
+    href: "/notes",
+    labelKey: "notes.title",
+    icon: NotebookPen,
+    area: "sidebar",
+  },
+  // example:end
   {
     href: "/profile/preferences",
     labelKey: "nav.preferences",
