@@ -3,6 +3,12 @@ name: ci-e2e
 # Playwright against the real stack: a production build of the web app plus
 # each backend service's binary (started by the Playwright webServer list).
 on:
+  workflow_call:
+    inputs:
+      bootstrap:
+        description: Shell command run at the repository root right after checkout.
+        type: string
+        default: ""
   pull_request:
     paths:
       - "backend/**"
@@ -21,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-e2e-${{ github.ref }}-${{ inputs.bootstrap }}
   cancel-in-progress: true
 
 defaults:
@@ -33,6 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # Set only when another workflow calls this one: the template's own CI
+      # passes `make init` / `make clean-example` here, then runs the checks.
+      - name: Bootstrap
+        if: inputs.bootstrap
+        working-directory: .
+        env:
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: bash -euo pipefail -c "$BOOTSTRAP"
 
       - uses: pnpm/action-setup@v6
         with:
@@ -54,13 +69,16 @@ jobs:
           go-version-file: backend/go.work
           cache-dependency-path: backend/**/go.sum
 
+      # Skipped once the service is gone, so the workflow still runs when it
+      # is called with `make clean-example` as the bootstrap.
       - name: Build notes
+        if: hashFiles('backend/services/notes/Makefile') != ''
         working-directory: backend/services/notes
         run: make build.api.frontend
       # example:end
 
       - name: Install Playwright Chromium
-        run: pnpm --filter @boilerplate/web exec playwright install --with-deps chromium
+        run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
 
       - name: e2e
         run: pnpm turbo run test:e2e

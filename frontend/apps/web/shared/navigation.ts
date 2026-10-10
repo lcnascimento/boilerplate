@@ -11,7 +11,7 @@ import type { AppMessages } from "@/shared/_messages";
 import type { Route } from "next";
 
 /**
- * A message key qualified by its namespace (`nav.home`, `notes.title`), so a
+ * A message key qualified by its namespace (`nav.home`, `<feature>.title`), so a
  * feature labels its route with its own namespace.
  */
 type NavLabelKey = {

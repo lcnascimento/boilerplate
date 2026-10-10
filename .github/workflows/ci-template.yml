@@ -1,0 +1,136 @@
+name: ci-template
+
+# The template's own CI: proves that both bootstrap paths give a green project.
+#   A: make init
+#   B: make clean-example, then make init (the reverse order)
+# Each path gets a job that checks what the scripts left behind, then the
+# project's own workflows run on a tree bootstrapped the same way (each called
+# workflow checks out and runs its `bootstrap` input before its steps).
+# make init deletes this workflow, so it never reaches an instantiated project.
+on: push
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-template-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  init:
+    name: A / make init
+    if: github.repository == 'lcnascimento/boilerplate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: make init
+        run: make init NAME=acme-app
+
+      - name: No marker left
+        run: |
+          ! git grep -ni boilerplate || exit 1
+          ! git ls-files -co --exclude-standard | grep -i boilerplate || exit 1
+
+      - name: Template-only parts are gone
+        run: |
+          test ! -e scripts/init.sh
+          test ! -e .github/workflows/ci-template.yml
+          test ! -e docs/agents
+          ! grep -q '^init:' Makefile || exit 1
+          ! grep -q '^## Como instanciar' README.md || exit 1
+          test "$(grep '^## ' CLAUDE.md)" = "## Language"
+          test "$(head -1 README.md)" = "# Acme App"
+          grep -q 'APP_NAME = "Acme App"' frontend/apps/web/shared/components/nav-sidebar.tsx
+
+      - name: clean-example still runs after init
+        run: |
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: init"
+          make clean-example
+
+  init-backend:
+    name: A / backend
+    needs: init
+    uses: ./.github/workflows/ci-backend.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
+  init-frontend:
+    name: A / frontend
+    needs: init
+    uses: ./.github/workflows/ci-frontend.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
+  init-openapi:
+    name: A / openapi
+    needs: init
+    uses: ./.github/workflows/ci-openapi.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
+  init-e2e:
+    name: A / e2e
+    needs: init
+    uses: ./.github/workflows/ci-e2e.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
+  clean-init:
+    name: B / make clean-example + make init
+    if: github.repository == 'lcnascimento/boilerplate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: make clean-example
+        run: make clean-example
+
+      - name: Commit, so init finds a clean tree
+        run: |
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example"
+
+      - name: make init
+        run: make init NAME=acme-app
+
+      - name: No fence nor marker left
+        run: |
+          ! git grep -n 'example[:]' || exit 1
+          ! git grep -ni boilerplate || exit 1
+          ! git ls-files -co --exclude-standard | grep -i boilerplate || exit 1
+
+      - name: Zero services
+        run: |
+          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "use./quality"
+          test ! -e Makefile
+          test ! -e scripts
+
+  clean-init-backend:
+    name: B / backend
+    needs: clean-init
+    uses: ./.github/workflows/ci-backend.yml
+    with:
+      bootstrap: &clean-init 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'
+
+  clean-init-frontend:
+    name: B / frontend
+    needs: clean-init
+    uses: ./.github/workflows/ci-frontend.yml
+    with:
+      bootstrap: *clean-init
+
+  clean-init-openapi:
+    name: B / openapi
+    needs: clean-init
+    uses: ./.github/workflows/ci-openapi.yml
+    with:
+      bootstrap: *clean-init
+
+  clean-init-e2e:
+    name: B / e2e
+    needs: clean-init
+    uses: ./.github/workflows/ci-e2e.yml
+    with:
+      bootstrap: *clean-init
