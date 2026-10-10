@@ -254,8 +254,8 @@ components:
               items:
                 type: string
               examples:
-                - - title is required
-                  - body must be at most 10000 characters
+                - - '[title] is a required field'
+                  - '[body] must be a maximum of 10,000 characters in length'
       required: [code, message, retryable]
 
   responses:
@@ -275,7 +275,7 @@ components:
                 retryable: false
                 details:
                   reasons:
-                    - title is required
+                    - '[title] is a required field'
     NotFound:
       description: Nota inexistente.
       content:
@@ -286,8 +286,11 @@ components:
             default:
               value:
                 code: NOTE_NOT_FOUND
-                message: note not found
+                message: failed to get note
                 retryable: false
+                details:
+                  reasons:
+                    - note not found
     InternalError:
       description: Falha inesperada no servidor.
       content:
