@@ -108,7 +108,7 @@ O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint`
 
 ### Explorando a API e depurando
 
-- **Bruno**: abra `backend/config/bruno/Boilerplate` no Bruno, ou rode a coleção pela CLI a partir da pasta dela: `cd backend/config/bruno/Boilerplate/collections/Notes && npx @usebruno/cli run --env local`. O `Create` guarda o id da nota para os requests seguintes.
+- **Bruno**: abra `backend/config/bruno` no Bruno, ou rode a coleção pela CLI a partir da pasta dela: `cd backend/config/bruno/collections/Notes && npx @usebruno/cli run --env local`. O `Create` guarda o id da nota para os requests seguintes.
 - **Debug**: o build dos serviços é de debug (`-gcflags="all=-N -l"`). Com o serviço rodando pelo Tilt, use a configuração `Attach` do `.vscode/launch.json` e escolha o processo (ex.: `notes_api_frontend`).
 
 ## Como adicionar um serviço
@@ -130,7 +130,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 4. Inclua o serviço no `backend/Tiltfile`: `include('./services/<name>/Tiltfile')`.
 5. Rode `make tidy mocks lint test` em `backend/`. O `bundle/runners_test.go` (`fx.ValidateApp`) quebra se o grafo do fx estiver incompleto.
-6. (Opcional) Copie a coleção `backend/config/bruno/Boilerplate/collections/Notes` e liste a nova em `collections:` no `workspace.yml`.
+6. (Opcional) Copie a coleção `backend/config/bruno/collections/Notes` e liste a nova em `collections:` no `workspace.yml`.
 
 **OpenAPI**
 
