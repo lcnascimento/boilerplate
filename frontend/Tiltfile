@@ -13,7 +13,11 @@ local_resource(
 local_resource(
     'web',
     serve_cmd='pnpm --filter @boilerplate/web dev',
-    serve_env={},
+    serve_env={
+        # example:begin
+        'NOTES_API_URL': 'http://localhost:8080',
+        # example:end
+    },
     resource_deps=['frontend-deps'],
     # TCP, not HTTP: an HTTP probe logs the whole page on every success.
     readiness_probe=probe(

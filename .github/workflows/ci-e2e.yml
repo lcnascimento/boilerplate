@@ -47,6 +47,18 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # example:begin
+      # The notes service binary, started by the Playwright webServer list.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/**/go.sum
+
+      - name: Build notes
+        working-directory: backend/services/notes
+        run: make build.api.frontend
+      # example:end
+
       - name: Install Playwright Chromium
         run: pnpm --filter @boilerplate/web exec playwright install --with-deps chromium
 
