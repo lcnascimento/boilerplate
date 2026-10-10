@@ -1,0 +1,24 @@
+{
+  "common": {
+    "save": "Save",
+    "create": "Create",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "loading": "Loading...",
+    "tryAgain": "Try again"
+  },
+  "errors": {
+    "generic": "An unexpected error occurred.",
+    "network": "Connection failed. Please try again.",
+    "notFound": "Page not found.",
+    "teamNotified": "Our team has been notified."
+  },
+  "validation": {
+    "required": "Required field",
+    "minLength": "Minimum of {min} characters",
+    "maxLength": "Maximum of {max} characters"
+  }
+}
