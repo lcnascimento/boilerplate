@@ -17,11 +17,11 @@ import {
 import { breadcrumbTrail } from "@/shared/navigation";
 
 export function NavBreadcrumb() {
-  const t = useTranslations("nav");
+  const t = useTranslations();
   const trail = breadcrumbTrail(usePathname());
 
   return (
-    <Breadcrumb aria-label={t("breadcrumb")}>
+    <Breadcrumb aria-label={t("nav.breadcrumb")}>
       <BreadcrumbList>
         {trail.map((crumb, index) => (
           <Fragment key={crumb.href}>

@@ -61,6 +61,7 @@ function UserIdentity({ user }: NavUserProps) {
 }
 
 export function NavUser({ user }: NavUserProps) {
+  const t = useTranslations();
   const tNav = useTranslations("nav");
   const tProfile = useTranslations("profile");
   const { isMobile } = useSidebar();
@@ -96,7 +97,7 @@ export function NavUser({ user }: NavUserProps) {
                 <DropdownMenuItem key={href} asChild>
                   <Link href={href}>
                     <Icon aria-hidden />
-                    {tNav(labelKey)}
+                    {t(labelKey)}
                   </Link>
                 </DropdownMenuItem>
               ))}

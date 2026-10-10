@@ -31,7 +31,7 @@ interface NavSidebarProps {
 }
 
 export function NavSidebar({ user }: NavSidebarProps) {
-  const t = useTranslations("nav");
+  const t = useTranslations();
   const pathname = usePathname();
 
   return (
@@ -53,7 +53,7 @@ export function NavSidebar({ user }: NavSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t("navigation")}</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.navigation")}</SidebarGroupLabel>
           <SidebarMenu>
             {routesIn("sidebar").map(({ href, labelKey, icon: Icon }) => (
               <SidebarMenuItem key={href}>

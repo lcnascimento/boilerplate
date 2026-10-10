@@ -1,9 +1,22 @@
-import { House, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import {
+  House,
+  // example:begin
+  NotebookPen,
+  // example:end
+  SlidersHorizontal,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { AppMessages } from "@/shared/_messages";
 import type { Route } from "next";
 
-type NavLabelKey = keyof AppMessages["nav"];
+/**
+ * A message key qualified by its namespace (`nav.home`, `notes.title`), so a
+ * feature labels its route with its own namespace.
+ */
+type NavLabelKey = {
+  [N in keyof AppMessages]: `${N}.${Extract<keyof AppMessages[N], string>}`;
+}[keyof AppMessages];
 
 interface NavRoute {
   href: Route;
@@ -18,10 +31,18 @@ interface NavRoute {
  * all read from it, so they can't disagree.
  */
 export const navRoutes = [
-  { href: "/", labelKey: "home", icon: House, area: "sidebar" },
+  { href: "/", labelKey: "nav.home", icon: House, area: "sidebar" },
+  // example:begin
+  {
+    href: "/notes",
+    labelKey: "notes.title",
+    icon: NotebookPen,
+    area: "sidebar",
+  },
+  // example:end
   {
     href: "/profile/preferences",
-    labelKey: "preferences",
+    labelKey: "nav.preferences",
     icon: SlidersHorizontal,
     area: "userMenu",
   },
@@ -51,7 +72,11 @@ export interface Crumb {
  */
 export function breadcrumbTrail(pathname: string): Crumb[] {
   const path = trimTrailingSlash(pathname);
-  const home: Crumb = { href: "/", labelKey: "home", current: path === "/" };
+  const home: Crumb = {
+    href: "/",
+    labelKey: "nav.home",
+    current: path === "/",
+  };
   const matched = navRoutes
     .filter((route) => route.href !== "/" && isActiveHref(path, route.href))
     .sort((a, b) => a.href.length - b.href.length)
