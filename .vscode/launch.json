@@ -1,0 +1,18 @@
+{
+    // Attach to a Go service started by Tilt. Its Makefile builds with
+    // -gcflags="all=-N -l", so breakpoints bind. Pick the process from the list
+    // (e.g. notes_api_frontend).
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach",
+            "type": "go",
+            "request": "attach",
+            "mode": "local",
+            "processId": "${command:pickGoProcess}",
+            "dlvFlags": [
+                "--log-dest=3"
+            ]
+        }
+    ]
+}

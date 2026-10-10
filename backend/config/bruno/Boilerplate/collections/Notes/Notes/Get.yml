@@ -1,0 +1,28 @@
+info:
+  name: Get
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{NOTES_HOST}}/notes/v1/notes/:id"
+  params:
+    - name: id
+      value: "{{noteId}}"
+      type: path
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("returns the created note", function () {
+          expect(res.getStatus()).to.equal(200);
+          expect(res.getBody().id).to.equal(bru.getVar("noteId"));
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
