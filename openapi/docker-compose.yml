@@ -1,0 +1,19 @@
+# Scalar API reference for the service specs in this folder.
+#
+# The whole folder is served live under /openapi/ (edits show up on reload).
+# The sources list, though, comes from /sources: the image scans MOUNT_DIR at
+# startup and builds one source per spec found there. Each service mounts its
+# spec into /sources below, so adding or removing a service is one volume line.
+services:
+  scalar:
+    image: scalarapi/api-reference:0.6.12
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      MOUNT_DIR: /sources
+    volumes:
+      - .:/docs:ro
+      # example:begin
+      - ./notes.yaml:/sources/notes.yaml:ro
+      # example:end
