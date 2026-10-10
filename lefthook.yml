@@ -1,0 +1,16 @@
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+
+pre-commit:
+  parallel: true
+  commands:
+    backend-lint:
+      root: "backend/"
+      glob: "backend/**/*.go"
+      run: make lint
+    frontend-lint:
+      root: "frontend/"
+      glob: "frontend/**/*.{ts,tsx,js,jsx,mjs,cjs}"
+      run: pnpm lint
