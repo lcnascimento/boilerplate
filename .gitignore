@@ -1,2 +1,4 @@
 .env
 .claude/worktrees/
+node_modules/
+.pnpm-store/
