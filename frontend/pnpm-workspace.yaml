@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tooling/*"
+
+# pnpm 12 fails the install on any build script not listed here.
+allowBuilds:
+  # napi-postinstall only re-checks the prebuilt binding pnpm already installed.
+  unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - prettier@3.9.10
