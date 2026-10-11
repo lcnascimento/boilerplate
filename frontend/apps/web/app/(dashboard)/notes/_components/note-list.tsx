@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 
+import { NOTES_HREF } from "@/shared/navigation";
+
 import type { Note } from "@boilerplate/api/notes/schemas";
 
 interface NoteListProps {
@@ -18,7 +20,7 @@ export function NoteList({ notes }: NoteListProps) {
         <li key={note.id}>
           <Link
             className="block rounded-xl border p-4 transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-            href={`/notes/${note.id}`}
+            href={`${NOTES_HREF}/${note.id}`}
           >
             <span className="block font-medium">{note.title}</span>
             {note.body ? (

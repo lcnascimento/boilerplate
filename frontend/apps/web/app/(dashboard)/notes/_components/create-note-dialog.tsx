@@ -6,10 +6,10 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition, type SubmitEvent } from "react";
 import { toast } from "sonner";
 
+import { ErrorCode } from "@boilerplate/api/core/errors";
 import {
   createNoteInputSchema,
-  NOTE_BODY_MAX_LENGTH,
-  NOTE_TITLE_MAX_LENGTH,
+  type CreateNoteInput,
 } from "@boilerplate/api/notes/schemas";
 import { Button } from "@boilerplate/ui/components/button";
 import {
@@ -27,17 +27,10 @@ import { Textarea } from "@boilerplate/ui/components/textarea";
 
 import { createNote } from "@/actions/notes";
 
-type Field = "title" | "body";
-type FieldErrors = Partial<Record<Field, string>>;
+type FieldErrors = Partial<Record<keyof CreateNoteInput, string>>;
 
-const MAX_LENGTH: Record<Field, number> = {
-  title: NOTE_TITLE_MAX_LENGTH,
-  body: NOTE_BODY_MAX_LENGTH,
-};
-
-function isField(value: unknown): value is Field {
-  return value === "title" || value === "body";
-}
+/** The form's fields are the schema's keys. */
+const fieldSchema = createNoteInputSchema.keyof();
 
 export function CreateNoteDialog() {
   const t = useTranslations("notes");
@@ -74,11 +67,11 @@ export function CreateNoteDialog() {
     if (!parsed.success) {
       const errors: FieldErrors = {};
       for (const issue of parsed.error.issues) {
-        const [field] = issue.path;
-        if (!isField(field) || errors[field] !== undefined) continue;
-        errors[field] =
+        const field = fieldSchema.safeParse(issue.path[0]);
+        if (!field.success || errors[field.data] !== undefined) continue;
+        errors[field.data] =
           issue.code === "too_big"
-            ? tValidation("maxLength", { max: MAX_LENGTH[field] })
+            ? tValidation("maxLength", { max: Number(issue.maximum) })
             : tValidation("required");
       }
       setFieldErrors(errors);
@@ -90,7 +83,7 @@ export function CreateNoteDialog() {
       const result = await createNote(parsed.data);
       if (result.kind === "error") {
         setFormError(
-          result.error.code === "UNAVAILABLE"
+          result.error.code === ErrorCode.Unavailable
             ? t("unavailableDescription")
             : t("createFailed")
         );

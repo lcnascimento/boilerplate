@@ -10,6 +10,11 @@ import {
 import type { AppMessages } from "@/shared/_messages";
 import type { Route } from "next";
 
+// example:begin
+/** The notes list; every link to the notes routes derives from it. */
+export const NOTES_HREF = "/notes" satisfies Route;
+// example:end
+
 /**
  * A message key qualified by its namespace (`nav.home`, `<feature>.title`), so a
  * feature labels its route with its own namespace.
@@ -34,7 +39,7 @@ export const navRoutes = [
   { href: "/", labelKey: "nav.home", icon: House, area: "sidebar" },
   // example:begin
   {
-    href: "/notes",
+    href: NOTES_HREF,
     labelKey: "notes.title",
     icon: NotebookPen,
     area: "sidebar",
