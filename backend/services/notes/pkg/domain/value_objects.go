@@ -1,19 +1,10 @@
 package domain
 
-import (
-	"unicode/utf8"
-
-	"github.com/lcnascimento/go-kit/errors"
-	"github.com/lcnascimento/go-kit/util"
-)
+import "github.com/lcnascimento/go-kit/util"
 
 const ContextKeyNoteID string = "note_id"
 
 const noteIDPrefix string = "note"
-
-// NoteTitleMaxLength is the title limit in characters (runes).
-// models.CreateNoteRequest repeats it in a validate tag; a test there keeps both in sync.
-const NoteTitleMaxLength = 120
 
 type NoteID struct {
 	util.CanonicalID
@@ -41,14 +32,6 @@ func MustParseNoteID(s string) NoteID {
 	return id
 }
 
-func (id NoteID) Validate() error {
-	if id.IsZero() {
-		return ErrInvalidNoteID.WithCause(errors.New("note id is empty"))
-	}
-
-	return nil
-}
-
 // MarshalText has a value receiver so a NoteID inside a non-addressable value
 // (a Note passed by value, a map entry) still encodes as its prefixed string.
 func (id NoteID) MarshalText() ([]byte, error) {
@@ -66,22 +49,4 @@ func (id *NoteID) UnmarshalText(b []byte) error {
 	*id = parsed
 
 	return nil
-}
-
-type NoteTitle string
-
-func (t NoteTitle) Validate() error {
-	if t == "" {
-		return ErrInvalidNoteTitle.WithCause(errors.New("title is required"))
-	}
-
-	if utf8.RuneCountInString(string(t)) > NoteTitleMaxLength {
-		return ErrInvalidNoteTitle.WithCause(errors.New("title must be at most %d characters", NoteTitleMaxLength))
-	}
-
-	return nil
-}
-
-func (t NoteTitle) String() string {
-	return string(t)
 }

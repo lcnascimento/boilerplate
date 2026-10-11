@@ -3,8 +3,7 @@ package models
 import "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 
 type CreateNoteRequest struct {
-	Title string `json:"title" validate:"required,max=120"`
-	Body  string `json:"body"  validate:"max=10000"`
+	domain.NoteContent
 }
 
 type ListNotesResponse struct {

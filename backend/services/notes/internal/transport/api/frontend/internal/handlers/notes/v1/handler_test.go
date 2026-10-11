@@ -48,7 +48,7 @@ func (s *HandlerSuite) SetupTest() {
 
 func (s *HandlerSuite) TestCreateReturnsCreatedNote() {
 	s.service.EXPECT().
-		Create(gomock.Any(), &models.CreateNoteRequest{Title: "Lista de compras", Body: "Leite, ovos e café."}).
+		Create(gomock.Any(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras", Body: "Leite, ovos e café."}}).
 		Return(s.note, nil)
 
 	rec := s.serve(http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras","body":"Leite, ovos e café."}`)
@@ -170,7 +170,7 @@ func wireJSON(t *testing.T, n *domain.Note) string {
 
 	out, err := json.Marshal(map[string]string{
 		"id":         n.ID.String(),
-		"title":      n.Title.String(),
+		"title":      n.Title,
 		"body":       n.Body,
 		"created_at": n.CreatedAt.Format(time.RFC3339),
 	})

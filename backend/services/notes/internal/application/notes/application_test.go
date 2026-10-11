@@ -52,11 +52,11 @@ func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 		return nil
 	})
 
-	got, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{Title: "Lista de compras", Body: "Leite."})
+	got, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras", Body: "Leite."}})
 
 	s.Require().NoError(err)
-	s.Require().NoError(got.ID.Validate())
-	s.Require().Equal(domain.NoteTitle("Lista de compras"), got.Title)
+	s.Require().True(strings.HasPrefix(got.ID.String(), "note_"), got.ID.String())
+	s.Require().Equal("Lista de compras", got.Title)
 	s.Require().Equal("Leite.", got.Body)
 	s.Require().Equal(now, got.CreatedAt)
 	s.Require().Equal(got, stored)
@@ -65,7 +65,7 @@ func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 func (s *ApplicationSuite) TestCreateWithoutBodyKeepsEmptyBody() {
 	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
-	got, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{Title: "Ideias"})
+	got, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Ideias"}})
 
 	s.Require().NoError(err)
 	s.Require().Empty(got.Body)
@@ -81,19 +81,19 @@ func (s *ApplicationSuite) TestCreateRejectsInvalidInputWithEveryReason() {
 			reasons: []string{"request body is required"},
 		},
 		"empty title": {
-			req:     &models.CreateNoteRequest{Title: ""},
+			req:     &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: ""}},
 			reasons: []string{"[title] is a required field"},
 		},
 		"title over 120 characters": {
-			req:     &models.CreateNoteRequest{Title: strings.Repeat("a", 121)},
+			req:     &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: strings.Repeat("a", 121)}},
 			reasons: []string{"[title] must be a maximum of 120 characters in length"},
 		},
 		"body over 10000 characters": {
-			req:     &models.CreateNoteRequest{Title: "a", Body: strings.Repeat("a", 10_001)},
+			req:     &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a", Body: strings.Repeat("a", 10_001)}},
 			reasons: []string{"[body] must be a maximum of 10,000 characters in length"},
 		},
 		"empty title and long body": {
-			req: &models.CreateNoteRequest{Body: strings.Repeat("a", 10_001)},
+			req: &models.CreateNoteRequest{NoteContent: domain.NoteContent{Body: strings.Repeat("a", 10_001)}},
 			reasons: []string{
 				"[title] is a required field",
 				"[body] must be a maximum of 10,000 characters in length",
@@ -113,8 +113,8 @@ func (s *ApplicationSuite) TestCreateRejectsInvalidInputWithEveryReason() {
 	}
 }
 
-// go-kit validator v1.10.1 writes into a shared map on every failed validation;
-// run with -race to prove the application serializes it.
+// Under -race this proves concurrent invalid creates share no error state
+// (go-kit errors before v1.9.1 wrote validator failures into a shared map).
 func (s *ApplicationSuite) TestCreateValidatesConcurrently() {
 	var wg sync.WaitGroup
 
@@ -131,7 +131,7 @@ func (s *ApplicationSuite) TestCreateValidatesConcurrently() {
 func (s *ApplicationSuite) TestCreateWrapsRepositoryErrors() {
 	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.ErrMock)
 
-	_, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{Title: "a"})
+	_, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
 
 	s.Require().ErrorIs(err, notes.ErrCreateNote)
 	s.Require().ErrorIs(err, errors.ErrMock)
@@ -179,12 +179,6 @@ func (s *ApplicationSuite) TestGetUnknownNoteIsNotFound() {
 	s.Require().Equal(errors.KindNotFound, errors.Kind(err))
 }
 
-func (s *ApplicationSuite) TestGetRejectsZeroID() {
-	_, err := s.app.Get(s.T().Context(), domain.NoteID{})
-
-	s.Require().ErrorIs(err, domain.ErrInvalidNoteID)
-}
-
 func (s *ApplicationSuite) TestDeleteRemovesNote() {
 	id := domain.NewNoteID()
 	s.repo.EXPECT().Delete(gomock.Any(), id).Return(nil)
@@ -200,10 +194,4 @@ func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 
 	s.Require().ErrorIs(err, notes.ErrDeleteNote)
 	s.Require().ErrorIs(err, domain.ErrNoteNotFound)
-}
-
-func (s *ApplicationSuite) TestDeleteRejectsZeroID() {
-	err := s.app.Delete(s.T().Context(), domain.NoteID{})
-
-	s.Require().ErrorIs(err, domain.ErrInvalidNoteID)
 }

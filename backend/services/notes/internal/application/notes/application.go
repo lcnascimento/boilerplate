@@ -2,7 +2,8 @@ package notes
 
 import (
 	"context"
-	"sync"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/lcnascimento/go-kit/errors"
@@ -11,11 +12,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 )
-
-// validatorMu serializes go-kit validator calls process-wide: validator v1.10.1
-// calls WithAttribute on the shared errors.ErrInvalidInput sentinel on every
-// failed validation, a concurrent map write that would crash the process.
-var validatorMu sync.Mutex
 
 type Application struct {
 	notes     application.NotesRepository
@@ -41,15 +37,18 @@ func (a *Application) Create(ctx context.Context, req *models.CreateNoteRequest)
 	ctx, span := a.onCreateStart(ctx)
 	defer span.End()
 
-	if err := a.validate(req); err != nil {
-		return nil, a.onError(ctx, err)
+	if req == nil {
+		return nil, a.onError(ctx, domain.ErrInvalidInput.WithCause(errors.New("request body is required")))
 	}
 
 	note := &domain.Note{
-		ID:        domain.NewNoteID(),
-		Title:     domain.NoteTitle(req.Title),
-		Body:      req.Body,
-		CreatedAt: a.now(),
+		ID:          domain.NewNoteID(),
+		NoteContent: req.NoteContent,
+		CreatedAt:   a.now(),
+	}
+
+	if err := a.validate(note); err != nil {
+		return nil, a.onError(ctx, err)
 	}
 
 	if err := a.notes.Create(ctx, note); err != nil {
@@ -77,10 +76,6 @@ func (a *Application) Get(ctx context.Context, id domain.NoteID) (*domain.Note, 
 	ctx, span := a.onGetStart(ctx, id)
 	defer span.End()
 
-	if err := id.Validate(); err != nil {
-		return nil, a.onError(ctx, err)
-	}
-
 	note, err := a.notes.Get(ctx, id)
 	if err != nil {
 		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
@@ -93,10 +88,6 @@ func (a *Application) Delete(ctx context.Context, id domain.NoteID) error {
 	ctx, span := a.onDeleteStart(ctx, id)
 	defer span.End()
 
-	if err := id.Validate(); err != nil {
-		return a.onError(ctx, err)
-	}
-
 	if err := a.notes.Delete(ctx, id); err != nil {
 		return a.onError(ctx, ErrDeleteNote.WithCause(err))
 	}
@@ -106,17 +97,12 @@ func (a *Application) Delete(ctx context.Context, id domain.NoteID) error {
 	return nil
 }
 
-// validate runs the validator and rebuilds its failure as domain.ErrInvalidInput,
-// one cause per reason, so the error shares no state with go-kit's sentinel.
-func (a *Application) validate(req *models.CreateNoteRequest) error {
-	if req == nil {
-		return domain.ErrInvalidInput.WithCause(errors.New("request body is required"))
-	}
-
-	validatorMu.Lock()
-	err := a.validator.Struct(req)
-	validatorMu.Unlock()
-
+// validate runs the validator and rebuilds its failure as domain.ErrInvalidInput
+// (go-kit's sentinel has another code), one cause per reason. The validator names
+// a field by its Go namespace, so a rule inside the embedded NoteContent reads
+// "[NoteContent.title]"; the wire is flat, so that segment is dropped.
+func (a *Application) validate(note *domain.Note) error {
+	err := a.validator.Struct(note)
 	if err == nil {
 		return nil
 	}
@@ -127,8 +113,10 @@ func (a *Application) validate(req *models.CreateNoteRequest) error {
 
 	out := domain.ErrInvalidInput
 	for _, reason := range errors.SafeReasons(err) {
-		out = out.WithCause(errors.New("%s", reason))
+		out = out.WithCause(errors.New("%s", strings.Replace(reason, embeddedContent, "[", 1)))
 	}
 
 	return out
 }
+
+var embeddedContent = "[" + reflect.TypeFor[domain.NoteContent]().Name() + "."
