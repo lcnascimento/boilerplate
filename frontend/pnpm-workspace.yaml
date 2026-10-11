@@ -1,0 +1,19 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tooling/*"
+
+# pnpm 12 fails the install on any build script not listed here.
+allowBuilds:
+  # Verifies its platform binary; Storybook's builder depends on it.
+  esbuild: true
+  # napi-postinstall only re-checks the prebuilt binding pnpm already installed.
+  unrs-resolver: false
+  # next-intl deps. Both ship prebuilt binaries; the scripts only verify them
+  # or build from source on request.
+  "@parcel/watcher": false
+  "@swc/core": false
+
+minimumReleaseAgeExclude:
+  - prettier@3.9.10
+  - lucide-react@1.55.0

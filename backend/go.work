@@ -1,0 +1,10 @@
+go 1.27.2
+
+use ./quality
+
+// example:begin
+use (
+	./services/notes
+	./services/notes/pkg
+)
+// example:end

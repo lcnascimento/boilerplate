@@ -1,0 +1,13 @@
+opencollection: 1.0.0
+info:
+  name: "Boilerplate"
+  type: workspace
+
+# Each service adds its collection below.
+collections:
+  # example:begin
+  - name: "Notes"
+    path: "collections/Notes"
+  # example:end
+
+docs: ''

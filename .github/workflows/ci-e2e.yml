@@ -1,0 +1,92 @@
+name: ci-e2e
+
+# Playwright against the real stack: a production build of the web app plus
+# each backend service's binary (started by the Playwright webServer list).
+on:
+  workflow_call:
+    inputs:
+      bootstrap:
+        description: Shell command run at the repository root right after checkout.
+        type: string
+        default: ""
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".nvmrc"
+      - ".github/workflows/ci-e2e.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".nvmrc"
+      - ".github/workflows/ci-e2e.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-e2e-${{ github.ref }}-${{ inputs.bootstrap }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Set only when another workflow calls this one: the template's own CI
+      # passes `make init` / `make clean-example` here, then runs the checks.
+      - name: Bootstrap
+        if: inputs.bootstrap
+        working-directory: .
+        env:
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # example:begin
+      # The notes service binary, started by the Playwright webServer list.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/**/go.sum
+
+      # Skipped once the service is gone, so the workflow still runs when it
+      # is called with `make clean-example` as the bootstrap.
+      - name: Build notes
+        if: hashFiles('backend/services/notes/Makefile') != ''
+        working-directory: backend/services/notes
+        run: make build.api.frontend
+      # example:end
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
+
+      - name: e2e
+        run: pnpm turbo run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: frontend/apps/web/playwright-report/
+          retention-days: 7

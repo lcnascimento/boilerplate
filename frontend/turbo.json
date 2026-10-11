@@ -1,0 +1,27 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "agentGuidance": false,
+  "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": ["*_API_URL"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "lint": {},
+    "lint:fix": {
+      "cache": false
+    },
+    "typecheck": {},
+    "test": {},
+    "test:e2e": {
+      "dependsOn": ["^build", "build"],
+      "cache": false,
+      "passThroughEnv": ["CI", "PLAYWRIGHT_*"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

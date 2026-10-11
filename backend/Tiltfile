@@ -1,0 +1,50 @@
+# -*- mode: Python -*-
+
+docker_compose('./docker-compose.yml')
+
+dc_resource(
+    'alloy',
+    labels=['Monitoring'],
+    resource_deps=['prometheus', 'loki', 'tempo', 'pyroscope'],
+    links=[
+        link('http://localhost:12345', 'UI'),
+        link('http://localhost:4317', 'OTLP gRPC receiver'),
+        link('http://localhost:4318', 'OTLP HTTP receiver'),
+    ],
+)
+
+dc_resource(
+    'prometheus',
+    labels=['Monitoring'],
+    links=[link('http://localhost:9090', 'UI')],
+)
+
+dc_resource(
+    'loki',
+    labels=['Monitoring'],
+    links=[link('http://localhost:3100', 'API')],
+)
+
+dc_resource(
+    'tempo',
+    labels=['Monitoring'],
+    links=[link('http://localhost:3200', 'API')],
+)
+
+dc_resource(
+    'pyroscope',
+    labels=['Monitoring'],
+    links=[link('http://localhost:4040', 'UI / API')],
+)
+
+dc_resource(
+    'grafana',
+    labels=['Monitoring'],
+    resource_deps=['alloy', 'prometheus', 'loki', 'tempo', 'pyroscope'],
+    links=[link('http://localhost:3010', 'UI')],
+)
+
+# Each service adds its own include below.
+# example:begin
+include('./services/notes/Tiltfile')
+# example:end

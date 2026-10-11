@@ -1,0 +1,37 @@
+info:
+  name: Create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{NOTES_HOST}}/notes/v1/notes"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Lista de compras",
+        "body": "Leite, ovos e café."
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.getStatus() === 201) {
+          bru.setVar("noteId", res.getBody().id);
+        }
+    - type: tests
+      code: |-
+        test("creates the note", function () {
+          expect(res.getStatus()).to.equal(201);
+          expect(res.getBody().id).to.match(/^note_/);
+          expect(res.getBody().title).to.equal("Lista de compras");
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

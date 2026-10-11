@@ -1,0 +1,50 @@
+{
+  "name": "@boilerplate/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "next typegen && tsc",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@boilerplate/api": "workspace:*",
+    "@boilerplate/i18n": "workspace:*",
+    "@boilerplate/types": "workspace:*",
+    "@boilerplate/ui": "workspace:*",
+    "@boilerplate/utils": "workspace:*",
+    "lucide-react": "1.55.0",
+    "next": "16.4.0",
+    "next-intl": "4.14.9",
+    "next-themes": "0.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sonner": "2.0.8",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@boilerplate/eslint-config": "workspace:*",
+    "@boilerplate/typescript-config": "workspace:*",
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "9.39.5",
+    "jsdom": "30.1.2",
+    "postcss": "8.5.29",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

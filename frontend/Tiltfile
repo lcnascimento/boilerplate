@@ -1,0 +1,50 @@
+# -*- mode: Python -*-
+
+# Keeps the frontend workspace installed when its manifests change.
+local_resource(
+    'frontend-deps',
+    cmd='pnpm install',
+    deps=['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'],
+    labels=['frontend'],
+)
+
+# The web app in dev mode. Server-only env vars (one `<NAME>_API_URL` per
+# service) go in `serve_env`.
+local_resource(
+    'web',
+    serve_cmd='pnpm --filter @boilerplate/web dev',
+    serve_env={
+        # example:begin
+        'NOTES_API_URL': 'http://localhost:8080',
+        # example:end
+    },
+    resource_deps=['frontend-deps'],
+    # TCP, not HTTP: an HTTP probe logs the whole page on every success.
+    readiness_probe=probe(
+        period_secs=5,
+        tcp_socket=tcp_socket_action(port=3000),
+    ),
+    links=[link('http://localhost:3000', 'App')],
+    labels=['frontend'],
+)
+
+# Playwright UI Mode for the web app's e2e suite, on demand: start it from the
+# Tilt UI. It runs the same webServers as `pnpm test:e2e` (web on 3001 and one
+# process per service), so it never touches the dev servers above. 9330 clears
+# the app (3000/3001), Grafana (3010), Loki (3100), Tempo (3200), the services
+# (8080/8081), Scalar (8090) and Playwright's own report server (9323).
+PLAYWRIGHT_UI_PORT = 9330
+
+local_resource(
+    'web-e2e-ui',
+    serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
+    resource_deps=['frontend-deps'],
+    auto_init=False,
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    readiness_probe=probe(
+        period_secs=5,
+        tcp_socket=tcp_socket_action(port=PLAYWRIGHT_UI_PORT),
+    ),
+    links=[link('http://127.0.0.1:{}'.format(PLAYWRIGHT_UI_PORT), 'Playwright UI')],
+    labels=['frontend'],
+)

@@ -1,0 +1,49 @@
+name: ci-backend
+
+on:
+  workflow_call:
+    inputs:
+      bootstrap:
+        description: Shell command run at the repository root right after checkout.
+        type: string
+        default: ""
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
+
+concurrency:
+  group: ci-backend-${{ github.ref }}-${{ inputs.bootstrap }}
+  cancel-in-progress: true
+
+jobs:
+  ci-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      # Set only when another workflow calls this one: the template's own CI
+      # passes `make init` / `make clean-example` here, then runs the checks.
+      - name: Bootstrap
+        if: inputs.bootstrap
+        working-directory: .
+        env:
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/**/go.sum
+
+      - name: Setup
+        run: make setup
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test

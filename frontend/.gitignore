@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+storybook-static/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+__screenshots__/
+test-results/
+playwright-report/
+
+# Turborepo
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+*.log
+*storybook.log
+
+# OS
+.DS_Store

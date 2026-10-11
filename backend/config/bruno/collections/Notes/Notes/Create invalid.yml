@@ -1,0 +1,31 @@
+info:
+  name: Create invalid
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{NOTES_HOST}}/notes/v1/notes"
+  body:
+    type: json
+    data: |-
+      {
+        "title": ""
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("rejects an empty title with reasons", function () {
+          expect(res.getStatus()).to.equal(400);
+          expect(res.getBody().code).to.equal("INVALID_INPUT");
+          expect(res.getBody().details.reasons).to.deep.equal(["[title] is a required field"]);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
