@@ -2,18 +2,17 @@ package domain
 
 import "time"
 
-// Note is never edited after creation, so it has no UpdatedAt.
-type Note struct {
-	ID        NoteID    `json:"id"`
-	Title     NoteTitle `json:"title"`
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
+// NoteContent is what a client writes; models.CreateNoteRequest embeds it, so
+// its validate tags are the only place the rules live.
+type NoteContent struct {
+	Title string `json:"title" validate:"required,max=120"`
+	Body  string `json:"body"  validate:"max=10000"`
 }
 
-func (n *Note) Validate() error {
-	if err := n.ID.Validate(); err != nil {
-		return err
-	}
+// Note is never edited after creation, so it has no UpdatedAt.
+type Note struct {
+	NoteContent
 
-	return n.Title.Validate()
+	ID        NoteID    `json:"id"         validate:"canonical_id=note"`
+	CreatedAt time.Time `json:"created_at"`
 }

@@ -65,7 +65,7 @@ func (s *RepositorySuite) TestStoredNoteIsNotAliasedByCaller() {
 
 	again, err := s.repo.Get(s.T().Context(), note.ID)
 	s.Require().NoError(err)
-	s.Require().Equal(domain.NoteTitle("original"), again.Title)
+	s.Require().Equal("original", again.Title)
 }
 
 func (s *RepositorySuite) TestListReturnsNewestFirst() {
@@ -81,7 +81,7 @@ func (s *RepositorySuite) TestListReturnsNewestFirst() {
 	got, err := s.repo.List(s.T().Context())
 
 	s.Require().NoError(err)
-	s.Require().Equal([]domain.NoteTitle{"newest", "middle", "oldest"}, titles(got))
+	s.Require().Equal([]string{"newest", "middle", "oldest"}, titles(got))
 }
 
 func (s *RepositorySuite) TestListBreaksTimestampTiesByID() {
@@ -95,7 +95,7 @@ func (s *RepositorySuite) TestListBreaksTimestampTiesByID() {
 	got, err := s.repo.List(s.T().Context())
 
 	s.Require().NoError(err)
-	s.Require().Equal([]domain.NoteTitle{"second", "first"}, titles(got))
+	s.Require().Equal([]string{"second", "first"}, titles(got))
 }
 
 func (s *RepositorySuite) TestDeleteRemovesNote() {
@@ -135,7 +135,7 @@ func (s *RepositorySuite) TestConcurrentAccessIsSafe() {
 	s.Require().Len(got, writers)
 }
 
-func newNote(title domain.NoteTitle, createdAt time.Time) *domain.Note {
+func newNote(title string, createdAt time.Time) *domain.Note {
 	note := fixture.RandomNote()
 	note.Title = title
 	note.CreatedAt = createdAt
@@ -143,8 +143,8 @@ func newNote(title domain.NoteTitle, createdAt time.Time) *domain.Note {
 	return note
 }
 
-func titles(list []*domain.Note) []domain.NoteTitle {
-	out := make([]domain.NoteTitle, 0, len(list))
+func titles(list []*domain.Note) []string {
+	out := make([]string, 0, len(list))
 	for _, note := range list {
 		out = append(out, note.Title)
 	}

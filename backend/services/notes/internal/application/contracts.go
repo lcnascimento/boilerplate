@@ -13,7 +13,7 @@ type NotesRepository interface {
 	Delete(ctx context.Context, id domain.NoteID) error
 }
 
-// Validator checks a request against its validate tags.
+// Validator checks a value against its validate tags.
 type Validator interface {
 	Struct(s any) error
 }
