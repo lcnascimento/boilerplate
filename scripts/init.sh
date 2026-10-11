@@ -17,7 +17,13 @@ fail() {
 	exit 1
 }
 
-cd "$(git rev-parse --show-toplevel)"
+# Work on the tree this script belongs to, never on the caller's cwd, and
+# refuse a stray copy that is not tracked at the root of its own git tree.
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+cd "$root"
+[[ $(git rev-parse --show-toplevel 2>/dev/null) == "$root" ]] &&
+	git ls-files --error-unmatch -- "$self" >/dev/null 2>&1 ||
+	fail "$root is not the template's git tree ($self is not tracked at its root)"
 
 # Preconditions, all checked before any file is touched.
 name=${1:-}
