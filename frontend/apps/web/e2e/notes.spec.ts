@@ -69,10 +69,17 @@ test("deleting a note after confirming removes it from the list", async ({
   await expect(noteLink(page, title)).toHaveCount(0);
 });
 
-test("an unknown note shows the not-found", async ({ page }) => {
-  await page.goto(`/notes/note_${randomUUID()}`);
+for (const [name, id] of [
+  ["an unknown note", `note_${randomUUID()}`],
+  ["a malformed note id", "not-a-note-id"],
+]) {
+  test(`${name} answers 404 with the not-found`, async ({ page }) => {
+    const response = await page.goto(`/notes/${id}`);
 
-  await expect(
-    page.getByRole("heading", { name: "Página não encontrada." })
-  ).toBeVisible();
-});
+    expect(response?.status()).toBe(404);
+    await expect(
+      page.getByRole("heading", { name: "Página não encontrada." })
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Boilerplate" })).toBeVisible();
+  });
+}
