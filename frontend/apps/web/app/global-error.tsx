@@ -44,7 +44,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
       <body className="font-sans antialiased">
         <main className="flex min-h-svh flex-col items-center justify-center gap-2 p-4 text-center">
           <h1 className="text-2xl font-bold">{errors.generic}</h1>
-          <p className="text-muted-foreground">{errors.teamNotified}</p>
+          <p className="text-muted-foreground">{errors.retryHint}</p>
           {error.digest ? (
             <p className="text-xs text-muted-foreground">
               <code>{error.digest}</code>

@@ -14,7 +14,7 @@
     "generic": "Ocorreu um erro inesperado.",
     "network": "Falha na conexão. Tente novamente.",
     "notFound": "Página não encontrada.",
-    "teamNotified": "Nossa equipe foi notificada."
+    "retryHint": "Tente novamente. Se o erro continuar, recarregue a página."
   },
   "validation": {
     "required": "Campo obrigatório",

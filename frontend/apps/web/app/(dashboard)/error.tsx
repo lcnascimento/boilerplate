@@ -24,7 +24,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
       title={t("generic")}
       description={
         <>
-          {t("teamNotified")}
+          {t("retryHint")}
           {error.digest ? (
             <code className="mt-2 block text-xs">{error.digest}</code>
           ) : null}
