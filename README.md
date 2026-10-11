@@ -109,6 +109,8 @@ pnpm -C frontend --filter @boilerplate/web exec playwright install chromium
 
 O `pnpm test:e2e` sobe um `next build && next start` na porta `3001` e o binário de cada serviço Go (build com o Go local), então não depende do Tilt e não conflita com ele.
 
+Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, com os mesmos servidores do `pnpm test:e2e`.
+
 <!-- example:begin -->
 
 O do `notes` sobe na porta `8081`, vazio a cada execução.
