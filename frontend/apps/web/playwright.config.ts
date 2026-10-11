@@ -7,9 +7,9 @@ const CI = Boolean(process.env.CI);
 const WEB_PORT = 3001;
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 // example:begin
-// Not Tilt's 8080: the e2e run gets its own, empty notes service.
+// Not Tilt's 8080: the e2e run gets its own notes service.
 const NOTES_PORT = 8081;
-const NOTES_URL = `http://localhost:${NOTES_PORT}`;
+export const NOTES_URL = `http://localhost:${NOTES_PORT}`;
 // example:end
 
 // e2e runs against the real stack: a production build of the web app and,
@@ -26,7 +26,8 @@ export default defineConfig({
   },
   projects: [
     // example:begin
-    // Asserts the empty list, so it runs before any test creates a note.
+    // Empties the store and asserts the empty list, so it runs before any
+    // test creates a note.
     {
       name: "notes-empty",
       testMatch: "notes-empty.spec.ts",
@@ -54,7 +55,9 @@ export default defineConfig({
     },
     // example:begin
     {
-      // A fresh process every run (never reused), so the store starts empty.
+      // Never reused, so no other run shares its store. UI Mode keeps it up
+      // across runs, so the store is not empty on a rerun: notes-empty
+      // empties it first.
       command: `make -s -C ../../../backend/services/notes build.api.frontend run.api.frontend FRONTEND_PORT=${NOTES_PORT}`,
       url: `${NOTES_URL}/health`,
       reuseExistingServer: false,
