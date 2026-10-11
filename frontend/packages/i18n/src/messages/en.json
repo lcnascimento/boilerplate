@@ -14,7 +14,7 @@
     "generic": "An unexpected error occurred.",
     "network": "Connection failed. Please try again.",
     "notFound": "Page not found.",
-    "teamNotified": "Our team has been notified."
+    "retryHint": "Please try again. If the error persists, reload the page."
   },
   "validation": {
     "required": "Required field",

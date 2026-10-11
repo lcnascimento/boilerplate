@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/lcnascimento/go-kit/errors"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 )
 
@@ -109,4 +111,12 @@ func TestNoteTitle_Validate(t *testing.T) {
 			require.ErrorIs(t, title.Validate(), domain.ErrInvalidNoteTitle)
 		})
 	}
+}
+
+func TestNoteTitle_ValidateExplainsTheLimit(t *testing.T) {
+	t.Parallel()
+
+	err := domain.NoteTitle(strings.Repeat("a", domain.NoteTitleMaxLength+1)).Validate()
+
+	require.Equal(t, []string{"title must be at most 120 characters"}, errors.SafeReasons(err))
 }

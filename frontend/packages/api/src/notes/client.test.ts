@@ -8,6 +8,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createNotesClient, noteIdSchema } from "./index";
 
+/** POST requests the fake service received. */
+let posts = 0;
+
 type Route = (req: IncomingMessage, body: string, res: ServerResponse) => void;
 
 function json(res: ServerResponse, status: number, payload: string) {
@@ -51,12 +54,13 @@ const routes: Record<string, Route> = {
     );
   },
   "POST /notes/v1/notes": (req, body, res) => {
+    posts += 1;
     const sent: unknown = JSON.parse(body);
     if (
       typeof sent === "object" &&
       sent !== null &&
       "title" in sent &&
-      sent.title === ""
+      sent.title === "Rejeitada"
     ) {
       json(
         res,
@@ -212,8 +216,47 @@ describe("notes client", () => {
     });
   });
 
+  it("trims the title before sending it", async () => {
+    const result = await createNotesClient({ baseUrl }).create({
+      title: "  Compras  ",
+    });
+
+    expect(result).toMatchObject({
+      kind: "ok",
+      data: { body: 'application/json {"title":"Compras"}' },
+    });
+  });
+
+  it("rejects input outside the schema without calling the service", async () => {
+    const before = posts;
+
+    const result = await createNotesClient({ baseUrl }).create({
+      title: "   ",
+      body: "x".repeat(10_001),
+    });
+
+    expect(posts).toBe(before);
+    expect(result).toEqual({
+      kind: "error",
+      error: {
+        code: "INVALID_INPUT",
+        message: "invalid input",
+        retryable: false,
+        details: {
+          reasons: [
+            "[title] Too small: expected string to have >=1 characters",
+            "[body] Too big: expected string to have <=10000 characters",
+          ],
+        },
+        status: 400,
+      },
+    });
+  });
+
   it("returns the service's 400 with its reasons", async () => {
-    const result = await createNotesClient({ baseUrl }).create({ title: "" });
+    const result = await createNotesClient({ baseUrl }).create({
+      title: "Rejeitada",
+    });
 
     expect(result).toEqual({
       kind: "error",

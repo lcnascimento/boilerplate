@@ -2,6 +2,7 @@
 
 import { notFound } from "next/navigation";
 
+import { invalidInputError, type Result } from "@boilerplate/api/core";
 import {
   createNoteInputSchema,
   createNotesClient,
@@ -10,8 +11,6 @@ import {
   type Note,
 } from "@boilerplate/api/notes";
 
-import type { APIError, Result } from "@boilerplate/api/core";
-
 // Every function here is a public endpoint: arguments arrive as `unknown` and
 // are parsed before reaching the notes service.
 
@@ -19,19 +18,6 @@ function notesClient() {
   return createNotesClient({
     baseUrl: parseNotesEnv(process.env).NOTES_API_URL,
   });
-}
-
-function invalidInput(reasons: string[]): { kind: "error"; error: APIError } {
-  return {
-    kind: "error",
-    error: {
-      code: "INVALID_INPUT",
-      message: "invalid input",
-      retryable: false,
-      details: { reasons },
-      status: 400,
-    },
-  };
 }
 
 export async function listNotes(): Promise<Result<Note[]>> {
@@ -51,17 +37,15 @@ export async function getNote(id: unknown): Promise<Result<Note>> {
 export async function createNote(input: unknown): Promise<Result<Note>> {
   const parsed = createNoteInputSchema.safeParse(input);
   if (!parsed.success) {
-    return invalidInput(
-      parsed.error.issues.map(
-        (issue) => `[${issue.path.join(".")}] ${issue.message}`
-      )
-    );
+    return { kind: "error", error: invalidInputError(parsed.error) };
   }
   return notesClient().create(parsed.data);
 }
 
 export async function deleteNote(id: unknown): Promise<Result<undefined>> {
   const noteId = noteIdSchema.safeParse(id);
-  if (!noteId.success) return invalidInput(["[id] invalid note id"]);
+  if (!noteId.success) {
+    return { kind: "error", error: invalidInputError(noteId.error) };
+  }
   return notesClient().delete(noteId.data);
 }

@@ -1,6 +1,7 @@
 package v1_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
@@ -16,30 +18,17 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/routes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/fixture"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 )
-
-const noteID = "note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f"
-
-var note = &domain.Note{
-	ID:        domain.MustParseNoteID(noteID),
-	Title:     "Lista de compras",
-	Body:      "Leite, ovos e café.",
-	CreatedAt: time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC),
-}
-
-const noteJSON = `{
-	"id": "note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f",
-	"title": "Lista de compras",
-	"body": "Leite, ovos e café.",
-	"created_at": "2026-10-10T19:30:00Z"
-}`
 
 type HandlerSuite struct {
 	suite.Suite
 
-	service *mocks.MockNotesService
-	router  *mux.Router
+	note     *domain.Note
+	noteJSON string
+	service  *mocks.MockNotesService
+	router   *mux.Router
 }
 
 func TestHandler(t *testing.T) {
@@ -50,6 +39,8 @@ func TestHandler(t *testing.T) {
 func (s *HandlerSuite) SetupTest() {
 	ctrl := gomock.NewController(s.T())
 	s.service = mocks.NewMockNotesService(ctrl)
+	s.note = fixture.RandomNote()
+	s.noteJSON = wireJSON(s.T(), s.note)
 
 	s.router = mux.NewRouter()
 	routes.RegisterNotes(s.router, s.service)
@@ -58,12 +49,12 @@ func (s *HandlerSuite) SetupTest() {
 func (s *HandlerSuite) TestCreateReturnsCreatedNote() {
 	s.service.EXPECT().
 		Create(gomock.Any(), &models.CreateNoteRequest{Title: "Lista de compras", Body: "Leite, ovos e café."}).
-		Return(note, nil)
+		Return(s.note, nil)
 
 	rec := s.serve(http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras","body":"Leite, ovos e café."}`)
 
 	s.Require().Equal(http.StatusCreated, rec.Code)
-	s.Require().JSONEq(noteJSON, rec.Body.String())
+	s.Require().JSONEq(s.noteJSON, rec.Body.String())
 }
 
 func (s *HandlerSuite) TestCreateRejectsMalformedBody() {
@@ -93,12 +84,12 @@ func (s *HandlerSuite) TestCreateWritesInvalidInputWithReasons() {
 }
 
 func (s *HandlerSuite) TestListReturnsEnvelope() {
-	s.service.EXPECT().List(gomock.Any()).Return([]*domain.Note{note}, nil)
+	s.service.EXPECT().List(gomock.Any()).Return([]*domain.Note{s.note}, nil)
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes", "")
 
 	s.Require().Equal(http.StatusOK, rec.Code)
-	s.Require().JSONEq(`{"notes": [`+noteJSON+`]}`, rec.Body.String())
+	s.Require().JSONEq(`{"notes": [`+s.noteJSON+`]}`, rec.Body.String())
 }
 
 func (s *HandlerSuite) TestListWithoutNotesReturnsEmptyArray() {
@@ -120,18 +111,18 @@ func (s *HandlerSuite) TestListWritesInternalErrors() {
 }
 
 func (s *HandlerSuite) TestGetReturnsNote() {
-	s.service.EXPECT().Get(gomock.Any(), domain.MustParseNoteID(noteID)).Return(note, nil)
+	s.service.EXPECT().Get(gomock.Any(), s.note.ID).Return(s.note, nil)
 
-	rec := s.serve(http.MethodGet, "/notes/v1/notes/"+noteID, "")
+	rec := s.serve(http.MethodGet, "/notes/v1/notes/"+s.note.ID.String(), "")
 
 	s.Require().Equal(http.StatusOK, rec.Code)
-	s.Require().JSONEq(noteJSON, rec.Body.String())
+	s.Require().JSONEq(s.noteJSON, rec.Body.String())
 }
 
 func (s *HandlerSuite) TestGetUnknownNoteIsNotFound() {
 	s.service.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, domain.ErrNoteNotFound)
 
-	rec := s.serve(http.MethodGet, "/notes/v1/notes/"+noteID, "")
+	rec := s.serve(http.MethodGet, "/notes/v1/notes/"+s.note.ID.String(), "")
 
 	s.Require().Equal(http.StatusNotFound, rec.Code)
 	s.Require().JSONEq(`{"code": "NOTE_NOT_FOUND", "message": "note not found", "retryable": false}`, rec.Body.String())
@@ -150,9 +141,9 @@ func (s *HandlerSuite) TestGetRejectsMalformedID() {
 }
 
 func (s *HandlerSuite) TestDeleteReturnsNoContent() {
-	s.service.EXPECT().Delete(gomock.Any(), domain.MustParseNoteID(noteID)).Return(nil)
+	s.service.EXPECT().Delete(gomock.Any(), s.note.ID).Return(nil)
 
-	rec := s.serve(http.MethodDelete, "/notes/v1/notes/"+noteID, "")
+	rec := s.serve(http.MethodDelete, "/notes/v1/notes/"+s.note.ID.String(), "")
 
 	s.Require().Equal(http.StatusNoContent, rec.Code)
 	s.Require().Empty(rec.Body.String())
@@ -161,7 +152,7 @@ func (s *HandlerSuite) TestDeleteReturnsNoContent() {
 func (s *HandlerSuite) TestDeleteUnknownNoteIsNotFound() {
 	s.service.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(domain.ErrNoteNotFound)
 
-	rec := s.serve(http.MethodDelete, "/notes/v1/notes/"+noteID, "")
+	rec := s.serve(http.MethodDelete, "/notes/v1/notes/"+s.note.ID.String(), "")
 
 	s.Require().Equal(http.StatusNotFound, rec.Code)
 }
@@ -170,6 +161,22 @@ func (s *HandlerSuite) TestDeleteRejectsMalformedID() {
 	rec := s.serve(http.MethodDelete, "/notes/v1/notes/note_bad", "")
 
 	s.Require().Equal(http.StatusBadRequest, rec.Code)
+}
+
+// wireJSON spells the wire contract of a note field by field, independent of
+// the domain's JSON encoding.
+func wireJSON(t *testing.T, n *domain.Note) string {
+	t.Helper()
+
+	out, err := json.Marshal(map[string]string{
+		"id":         n.ID.String(),
+		"title":      n.Title.String(),
+		"body":       n.Body,
+		"created_at": n.CreatedAt.Format(time.RFC3339),
+	})
+	require.NoError(t, err)
+
+	return string(out)
 }
 
 func (s *HandlerSuite) serve(method, path, body string) *httptest.ResponseRecorder {

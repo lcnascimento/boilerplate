@@ -12,3 +12,8 @@ type NotesRepository interface {
 	List(ctx context.Context) ([]*domain.Note, error)
 	Delete(ctx context.Context, id domain.NoteID) error
 }
+
+// Validator checks a request against its validate tags.
+type Validator interface {
+	Struct(s any) error
+}

@@ -2,7 +2,9 @@ import "server-only";
 
 import { z } from "zod";
 
-import type { APIError, Result } from "./result";
+import { unavailableError, unexpectedError } from "./errors";
+
+import type { Result } from "./result";
 
 export interface RequestOptions<T> {
   url: string;
@@ -12,20 +14,6 @@ export interface RequestOptions<T> {
   /** Parses the success body; an empty body parses as `undefined`. */
   schema: z.ZodType<T>;
 }
-
-const unavailable: APIError = {
-  code: "UNAVAILABLE",
-  message: "service unavailable",
-  retryable: true,
-  status: 503,
-};
-
-const unexpected: APIError = {
-  code: "UNEXPECTED",
-  message: "unexpected response from service",
-  retryable: false,
-  status: 502,
-};
 
 /** go-kit's `httpserver/util.APIError` as written to the response body. */
 const apiErrorBodySchema = z.object({
@@ -73,21 +61,21 @@ export async function request<T>({
     status = response.status;
     text = await response.text();
   } catch {
-    return { kind: "error", error: unavailable };
+    return { kind: "error", error: unavailableError };
   }
 
   const parsedBody = parseBody(text);
   if (parsedBody.kind === "invalid") {
-    return { kind: "error", error: unexpected };
+    return { kind: "error", error: unexpectedError };
   }
 
   if (status >= 400) {
     const apiError = apiErrorBodySchema.safeParse(parsedBody.value);
-    if (!apiError.success) return { kind: "error", error: unexpected };
+    if (!apiError.success) return { kind: "error", error: unexpectedError };
     return { kind: "error", error: { ...apiError.data, status } };
   }
 
   const data = schema.safeParse(parsedBody.value);
-  if (!data.success) return { kind: "error", error: unexpected };
+  if (!data.success) return { kind: "error", error: unexpectedError };
   return { kind: "ok", data: data.data };
 }

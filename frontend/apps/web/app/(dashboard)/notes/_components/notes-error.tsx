@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 
+import { ErrorCode } from "@boilerplate/api/core/errors";
 import { Button } from "@boilerplate/ui/components/button";
 import { EmptyState } from "@boilerplate/ui/primitives/empty-state";
 
@@ -20,7 +21,7 @@ export function NotesError({ error }: NotesErrorProps) {
   const tCommon = useTranslations("common");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const unavailable = error.code === "UNAVAILABLE";
+  const unavailable = error.code === ErrorCode.Unavailable;
 
   return (
     <EmptyState

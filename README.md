@@ -134,16 +134,26 @@ A coleção do `notes` fica em `backend/config/bruno/collections/Notes`, e o `Cr
 
 <!-- example:end -->
 
-<!-- example:begin -->
-
 ## Como adicionar um serviço
 
-O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre cercas `example:begin` / `example:end`, então cada cerca indica um lugar onde um serviço novo também entra. Nos passos abaixo, `<name>` é o nome do serviço em kebab-case (ex.: `billing`) e `<NAME>` é o mesmo nome em maiúsculas com `_` (ex.: `BILLING`).
+Nos passos abaixo, `<name>` é o nome do serviço em kebab-case (ex.: `billing`) e `<NAME>` é o mesmo nome em maiúsculas com `_` (ex.: `BILLING`).
+
+<!-- example:begin -->
+
+O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre cercas `example:begin` / `example:end`, então cada cerca indica um lugar onde um serviço novo também entra.
+
+<!-- example:end -->
 
 **Backend**
 
-1. Copie `backend/services/notes/` para `backend/services/<name>/` e troque `notes` pelo novo nome: os módulos em `go.mod` e `pkg/go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>` e `.../<name>/pkg`, mais o `replace`), os imports, o `OTEL_SERVICE_NAME` e o binário no `Makefile`, e o recurso do Tilt no `Tiltfile` do serviço. Depois, troque o domínio, que vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e registre cada construtor no fx uma vez em `bundle/`.
-2. Escolha uma porta livre (ex.: `8082`; `8080` é do `notes` e `8081` do e2e dele) e use-a no `.env.example` do serviço (`FRONTEND_PORT`), no `FRONTEND_PORT ?=` do `Makefile` e na `readiness_probe` e no link do `Tiltfile` do serviço.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, o recurso do Tilt.
+   <!-- example:begin -->
+   O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
+   <!-- example:end -->
+2. Escolha uma porta livre (ex.: `8082`) e use-a no `.env.example` do serviço (`FRONTEND_PORT`), no `FRONTEND_PORT ?=` do `Makefile` e na `readiness_probe` e no link do `Tiltfile` do serviço.
+   <!-- example:begin -->
+   A `8080` é do `notes` e a `8081`, do e2e dele.
+   <!-- example:end -->
 3. Registre os dois módulos no `backend/go.work`:
 
    ```text
@@ -154,8 +164,8 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    ```
 
 4. Inclua o serviço no `backend/Tiltfile`: `include('./services/<name>/Tiltfile')`.
-5. Rode `make tidy mocks lint test` em `backend/`. O `bundle/runners_test.go` (`fx.ValidateApp`) quebra se o grafo do fx estiver incompleto.
-6. (Opcional) Copie a coleção `backend/config/bruno/collections/Notes` e liste a nova em `collections:` no `workspace.yml`.
+5. Rode `make tidy mocks lint test` em `backend/`. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
+6. (Opcional) Crie a coleção Bruno em `backend/config/bruno/collections/<Name>` e liste-a em `collections:` no `workspace.yml`.
 
 **OpenAPI**
 
@@ -163,19 +173,21 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Frontend**
 
-8. Crie `frontend/packages/api/src/<name>/index.ts`. O `exports` com curinga do pacote já publica o subpath `@boilerplate/api/<name>`, sem editar `package.json`. Siga `src/notes/`: schemas Zod em `schemas/index.ts` (o entry isomórfico que client components importam), o cliente sobre `request()` de `@boilerplate/api/core` e um `parse<Name>Env` que valida `<NAME>_API_URL`.
+8. Crie `frontend/packages/api/src/<name>/index.ts`. O `exports` com curinga do pacote já publica o subpath `@boilerplate/api/<name>`, sem editar `package.json`. Ele traz os schemas Zod em `schemas/index.ts` (o entry isomórfico que client components importam), o cliente sobre `request()` de `@boilerplate/api/core` e um `parse<Name>Env` que valida `<NAME>_API_URL`.
+   <!-- example:begin -->
+   Siga `src/notes/`.
+   <!-- example:end -->
 9. Declare `<NAME>_API_URL`:
    - em `frontend/Tiltfile`, no `serve_env` do recurso `web`;
    - em `frontend/apps/web/.env.example`;
    - em `frontend/apps/web/instrumentation.ts`, chamando o `parse<Name>Env` dentro do `Promise.all`, para o servidor falhar na subida sem ela.
 
    O `turbo.json` já repassa `*_API_URL` para as tasks.
+
 10. Telas: as rotas em `frontend/apps/web/app/(dashboard)/<name>/`, as funções `"use server"` em `frontend/apps/web/actions/<name>.ts`, as mensagens em `frontend/apps/web/shared/_messages/<name>.json` (pt-BR e en no mesmo arquivo) registradas em `shared/_messages/index.ts`, e o item do menu em `navRoutes` (`shared/navigation.ts`).
 11. e2e: em `frontend/apps/web/playwright.config.ts`, adicione o serviço ao array `webServer` (outra porta livre, `reuseExistingServer: false`) e passe `<NAME>_API_URL` no `env` do servidor web. No `.github/workflows/ci-e2e.yml`, adicione o build do binário antes do passo de e2e.
 
 Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para adicionar um serviço.
-
-<!-- example:end -->
 
 ## Como instanciar
 

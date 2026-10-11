@@ -1,10 +1,13 @@
+import { getTranslations } from "next-intl/server";
+
 import type { User } from "@boilerplate/types";
 
 /**
- * The only user while the app has no authentication. This is the seam for a
- * future auth: replace it with the session user and the shell keeps working.
+ * The only user while the app has no authentication, named in the request
+ * locale. This is the seam for a future auth: return the session user here and
+ * the shell keeps working.
  */
-export const LOCAL_USER: User = {
-  id: "local",
-  name: "Usuário local",
-};
+export async function getLocalUser(): Promise<User> {
+  const t = await getTranslations("nav");
+  return { id: "local", name: t("localUser") };
+}

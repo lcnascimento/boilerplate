@@ -7,6 +7,7 @@ import { Card, CardContent } from "@boilerplate/ui/components/card";
 import { PageHeader } from "@boilerplate/ui/primitives/page-header";
 
 import { getNote } from "@/actions/notes";
+import { NOTES_HREF } from "@/shared/navigation";
 
 import { DeleteNoteDialog, NotesError } from "../_components";
 
@@ -24,7 +25,7 @@ export default async function NotePage({ params }: NotePageProps) {
 
   const back = (
     <Button asChild className="self-start" variant="ghost">
-      <Link href="/notes">
+      <Link href={NOTES_HREF}>
         <ArrowLeft aria-hidden />
         {t("backToList")}
       </Link>

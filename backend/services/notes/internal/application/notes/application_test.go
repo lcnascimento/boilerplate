@@ -15,6 +15,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/fixture"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 )
 
@@ -137,8 +138,7 @@ func (s *ApplicationSuite) TestCreateWrapsRepositoryErrors() {
 }
 
 func (s *ApplicationSuite) TestListReturnsRepositoryOrder() {
-	newest := &domain.Note{ID: domain.NewNoteID(), Title: "newest"}
-	oldest := &domain.Note{ID: domain.NewNoteID(), Title: "oldest"}
+	newest, oldest := fixture.RandomNote(), fixture.RandomNote()
 	s.repo.EXPECT().List(gomock.Any()).Return([]*domain.Note{newest, oldest}, nil)
 
 	got, err := s.app.List(s.T().Context())
@@ -159,7 +159,7 @@ func (s *ApplicationSuite) TestListWrapsRepositoryErrors() {
 }
 
 func (s *ApplicationSuite) TestGetReturnsNote() {
-	note := &domain.Note{ID: domain.NewNoteID(), Title: "a"}
+	note := fixture.RandomNote()
 	s.repo.EXPECT().Get(gomock.Any(), note.ID).Return(note, nil)
 
 	got, err := s.app.Get(s.T().Context(), note.ID)

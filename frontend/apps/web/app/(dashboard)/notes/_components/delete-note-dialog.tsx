@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition, type MouseEvent } from "react";
 import { toast } from "sonner";
 
+import { ErrorCode } from "@boilerplate/api/core/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,7 @@ import {
 import { Button } from "@boilerplate/ui/components/button";
 
 import { deleteNote } from "@/actions/notes";
+import { NOTES_HREF } from "@/shared/navigation";
 
 import type { Note } from "@boilerplate/api/notes/schemas";
 
@@ -43,7 +45,7 @@ export function DeleteNoteDialog({ id, title }: DeleteNoteDialogProps) {
       const result = await deleteNote(id);
       if (result.kind === "error") {
         toast.error(
-          result.error.code === "UNAVAILABLE"
+          result.error.code === ErrorCode.Unavailable
             ? t("unavailableDescription")
             : t("deleteFailed")
         );
@@ -51,7 +53,7 @@ export function DeleteNoteDialog({ id, title }: DeleteNoteDialogProps) {
       }
       setOpen(false);
       toast.success(t("deleted"));
-      router.push("/notes");
+      router.push(NOTES_HREF);
       router.refresh();
     });
   }

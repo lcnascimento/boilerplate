@@ -9,6 +9,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/fixture"
 )
 
 type RepositorySuite struct {
@@ -135,7 +136,11 @@ func (s *RepositorySuite) TestConcurrentAccessIsSafe() {
 }
 
 func newNote(title domain.NoteTitle, createdAt time.Time) *domain.Note {
-	return &domain.Note{ID: domain.NewNoteID(), Title: title, Body: "", CreatedAt: createdAt}
+	note := fixture.RandomNote()
+	note.Title = title
+	note.CreatedAt = createdAt
+
+	return note
 }
 
 func titles(list []*domain.Note) []domain.NoteTitle {

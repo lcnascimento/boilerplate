@@ -76,7 +76,7 @@ func (t NoteTitle) Validate() error {
 	}
 
 	if utf8.RuneCountInString(string(t)) > NoteTitleMaxLength {
-		return ErrInvalidNoteTitle.WithCause(errors.New("title must be at most 120 characters"))
+		return ErrInvalidNoteTitle.WithCause(errors.New("title must be at most %d characters", NoteTitleMaxLength))
 	}
 
 	return nil

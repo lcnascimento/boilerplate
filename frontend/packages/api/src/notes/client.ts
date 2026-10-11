@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-import { request, type Result } from "../core";
+import { invalidInputError, request, type Result } from "../core";
 
 import {
+  createNoteInputSchema,
   noteListSchema,
   noteSchema,
   type CreateNoteInput,
@@ -34,13 +35,18 @@ export function createNotesClient({
   const noteUrl = (id: NoteId) => `${notesUrl}/${encodeURIComponent(id)}`;
 
   return {
-    create: (input) =>
-      request({
+    create: async (input) => {
+      const parsed = createNoteInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return { kind: "error", error: invalidInputError(parsed.error) };
+      }
+      return request({
         url: notesUrl,
         method: "POST",
-        body: toWireCreateNote(input),
+        body: toWireCreateNote(parsed.data),
         schema: noteSchema,
-      }),
+      });
+    },
     list: () => request({ url: notesUrl, schema: noteListSchema }),
     get: (id) => request({ url: noteUrl(id), schema: noteSchema }),
     delete: (id) =>
