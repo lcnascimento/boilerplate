@@ -8,8 +8,8 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/errors v1.9.3
-	github.com/lcnascimento/go-kit/http v1.4.7
-	github.com/lcnascimento/go-kit/o11y v1.6.5
+	github.com/lcnascimento/go-kit/http v1.4.8
+	github.com/lcnascimento/go-kit/o11y v1.6.6
 	github.com/lcnascimento/go-kit/validator v1.11.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.45.0
