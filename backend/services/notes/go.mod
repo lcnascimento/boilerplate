@@ -18,10 +18,10 @@ exclude (
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/errors v1.9.0
+	github.com/lcnascimento/go-kit/errors v1.9.1-0.20261011151219-8893a4f5ecfe // TODO(go-kit): swap for errors/v1.9.1 and validator/v1.11.0 once tagged
 	github.com/lcnascimento/go-kit/http v1.4.5
 	github.com/lcnascimento/go-kit/o11y v1.6.3
-	github.com/lcnascimento/go-kit/validator v1.10.1
+	github.com/lcnascimento/go-kit/validator v1.10.2-0.20261011151421-31af4cd5a5f8 // TODO(go-kit): swap for errors/v1.9.1 and validator/v1.11.0 once tagged
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/trace v1.45.0

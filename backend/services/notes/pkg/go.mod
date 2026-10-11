@@ -14,9 +14,9 @@ exclude (
 )
 
 require (
-	github.com/lcnascimento/go-kit/errors v1.9.0
+	github.com/lcnascimento/go-kit/errors v1.9.1-0.20261011151219-8893a4f5ecfe // TODO(go-kit): swap for errors/v1.9.1 and validator/v1.11.0 once tagged
 	github.com/lcnascimento/go-kit/util v1.4.3
-	github.com/lcnascimento/go-kit/validator v1.10.1
+	github.com/lcnascimento/go-kit/validator v1.10.2-0.20261011151421-31af4cd5a5f8 // TODO(go-kit): swap for errors/v1.9.1 and validator/v1.11.0 once tagged
 	github.com/stretchr/testify v1.12.1
 )
 
