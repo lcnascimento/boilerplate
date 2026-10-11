@@ -2,8 +2,6 @@ package notes
 
 import (
 	"context"
-	"reflect"
-	"strings"
 	"time"
 
 	"github.com/lcnascimento/go-kit/errors"
@@ -98,9 +96,7 @@ func (a *Application) Delete(ctx context.Context, id domain.NoteID) error {
 }
 
 // validate runs the validator and rebuilds its failure as domain.ErrInvalidInput
-// (go-kit's sentinel has another code), one cause per reason. The validator names
-// a field by its Go namespace, so a rule inside the embedded NoteContent reads
-// "[NoteContent.title]"; the wire is flat, so that segment is dropped.
+// (go-kit's sentinel has another code), one cause per reason.
 func (a *Application) validate(note *domain.Note) error {
 	err := a.validator.Struct(note)
 	if err == nil {
@@ -113,10 +109,8 @@ func (a *Application) validate(note *domain.Note) error {
 
 	out := domain.ErrInvalidInput
 	for _, reason := range errors.SafeReasons(err) {
-		out = out.WithCause(errors.New("%s", strings.Replace(reason, embeddedContent, "[", 1)))
+		out = out.WithCause(errors.New("%s", reason))
 	}
 
 	return out
 }
-
-var embeddedContent = "[" + reflect.TypeFor[domain.NoteContent]().Name() + "."

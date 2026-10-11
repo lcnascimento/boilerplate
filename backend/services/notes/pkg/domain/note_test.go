@@ -70,21 +70,21 @@ func TestNote_InvalidReportsEveryReason(t *testing.T) {
 		},
 		"empty title": {
 			note:    domain.Note{ID: domain.NewNoteID()},
-			reasons: []string{"[NoteContent.title] is a required field"},
+			reasons: []string{"[title] is a required field"},
 		},
 		"121 character title": {
 			note:    domain.Note{ID: domain.NewNoteID(), NoteContent: domain.NoteContent{Title: strings.Repeat("ç", 121)}},
-			reasons: []string{"[NoteContent.title] must be a maximum of 120 characters in length"},
+			reasons: []string{"[title] must be a maximum of 120 characters in length"},
 		},
 		"10001 character body": {
 			note:    domain.Note{ID: domain.NewNoteID(), NoteContent: domain.NoteContent{Title: "a", Body: strings.Repeat("a", 10_001)}},
-			reasons: []string{"[NoteContent.body] must be a maximum of 10,000 characters in length"},
+			reasons: []string{"[body] must be a maximum of 10,000 characters in length"},
 		},
 		"everything wrong": {
 			note: domain.Note{NoteContent: domain.NoteContent{Body: strings.Repeat("a", 10_001)}},
 			reasons: []string{
-				"[NoteContent.title] is a required field",
-				"[NoteContent.body] must be a maximum of 10,000 characters in length",
+				"[title] is a required field",
+				"[body] must be a maximum of 10,000 characters in length",
 				"[id] must be a valid canonical id with prefix note",
 			},
 		},

@@ -4,24 +4,13 @@ go 1.27.2
 
 replace github.com/lcnascimento/boilerplate/backend/services/notes/pkg => ./pkg
 
-// go-kit modules reference each other through local replaces, which leak
-// zero pseudo-versions into their requirements: exclude them so tags win.
-exclude (
-	github.com/lcnascimento/go-kit/env v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/errors v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/http v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/o11y v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/util v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/validator v0.0.0-00010101000000-000000000000
-)
-
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/errors v1.9.1-0.20261011151219-8893a4f5ecfe // TODO(go-kit): swap for errors/v1.9.1 and validator/v1.11.0 once tagged
-	github.com/lcnascimento/go-kit/http v1.4.5
-	github.com/lcnascimento/go-kit/o11y v1.6.3
-	github.com/lcnascimento/go-kit/validator v1.10.2-0.20261011151421-31af4cd5a5f8 // TODO(go-kit): swap for errors/v1.9.1 and validator/v1.11.0 once tagged
+	github.com/lcnascimento/go-kit/errors v1.9.3
+	github.com/lcnascimento/go-kit/http v1.4.7
+	github.com/lcnascimento/go-kit/o11y v1.6.5
+	github.com/lcnascimento/go-kit/validator v1.11.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/trace v1.45.0
@@ -43,8 +32,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/lcnascimento/go-kit/env v1.2.0 // indirect
-	github.com/lcnascimento/go-kit/util v1.4.3 // indirect
+	github.com/lcnascimento/go-kit/env v1.2.2 // indirect
+	github.com/lcnascimento/go-kit/util v1.4.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.20.0 // indirect
@@ -68,12 +57,12 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
-	google.golang.org/grpc v1.83.0 // indirect
+	google.golang.org/grpc v1.83.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
