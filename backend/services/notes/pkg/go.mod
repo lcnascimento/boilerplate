@@ -29,8 +29,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/lcnascimento/go-kit/o11y v1.6.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	go.opentelemetry.io/otel v1.44.1-0.20260626205805-41ff5ed18bec // indirect
-	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01 // indirect
+	go.opentelemetry.io/otel v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
