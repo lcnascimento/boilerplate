@@ -27,9 +27,12 @@ func Logger(logger *slog.Logger) fx.Option {
 func Validator() fx.Option {
 	return fx.Module(
 		"Validator",
-		fx.Provide(func() (*validator.Validator, error) {
-			return validator.New(validator.WithJSONFieldNames())
-		}),
+		fx.Provide(fx.Annotate(
+			func() (*validator.Validator, error) {
+				return validator.New(validator.WithJSONFieldNames())
+			},
+			fx.As(new(application.Validator)),
+		)),
 	)
 }
 

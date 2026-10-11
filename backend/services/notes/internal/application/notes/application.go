@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/lcnascimento/go-kit/errors"
-	"github.com/lcnascimento/go-kit/validator"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -20,11 +19,11 @@ var validatorMu sync.Mutex
 
 type Application struct {
 	notes     application.NotesRepository
-	validator *validator.Validator
+	validator application.Validator
 	now       func() time.Time
 }
 
-func New(notes application.NotesRepository, v *validator.Validator, opts ...Option) *Application {
+func New(notes application.NotesRepository, v application.Validator, opts ...Option) *Application {
 	app := &Application{
 		notes:     notes,
 		validator: v,
@@ -51,10 +50,6 @@ func (a *Application) Create(ctx context.Context, req *models.CreateNoteRequest)
 		Title:     domain.NoteTitle(req.Title),
 		Body:      req.Body,
 		CreatedAt: a.now(),
-	}
-
-	if err := note.Validate(); err != nil {
-		return nil, a.onError(ctx, ErrCreateNote.WithCause(err))
 	}
 
 	if err := a.notes.Create(ctx, note); err != nil {
