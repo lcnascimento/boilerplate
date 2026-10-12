@@ -73,6 +73,14 @@ E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`
 
 <!-- example:end -->
 
+Para um stack leve, sem observabilidade, Scalar nem `web-e2e-ui`, suba o modo mínimo:
+
+```sh
+TILT_STACK=minimal tilt up
+```
+
+Ele sobe só os serviços Go, o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
+
 Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem no dashboard `logs` do Grafana, filtrados por `service_name`, e não no painel do Tilt.
 
 O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de cada serviço para o `next dev`. Para rodar o `next dev` sem o Tilt, copie `frontend/apps/web/.env.example` para `frontend/apps/web/.env.local`. Sem essas variáveis, o servidor recusa subir.

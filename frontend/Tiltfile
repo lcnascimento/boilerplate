@@ -33,18 +33,20 @@ local_resource(
 # process per service), so it never touches the dev servers above. 9330 clears
 # the app (3000/3001), Grafana (3010), Loki (3100), Tempo (3200), the services
 # (8080/8081), Scalar (8090) and Playwright's own report server (9323).
+# TILT_STACK=minimal does not register it.
 PLAYWRIGHT_UI_PORT = 9330
 
-local_resource(
-    'web-e2e-ui',
-    serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
-    resource_deps=['frontend-deps'],
-    auto_init=False,
-    trigger_mode=TRIGGER_MODE_MANUAL,
-    readiness_probe=probe(
-        period_secs=5,
-        tcp_socket=tcp_socket_action(port=PLAYWRIGHT_UI_PORT),
-    ),
-    links=[link('http://127.0.0.1:{}'.format(PLAYWRIGHT_UI_PORT), 'Playwright UI')],
-    labels=['frontend'],
-)
+if os.getenv('TILT_STACK', '') != 'minimal':
+    local_resource(
+        'web-e2e-ui',
+        serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
+        resource_deps=['frontend-deps'],
+        auto_init=False,
+        trigger_mode=TRIGGER_MODE_MANUAL,
+        readiness_probe=probe(
+            period_secs=5,
+            tcp_socket=tcp_socket_action(port=PLAYWRIGHT_UI_PORT),
+        ),
+        links=[link('http://127.0.0.1:{}'.format(PLAYWRIGHT_UI_PORT), 'Playwright UI')],
+        labels=['frontend'],
+    )
