@@ -14,7 +14,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | --- | --- |
 | Backend (`backend/`) | Go (versão no `go.work`) com [uber/fx](https://github.com/uber-go/fx) e [go-kit](https://github.com/lcnascimento/go-kit) (`errors`, `http`, `o11y`, `env`, `util`, `validator`), `golangci-lint`, `mockgen`, `govulncheck` e coleção [Bruno](https://www.usebruno.com/) |
 | Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs` e `traces` |
-| Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
+| Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Acesso com [pgx](https://github.com/jackc/pgx) (`pgxpool`, instrumentado com [otelpgx](https://github.com/exaring/otelpgx)) e queries tipadas pelo [sqlc](https://sqlc.dev/). Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
@@ -106,6 +106,10 @@ make migration.new name=add_tags                  # basta enquanto só um servi�
 make migration.new name=add_tags service=<name>   # com mais de um
 ```
 
+A API abre o pool no boot e pinga o banco: com o banco inacessível, ela falha em até 5s com um erro dizendo o host e a causa. As queries aparecem nos traces do Grafana.
+
+Cada repositório escreve suas queries em SQL num `queries.sql` ao lado dele, e o [sqlc](https://sqlc.dev/) gera o código Go tipado num pacote `internal/db` do repositório (commitado). O `sqlc.yaml` na raiz do serviço tem um bloco `sql:` por repositório, com o `schema` apontando para as migrations. Depois de mudar uma query ou uma migration, rode `make sqlc` em `backend/`; o `ci-backend` falha se o código gerado estiver desatualizado.
+
 Se o banco tiver uma migration aplicada que a branch atual não conhece (por exemplo, depois de trocar de branch), o `<name>-migrate` e o `make db.migrate` falham com uma mensagem pedindo `make db.reset`. Para zerar todos os bancos, apague o volume: `docker compose down -v` em `backend/`.
 
 ### Lint e testes
@@ -113,12 +117,17 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
 ```sh
-make lint          # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
-make test          # go test -race com cobertura
-make mocks         # regenera internal/mocks/mocks.go a partir de cada contracts.go
-make tidy          # go mod tidy
-make vuln-check    # govulncheck (só local, fora do CI)
+make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
+make test             # go test -race com cobertura: unit + componente (exige o Postgres no ar)
+make test.unit        # só os de unidade (-short), sem banco
+make test.component   # só os de componente (-run Component)
+make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
+make mocks            # regenera internal/mocks/mocks.go a partir de cada contracts.go
+make tidy             # go mod tidy
+make vuln-check       # govulncheck (só local, fora do CI)
 ```
+
+Os testes de componente (`TestComponent<Unit>_<Scenario>`, pulados com `-short`) rodam contra o Postgres de verdade, sem precisar do `<name>-db` nem do `<name>-migrate`: basta o container (`tilt up` ou `docker compose up -d postgres` em `backend/`). Cada teste ganha um database próprio, clonado de um template já migrado pelo [pgtestdb](https://github.com/peterldowns/pgtestdb), então eles rodam em paralelo e nunca tocam o database de dev. O template é reaproveitado entre execuções e só é recriado quando as migrations mudam; o database de um teste que falha fica no servidor, com o nome no log do teste. A conexão de admin vem de `POSTGRES_ADMIN_URL` (padrão: o superuser do compose, `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`). Com o Postgres fora do ar, eles falham (não pulam) com uma mensagem dizendo o que rodar.
 
 **Frontend** (em `frontend/`, via Turborepo):
 
@@ -177,7 +186,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Backend**
 
-1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, e o `DATABASE_URL` no `.env.example`.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `DATABASE_URL` no `.env.example`.
    <!-- example:begin -->
    O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
    <!-- example:end -->
@@ -195,7 +204,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    ```
 
 4. Inclua o serviço no `backend/Tiltfile`: `include('./services/<name>/Tiltfile')`.
-5. Rode `make tidy mocks lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
+5. Rode `make tidy mocks sqlc lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
 6. (Opcional) Crie a coleção Bruno em `backend/config/bruno/collections/<Name>` e liste-a em `collections:` no `workspace.yml`.
 
 **OpenAPI**
