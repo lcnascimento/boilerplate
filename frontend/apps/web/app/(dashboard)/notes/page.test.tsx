@@ -1,12 +1,6 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { createTranslator, NextIntlClientProvider } from "next-intl";
-import {
-  cloneElement,
-  isValidElement,
-  type ReactElement,
-  type ReactNode,
-} from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { messages } from "@boilerplate/i18n";
@@ -29,36 +23,22 @@ vi.mock("@/actions/notes", () => ({ listNotes: vi.fn() }));
 
 const listNotesMock = vi.mocked(listNotes);
 
-/**
- * Renders the async server components in a tree ahead of time, as the server
- * would, since the DOM renderer only takes sync components.
- */
-async function resolveServerTree(node: ReactNode): Promise<ReactNode> {
-  if (Array.isArray(node)) return Promise.all(node.map(resolveServerTree));
-  if (!isValidElement<{ children?: ReactNode }>(node)) return node;
-
-  const { type, props } = node;
-  if (typeof type === "function" && type.constructor.name === "AsyncFunction") {
-    const render = type as (props: unknown) => Promise<ReactNode>;
-    return resolveServerTree(await render(props));
-  }
-  if (props.children === undefined) return node;
-  return cloneElement(node as ReactElement<{ children?: ReactNode }>, {
-    children: await resolveServerTree(props.children),
-  });
-}
-
+// The page is async only for its translations: awaiting it yields a tree of
+// sync components, and Notes resolves listNotes under the page's Suspense,
+// which the awaited act lets settle.
 async function renderPage() {
-  const page = await resolveServerTree(<NotesPage />);
-  render(
-    <NextIntlClientProvider
-      locale="pt-BR"
-      messages={allMessages}
-      timeZone="America/Sao_Paulo"
-    >
-      {page}
-    </NextIntlClientProvider>
-  );
+  await act(async () => {
+    const page = await NotesPage();
+    render(
+      <NextIntlClientProvider
+        locale="pt-BR"
+        messages={allMessages}
+        timeZone="America/Sao_Paulo"
+      >
+        {page}
+      </NextIntlClientProvider>
+    );
+  });
 }
 
 beforeEach(() => {
@@ -74,7 +54,7 @@ describe("NotesPage", () => {
     await renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "Nenhuma nota ainda" })
+      await screen.findByRole("heading", { name: "Nenhuma nota ainda" })
     ).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -92,7 +72,7 @@ describe("NotesPage", () => {
 
     await renderPage();
 
-    const alert = screen.getByRole("alert");
+    const alert = await screen.findByRole("alert");
     expect(
       within(alert).getByRole("heading", {
         name: "Serviço de notas indisponível",
