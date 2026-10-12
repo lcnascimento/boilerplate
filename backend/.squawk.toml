@@ -1,0 +1,4 @@
+# squawk: lints every service's migrations (make lint). goose runs each migration
+# in a transaction, so the rules judge them as such.
+assume_in_transaction = true
+pg_version = "18.0"

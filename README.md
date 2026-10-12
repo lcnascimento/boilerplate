@@ -14,6 +14,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | --- | --- |
 | Backend (`backend/`) | Go (versão no `go.work`) com [uber/fx](https://github.com/uber-go/fx) e [go-kit](https://github.com/lcnascimento/go-kit) (`errors`, `http`, `o11y`, `env`, `util`, `validator`), `golangci-lint`, `mockgen`, `govulncheck` e coleção [Bruno](https://www.usebruno.com/) |
 | Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs` e `traces` |
+| Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
@@ -39,7 +40,7 @@ openapi/               uma spec por serviço + Scalar
 - **Go** na versão do `backend/go.work`. Com um Go mais antigo instalado, o `GOTOOLCHAIN=auto` (padrão) baixa a versão certa sozinho.
 - **Node** na versão do `.nvmrc` (`nvm use`, `fnm use` ou equivalente).
 - **pnpm**. Qualquer versão recente serve: ela troca para a versão do `packageManager` dos `package.json` sozinha.
-- **Docker**, para a observabilidade e o Scalar.
+- **Docker**, para o Postgres, a observabilidade e o Scalar. O `psql` roda dentro do container, então não precisa dele no host.
 - **Tilt**.
 
 ### Primeira vez
@@ -63,6 +64,7 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 | O quê | Onde |
 | --- | --- |
 | App web (`next dev`) | <http://localhost:3000> |
+| Postgres (superuser `postgres`/`postgres`) | `localhost:5432` |
 | Grafana (home = dashboard `overview`) | <http://localhost:3010> |
 | Scalar (referência das APIs) | <http://localhost:8090> |
 | Prometheus, Loki, Tempo, Pyroscope, Alloy | `9090`, `3100`, `3200`, `4040`, `12345` (links na UI do Tilt) |
@@ -79,18 +81,39 @@ Para um stack leve, sem observabilidade, Scalar nem `web-e2e-ui`, suba o modo m�
 TILT_STACK=minimal tilt up
 ```
 
-Ele sobe só os serviços Go, o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
+Ele sobe só o Postgres, os serviços Go (com os recursos de banco), o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
 
 Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem no dashboard `logs` do Grafana, filtrados por `service_name`, e não no painel do Tilt.
 
 O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de cada serviço para o `next dev`. Para rodar o `next dev` sem o Tilt, copie `frontend/apps/web/.env.example` para `frontend/apps/web/.env.local`. Sem essas variáveis, o servidor recusa subir.
+
+### Banco de dados
+
+Um único container `postgres` (em `backend/docker-compose.yml`) atende todos os serviços; cada serviço tem um database e um role com o nome dele, e o database pertence ao role. No Tilt, cada serviço encadeia `postgres → <name>-db → <name>-migrate → <name>-api-*`, então a API só sobe com o banco criado e migrado. Os dados ficam no volume `postgres_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, suba só o banco com `docker compose up -d --wait postgres` em `backend/`.
+
+No diretório do serviço (`backend/services/<name>/`), com o `postgres` no ar:
+
+```sh
+make db.setup      # cria o role e o database, só se não existirem
+make db.migrate    # aplica as migrations pendentes (binário cmd/migrate, mesmo DATABASE_URL da API)
+make db.reset      # apaga o database, recria e migra de novo
+```
+
+As migrations ficam em `internal/repository/migrations/` de cada serviço, embutidas no binário. São só para frente (só a seção `-- +goose Up`; desfazer algo é uma migration nova), numeradas em sequência com 5 dígitos, cada uma na sua transação, e rodam sob advisory lock, então execuções concorrentes não se atropelam. A API não roda migrations no boot. Para criar a próxima, em `backend/`:
+
+```sh
+make migration.new name=add_tags                  # basta enquanto só um serviço tem migrations
+make migration.new name=add_tags service=<name>   # com mais de um
+```
+
+Se o banco tiver uma migration aplicada que a branch atual não conhece (por exemplo, depois de trocar de branch), o `<name>-migrate` e o `make db.migrate` falham com uma mensagem pedindo `make db.reset`. Para zerar todos os bancos, apague o volume: `docker compose down -v` em `backend/`.
 
 ### Lint e testes
 
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
 ```sh
-make lint          # golangci-lint (make lint.fix corrige o que der)
+make lint          # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
 make test          # go test -race com cobertura
 make mocks         # regenera internal/mocks/mocks.go a partir de cada contracts.go
 make tidy          # go mod tidy
@@ -154,7 +177,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Backend**
 
-1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, o recurso do Tilt.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, e o `DATABASE_URL` no `.env.example`.
    <!-- example:begin -->
    O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
    <!-- example:end -->
@@ -172,7 +195,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    ```
 
 4. Inclua o serviço no `backend/Tiltfile`: `include('./services/<name>/Tiltfile')`.
-5. Rode `make tidy mocks lint test` em `backend/`. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
+5. Rode `make tidy mocks lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
 6. (Opcional) Crie a coleção Bruno em `backend/config/bruno/collections/<Name>` e liste-a em `collections:` no `workspace.yml`.
 
 **OpenAPI**
@@ -233,4 +256,4 @@ make clean-example
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 
-O estado com zero serviços também é válido e fica verde: o `go.work` fica só com `quality` (`make lint` e `make test` passam), o `tilt up` sobe a observabilidade e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/`, `/profile/preferences` e o `not-found`, o e2e roda só o teste do shell e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`).
+O estado com zero serviços também é válido e fica verde: o `go.work` fica só com `quality` (`make lint` e `make test` passam, sem migrations para o squawk), o `tilt up` sobe o Postgres, a observabilidade e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/`, `/profile/preferences` e o `not-found`, o e2e roda só o teste do shell e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`).
