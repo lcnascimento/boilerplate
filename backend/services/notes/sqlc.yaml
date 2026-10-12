@@ -1,0 +1,17 @@
+# sqlc generates each repository's typed queries (`make sqlc` in backend/).
+# The schema is the goose migrations; each repository adds one `sql:` block.
+version: "2"
+sql:
+  - engine: postgresql
+    schema: internal/repository/migrations
+    queries: internal/repository/notes/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/repository/notes/internal/db
+        sql_package: pgx/v5
+        overrides:
+          - db_type: uuid
+            go_type: github.com/google/uuid.UUID
+          - db_type: timestamptz
+            go_type: time.Time

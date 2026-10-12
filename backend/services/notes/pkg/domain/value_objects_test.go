@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -25,6 +26,15 @@ func TestNoteID_ParseRoundTrips(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f", id.String())
+}
+
+func TestNoteID_FromUUIDAddsNotePrefix(t *testing.T) {
+	t.Parallel()
+
+	id := domain.NoteIDFromUUID(uuid.MustParse("01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f"))
+
+	require.Equal(t, "note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f", id.String())
+	require.Equal(t, domain.MustParseNoteID("note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f"), id)
 }
 
 func TestNoteID_ParseRejectsMalformedIDs(t *testing.T) {

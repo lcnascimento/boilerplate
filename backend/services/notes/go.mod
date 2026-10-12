@@ -5,6 +5,7 @@ go 1.27.2
 replace github.com/lcnascimento/boilerplate/backend/services/notes/pkg => ./pkg
 
 require (
+	github.com/exaring/otelpgx v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.11.0
@@ -14,6 +15,7 @@ require (
 	github.com/lcnascimento/go-kit/http v1.4.7
 	github.com/lcnascimento/go-kit/o11y v1.6.5
 	github.com/lcnascimento/go-kit/validator v1.11.0
+	github.com/peterldowns/pgtestdb v0.1.1
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0

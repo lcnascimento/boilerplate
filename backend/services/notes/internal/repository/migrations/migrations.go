@@ -16,8 +16,11 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 )
 
+// FS holds the migration files. The component tests hash it to know when their
+// migrated template database is stale.
+//
 //go:embed *.sql
-var files embed.FS
+var FS embed.FS
 
 var (
 	ErrUnknownAppliedVersion = errors.New(
@@ -42,7 +45,7 @@ func Up(ctx context.Context, db *sql.DB) error {
 		return ErrMigrate.WithCause(err)
 	}
 
-	provider, err := goose.NewProvider("", db, files, goose.WithStore(store), goose.WithSessionLocker(locker))
+	provider, err := goose.NewProvider("", db, FS, goose.WithStore(store), goose.WithSessionLocker(locker))
 	if err != nil {
 		return ErrMigrate.WithCause(err)
 	}
