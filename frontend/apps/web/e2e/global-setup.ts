@@ -1,8 +1,12 @@
 import { stackProbes } from "./stack";
 
-// Fails the run in seconds, before any browser starts, when a server of the
-// stack does not answer: the suite never starts servers of its own.
-const PROBE_TIMEOUT_MS = 5_000;
+// Fails the run before any browser starts when a server of the stack does not
+// answer: the suite never starts servers of its own. A stack that is down
+// refuses the connection at once, so the timeout only bounds a slow answer.
+// It is generous because Tilt marks `web` ready once `next dev` binds its
+// port, before it compiles any route: on a cold cache (a fresh CI runner) the
+// first `GET /` waits for that compile, which takes several seconds.
+const PROBE_TIMEOUT_MS = 60_000;
 
 async function probe(url: string): Promise<string | undefined> {
   try {
