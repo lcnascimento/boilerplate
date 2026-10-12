@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/fx"
 
+	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/o11y"
 	"github.com/lcnascimento/go-kit/o11y/log"
 
@@ -43,6 +44,8 @@ func run(app *fx.App) int {
 	}()
 
 	if err := app.Start(ctx); err != nil {
+		logStartFailure(ctx, err)
+
 		return 1
 	}
 
@@ -57,6 +60,17 @@ func run(app *fx.App) int {
 	return signal.ExitCode
 }
 
+// logStartFailure surfaces the error a constructor returned, with its cause,
+// which fx's own report buries under the dependency chain.
+func logStartFailure(ctx context.Context, err error) {
+	var cause errors.CustomError
+	if !errors.As(err, &cause) {
+		return
+	}
+
+	logger.ErrorContext(ctx, cause.Error(), "reasons", errors.Reasons(cause), "attributes", errors.Attributes(cause))
+}
+
 func NewFrontendServer() *fx.App {
 	return fx.New(frontendServerOptions()...)
 }
@@ -65,6 +79,7 @@ func frontendServerOptions() []fx.Option {
 	return []fx.Option{
 		Logger(logger),
 		Validator(),
+		Database(),
 		Repositories(),
 		NotesService(),
 		fx.Provide(func(notes transport.NotesService, shutdowner fx.Shutdowner) *frontend.Server {

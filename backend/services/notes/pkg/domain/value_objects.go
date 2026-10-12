@@ -1,6 +1,10 @@
 package domain
 
-import "github.com/lcnascimento/go-kit/util"
+import (
+	"github.com/google/uuid"
+
+	"github.com/lcnascimento/go-kit/util"
+)
 
 const ContextKeyNoteID string = "note_id"
 
@@ -12,6 +16,11 @@ type NoteID struct {
 
 func NewNoteID() NoteID {
 	return NoteID{util.NewCanonicalID(noteIDPrefix)}
+}
+
+// NoteIDFromUUID rebuilds a NoteID from the UUID that NoteID.UUID returns.
+func NoteIDFromUUID(u uuid.UUID) NoteID {
+	return NoteID{util.CanonicalIDFromUUID(noteIDPrefix, u)}
 }
 
 func ParseNoteID(s string) (NoteID, error) {
