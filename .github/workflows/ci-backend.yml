@@ -42,6 +42,16 @@ jobs:
       - name: Setup
         run: make setup
 
+      # Fails when the committed sqlc code is stale. The tree is staged first, so
+      # only what `make sqlc` changes (or adds) shows up, even after a bootstrap.
+      - name: sqlc
+        run: |
+          git add -A
+          make sqlc
+          git diff --exit-code
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then echo "make sqlc created untracked files:"; echo "$untracked"; exit 1; fi
+
       - name: Lint
         run: make lint
 

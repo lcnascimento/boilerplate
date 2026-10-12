@@ -9,6 +9,7 @@ MOCKGEN_VERSION := v0.6.0
 GOVULNCHECK_VERSION := v1.8.0
 GOOSE_VERSION := v3.29.0
 SQUAWK_VERSION := v2.68.0
+SQLC_VERSION := v1.31.1
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 
@@ -23,12 +24,18 @@ MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
 PACKAGES = go list ./... | { grep -v -e '/cmd/' -e '/mocks$$' || true; }
 
 # in_modules runs a shell snippet inside each module of go.work, stopping at the first failure.
+# The snippet sets its own errexit: make 3.81 (macOS) ignores .SHELLFLAGS, and the
+# subshell's status is read on its own line because `( ... ) || exit` would turn errexit off inside it.
 define in_modules
 	@for dir in $(MODULES); do \
 		echo "==> $(1) $${dir#$(CURDIR)/}"; \
-		(cd "$$dir" && $(2)); \
+		(set -eu -o pipefail; cd "$$dir"; $(2)); status=$$?; \
+		if [ $$status -ne 0 ]; then exit $$status; fi; \
 	done
 endef
+
+# go_test runs go test with the given flags over the current module's packages.
+go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -race -cover $(1) $$pkgs; fi
 
 # env creates each missing .env from its .env.example; existing ones are kept.
 .PHONY: env
@@ -46,6 +53,7 @@ setup: env
 	@go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
 	@go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 	@go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
+	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 	@$(MAKE) -s squawk
 
 # squawk ships as a release binary: downloaded only when missing or at another version.
@@ -85,10 +93,26 @@ mocks:
 			$(GOBIN)/mockgen -source "$$src" -destination "$$dir/internal/mocks/mocks.go" -package mocks; \
 		done)
 
+# test runs unit and component tests; component tests need Postgres up
+# (`tilt up` or `docker compose up -d postgres`) and connect through
+# POSTGRES_ADMIN_URL, the compose superuser by default.
 .PHONY: test
 test:
-	$(call in_modules,test,pkgs=$$($(PACKAGES)); \
-		if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -race -cover -coverprofile=coverage.out $$pkgs; fi)
+	$(call in_modules,test,$(call go_test,-coverprofile=coverage.out))
+
+# test.unit skips the component tests (-short): no Postgres needed.
+.PHONY: test.unit
+test.unit:
+	$(call in_modules,test.unit,$(call go_test,-short))
+
+.PHONY: test.component
+test.component:
+	$(call in_modules,test.component,$(call go_test,-run Component))
+
+# sqlc regenerates each module's typed queries from its sqlc.yaml, then vets them.
+.PHONY: sqlc
+sqlc:
+	$(call in_modules,sqlc,if [ -f sqlc.yaml ]; then $(GOBIN)/sqlc generate && $(GOBIN)/sqlc vet; else echo "no sqlc.yaml"; fi)
 
 .PHONY: vuln-check
 vuln-check:
