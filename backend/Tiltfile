@@ -7,7 +7,9 @@ minimal = os.getenv('TILT_STACK', '') == 'minimal'
 compose_files = ['./docker-compose.yml']
 if not minimal:
     compose_files.append('./docker-compose.observability.yml')
-docker_compose(compose_files)
+# wait=True runs `docker compose up --wait`: without it Tilt marks a compose
+# resource ready once its container starts, ignoring its healthcheck.
+docker_compose(compose_files, wait=True)
 
 # Shared by every service, so every stack registers it. Ready once its
 # healthcheck (pg_isready) passes.
