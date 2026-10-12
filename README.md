@@ -50,7 +50,7 @@ pnpm -C frontend install     # workspace do frontend
 make -C backend setup        # cria os .env a partir dos .env.example e instala as ferramentas Go
 ```
 
-O `make -C backend setup` cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) só quando eles ainda não existem. Para pegar um `.env.example` atualizado, apague o `.env` e rode de novo.
+O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) só quando eles ainda não existem; o `env` também roda sozinho, sem instalar as ferramentas. Para pegar um `.env.example` atualizado, apague o `.env` e rode de novo.
 
 ### Subindo tudo
 
