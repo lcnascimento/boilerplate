@@ -156,6 +156,12 @@ jobs:
           pnpm --filter @boilerplate/web exec playwright test
           end=$(date +%s.%N)
           echo "::notice title=t2::e2e=$(echo "$end - $start" | bc)s"
+      - name: OTel without a collector, 90s later
+        working-directory: .
+        run: |
+          sleep 90
+          curl -fsS http://localhost:8080/health
+          tilt logs notes-api-frontend | grep -v "\[Fx\]" || true
       - name: Tilt log
         if: always()
         working-directory: .
