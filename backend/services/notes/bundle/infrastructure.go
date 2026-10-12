@@ -16,6 +16,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 )
 
 const (
@@ -51,11 +52,11 @@ func Validator() fx.Option {
 
 // Database opens the service's Postgres pool on DATABASE_URL, traced and
 // measured through the global OTel providers, and fails the boot when the
-// database does not answer a ping.
+// database does not answer a ping. The pool also backs the /health probe.
 func Database() fx.Option {
 	return fx.Module(
 		"Database",
-		fx.Provide(newPool),
+		fx.Provide(fx.Annotate(newPool, fx.As(fx.Self()), fx.As(new(transport.Database)))),
 	)
 }
 
