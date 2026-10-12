@@ -1,14 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const CI = Boolean(process.env.CI);
+// spike/boi-37: against Tilt's stack (web on 3000, notes on 8080), no webServer.
+const TILT = process.env.E2E_STACK === "tilt";
 
 // Its own port, so a `next dev` on 3000 (Tilt) is never reused by mistake.
 // It must not clash with the observability stack (3010, 3100, 3200, ...).
-const WEB_PORT = 3001;
+const WEB_PORT = TILT ? 3000 : 3001;
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 // example:begin
 // Not Tilt's 8080: the e2e run gets its own notes service.
-const NOTES_PORT = 8081;
+const NOTES_PORT = TILT ? 8080 : 8081;
 export const NOTES_URL = `http://localhost:${NOTES_PORT}`;
 // example:end
 
@@ -43,7 +45,7 @@ export default defineConfig({
       // example:end
     },
   ],
-  webServer: [
+  webServer: TILT ? [] : [
     {
       command: `next build && next start --port ${WEB_PORT}`,
       url: WEB_URL,

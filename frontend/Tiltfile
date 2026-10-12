@@ -48,3 +48,13 @@ local_resource(
     links=[link('http://127.0.0.1:{}'.format(PLAYWRIGHT_UI_PORT), 'Playwright UI')],
     labels=['frontend'],
 )
+
+# spike/boi-37 (T1): the e2e suite as a Tilt resource; `tilt ci` exits with
+# its result. It stamps the moment its deps turned ready.
+if config.tilt_subcommand == 'ci':
+    local_resource(
+        'web-e2e',
+        cmd='date +%s.%N > /tmp/stack-ready && pnpm --filter @boilerplate/web exec playwright test',
+        resource_deps=['web', 'notes-api-frontend'],
+        labels=['frontend'],
+    )

@@ -1,0 +1,166 @@
+name: spike-e2e
+
+# spike/boi-37: measures the e2e on Tilt's stack in GitHub Actions.
+#   baseline: the current ci-e2e steps (next build + webServer list)
+#   t1: e2e as a Tilt local_resource, run by `tilt ci`
+#   t2: `tilt up` in background + `tilt wait` + playwright
+# Never merged.
+on:
+  push:
+    branches: [spike/boi-37-tilt-ci-boot]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/**/go.sum
+      - name: Build notes
+        working-directory: backend/services/notes
+        run: make build.api.frontend
+      - name: Install Playwright Chromium
+        run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
+      - name: e2e
+        run: pnpm turbo run test:e2e
+
+  t1:
+    runs-on: ubuntu-latest
+    env:
+      E2E_STACK: tilt
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/**/go.sum
+      - name: Install Playwright Chromium
+        run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
+      - name: Restore next dev cache
+        uses: actions/cache@v6
+        with:
+          path: frontend/apps/web/.next/dev/cache
+          key: next-dev-t1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: next-dev-t1-
+      - name: Install Tilt
+        working-directory: .
+        run: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash && tilt version
+      - name: Env files (as on a dev machine, OTel on, no Alloy)
+        working-directory: .
+        run: |
+          cp backend/.env.example backend/.env
+          cp backend/services/notes/.env.example backend/services/notes/.env
+      - name: tilt ci
+        working-directory: .
+        run: |
+          start=$(date +%s.%N)
+          set +e
+          tilt ci --timeout 15m
+          code=$?
+          end=$(date +%s.%N)
+          ready=$(cat /tmp/stack-ready 2>/dev/null || echo "$end")
+          echo "::notice title=t1::boot-to-ready=$(echo "$ready - $start" | bc)s e2e=$(echo "$end - $ready" | bc)s total=$(echo "$end - $start" | bc)s exit=$code"
+          exit $code
+      - name: Containers left
+        if: always()
+        working-directory: .
+        run: docker ps -a; docker images
+
+  t2:
+    runs-on: ubuntu-latest
+    env:
+      E2E_STACK: tilt
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/**/go.sum
+      - name: Install Playwright Chromium
+        run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
+      - name: Restore next dev cache
+        uses: actions/cache@v6
+        with:
+          path: frontend/apps/web/.next/dev/cache
+          key: next-dev-t2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: next-dev-t2-
+      - name: Install Tilt
+        working-directory: .
+        run: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash && tilt version
+      - name: Env files (as on a dev machine, OTel on, no Alloy)
+        working-directory: .
+        run: |
+          cp backend/.env.example backend/.env
+          cp backend/services/notes/.env.example backend/services/notes/.env
+      - name: tilt up + wait
+        working-directory: .
+        run: |
+          start=$(date +%s.%N)
+          tilt up --stream > /tmp/tilt.log 2>&1 &
+          until tilt get uiresource web notes-api-frontend >/dev/null 2>&1; do sleep 1; done
+          tilt wait --for=condition=Ready --timeout=10m uiresource/web uiresource/notes-api-frontend
+          end=$(date +%s.%N)
+          echo "::notice title=t2::boot-to-ready=$(echo "$end - $start" | bc)s"
+      - name: First request per route (next dev compiles on demand)
+        working-directory: .
+        run: |
+          for path in / /notes /notes/00000000-0000-0000-0000-000000000000 /rota-que-nao-existe /; do
+            curl -s -o /dev/null -w "$path %{http_code} %{time_total}s\n" "http://localhost:3000$path"
+          done | tee /tmp/routes.txt
+          echo "::notice title=t2 routes::$(tr '\n' ';' < /tmp/routes.txt)"
+      - name: Notes health
+        working-directory: .
+        run: curl -fsS http://localhost:8080/health && curl -fsS http://localhost:8080/notes/v1/notes
+      - name: e2e
+        run: |
+          start=$(date +%s.%N)
+          pnpm --filter @boilerplate/web exec playwright test
+          end=$(date +%s.%N)
+          echo "::notice title=t2::e2e=$(echo "$end - $start" | bc)s"
+      - name: Tilt log
+        if: always()
+        working-directory: .
+        run: cat /tmp/tilt.log; tilt logs notes-api-frontend || true; docker ps -a; docker images
+      - name: tilt down
+        if: always()
+        working-directory: .
+        run: tilt down || true
