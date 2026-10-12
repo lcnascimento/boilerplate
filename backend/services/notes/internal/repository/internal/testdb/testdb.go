@@ -1,7 +1,7 @@
 // Package testdb gives each component test of the repository layer its own
-// migrated Postgres database, cloned from a template that pgtestdb keeps
-// across runs and rebuilds only when the migrations change. A failing test's
-// database is kept, and its URL is in the test log.
+// Postgres database, cloned from a template that pgtestdb keeps across runs
+// and rebuilds only when the migrations change. A failing test's database is
+// kept, and its URL is in the test log.
 package testdb
 
 import (
@@ -35,10 +35,7 @@ const pingTimeout = 5 * time.Second
 func New(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
-	conf := adminConfig(t)
-	requireReachable(t, &conf)
-
-	instance := pgtestdb.Custom(t, conf, migrator{})
+	instance := pgtestdb.Custom(t, reachableAdminConfig(t), migrator{})
 
 	pool, err := pgxpool.New(t.Context(), instance.URL())
 	if err != nil {
@@ -48,6 +45,23 @@ func New(t *testing.T) *pgxpool.Pool {
 	t.Cleanup(pool.Close)
 
 	return pool
+}
+
+// NewEmpty returns a database with no migration applied, for the tests of the
+// migrations themselves. pgtestdb closes it at cleanup.
+func NewEmpty(t *testing.T) *sql.DB {
+	t.Helper()
+
+	return pgtestdb.New(t, reachableAdminConfig(t), pgtestdb.NoopMigrator{})
+}
+
+func reachableAdminConfig(t *testing.T) pgtestdb.Config {
+	t.Helper()
+
+	conf := adminConfig(t)
+	requireReachable(t, &conf)
+
+	return conf
 }
 
 func adminConfig(t *testing.T) pgtestdb.Config {

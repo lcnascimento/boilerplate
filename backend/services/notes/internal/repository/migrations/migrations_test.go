@@ -1,24 +1,16 @@
 package migrations_test
 
 import (
-	"context"
 	"database/sql"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lcnascimento/go-kit/env"
-
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 )
-
-const defaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" //nolint:gosec // local docker-compose credentials
 
 func TestComponentMigrations_CreatesNotesTable(t *testing.T) {
 	t.Parallel()
@@ -92,7 +84,6 @@ func TestComponentMigrations_AppliedVersionWithoutFileAsksForReset(t *testing.T)
 	require.Contains(t, err.Error(), "make db.reset")
 }
 
-// newDatabase creates an empty database for one test and drops it at cleanup.
 func newDatabase(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -100,33 +91,5 @@ func newDatabase(t *testing.T) *sql.DB {
 		t.Skip("component test")
 	}
 
-	adminURL := env.Get("POSTGRES_ADMIN_URL", env.WithDefaultValue(defaultAdminURL))
-
-	admin, err := sql.Open("pgx", adminURL)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = admin.Close() })
-
-	if err := admin.PingContext(t.Context()); err != nil {
-		t.Fatalf("postgres is not reachable at POSTGRES_ADMIN_URL (%v): run `tilt up` or `docker compose up -d postgres` in backend/, "+
-			"or `make test.unit` to skip component tests", err)
-	}
-
-	name := "test_migrations_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	_, err = admin.ExecContext(t.Context(), "CREATE DATABASE "+pgx.Identifier{name}.Sanitize())
-	require.NoError(t, err)
-
-	cfg, err := pgx.ParseConfig(adminURL)
-	require.NoError(t, err)
-
-	cfg.Database = name
-
-	db := stdlib.OpenDB(*cfg)
-
-	t.Cleanup(func() {
-		_ = db.Close()
-		ctx := context.WithoutCancel(t.Context())
-		_, _ = admin.ExecContext(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)")
-	})
-
-	return db
+	return testdb.NewEmpty(t)
 }
