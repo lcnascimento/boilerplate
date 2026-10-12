@@ -50,7 +50,7 @@ pnpm -C frontend install     # workspace do frontend
 make -C backend setup        # cria os .env a partir dos .env.example e instala as ferramentas Go
 ```
 
-O `make -C backend setup` cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) só quando eles ainda não existem. Para pegar um `.env.example` atualizado, apague o `.env` e rode de novo.
+O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) só quando eles ainda não existem; o `env` também roda sozinho, sem instalar as ferramentas. Para pegar um `.env.example` atualizado, apague o `.env` e rode de novo.
 
 ### Subindo tudo
 
@@ -72,6 +72,14 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`).
 
 <!-- example:end -->
+
+Para um stack leve, sem observabilidade, Scalar nem `web-e2e-ui`, suba o modo mínimo:
+
+```sh
+TILT_STACK=minimal tilt up
+```
+
+Ele sobe só os serviços Go, o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
 
 Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem no dashboard `logs` do Grafana, filtrados por `service_name`, e não no painel do Tilt.
 

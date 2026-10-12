@@ -24,14 +24,17 @@ define in_modules
 	done
 endef
 
-.PHONY: setup
-setup:
-	@if [ ! -f .env ]; then echo "==> Creating .env from .env.example"; cp .env.example .env; fi
-	@for example in services/*/.env.example; do \
+# env creates each missing .env from its .env.example; existing ones are kept.
+.PHONY: env
+env:
+	@for example in .env.example services/*/.env.example; do \
 		[ -f "$$example" ] || continue; \
 		env_file="$${example%.example}"; \
 		if [ ! -f "$$env_file" ]; then echo "==> Creating $$env_file"; cp "$$example" "$$env_file"; fi; \
 	done
+
+.PHONY: setup
+setup: env
 	@echo "==> Installing Go tooling into $(GOBIN)"
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
