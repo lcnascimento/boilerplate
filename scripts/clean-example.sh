@@ -19,7 +19,6 @@ example_paths=(
 	frontend/apps/web/actions/notes.ts
 	frontend/apps/web/shared/_messages/notes.json
 	frontend/apps/web/e2e/notes.spec.ts
-	frontend/apps/web/e2e/notes-empty.spec.ts
 	frontend/packages/api/src/notes
 )
 

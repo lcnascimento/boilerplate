@@ -29,10 +29,10 @@ local_resource(
 )
 
 # Playwright UI Mode for the web app's e2e suite, on demand: start it from the
-# Tilt UI. It runs the same webServers as `pnpm test:e2e` (web on 3001 and one
-# process per service), so it never touches the dev servers above. 9330 clears
-# the app (3000/3001), Grafana (3010), Loki (3100), Tempo (3200), the services
-# (8080/8081), Scalar (8090) and Playwright's own report server (9323).
+# Tilt UI. Like `pnpm test:e2e`, it runs against this stack (the `web` above
+# and each service), so it waits for them. 9330 clears the app (3000),
+# Grafana (3010), Loki (3100), Tempo (3200), the services (8080...), Scalar
+# (8090) and Playwright's own report server (9323).
 # TILT_STACK=minimal does not register it.
 PLAYWRIGHT_UI_PORT = 9330
 
@@ -40,7 +40,13 @@ if os.getenv('TILT_STACK', '') != 'minimal':
     local_resource(
         'web-e2e-ui',
         serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
-        resource_deps=['frontend-deps'],
+        # One line per service the e2e suite talks to.
+        resource_deps=[
+            'web',
+            # example:begin
+            'notes-api-frontend',
+            # example:end
+        ],
         auto_init=False,
         trigger_mode=TRIGGER_MODE_MANUAL,
         readiness_probe=probe(

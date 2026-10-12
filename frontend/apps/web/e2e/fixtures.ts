@@ -1,0 +1,61 @@
+import { randomUUID } from "node:crypto";
+
+import { test as base, expect, type APIRequestContext } from "@playwright/test";
+
+// example:begin
+import { noteListSchema } from "@boilerplate/api/notes/schemas";
+
+import { NOTES_URL } from "./stack";
+// example:end
+
+/** Mints a unique `e2e-` marker for the data one test creates. */
+type Marker = (label: string) => string;
+
+interface CleanupArgs {
+  request: APIRequestContext;
+  markers: readonly string[];
+}
+
+/**
+ * Deletes, through one service's API, its records that hold one of the
+ * markers. Each service with data the e2e creates adds one to `cleanups`.
+ */
+type Cleanup = (args: CleanupArgs) => Promise<void>;
+
+// example:begin
+async function deleteMarkedNotes({ request, markers }: CleanupArgs) {
+  const list = await request.get(`${NOTES_URL}/notes/v1/notes`);
+  expect(list.status()).toBe(200);
+  const notes = noteListSchema.parse(await list.json());
+
+  for (const { id, title } of notes) {
+    if (!markers.some((marker) => title.includes(marker))) continue;
+    const deleted = await request.delete(`${NOTES_URL}/notes/v1/notes/${id}`);
+    expect(deleted.status()).toBe(204);
+  }
+}
+// example:end
+
+const cleanups: readonly Cleanup[] = [
+  // example:begin
+  deleteMarkedNotes,
+  // example:end
+];
+
+export const test = base.extend<{ marker: Marker }>({
+  // The tests share the dev data: each one marks what it creates and, on
+  // teardown (which runs even when the test fails), the marked records go.
+  marker: async ({ request }, use) => {
+    const markers: string[] = [];
+    await use((label) => {
+      const marker = `e2e-${label}-${randomUUID().slice(0, 8)}`;
+      markers.push(marker);
+      return marker;
+    });
+
+    if (markers.length === 0) return;
+    for (const cleanup of cleanups) await cleanup({ request, markers });
+  },
+});
+
+export { expect };

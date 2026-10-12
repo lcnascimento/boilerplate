@@ -127,7 +127,7 @@ pnpm lint
 pnpm typecheck
 pnpm test                # unit, componentes e as stories do ui como testes
 pnpm build
-pnpm test:e2e            # Playwright contra o stack real
+pnpm test:e2e            # Playwright contra o stack do Tilt (suba-o antes)
 pnpm format:check        # prettier (pnpm format corrige)
 pnpm storybook           # Storybook do ui em http://localhost:6006
 ```
@@ -138,15 +138,13 @@ As stories do `ui` e o e2e rodam no Chromium do Playwright. Instale uma vez:
 pnpm -C frontend --filter @boilerplate/web exec playwright install chromium
 ```
 
-O `pnpm test:e2e` sobe um `next build && next start` na porta `3001` e o binário de cada serviço Go (build com o Go local), então não depende do Tilt e não conflita com ele.
+O e2e depende do Tilt: o `pnpm test:e2e` roda contra o stack já de pé (`tilt up` ou `TILT_STACK=minimal tilt up`), o mesmo que você usa no dia a dia, e não sobe servidor nenhum. Antes do primeiro teste, ele confere o `web` e o `/health` de cada serviço e, se algum não responder, aborta em segundos pedindo `tilt up`. As URLs vêm de env, com as portas do Tilt como padrão: `WEB_URL` (`http://localhost:3000`) e uma `<NAME>_URL` por serviço, todas em `frontend/apps/web/e2e/stack.ts`.
 
-Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, com os mesmos servidores do `pnpm test:e2e`.
+O e2e divide os dados com o seu dev: cada teste cria os próprios registros com um marcador único `e2e-` (a fixture `marker`, em `e2e/fixtures.ts`), só faz asserções sobre eles e, no fim do teste, mesmo em falha, a fixture apaga pela API de cada serviço os registros com esses marcadores.
 
-<!-- example:begin -->
+No CI, o `ci-e2e` faz o mesmo caminho: sobe `TILT_STACK=minimal tilt up` em background, espera todos os recursos ficarem prontos, roda o `pnpm test:e2e` e sempre faz `tilt down`. Em falha, os logs do Tilt vão para o log do passo e para o artefato `tilt-logs`.
 
-O do `notes` sobe na porta `8081`, vazio a cada execução.
-
-<!-- example:end -->
+Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, contra o mesmo stack.
 
 **OpenAPI** (na raiz):
 
@@ -185,7 +183,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    <!-- example:end -->
 2. Escolha uma porta livre (ex.: `8082`) e use-a no `.env.example` do serviço (`FRONTEND_PORT`), no `FRONTEND_PORT ?=` do `Makefile` e na `readiness_probe` e no link do `Tiltfile` do serviço.
    <!-- example:begin -->
-   A `8080` é do `notes` e a `8081`, do e2e dele.
+   A `8080` é do `notes`.
    <!-- example:end -->
 3. Registre os dois módulos no `backend/go.work`:
 
@@ -218,7 +216,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    O `turbo.json` já repassa `*_API_URL` para as tasks.
 
 10. Telas: as rotas em `frontend/apps/web/app/(dashboard)/<name>/`, as funções `"use server"` em `frontend/apps/web/actions/<name>.ts`, as mensagens em `frontend/apps/web/shared/_messages/<name>.json` (pt-BR e en no mesmo arquivo) registradas em `shared/_messages/index.ts`, e o item do menu em `navRoutes` (`shared/navigation.ts`).
-11. e2e: em `frontend/apps/web/playwright.config.ts`, adicione o serviço ao array `webServer` (outra porta livre, `reuseExistingServer: false`) e passe `<NAME>_API_URL` no `env` do servidor web. No `.github/workflows/ci-e2e.yml`, adicione o build do binário antes do passo de e2e.
+11. e2e: em `frontend/apps/web/e2e/stack.ts`, declare a `<NAME>_URL` (padrão, a porta do serviço) e acrescente o `/health` dela em `stackProbes`; se o e2e criar dados no serviço, acrescente em `e2e/fixtures.ts` uma limpeza em `cleanups` que apague pela API os registros com os marcadores. Em `frontend/Tiltfile`, acrescente o recurso do serviço às `resource_deps` do `web-e2e-ui`. O `ci-e2e` não muda: ele sobe o stack do Tilt sem citar recurso nenhum.
 
 Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para adicionar um serviço.
 
