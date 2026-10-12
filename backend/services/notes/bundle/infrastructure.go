@@ -10,11 +10,11 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 
-	"github.com/lcnascimento/go-kit/env"
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 )
@@ -22,7 +22,6 @@ import (
 const (
 	pkg = "notes/bundle"
 
-	defaultDatabaseURL  = "postgres://notes:notes@localhost:5432/notes?sslmode=disable" //nolint:gosec // local docker-compose credentials
 	databasePingTimeout = 5 * time.Second
 )
 
@@ -61,7 +60,12 @@ func Database() fx.Option {
 }
 
 func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
-	cfg, err := pgxpool.ParseConfig(env.Get("DATABASE_URL", env.WithDefaultValue(defaultDatabaseURL)))
+	url, err := config.DatabaseURL()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		return nil, ErrConnectDatabase.WithCause(err)
 	}
