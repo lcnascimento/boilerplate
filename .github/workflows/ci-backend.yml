@@ -45,5 +45,10 @@ jobs:
       - name: Lint
         run: make lint
 
+      # Component tests run against the real database. Always up, even with zero
+      # services, so CI also proves the compose file boots.
+      - name: Postgres
+        run: docker compose up -d --wait postgres
+
       - name: Test
         run: make test

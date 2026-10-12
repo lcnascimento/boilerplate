@@ -9,6 +9,10 @@ if not minimal:
     compose_files.append('./docker-compose.observability.yml')
 docker_compose(compose_files)
 
+# Shared by every service, so every stack registers it. Ready once its
+# healthcheck (pg_isready) passes.
+dc_resource('postgres', labels=['Database'])
+
 if not minimal:
     dc_resource(
         'alloy',
