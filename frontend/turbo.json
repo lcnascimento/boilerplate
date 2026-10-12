@@ -15,9 +15,8 @@
     "typecheck": {},
     "test": {},
     "test:e2e": {
-      "dependsOn": ["^build", "build"],
       "cache": false,
-      "passThroughEnv": ["CI", "PLAYWRIGHT_*"]
+      "passThroughEnv": ["CI", "PLAYWRIGHT_*", "*_URL"]
     },
     "dev": {
       "cache": false,
