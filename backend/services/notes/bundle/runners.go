@@ -82,8 +82,8 @@ func frontendServerOptions() []fx.Option {
 		Database(),
 		Repositories(),
 		NotesService(),
-		fx.Provide(func(notes transport.NotesService, shutdowner fx.Shutdowner) *frontend.Server {
-			return frontend.New(notes, frontend.WithShutdown(func() {
+		fx.Provide(func(notes transport.NotesService, db transport.Database, shutdowner fx.Shutdowner) *frontend.Server {
+			return frontend.New(notes, db, frontend.WithShutdown(func() {
 				_ = shutdowner.Shutdown(fx.ExitCode(1))
 			}))
 		}),
