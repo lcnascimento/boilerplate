@@ -11,16 +11,13 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/lcnascimento/go-kit/env"
 	"github.com/lcnascimento/go-kit/errors"
 
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 )
 
-const (
-	defaultDatabaseURL = "postgres://notes:notes@localhost:5432/notes?sslmode=disable" //nolint:gosec // local docker-compose credentials
-	timeout            = 5 * time.Minute
-)
+const timeout = 5 * time.Minute
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
@@ -37,7 +34,12 @@ func migrate() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	db, err := sql.Open("pgx", env.Get("DATABASE_URL", env.WithDefaultValue(defaultDatabaseURL)))
+	url, err := config.DatabaseURL()
+	if err != nil {
+		return err
+	}
+
+	db, err := sql.Open("pgx", url)
 	if err != nil {
 		return migrations.ErrMigrate.WithCause(err)
 	}
