@@ -7,8 +7,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/fixture"
 )
