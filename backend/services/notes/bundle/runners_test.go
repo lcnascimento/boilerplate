@@ -12,7 +12,8 @@ func TestDependencyGraphs(t *testing.T) {
 	t.Parallel()
 
 	graphs := map[string]func() []fx.Option{
-		"frontend server": bundle.FrontendServerOptions,
+		"frontend server":  bundle.FrontendServerOptions,
+		"worker forwarder": bundle.WorkerForwarderOptions,
 	}
 
 	for name, options := range graphs {

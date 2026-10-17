@@ -1,11 +1,14 @@
 package outbox
 
 import (
+	"time"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-sql/v4/pkg/sql"
 	"github.com/ThreeDotsLabs/watermill/components/forwarder"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -27,4 +30,24 @@ func NewPublisher(tx pgx.Tx) (message.Publisher, error) {
 	}
 
 	return forwarder.NewPublisher(publisher, forwarder.PublisherConfig{ForwarderTopic: ForwarderTopic}), nil
+}
+
+// NewSubscriber reads the outbox one message at a time, in commit order, for ConsumerGroup. Its transaction
+// locks the group's offset row, so of several subscribers only one consumes and the others wait.
+func NewSubscriber(pool *pgxpool.Pool) (message.Subscriber, error) {
+	// A deadline would redeliver a message while its handler may still be publishing it, so the next
+	// message could reach Kafka first.
+	noAckDeadline := time.Duration(0)
+
+	return sql.NewSubscriber(
+		sql.BeginnerFromPgx(pool),
+		sql.SubscriberConfig{
+			ConsumerGroup:    ConsumerGroup,
+			AckDeadline:      &noAckDeadline,
+			SchemaAdapter:    sql.DefaultPostgreSQLSchema{SubscribeBatchSize: 1},
+			OffsetsAdapter:   sql.DefaultPostgreSQLOffsetsAdapter{},
+			InitializeSchema: false,
+		},
+		watermill.NopLogger{},
+	)
 }

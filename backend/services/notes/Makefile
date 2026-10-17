@@ -3,6 +3,7 @@
 export
 
 FRONTEND_PORT ?= 8080
+FORWARDER_HEALTH_PORT ?= 8091
 SCHEMA_REGISTRY_URL ?= http://localhost:8081
 
 DB_NAME := notes
@@ -18,6 +19,14 @@ build.api.frontend:
 .PHONY: run.api.frontend
 run.api.frontend:
 	@OTEL_SERVICE_NAME=notes-api-frontend PORT=$(FRONTEND_PORT) ./bin/notes_api_frontend
+
+.PHONY: build.worker.forwarder
+build.worker.forwarder:
+	@go build -gcflags="$(DEBUG_GCFLAGS)" -o ./bin/notes_worker_forwarder ./cmd/worker/forwarder
+
+.PHONY: run.worker.forwarder
+run.worker.forwarder:
+	@OTEL_SERVICE_NAME=notes-worker-forwarder HEALTH_PORT=$(FORWARDER_HEALTH_PORT) ./bin/notes_worker_forwarder
 
 .PHONY: db.setup
 db.setup:

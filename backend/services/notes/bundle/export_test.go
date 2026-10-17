@@ -1,3 +1,6 @@
 package bundle
 
-var FrontendServerOptions = frontendServerOptions
+var (
+	FrontendServerOptions  = frontendServerOptions
+	WorkerForwarderOptions = workerForwarderOptions
+)
