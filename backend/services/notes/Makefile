@@ -27,7 +27,12 @@ db.setup:
 .PHONY: db.migrate
 db.migrate:
 	@go build -o ./bin/notes_migrate ./cmd/migrate
-	@./bin/notes_migrate
+	@OTEL_SERVICE_NAME=notes-migrate ./bin/notes_migrate
+
+.PHONY: db.rollback
+db.rollback:
+	@go build -o ./bin/notes_migrate ./cmd/migrate
+	@OTEL_SERVICE_NAME=notes-migrate ./bin/notes_migrate down
 
 .PHONY: db.reset
 db.reset:

@@ -29,6 +29,10 @@ func onStartFailed(ctx context.Context, err error) {
 	logger.ErrorContext(ctx, cause.Error(), "reasons", errors.Reasons(cause), "attributes", errors.Attributes(cause))
 }
 
+func onMigrationsFailed(ctx context.Context, err error) {
+	logger.ErrorContext(ctx, err.Error(), "reasons", errors.Reasons(err), "attributes", errors.Attributes(err))
+}
+
 func onStopFailed(ctx context.Context, err error) {
 	logger.ErrorContext(ctx, "failed to stop app", "error", err)
 }

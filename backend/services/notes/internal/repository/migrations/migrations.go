@@ -22,35 +22,75 @@ var (
 		"the database has migrations applied that this checkout does not have (switched branches?): run `make db.reset`",
 	).WithCode("UNKNOWN_APPLIED_MIGRATION")
 
-	ErrMigrate = errors.New("failed to apply migrations")
+	ErrNothingToRollBack = errors.New("no migration is applied: there is nothing to roll back").
+				WithCode("NOTHING_TO_ROLL_BACK")
+
+	ErrMigrate = errors.New("failed to run migrations")
 )
 
 func Up(ctx context.Context, db *sql.DB) error {
-	store, err := database.NewStore(database.DialectPostgres, goose.DefaultTablename)
+	provider, err := newProvider(ctx, db)
 	if err != nil {
-		return ErrMigrate.WithCause(err)
-	}
-
-	locker, err := lock.NewPostgresSessionLocker()
-	if err != nil {
-		return ErrMigrate.WithCause(err)
-	}
-
-	provider, err := goose.NewProvider("", db, FS, goose.WithStore(store), goose.WithSessionLocker(locker))
-	if err != nil {
-		return ErrMigrate.WithCause(err)
-	}
-
-	// Returned unwrapped: its message is the one thing the developer must read.
-	if err := checkAppliedVersionsAreKnown(ctx, db, store, provider.ListSources()); err != nil {
 		return err
 	}
 
-	if _, err := provider.Up(ctx); err != nil {
+	results, err := provider.Up(ctx)
+	for _, result := range results {
+		onMigrated(ctx, result)
+	}
+
+	if err != nil {
 		return ErrMigrate.WithCause(err)
 	}
 
 	return nil
+}
+
+// Down rolls back the latest applied migration only.
+func Down(ctx context.Context, db *sql.DB) error {
+	provider, err := newProvider(ctx, db)
+	if err != nil {
+		return err
+	}
+
+	result, err := provider.Down(ctx)
+	if errors.Is(err, goose.ErrNoNextVersion) {
+		return ErrNothingToRollBack
+	}
+
+	if result != nil {
+		onMigrated(ctx, result)
+	}
+
+	if err != nil {
+		return ErrMigrate.WithCause(err)
+	}
+
+	return nil
+}
+
+func newProvider(ctx context.Context, db *sql.DB) (*goose.Provider, error) {
+	store, err := database.NewStore(database.DialectPostgres, goose.DefaultTablename)
+	if err != nil {
+		return nil, ErrMigrate.WithCause(err)
+	}
+
+	locker, err := lock.NewPostgresSessionLocker()
+	if err != nil {
+		return nil, ErrMigrate.WithCause(err)
+	}
+
+	provider, err := goose.NewProvider("", db, FS, goose.WithStore(store), goose.WithSessionLocker(locker))
+	if err != nil {
+		return nil, ErrMigrate.WithCause(err)
+	}
+
+	// Returned unwrapped: its message is the one thing the developer must read.
+	if err := checkAppliedVersionsAreKnown(ctx, db, store, provider.ListSources()); err != nil {
+		return nil, err
+	}
+
+	return provider, nil
 }
 
 // goose v3 silently skips an applied version with no file, which would leave

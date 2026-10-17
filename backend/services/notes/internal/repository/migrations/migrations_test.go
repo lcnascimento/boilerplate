@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/lcnascimento/go-kit/errors"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 )
@@ -81,6 +83,75 @@ func TestComponentMigrations_AppliedVersionWithoutFileAsksForReset(t *testing.T)
 
 	require.ErrorIs(t, err, migrations.ErrUnknownAppliedVersion)
 	require.Contains(t, err.Error(), "make db.reset")
+}
+
+func TestComponentMigrations_DownRevertsTheLatestMigration(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrations.Up(t.Context(), db))
+	require.NoError(t, migrations.Down(t.Context(), db))
+
+	require.False(t, notesTableExists(t, db))
+}
+
+func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrations.Up(t.Context(), db))
+
+	for rollbacks := 0; ; rollbacks++ {
+		require.Less(t, rollbacks, 1000, "Down never ran out of migrations")
+
+		err := migrations.Down(t.Context(), db)
+		if errors.Is(err, migrations.ErrNothingToRollBack) {
+			break
+		}
+
+		require.NoError(t, err)
+	}
+
+	require.False(t, notesTableExists(t, db))
+	require.NoError(t, migrations.Up(t.Context(), db))
+	require.True(t, notesTableExists(t, db))
+}
+
+func TestComponentMigrations_DownWithNothingAppliedFails(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.ErrorIs(t, migrations.Down(t.Context(), db), migrations.ErrNothingToRollBack)
+}
+
+func TestComponentMigrations_DownWithAppliedVersionWithoutFileAsksForReset(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrations.Up(t.Context(), db))
+
+	_, err := db.ExecContext(t.Context(), `INSERT INTO goose_db_version (version_id, is_applied) VALUES (99999, true)`)
+	require.NoError(t, err)
+
+	err = migrations.Down(t.Context(), db)
+
+	require.ErrorIs(t, err, migrations.ErrUnknownAppliedVersion)
+	require.True(t, notesTableExists(t, db))
+}
+
+func notesTableExists(t *testing.T, db *sql.DB) bool {
+	t.Helper()
+
+	var exists bool
+
+	err := db.QueryRowContext(t.Context(), `SELECT to_regclass('public.notes') IS NOT NULL`).Scan(&exists)
+	require.NoError(t, err)
+
+	return exists
 }
 
 func newDatabase(t *testing.T) *sql.DB {

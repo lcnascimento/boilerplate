@@ -120,5 +120,5 @@ migration.new:
 	fi; \
 	file=$$($(GOBIN)/goose -dir "$$1" -s create "$(name)" sql 2>&1 | sed -n 's/.*Created new file: //p'); \
 	[ -n "$$file" ] || { echo "make migration.new: goose did not create the migration" >&2; exit 1; }; \
-	printf -- '-- +goose Up\n' > "$$file"; \
+	printf -- '-- +goose Up\n\n-- +goose Down\n' > "$$file"; \
 	echo "==> Created $$file"
