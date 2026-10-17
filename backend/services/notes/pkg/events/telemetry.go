@@ -101,7 +101,7 @@ func (s *Subscriber) onAttemptStart(msg *message.Message, attempt int) (context.
 	return ctx, func(err error) {
 		defer span.End()
 
-		metricAttributes := append(s.commonAttributes(), deliveryAttempt(attempt))
+		metricAttributes := s.commonAttributes()
 
 		if err != nil {
 			errType := semconv.ErrorTypeKey.String(errorType(err))

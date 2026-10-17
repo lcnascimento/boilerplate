@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -210,6 +211,62 @@ func TestComponentForwarder_RecordsSendAndProcessDurationsInSeconds(t *testing.T
 		require.Equal(t, "s", unit, name)
 		require.Equal(t, wantBounds, bounds, name)
 	}
+}
+
+func TestComponentForwarder_MessagingMetricsOmitTheDeliveryAttempt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	t.Parallel()
+
+	env := newEnv(t)
+	repo := notes.New(env.pool, env.schemaIDs)
+	note := newNote("unbounded", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+
+	require.NoError(t, repo.Create(t.Context(), note))
+	env.startForwarder(t)
+	env.subscribe(t, note.ID).next(t)
+
+	recorded := messagingMetricAttributes(t)
+
+	for _, name := range []string{
+		"messaging.client.sent.messages",
+		"messaging.client.operation.duration",
+		"messaging.process.duration",
+	} {
+		require.NotEmpty(t, recorded[name], name)
+
+		for _, set := range recorded[name] {
+			require.False(t, set.HasValue("messaging.delivery.attempt"), "%s carries %v", name, set.ToSlice())
+		}
+	}
+}
+
+func messagingMetricAttributes(t *testing.T) map[string][]attribute.Set {
+	t.Helper()
+
+	var collected metricdata.ResourceMetrics
+	require.NoError(t, metrics.Collect(t.Context(), &collected))
+
+	recorded := map[string][]attribute.Set{}
+
+	for _, scope := range collected.ScopeMetrics {
+		for _, m := range scope.Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Histogram[float64]:
+				for _, point := range data.DataPoints {
+					recorded[m.Name] = append(recorded[m.Name], point.Attributes)
+				}
+			case metricdata.Sum[int64]:
+				for _, point := range data.DataPoints {
+					recorded[m.Name] = append(recorded[m.Name], point.Attributes)
+				}
+			}
+		}
+	}
+
+	return recorded
 }
 
 func histogram(t *testing.T, name string) (string, []float64) {

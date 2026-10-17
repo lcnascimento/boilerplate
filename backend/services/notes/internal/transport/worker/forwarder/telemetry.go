@@ -135,7 +135,7 @@ func onSendStart(msg *message.Message, topic string, attempt int) func(error) {
 	return func(err error) {
 		defer span.End()
 
-		metricAttributes := append(commonAttributes(topic), deliveryAttempt(attempt))
+		metricAttributes := commonAttributes(topic)
 
 		if err != nil {
 			errType := semconv.ErrorTypeKey.String(errorType(err))
