@@ -2,12 +2,14 @@ package bundle
 
 import (
 	"context"
+	"maps"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/sr"
+	"go.uber.org/fx"
 
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/o11y"
@@ -16,7 +18,10 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
-const schemasTimeout = time.Minute
+const (
+	schemasTimeout      = time.Minute
+	schemaLookupTimeout = 10 * time.Second
+)
 
 var ErrConnectSchemaRegistry = errors.New("failed to create the Schema Registry client: check SCHEMA_REGISTRY_URL").
 	WithCode("CONNECT_SCHEMA_REGISTRY")
@@ -57,6 +62,44 @@ func registerSchemas() int {
 }
 
 func register(ctx context.Context) (events.SchemaIDs, error) {
+	client, err := newRegistryClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return events.RegisterSchemas(ctx, client)
+}
+
+// newSchemaIDs fills the IDs on start, never inside a transaction, and fails the start when a schema
+// is not registered: the API never auto-registers.
+func newSchemaIDs(lifecycle fx.Lifecycle) (events.SchemaIDs, error) {
+	client, err := newRegistryClient()
+	if err != nil {
+		return nil, err
+	}
+
+	ids := events.SchemaIDs{}
+
+	lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, schemaLookupTimeout)
+			defer cancel()
+
+			found, err := events.LookupSchemaIDs(ctx, client)
+			if err != nil {
+				return err
+			}
+
+			maps.Copy(ids, found)
+
+			return nil
+		},
+	})
+
+	return ids, nil
+}
+
+func newRegistryClient() (*sr.Client, error) {
 	url, err := config.SchemaRegistryURL()
 	if err != nil {
 		return nil, err
@@ -67,5 +110,5 @@ func register(ctx context.Context) (events.SchemaIDs, error) {
 		return nil, ErrConnectSchemaRegistry.WithCause(err)
 	}
 
-	return events.RegisterSchemas(ctx, client)
+	return client, nil
 }
