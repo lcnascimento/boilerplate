@@ -8,7 +8,6 @@ interface PageHeaderProps extends Omit<
 > {
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Page-level action, such as a "New" button, aligned to the end. */
   action?: React.ReactNode;
 }
 

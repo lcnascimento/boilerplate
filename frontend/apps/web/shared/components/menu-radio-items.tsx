@@ -12,7 +12,6 @@ import {
 import { useLocaleSwitch } from "@/shared/hooks/use-locale-switch";
 import { parseTheme, themeOptions, themes } from "@/shared/theme";
 
-/** Theme choices for a dropdown menu (header switcher and user menu). */
 export function ThemeRadioItems() {
   const t = useTranslations("profile");
   const { theme, setTheme } = useTheme();
@@ -32,7 +31,6 @@ export function ThemeRadioItems() {
   );
 }
 
-/** Locale choices for a dropdown menu (header switcher and user menu). */
 export function LocaleRadioItems() {
   const { locale, setLocale } = useLocaleSwitch();
 

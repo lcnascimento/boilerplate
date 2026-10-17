@@ -29,7 +29,6 @@ import { createNote } from "@/actions/notes";
 
 type FieldErrors = Partial<Record<keyof CreateNoteInput, string>>;
 
-/** The form's fields are the schema's keys. */
 const fieldSchema = createNoteInputSchema.keyof();
 
 export function CreateNoteDialog() {

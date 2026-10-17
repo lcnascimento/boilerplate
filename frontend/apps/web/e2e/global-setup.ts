@@ -1,8 +1,6 @@
 import { stackProbes } from "./stack";
 
-// Generous: Tilt marks `web` ready once `next dev` binds its port, before it
-// compiles a route, so on a cold cache the first `GET /` waits for that compile.
-// A stack that is down refuses the connection at once.
+// Tilt marks `web` ready before `next dev` compiles a route, so a cold first `GET /` waits for the compile.
 const PROBE_TIMEOUT_MS = 60_000;
 
 async function probe(url: string): Promise<string | undefined> {

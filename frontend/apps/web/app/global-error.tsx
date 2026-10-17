@@ -28,9 +28,7 @@ function cookieLocale(): Locale {
   return parseLocale(entry?.slice(LOCALE_COOKIE_NAME.length + 1));
 }
 
-// Replaces the root layout when it fails, so it renders outside every provider
-// and loads the messages for the cookie locale itself (the default locale while
-// prerendering, where there is no cookie).
+// Next renders global-error in place of the root layout, outside every provider.
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   const locale = useSyncExternalStore(
     subscribe,

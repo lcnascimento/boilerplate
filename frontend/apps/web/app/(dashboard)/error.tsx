@@ -11,7 +11,6 @@ interface DashboardErrorProps {
   reset: () => void;
 }
 
-// No error tracker is wired yet; when one is, report `error` here in an effect.
 export default function DashboardError({ error, reset }: DashboardErrorProps) {
   const t = useTranslations("errors");
   const tCommon = useTranslations("common");

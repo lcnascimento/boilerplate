@@ -6,9 +6,6 @@ import { defineConfig } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-/**
- * Base preset for TypeScript packages: type-checked rules and import order.
- */
 export const base = defineConfig(
   {
     ignores: [

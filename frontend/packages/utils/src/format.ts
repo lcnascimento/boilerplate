@@ -9,7 +9,6 @@ export function formatCurrency(
   );
 }
 
-/** Long date, e.g. "15 de janeiro de 2024". */
 export function formatDate(
   date: Date,
   {
@@ -38,7 +37,6 @@ const RELATIVE_UNITS: readonly {
   { unit: "second", seconds: 1 },
 ];
 
-/** Time relative to `now`, e.g. "há 1 hora" or "em 2 dias". */
 export function formatRelativeTime(
   date: Date,
   {

@@ -8,10 +8,6 @@ import { isLocale, type Locale } from "@boilerplate/i18n";
 
 import { writeLocaleCookie } from "@/shared/cookies";
 
-/**
- * The active locale and a setter that writes the locale cookie and re-renders
- * the server tree, so every text changes without a full reload.
- */
 export function useLocaleSwitch(): {
   locale: Locale;
   setLocale: (value: string) => void;

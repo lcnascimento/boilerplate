@@ -5,8 +5,7 @@ import type { NextConfig } from "next";
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const nextConfig: NextConfig = {
-  // `next dev` writes an AGENTS.md when it detects an AI agent; the repo keeps
-  // its own agent docs (as turbo's `agentGuidance: false`).
+  // `next dev` writes an AGENTS.md when it detects an AI agent.
   agentRules: false,
   reactCompiler: true,
   typedRoutes: true,

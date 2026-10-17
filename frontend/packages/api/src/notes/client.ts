@@ -12,7 +12,6 @@ import {
 } from "./schemas";
 
 interface NotesClientOptions {
-  /** The notes service root, e.g. `http://localhost:8080`. */
   baseUrl: string;
 }
 
@@ -23,7 +22,6 @@ export interface NotesClient {
   delete(id: NoteId): Promise<Result<undefined>>;
 }
 
-/** The domain input in the wire shape the service reads. */
 function toWireCreateNote({ title, body }: CreateNoteInput) {
   return body === undefined ? { title } : { title, body };
 }

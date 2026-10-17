@@ -42,7 +42,6 @@ const routes: Record<string, Route> = {
     );
   },
   "POST /widgets": (req, body, res) => {
-    // Echo what arrived so the test sees the method, header and body sent.
     json(
       res,
       201,

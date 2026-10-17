@@ -8,7 +8,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createNotesClient, noteIdSchema } from "./index";
 
-/** POST requests the fake service received. */
 let posts = 0;
 
 type Route = (req: IncomingMessage, body: string, res: ServerResponse) => void;
@@ -22,7 +21,6 @@ const ID = "note_0199c3a1-7b2e-7c4d-9e5f-0a1b2c3d4e5f";
 const OTHER_ID = "note_0199c3a0-0000-7000-8000-000000000000";
 const MISSING_ID = "note_0199c3a1-ffff-7fff-bfff-ffffffffffff";
 
-// Payloads as the Go service writes them (see openapi/notes.yaml).
 const routes: Record<string, Route> = {
   "GET /notes/v1/notes": (_req, _body, res) => {
     json(
@@ -39,7 +37,6 @@ const routes: Record<string, Route> = {
     );
   },
   [`GET /notes/v1/notes/${OTHER_ID}`]: (_req, _body, res) => {
-    // Out of contract: `created_at` is not RFC 3339.
     json(
       res,
       200,
@@ -69,7 +66,6 @@ const routes: Record<string, Route> = {
       );
       return;
     }
-    // Echo what arrived in `body` so the test sees the wire payload.
     json(
       res,
       201,
@@ -119,7 +115,6 @@ afterAll(async () => {
   await new Promise((resolve) => server.close(resolve));
 });
 
-// Ids reach the client already parsed at the app's boundary.
 const noteId = (value: string) => noteIdSchema.parse(value);
 
 describe("notes client", () => {

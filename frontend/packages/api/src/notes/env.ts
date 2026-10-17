@@ -14,11 +14,6 @@ const notesEnvSchema = z.object({
 
 export type NotesEnv = z.infer<typeof notesEnvSchema>;
 
-/**
- * Reads the notes service settings from the environment (pass `process.env`)
- * and throws when they are missing or invalid. Call it at server start so a
- * misconfigured app fails before serving, not on its first request.
- */
 export function parseNotesEnv(
   env: Record<string, string | undefined>
 ): NotesEnv {

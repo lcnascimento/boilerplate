@@ -20,7 +20,6 @@ export function ThemeSwitcher() {
   const t = useTranslations("profile");
   const { theme } = useTheme();
   const mounted = useMounted();
-  // The theme is only known in the browser: show a neutral icon until then.
   const Icon = mounted ? themeOptions[parseTheme(theme)].icon : Monitor;
 
   return (

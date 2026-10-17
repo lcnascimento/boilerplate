@@ -38,7 +38,7 @@ export function DeleteNoteDialog({ id, title }: DeleteNoteDialogProps) {
   const [isPending, startTransition] = useTransition();
 
   function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
-    // Keep the dialog open until the service answers.
+    // Radix closes the dialog on the action's click.
     event.preventDefault();
 
     startTransition(async () => {
