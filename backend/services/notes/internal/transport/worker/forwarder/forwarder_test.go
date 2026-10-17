@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
@@ -30,10 +31,14 @@ import (
 
 const waitFor = 30 * time.Second
 
-var spans = tracetest.NewSpanRecorder()
+var (
+	spans   = tracetest.NewSpanRecorder()
+	metrics = sdkmetric.NewManualReader()
+)
 
 func TestMain(m *testing.M) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spans)))
+	otel.SetMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(metrics)))
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	os.Exit(m.Run())

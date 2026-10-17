@@ -16,6 +16,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 )
 
@@ -109,5 +110,12 @@ func Repositories() fx.Option {
 		"Repositories",
 		fx.Provide(newSchemaIDs),
 		fx.Provide(fx.Annotate(notes.New, fx.As(new(application.NotesRepository)))),
+	)
+}
+
+func OutboxRepository() fx.Option {
+	return fx.Module(
+		"Outbox Repository",
+		fx.Provide(fx.Annotate(outbox.New, fx.As(new(application.OutboxRepository)))),
 	)
 }

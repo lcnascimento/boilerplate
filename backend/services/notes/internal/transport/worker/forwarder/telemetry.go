@@ -35,8 +35,39 @@ var (
 	operationDuration = metric.MustFloat64Histogram(meter, "messaging.client.operation.duration",
 		"Duration of one attempt to send a message to Kafka, in seconds")
 
+	oldestPendingAge = mustOldestPendingAgeGauge()
+
+	ErrOldestPendingAge = errors.New("failed to observe the age of the oldest pending outbox message").
+				WithCode("OUTBOX_OLDEST_PENDING_AGE")
+
 	ErrSend = errors.New("failed to send the message to Kafka: retrying").WithCode("FORWARDER_SEND")
 )
+
+func mustOldestPendingAgeGauge() otelmetric.Int64ObservableGauge {
+	gauge, err := meter.Int64ObservableGauge("notes.outbox.oldest_pending.age",
+		otelmetric.WithDescription("Age of the oldest outbox message not yet forwarded to Kafka, 0 when none"),
+		otelmetric.WithUnit("s"))
+	if err != nil {
+		panic(err)
+	}
+
+	return gauge
+}
+
+func registerOldestPendingAge(read func(context.Context) (time.Duration, error)) (otelmetric.Registration, error) {
+	return meter.RegisterCallback(func(ctx context.Context, observer otelmetric.Observer) error {
+		age, err := read(ctx)
+		if err != nil {
+			logger.Error(ctx, ErrOldestPendingAge.WithCause(err))
+
+			return nil
+		}
+
+		observer.ObserveInt64(oldestPendingAge, int64(age.Seconds()))
+
+		return nil
+	}, oldestPendingAge)
+}
 
 func onStarted(ctx context.Context) {
 	logger.Info(ctx, "forwarder started", log.String("topic", events.Topic))
