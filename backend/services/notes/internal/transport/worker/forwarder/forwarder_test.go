@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/proto"
@@ -185,6 +186,55 @@ func TestComponentForwarder_SendSpanIsARootLinkedToTheCreateSpan(t *testing.T) {
 		"messaging.kafka.message.key": note.ID.String(),
 		"messaging.delivery.attempt":  "1",
 	}, attributesOf(send))
+}
+
+func TestComponentForwarder_RecordsSendAndProcessDurationsInSeconds(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	t.Parallel()
+
+	env := newEnv(t)
+	repo := notes.New(env.pool, env.schemaIDs)
+	note := newNote("timed", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+
+	require.NoError(t, repo.Create(t.Context(), note))
+	env.startForwarder(t)
+	env.subscribe(t, note.ID).next(t)
+
+	wantBounds := []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
+
+	for _, name := range []string{"messaging.client.operation.duration", "messaging.process.duration"} {
+		unit, bounds := histogram(t, name)
+		require.Equal(t, "s", unit, name)
+		require.Equal(t, wantBounds, bounds, name)
+	}
+}
+
+func histogram(t *testing.T, name string) (string, []float64) {
+	t.Helper()
+
+	var collected metricdata.ResourceMetrics
+	require.NoError(t, metrics.Collect(t.Context(), &collected))
+
+	for _, scope := range collected.ScopeMetrics {
+		for _, m := range scope.Metrics {
+			if m.Name != name {
+				continue
+			}
+
+			data, ok := m.Data.(metricdata.Histogram[float64])
+			require.True(t, ok, "%s is a %T", name, m.Data)
+			require.NotEmpty(t, data.DataPoints, name)
+
+			return m.Unit, data.DataPoints[0].Bounds
+		}
+	}
+
+	t.Fatalf("no %s histogram", name)
+
+	return "", nil
 }
 
 func endedSpan(t *testing.T, name, messageID string) sdktrace.ReadOnlySpan {

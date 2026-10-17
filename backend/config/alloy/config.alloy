@@ -63,6 +63,17 @@ otelcol.exporter.prometheus "local_prom" {
   forward_to = [prometheus.remote_write.local_prometheus.receiver]
 }
 
+prometheus.exporter.kafka "local_kafka" {
+  kafka_uris          = ["kafka:19092"]
+  topics_filter_regex = "^[^_].*"
+}
+
+prometheus.scrape "kafka" {
+  targets         = prometheus.exporter.kafka.local_kafka.targets
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.local_prometheus.receiver]
+}
+
 prometheus.remote_write "local_prometheus" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"

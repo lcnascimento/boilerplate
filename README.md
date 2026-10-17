@@ -13,7 +13,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Área | O que tem |
 | --- | --- |
 | Backend (`backend/`) | Go (versão no `go.work`) com [uber/fx](https://github.com/uber-go/fx) e [go-kit](https://github.com/lcnascimento/go-kit) (`errors`, `http`, `o11y`, `env`, `util`, `validator`), `golangci-lint`, `mockgen`, `govulncheck` e coleção [Bruno](https://www.usebruno.com/) |
-| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs` e `traces` |
+| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs`, `traces` e `messaging`, e os alertas de mensageria |
 | Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Acesso com [pgx](https://github.com/jackc/pgx) (`pgxpool`, instrumentado com [otelpgx](https://github.com/exaring/otelpgx)) e queries tipadas pelo [sqlc](https://sqlc.dev/). Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
 | Mensageria local (`backend/`) | Kafka 4.3 (KRaft, nó único, sem auto-create de tópicos), Confluent Schema Registry e [Redpanda Console](https://github.com/redpanda-data/console) via Docker Compose |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
@@ -102,6 +102,14 @@ O `notes` grava cada Integration Event num outbox, na mesma transação da Note,
 <!-- example:end -->
 
 Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
+
+Fora do modo mínimo, o Alloy lê do broker o lag de cada consumer group e os high-water marks de cada tópico (`prometheus.exporter.kafka`), sem instrumentar o Kafka, e só sobe depois do `kafka` saudável. O dashboard `messaging` do Grafana junta esses números às métricas `messaging.*` dos serviços, em seções Outbox, Forward, Consume e DLQ, com o estado dos alertas no topo. Os alertas são Grafana-managed, provisionados em `backend/config/grafana/provisioning/alerting/messaging.yaml`, sem contact point: aparecem em Alerting no Grafana e no topo do dashboard. O alerta de DLQ dispara na hora em que qualquer mensagem nova chega a um tópico `*.dlq`.
+
+<!-- example:begin -->
+
+O exemplo traz mais dois alertas. O de lag dispara quando o group `audit` fica mais de 100 mensagens atrás por 5 minutos. O de outbox travado dispara quando a mensagem pendente mais antiga do outbox do `notes` passa de 120s por 5 minutos, ou quando nenhum forwarder reporta essa idade há mais de 2 minutos, também por 5 minutos, já que sem forwarder ninguém esvazia o outbox.
+
+<!-- example:end -->
 
 ### Banco de dados
 

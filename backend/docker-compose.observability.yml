@@ -16,9 +16,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - alloy_data:/var/lib/alloy/data
     depends_on:
-      - prometheus
-      - tempo
-      - loki
+      prometheus:
+        condition: service_started
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+      # prometheus.exporter.kafka fails the whole config, and Alloy exits, when the broker is unreachable at start.
+      kafka:
+        condition: service_healthy
     networks:
       - boilerplate
 
