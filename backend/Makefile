@@ -43,7 +43,7 @@ define in_buf_dirs
 	done
 endef
 
-go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -race -cover $(1) $$pkgs; fi
+go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
 env:
@@ -106,15 +106,15 @@ mocks:
 
 .PHONY: test
 test:
-	$(call in_modules,test,$(call go_test,-coverprofile=coverage.out))
+	$(call in_modules,test,$(call go_test,3m,-coverprofile=coverage.out))
 
 .PHONY: test.unit
 test.unit:
-	$(call in_modules,test.unit,$(call go_test,-short))
+	$(call in_modules,test.unit,$(call go_test,30s,-short))
 
 .PHONY: test.component
 test.component:
-	$(call in_modules,test.component,$(call go_test,-run Component))
+	$(call in_modules,test.component,$(call go_test,3m,-run Component))
 
 .PHONY: sqlc
 sqlc:

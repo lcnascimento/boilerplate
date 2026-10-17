@@ -95,6 +95,8 @@ O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de c
 
 O `backend/docker-compose.yml` sobe um broker Kafka, o Schema Registry e o Redpanda Console, nessa ordem; no Tilt, `kafka → schema-registry → kafka-console`. O auto-create de tópicos está desligado: produzir num tópico que não existe falha, em vez de criar um tópico de uma partição. Cada serviço declara os próprios tópicos num `make kafka.topics` idempotente, que o Tilt roda como o recurso `<name>-topics` depois do `schema-registry`. Os nomes de tópico usam só pontos (`<serviço>.<agregado>.v<N>`), nunca `_`. Os serviços Go no host falam com o broker em `localhost:9092`; containers e ferramentas dentro da rede `boilerplate` usam `kafka:19092`. Tópicos e schemas ficam no volume `kafka_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, em `backend/`: `docker compose up -d --wait kafka schema-registry` (mais `--profile console` para o Console).
 
+Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
+
 ### Banco de dados
 
 Um único container `postgres` (em `backend/docker-compose.yml`) atende todos os serviços; cada serviço tem um database e um role com o nome dele, e o database pertence ao role. No Tilt, cada serviço encadeia `postgres → <name>-db → <name>-migrate → <name>-api-*`, então a API só sobe com o banco criado e migrado. Os dados ficam no volume `postgres_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, suba só o banco com `docker compose up -d --wait postgres` em `backend/`.
@@ -127,9 +129,9 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 
 ```sh
 make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
-make test             # go test -race com cobertura: unit + componente (exige o Postgres no ar)
-make test.unit        # só os de unidade (-short), sem banco
-make test.component   # só os de componente (-run Component)
+make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
+make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
+make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
 make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
@@ -140,6 +142,12 @@ make vuln-check       # govulncheck (só local, fora do CI)
 ```
 
 Os testes de componente (`TestComponent<Unit>_<Scenario>`, pulados com `-short`) rodam contra o Postgres de verdade, sem precisar do `<name>-db` nem do `<name>-migrate`: basta o container (`tilt up` ou `docker compose up -d postgres` em `backend/`). Cada teste ganha um database próprio, clonado de um template já migrado pelo [pgtestdb](https://github.com/peterldowns/pgtestdb), então eles rodam em paralelo e nunca tocam o database de dev. O template é reaproveitado entre execuções e só é recriado quando as migrations mudam; o database de um teste que falha fica no servidor, com o nome no log do teste. A conexão de admin vem de `POSTGRES_ADMIN_URL` (padrão: o superuser do compose, `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`). Com o Postgres fora do ar, eles falham (não pulam) com uma mensagem dizendo o que rodar.
+
+<!-- example:begin -->
+
+Os testes de componente de mensageria usam o helper público `eventstest` (em `notes/pkg/events/eventstest`): um container Redpanda (broker e Schema Registry) por pacote de teste, via [testcontainers](https://golang.testcontainers.org/), com os schemas já registrados, e tópico e consumer group `test_<uuid>` próprios de cada teste. O `Publish` dele produz no envelope CloudEvents e no wire format Confluent reais, então um consumidor é testado sem o forwarder. Eles só exigem o Docker; o pull e o start do container cabem no timeout de 3 minutos.
+
+<!-- example:end -->
 
 **Frontend** (em `frontend/`, via Turborepo):
 
