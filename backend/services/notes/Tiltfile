@@ -8,6 +8,14 @@ local_resource(
 )
 
 local_resource(
+    'notes-topics',
+    labels=['notes'],
+    cmd='make kafka.topics -s',
+    deps=['Makefile'],
+    resource_deps=['schema-registry'],
+)
+
+local_resource(
     'notes-migrate',
     labels=['notes'],
     cmd='make db.migrate -s',
