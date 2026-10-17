@@ -33,4 +33,22 @@ var (
 
 	ErrNotOneMessagePerFile = errors.New("each .proto file must declare exactly one message").
 				WithCode("NOT_ONE_MESSAGE_PER_FILE")
+
+	ErrPermanent = errors.New("message cannot be processed and goes to the DLQ")
+
+	ErrHandlerPanicked = errors.New("observer panicked while processing the message").
+				WithCode("HANDLER_PANICKED")
+
+	ErrInvalidSubscriberConfig = errors.New("subscriber needs brokers, a consumer group and an observer").
+					WithCode("INVALID_SUBSCRIBER_CONFIG").
+					WithKind(errors.KindInvalidInput)
+
+	ErrTopicMissing = errors.New("topic does not exist: declare it with make kafka.topics").
+			WithCode("TOPIC_MISSING")
+
+	ErrKafkaUnavailable = errors.New("failed to connect to Kafka").
+				WithCode("KAFKA_UNAVAILABLE")
+
+	ErrSubscriberStopped = errors.New("subscriber stopped with an error").
+				WithCode("SUBSCRIBER_STOPPED")
 )
