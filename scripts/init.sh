@@ -37,8 +37,19 @@ rm -f .github/workflows/ci-template.yml
 drop_section README.md "## Como instanciar"
 perl -0pi -e 's/^\.PHONY: init\ninit:\n(?:\t.*\n)*\n?//m' Makefile
 
+proto_name=${name//-/_}
+while IFS= read -r dir; do
+	git mv "$dir/$marker" "$dir/$proto_name"
+done < <(git ls-files -- '*.proto' | sed -n "s#^\(.*/proto\)/$marker/.*#\1#p" | sort -u)
+{ git grep -lz "$marker" -- '*.proto' || true; } |
+	NAME=$proto_name xargs -0 perl -pi -e 's/(?<![\w\/.-])boilerplate(?=[.\/])/$ENV{NAME}/g'
+
 git grep -lzI -e "$marker" -e "$title_marker" -- ":!$self" |
 	NAME=$name TITLE=$title xargs -0 perl -pi -e 's/boilerplate/$ENV{NAME}/g; s/Boilerplate/$ENV{TITLE}/g'
+
+if [[ -n $(git ls-files -- '*buf.gen.yaml') ]]; then
+	make -C backend -s proto.tools proto.generate
+fi
 
 if leftovers=$(git grep -ni "$marker" -- ":!$self"); then
 	echo "$leftovers" >&2
