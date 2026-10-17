@@ -107,6 +107,7 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 func Repositories() fx.Option {
 	return fx.Module(
 		"Repositories",
+		fx.Provide(newSchemaIDs),
 		fx.Provide(fx.Annotate(notes.New, fx.As(new(application.NotesRepository)))),
 	)
 }

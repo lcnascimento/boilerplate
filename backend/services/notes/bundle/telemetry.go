@@ -29,8 +29,12 @@ func onStartFailed(ctx context.Context, err error) {
 	logger.ErrorContext(ctx, cause.Error(), "reasons", errors.Reasons(cause), "attributes", errors.Attributes(cause))
 }
 
-func onMigrationsFailed(ctx context.Context, err error) {
+func onCommandFailed(ctx context.Context, err error) {
 	logger.ErrorContext(ctx, err.Error(), "reasons", errors.Reasons(err), "attributes", errors.Attributes(err))
+}
+
+func onSchemasRegistered(ctx context.Context, ids map[string]int) {
+	logger.InfoContext(ctx, "schemas registered", "ids", ids)
 }
 
 func onStopFailed(ctx context.Context, err error) {

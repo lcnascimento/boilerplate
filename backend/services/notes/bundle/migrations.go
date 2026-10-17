@@ -55,7 +55,7 @@ func runMigrations(args []string) int {
 	defer cancel()
 
 	if err := migrate(migrateCtx, args); err != nil {
-		onMigrationsFailed(ctx, err)
+		onCommandFailed(ctx, err)
 
 		return 1
 	}
