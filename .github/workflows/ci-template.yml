@@ -63,6 +63,13 @@ jobs:
     with:
       bootstrap: make init NAME=acme-app
 
+  init-proto:
+    name: A / proto
+    needs: init
+    uses: ./.github/workflows/ci-proto.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
   init-e2e:
     name: A / e2e
     needs: init
@@ -118,6 +125,13 @@ jobs:
     name: B / openapi
     needs: clean-init
     uses: ./.github/workflows/ci-openapi.yml
+    with:
+      bootstrap: *clean-init
+
+  clean-init-proto:
+    name: B / proto
+    needs: clean-init
+    uses: ./.github/workflows/ci-proto.yml
     with:
       bootstrap: *clean-init
 
