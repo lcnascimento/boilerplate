@@ -93,7 +93,8 @@ func TestComponentMigrations_DownRevertsTheLatestMigration(t *testing.T) {
 	require.NoError(t, migrations.Up(t.Context(), db))
 	require.NoError(t, migrations.Down(t.Context(), db))
 
-	require.False(t, notesTableExists(t, db))
+	require.False(t, tableExists(t, db, "watermill_notes_outbox"))
+	require.True(t, tableExists(t, db, "notes"))
 }
 
 func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
@@ -114,9 +115,9 @@ func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	require.False(t, notesTableExists(t, db))
+	require.False(t, tableExists(t, db, "notes"))
 	require.NoError(t, migrations.Up(t.Context(), db))
-	require.True(t, notesTableExists(t, db))
+	require.True(t, tableExists(t, db, "notes"))
 }
 
 func TestComponentMigrations_DownWithNothingAppliedFails(t *testing.T) {
@@ -140,15 +141,15 @@ func TestComponentMigrations_DownWithAppliedVersionWithoutFileAsksForReset(t *te
 	err = migrations.Down(t.Context(), db)
 
 	require.ErrorIs(t, err, migrations.ErrUnknownAppliedVersion)
-	require.True(t, notesTableExists(t, db))
+	require.True(t, tableExists(t, db, "notes"))
 }
 
-func notesTableExists(t *testing.T, db *sql.DB) bool {
+func tableExists(t *testing.T, db *sql.DB, table string) bool {
 	t.Helper()
 
 	var exists bool
 
-	err := db.QueryRowContext(t.Context(), `SELECT to_regclass('public.notes') IS NOT NULL`).Scan(&exists)
+	err := db.QueryRowContext(t.Context(), `SELECT to_regclass('public.' || $1) IS NOT NULL`, table).Scan(&exists)
 	require.NoError(t, err)
 
 	return exists

@@ -5,6 +5,8 @@ go 1.27.2
 replace github.com/lcnascimento/boilerplate/backend/services/notes/pkg => ./pkg
 
 require (
+	github.com/ThreeDotsLabs/watermill v1.5.3
+	github.com/ThreeDotsLabs/watermill-sql/v4 v4.1.5
 	github.com/exaring/otelpgx v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
@@ -23,6 +25,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0
 	go.uber.org/fx v1.24.0
 	go.uber.org/mock v0.6.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
@@ -43,8 +46,13 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lcnascimento/go-kit/util v1.4.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/lib/pq v1.12.3 // indirect
+	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
+	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
+	github.com/sony/gobreaker v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.20.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.70.0 // indirect
@@ -75,5 +83,4 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20261005182115-fad411399dd8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8 // indirect
 	google.golang.org/grpc v1.84.0 // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 )
