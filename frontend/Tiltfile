@@ -1,6 +1,5 @@
 # -*- mode: Python -*-
 
-# Keeps the frontend workspace installed when its manifests change.
 local_resource(
     'frontend-deps',
     cmd='pnpm install',
@@ -8,8 +7,6 @@ local_resource(
     labels=['frontend'],
 )
 
-# The web app in dev mode. Server-only env vars (one `<NAME>_API_URL` per
-# service) go in `serve_env`.
 local_resource(
     'web',
     serve_cmd='pnpm --filter @boilerplate/web dev',
@@ -28,14 +25,12 @@ local_resource(
     labels=['frontend'],
 )
 
-# 9330 clears every port the stack and Playwright's report server use.
 PLAYWRIGHT_UI_PORT = 9330
 
 if os.getenv('TILT_STACK', '') != 'minimal':
     local_resource(
         'web-e2e-ui',
         serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
-        # One line per service the e2e suite talks to.
         resource_deps=[
             'web',
             # example:begin

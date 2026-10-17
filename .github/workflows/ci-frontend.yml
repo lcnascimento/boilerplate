@@ -36,8 +36,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Set only when another workflow calls this one: the template's own CI
-      # passes `make init` / `make clean-example` here, then runs the checks.
       - name: Bootstrap
         if: inputs.bootstrap
         working-directory: .

@@ -1,12 +1,5 @@
 name: ci-template
 
-# The template's own CI: proves that both bootstrap paths give a green project.
-#   A: make init
-#   B: make clean-example, then make init (the reverse order)
-# Each path gets a job that checks what the scripts left behind, then the
-# project's own workflows run on a tree bootstrapped the same way (each called
-# workflow checks out and runs its `bootstrap` input before its steps).
-# make init deletes this workflow, so it never reaches an instantiated project.
 on: push
 
 permissions:

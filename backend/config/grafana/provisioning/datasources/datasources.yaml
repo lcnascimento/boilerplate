@@ -9,10 +9,7 @@ datasources:
     isDefault: true
     jsonData:
       httpMethod: POST
-      # Metrics are pushed via OTLP -> Alloy -> remote_write every 60s (OTel
-      # SDK default export interval). Declaring the real cadence makes
-      # $__rate_interval resolve to windows wide enough for rate() to see at
-      # least two samples.
+      # The OTel SDK exports metrics every 60s; $__rate_interval needs that cadence to span two samples.
       timeInterval: 60s
 
   - name: Loki
