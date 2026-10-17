@@ -18,9 +18,12 @@ func workerForwarderOptions() []fx.Option {
 	return []fx.Option{
 		Logger(logger),
 		Database(),
-		fx.Provide(newForwarder, newForwarderHealthServer),
-		fx.Invoke(func(lifecycle fx.Lifecycle, f *forwarder.Forwarder, health *forwarder.HealthServer) {
+		OutboxRepository(),
+		OutboxService(),
+		fx.Provide(newForwarder, newForwarderHealthServer, forwarder.NewJanitor),
+		fx.Invoke(func(lifecycle fx.Lifecycle, f *forwarder.Forwarder, janitor *forwarder.Janitor, health *forwarder.HealthServer) {
 			lifecycle.Append(fx.Hook{OnStart: f.Start, OnStop: f.Stop})
+			lifecycle.Append(fx.Hook{OnStart: janitor.Start, OnStop: janitor.Stop})
 			lifecycle.Append(fx.Hook{OnStart: health.Start, OnStop: health.Shutdown})
 		}),
 	}
