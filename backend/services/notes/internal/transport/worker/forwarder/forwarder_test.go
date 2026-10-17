@@ -375,10 +375,7 @@ func (e *env) subscribe(t *testing.T, ids ...domain.NoteID) *recorder {
 	r := &recorder{events: make(chan *events.Event, 1000), wanted: map[string]bool{}, seen: map[string]bool{}}
 	r.want(ids...)
 
-	subscriber, err := events.NewSubscriber(
-		events.SubscriberConfig{Brokers: e.brokers, Group: e.Group, Observer: r},
-		events.WithTopic(events.Topic),
-	)
+	subscriber, err := events.NewSubscriber(events.SubscriberConfig{Brokers: e.brokers, Group: e.Group, Observer: r})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -29,13 +29,6 @@ type SubscriberConfig struct {
 	Observer Observer
 }
 
-type SubscriberOption func(*Subscriber)
-
-// WithTopic replaces Topic, so tests can consume a topic of their own.
-func WithTopic(topic string) SubscriberOption {
-	return func(s *Subscriber) { s.topic = topic }
-}
-
 // DLQTopic is where a consumer group's permanently failed messages of topic go.
 func DLQTopic(topic, group string) string {
 	return topic + "." + group + ".dlq"
@@ -53,15 +46,16 @@ type Subscriber struct {
 }
 
 // NewSubscriber fails with ErrTopicMissing when the topic or its DLQ does not exist.
-func NewSubscriber(cfg SubscriberConfig, opts ...SubscriberOption) (*Subscriber, error) {
+func NewSubscriber(cfg SubscriberConfig) (*Subscriber, error) {
+	return newSubscriber(cfg, Topic)
+}
+
+func newSubscriber(cfg SubscriberConfig, topic string) (*Subscriber, error) {
 	if len(cfg.Brokers) == 0 || cfg.Group == "" || cfg.Observer == nil {
 		return nil, ErrInvalidSubscriberConfig
 	}
 
-	s := &Subscriber{topic: Topic, group: cfg.Group, observer: cfg.Observer}
-	for _, opt := range opts {
-		opt(s)
-	}
+	s := &Subscriber{topic: topic, group: cfg.Group, observer: cfg.Observer}
 
 	if err := checkTopics(cfg.Brokers, s.topic, s.dlqTopic()); err != nil {
 		return nil, err
