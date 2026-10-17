@@ -1,6 +1,3 @@
-// Within a major version only additive changes are allowed. A breaking change
-// opens the next major topic (notes.note.v2), published alongside v1 until
-// every consumer has migrated.
 syntax = "proto3";
 
 package boilerplate.notes.v1;

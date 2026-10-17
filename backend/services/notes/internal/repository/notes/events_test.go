@@ -179,7 +179,6 @@ type outboxEvent struct {
 	message     proto.Message
 }
 
-// outboxEvents reads the outbox in write order, unwrapping the forwarder's JSON envelope.
 func outboxEvents(t *testing.T, pool *pgxpool.Pool) []outboxEvent {
 	t.Helper()
 
@@ -219,8 +218,6 @@ func outboxEvents(t *testing.T, pool *pgxpool.Pool) []outboxEvent {
 	return out
 }
 
-// requireEnvelope checks the event goes to notes.note.v1 with want as its CloudEvents headers
-// and a UUIDv7 ce_id that is also the Watermill message UUID.
 func requireEnvelope(t *testing.T, got outboxEvent, want map[string]string) {
 	t.Helper()
 

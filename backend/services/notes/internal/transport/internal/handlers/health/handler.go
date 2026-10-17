@@ -15,14 +15,12 @@ const checkTimeout = 2 * time.Second
 
 var ErrUnhealthy = errors.New("a readiness check failed")
 
-// Check is one readiness condition of /health, such as a database ping.
 type Check func(ctx context.Context) error
 
 type Health struct {
 	checks []Check
 }
 
-// Register serves /ping (liveness) and /health (readiness: every check passes).
 func Register(router *mux.Router, checks ...Check) {
 	h := &Health{checks: checks}
 

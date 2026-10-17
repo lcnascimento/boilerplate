@@ -36,7 +36,6 @@ func SchemaRegistryURL() (string, error) {
 	return required("SCHEMA_REGISTRY_URL", ErrSchemaRegistryURLMissing)
 }
 
-// KafkaBrokers reads a comma-separated list.
 func KafkaBrokers() ([]string, error) {
 	var brokers []string
 

@@ -53,7 +53,7 @@ func TestJanitor_KeepsPurgingAfterAFailure(t *testing.T) {
 		outbox.EXPECT().Purge(gomock.Any()).Return(nil).AnyTimes(),
 	)
 
-	janitor := forwarder.NewJanitor(outbox, forwarder.WithPurgeInterval(time.Millisecond))
+	janitor := forwarder.NewJanitorPurgingEvery(outbox, time.Millisecond)
 	require.NoError(t, janitor.Start(t.Context()))
 	t.Cleanup(func() { require.NoError(t, janitor.Stop(context.Background())) })
 
@@ -73,7 +73,7 @@ func TestJanitor_StopsPurging(t *testing.T) {
 		return nil
 	}).MinTimes(1)
 
-	janitor := forwarder.NewJanitor(outbox, forwarder.WithPurgeInterval(time.Millisecond))
+	janitor := forwarder.NewJanitorPurgingEvery(outbox, time.Millisecond)
 	require.NoError(t, janitor.Start(t.Context()))
 	require.Eventually(t, func() bool { return calls.Load() > 0 }, waitFor, time.Millisecond)
 	require.NoError(t, janitor.Stop(t.Context()))

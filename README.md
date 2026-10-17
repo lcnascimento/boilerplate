@@ -103,11 +103,11 @@ O `notes` grava cada Integration Event num outbox, na mesma transação da Note,
 
 Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
 
-Fora do modo mínimo, o Alloy lê do broker o lag de cada consumer group e os high-water marks de cada tópico (`prometheus.exporter.kafka`), sem instrumentar o Kafka, e só sobe depois do `kafka` saudável. O dashboard `messaging` do Grafana junta esses números às métricas `messaging.*` dos serviços, em seções Outbox, Forward, Consume e DLQ, com o estado dos alertas no topo. Os alertas são Grafana-managed, provisionados em `backend/config/grafana/provisioning/alerting/messaging.yaml`, sem contact point: aparecem em Alerting no Grafana e no topo do dashboard. O alerta de DLQ dispara na hora em que qualquer mensagem nova chega a um tópico `*.dlq`.
+Fora do modo mínimo, o Alloy lê do broker o lag de cada consumer group e os high-water marks de cada tópico (`prometheus.exporter.kafka`), sem instrumentar o Kafka, e só sobe depois do `kafka` saudável. O dashboard `messaging` do Grafana junta esses números às métricas `messaging.*` dos serviços, em seções Produce, Consume e DLQ, com o estado dos alertas no topo. Os alertas são Grafana-managed, provisionados em `backend/config/grafana/provisioning/alerting/messaging.yaml`, sem contact point: aparecem em Alerting no Grafana e no topo do dashboard. O alerta de DLQ dispara na hora em que qualquer mensagem nova chega a um tópico `*.dlq`.
 
 <!-- example:begin -->
 
-O exemplo traz mais dois alertas. O de lag dispara quando o group `audit` fica mais de 100 mensagens atrás por 5 minutos. O de outbox travado dispara quando a mensagem pendente mais antiga do outbox do `notes` passa de 120s por 5 minutos, ou quando nenhum forwarder reporta essa idade há mais de 2 minutos, também por 5 minutos, já que sem forwarder ninguém esvazia o outbox.
+O exemplo traz mais dois alertas. O de lag dispara quando o group `audit` fica mais de 100 mensagens atrás por 5 minutos. O de outbox travado dispara quando a mensagem pendente mais antiga do outbox do `notes` passa de 120s por 5 minutos, ou quando nenhum forwarder reporta essa idade há mais de 2 minutos, também por 5 minutos, já que sem forwarder ninguém esvazia o outbox. As seções Outbox e Forward do `notes` ficam no dashboard `notes-outbox`, para onde aponta esse alerta.
 
 <!-- example:end -->
 
@@ -295,7 +295,7 @@ make clean-example
 ```
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
-- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
+- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, o dashboard `notes-outbox` do Grafana, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 

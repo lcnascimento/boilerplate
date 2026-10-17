@@ -46,8 +46,6 @@ var (
 	ErrStop = errors.New("forwarder did not stop cleanly").WithCode("FORWARDER_STOP")
 )
 
-// Forwarder moves the outbox to Kafka in commit order. A message that cannot be published is retried
-// forever and blocks the ones after it.
 type Forwarder struct {
 	router    *message.Router
 	publisher *kafka.Publisher
@@ -60,8 +58,6 @@ type Forwarder struct {
 	runDone  chan struct{}
 }
 
-// New fails with ErrKafkaUnavailable when no broker answers, and with ErrTopicMissing when events.Topic
-// does not exist.
 func New(outboxSubscriber message.Subscriber, brokers []string, opts ...Option) (*Forwarder, error) {
 	if outboxSubscriber == nil || len(brokers) == 0 {
 		return nil, ErrInvalidConfig
@@ -109,8 +105,6 @@ func New(outboxSubscriber message.Subscriber, brokers []string, opts ...Option) 
 	return f, nil
 }
 
-// Start returns once the forwarder consumes the outbox. From then on, if it stops before Stop, it calls
-// the WithShutdown function.
 func (f *Forwarder) Start(ctx context.Context) error {
 	runErr := make(chan error, 1)
 
@@ -147,7 +141,6 @@ func (f *Forwarder) Start(ctx context.Context) error {
 	}
 }
 
-// Stop waits for the message being forwarded, then disconnects. It is safe to call more than once.
 func (f *Forwarder) Stop(context.Context) error {
 	f.stopOnce.Do(func() {
 		f.stopping.Store(true)
@@ -171,8 +164,6 @@ func (f *Forwarder) Stop(context.Context) error {
 	return f.stopErr
 }
 
-// Ready passes while the forwarder runs, including while another replica holds the outbox and this one
-// waits for it.
 func (f *Forwarder) Ready(context.Context) error {
 	if !f.router.IsRunning() || f.router.IsClosed() {
 		return ErrNotRunning

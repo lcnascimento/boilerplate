@@ -17,8 +17,6 @@ const (
 	ConsumerGroup  = "notes-forwarder"
 )
 
-// NewPublisher writes messages to the outbox inside tx, so they exist if and only if tx commits.
-// Publish takes the Kafka topic the forwarder delivers them to.
 func NewPublisher(tx pgx.Tx) (message.Publisher, error) {
 	publisher, err := sql.NewPublisher(
 		sql.TxFromPgx(tx),

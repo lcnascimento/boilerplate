@@ -13,8 +13,6 @@ import (
 //go:embed proto
 var protoFS embed.FS
 
-// schema pairs a subject (RecordNameStrategy: the full message name, equal to ce_type)
-// with the .proto text registered under it and the Go type that decodes it.
 type schema struct {
 	subject string
 	text    string

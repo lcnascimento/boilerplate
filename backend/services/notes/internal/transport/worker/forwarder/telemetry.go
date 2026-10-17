@@ -32,7 +32,7 @@ var (
 
 	sentMessages = metric.MustIntCounter(meter, "messaging.client.sent.messages",
 		"Number of attempts to send a message to Kafka")
-	operationDuration = mustSecondsHistogram("messaging.client.operation.duration",
+	operationDuration = events.MustDurationHistogram(meter, "messaging.client.operation.duration",
 		"Duration of one attempt to send a message to Kafka")
 
 	oldestPendingAge = mustOldestPendingAgeGauge()
@@ -42,22 +42,6 @@ var (
 
 	ErrSend = errors.New("failed to send the message to Kafka: retrying").WithCode("FORWARDER_SEND")
 )
-
-// secondsBuckets are the OTel semconv buckets for messaging durations.
-var secondsBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
-
-// mustSecondsHistogram replaces metric.MustFloat64Histogram, which declares milliseconds.
-func mustSecondsHistogram(name, description string) otelmetric.Float64Histogram {
-	histogram, err := meter.Float64Histogram(name,
-		otelmetric.WithDescription(description),
-		otelmetric.WithUnit("s"),
-		otelmetric.WithExplicitBucketBoundaries(secondsBuckets...))
-	if err != nil {
-		panic(err)
-	}
-
-	return histogram
-}
 
 func mustOldestPendingAgeGauge() otelmetric.Int64ObservableGauge {
 	gauge, err := meter.Int64ObservableGauge("notes.outbox.oldest_pending.age",
@@ -106,7 +90,6 @@ func deliveryAttempt(n int) attribute.KeyValue {
 	return attribute.Int("messaging.delivery.attempt", n)
 }
 
-// onSendStart opens a root span linked to the span that wrote the message to the outbox.
 func onSendStart(msg *message.Message, topic string, attempt int) func(error) {
 	started := time.Now()
 
@@ -135,7 +118,7 @@ func onSendStart(msg *message.Message, topic string, attempt int) func(error) {
 	return func(err error) {
 		defer span.End()
 
-		metricAttributes := append(commonAttributes(topic), deliveryAttempt(attempt))
+		metricAttributes := commonAttributes(topic)
 
 		if err != nil {
 			errType := semconv.ErrorTypeKey.String(errorType(err))

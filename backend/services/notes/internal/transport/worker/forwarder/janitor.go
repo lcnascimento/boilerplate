@@ -11,8 +11,6 @@ import (
 
 const purgeInterval = time.Hour
 
-// Janitor purges the outbox on start and then every purgeInterval, and reports the age of its oldest
-// pending message. Every replica runs one.
 type Janitor struct {
 	outbox   transport.OutboxService
 	interval time.Duration
@@ -22,22 +20,12 @@ type Janitor struct {
 	registration otelmetric.Registration
 }
 
-type JanitorOption func(*Janitor)
-
-func WithPurgeInterval(interval time.Duration) JanitorOption {
-	return func(j *Janitor) {
-		j.interval = interval
-	}
+func NewJanitor(outbox transport.OutboxService) *Janitor {
+	return newJanitor(outbox, purgeInterval)
 }
 
-func NewJanitor(outbox transport.OutboxService, opts ...JanitorOption) *Janitor {
-	j := &Janitor{outbox: outbox, interval: purgeInterval}
-
-	for _, opt := range opts {
-		opt(j)
-	}
-
-	return j
+func newJanitor(outbox transport.OutboxService, interval time.Duration) *Janitor {
+	return &Janitor{outbox: outbox, interval: interval}
 }
 
 func (j *Janitor) Start(ctx context.Context) error {
@@ -68,7 +56,6 @@ func (j *Janitor) Stop(ctx context.Context) error {
 	return j.registration.Unregister()
 }
 
-// run leaves failures to the next tick: Purge already reports them.
 func (j *Janitor) run(ctx context.Context) {
 	defer close(j.done)
 

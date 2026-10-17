@@ -6,8 +6,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 )
 
-// tracedPublisher observes every publish attempt. It counts the attempts of a message across retries and
-// redeliveries, which works because the forwarder publishes one message at a time.
 type tracedPublisher struct {
 	message.Publisher
 

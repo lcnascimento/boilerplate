@@ -23,8 +23,6 @@ func New(pool *pgxpool.Pool) *Repository {
 	return &Repository{queries: db.New(pool)}
 }
 
-// Purge deletes, in batches, the messages ConsumerGroup has already forwarded that are older than retention.
-// It returns how many it deleted, including those of the batches before a failure.
 func (r *Repository) Purge(ctx context.Context, retention time.Duration) (int64, error) {
 	var total int64
 
@@ -46,7 +44,6 @@ func (r *Repository) Purge(ctx context.Context, retention time.Duration) (int64,
 	}
 }
 
-// OldestPendingAge is zero when ConsumerGroup has forwarded every message.
 func (r *Repository) OldestPendingAge(ctx context.Context) (time.Duration, error) {
 	seconds, err := r.queries.OldestPendingAgeSeconds(ctx, ConsumerGroup)
 	if err != nil {

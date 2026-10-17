@@ -451,11 +451,11 @@ func startSubscriber(t *testing.T, env *eventstest.Env, observer events.Observer
 func newSubscriber(t *testing.T, env *eventstest.Env, observer events.Observer) (*events.Subscriber, error) {
 	t.Helper()
 
-	return events.NewSubscriber(events.SubscriberConfig{
+	return events.NewSubscriberOfTopic(events.SubscriberConfig{
 		Brokers:  env.Brokers,
 		Group:    env.Group,
 		Observer: observer,
-	}, events.WithTopic(env.Topic))
+	}, env.Topic)
 }
 
 func consumeDLQ(t *testing.T, env *eventstest.Env, n int) []*sarama.ConsumerMessage {

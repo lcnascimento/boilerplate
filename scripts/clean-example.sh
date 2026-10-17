@@ -7,6 +7,7 @@ example_paths=(
 	backend/services/notes
 	backend/services/audit
 	backend/config/bruno/collections/Notes
+	backend/config/grafana/provisioning/dashboards/notes-outbox.json
 	openapi/notes.yaml
 	frontend/apps/web/app/\(dashboard\)/notes
 	frontend/apps/web/actions/notes.ts
