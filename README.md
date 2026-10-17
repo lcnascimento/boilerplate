@@ -20,7 +20,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
 | Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit) e commitlint (Conventional Commits no commit-msg) |
-| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e` e `ci-openapi`, cada um disparado pelos caminhos da sua área |
+| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e`, `ci-openapi` e `ci-proto`, cada um disparado pelos caminhos da sua área |
 
 ```text
 backend/
@@ -131,6 +131,9 @@ make test             # go test -race com cobertura: unit + componente (exige o 
 make test.unit        # só os de unidade (-short), sem banco
 make test.component   # só os de componente (-run Component)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
+make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
+make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
+make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
 make mocks            # regenera internal/mocks/mocks.go a partir de cada contracts.go
 make tidy             # go mod tidy
 make vuln-check       # govulncheck (só local, fora do CI)

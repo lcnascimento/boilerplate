@@ -8,6 +8,7 @@ require (
 	github.com/lcnascimento/go-kit/util v1.4.5
 	github.com/lcnascimento/go-kit/validator v1.11.0
 	github.com/stretchr/testify v1.12.1
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
