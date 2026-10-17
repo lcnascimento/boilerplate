@@ -69,10 +69,7 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 
 	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
 
-	ctx, cancel := context.WithTimeout(context.Background(), databasePingTimeout)
-	defer cancel()
-
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		return nil, ErrConnectDatabase.WithCause(err)
 	}
@@ -83,16 +80,26 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 		return nil, ErrConnectDatabase.WithCause(err)
 	}
 
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
+	lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, databasePingTimeout)
+			defer cancel()
 
-		return nil, ErrConnectDatabase.
-			WithAttribute("host", cfg.ConnConfig.Host).
-			WithAttribute("database", cfg.ConnConfig.Database).
-			WithCause(err)
-	}
+			if err := pool.Ping(ctx); err != nil {
+				return ErrConnectDatabase.
+					WithAttribute("host", cfg.ConnConfig.Host).
+					WithAttribute("database", cfg.ConnConfig.Database).
+					WithCause(err)
+			}
 
-	lifecycle.Append(fx.StopHook(pool.Close))
+			return nil
+		},
+		OnStop: func(context.Context) error {
+			pool.Close()
+
+			return nil
+		},
+	})
 
 	return pool, nil
 }

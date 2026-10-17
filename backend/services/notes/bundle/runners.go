@@ -3,6 +3,8 @@ package bundle
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"go.uber.org/fx"
 
@@ -29,7 +31,14 @@ func run(app *fx.App) int {
 		}
 	}()
 
-	if err := app.Start(ctx); err != nil {
+	// fx only listens for signals from app.Wait on: until then a SIGTERM
+	// cancels the start instead of waiting out a slow OnStart hook.
+	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	err := app.Start(startCtx)
+
+	stopSignals()
+
+	if err != nil {
 		onStartFailed(ctx, err)
 
 		return 1
@@ -41,9 +50,9 @@ func run(app *fx.App) int {
 		}
 	}()
 
-	signal := <-app.Wait()
+	shutdown := <-app.Wait()
 
-	return signal.ExitCode
+	return shutdown.ExitCode
 }
 
 func NewFrontendServer() *fx.App {
