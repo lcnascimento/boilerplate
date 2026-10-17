@@ -22,22 +22,12 @@ type Janitor struct {
 	registration otelmetric.Registration
 }
 
-type JanitorOption func(*Janitor)
-
-func WithPurgeInterval(interval time.Duration) JanitorOption {
-	return func(j *Janitor) {
-		j.interval = interval
-	}
+func NewJanitor(outbox transport.OutboxService) *Janitor {
+	return newJanitor(outbox, purgeInterval)
 }
 
-func NewJanitor(outbox transport.OutboxService, opts ...JanitorOption) *Janitor {
-	j := &Janitor{outbox: outbox, interval: purgeInterval}
-
-	for _, opt := range opts {
-		opt(j)
-	}
-
-	return j
+func newJanitor(outbox transport.OutboxService, interval time.Duration) *Janitor {
+	return &Janitor{outbox: outbox, interval: interval}
 }
 
 func (j *Janitor) Start(ctx context.Context) error {
