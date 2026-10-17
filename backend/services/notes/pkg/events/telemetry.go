@@ -31,11 +31,27 @@ var (
 
 	consumedMessages = metric.MustIntCounter(meter, "messaging.client.consumed.messages",
 		"Number of messages the consumer finished handling, acked or nacked")
-	processDuration = metric.MustFloat64Histogram(meter, "messaging.process.duration",
-		"Duration of one processing attempt of a message, in seconds")
+	processDuration = mustSecondsHistogram("messaging.process.duration",
+		"Duration of one processing attempt of a message")
 	dlqSentMessages = metric.MustIntCounter(meter, "messaging.dlq.sent.messages",
 		"Number of messages sent to the DLQ")
 )
+
+// secondsBuckets are the OTel semconv buckets for messaging durations.
+var secondsBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
+
+// mustSecondsHistogram replaces metric.MustFloat64Histogram, which declares milliseconds.
+func mustSecondsHistogram(name, description string) otelmetric.Float64Histogram {
+	histogram, err := meter.Float64Histogram(name,
+		otelmetric.WithDescription(description),
+		otelmetric.WithUnit("s"),
+		otelmetric.WithExplicitBucketBoundaries(secondsBuckets...))
+	if err != nil {
+		panic(err)
+	}
+
+	return histogram
+}
 
 func deliveryAttempt(n int) attribute.KeyValue {
 	return attribute.Int("messaging.delivery.attempt", n)
