@@ -1,7 +1,3 @@
-// Package testdb gives each component test of the repository layer its own
-// Postgres database, cloned from a template that pgtestdb keeps across runs
-// and rebuilds only when the migrations change. A failing test's database is
-// kept, and its URL is in the test log.
 package testdb
 
 import (
@@ -24,14 +20,11 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 )
 
-// DefaultAdminURL is the superuser of backend/docker-compose.yml. Tests only:
-// the service's own role never needs CREATEDB.
+// DefaultAdminURL is for tests only: the service's own role never needs CREATEDB.
 const DefaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" //nolint:gosec // local docker-compose credentials
 
 const pingTimeout = 5 * time.Second
 
-// New returns a pool on a fresh database with every migration applied. It
-// fails the test, never skips it, when Postgres is not reachable.
 func New(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
@@ -47,8 +40,6 @@ func New(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-// NewEmpty returns a database with no migration applied, for the tests of the
-// migrations themselves. pgtestdb closes it at cleanup.
 func NewEmpty(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -95,24 +86,27 @@ func adminConfig(t *testing.T) pgtestdb.Config {
 func requireReachable(t *testing.T, conf *pgtestdb.Config) {
 	t.Helper()
 
-	db, err := conf.Connect()
-	if err == nil {
-		defer func() { _ = db.Close() }()
-
-		ctx, cancel := context.WithTimeout(t.Context(), pingTimeout)
-		defer cancel()
-
-		err = db.PingContext(ctx)
-	}
-
-	if err != nil {
+	if err := ping(t.Context(), conf); err != nil {
 		t.Fatalf("postgres is not reachable at POSTGRES_ADMIN_URL (%s:%s): %v\n"+
 			"Start it with `tilt up` or `docker compose up -d postgres` in backend/, "+
 			"or run `make test.unit` to skip the component tests.", conf.Host, conf.Port, err)
 	}
 }
 
-// migrator builds pgtestdb's template with the service's own migrations.Up.
+func ping(ctx context.Context, conf *pgtestdb.Config) error {
+	db, err := conf.Connect()
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = db.Close() }()
+
+	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	defer cancel()
+
+	return db.PingContext(ctx)
+}
+
 type migrator struct{}
 
 func (migrator) Hash() (string, error) {
