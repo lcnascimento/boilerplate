@@ -5,6 +5,7 @@ self=scripts/clean-example.sh
 
 example_paths=(
 	backend/services/notes
+	backend/services/audit
 	backend/config/bruno/collections/Notes
 	openapi/notes.yaml
 	frontend/apps/web/app/\(dashboard\)/notes
