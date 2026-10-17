@@ -1,5 +1,3 @@
-// Package fixture builds valid, randomized domain entities for tests: a test
-// overrides only the fields it is about.
 package fixture
 
 import (
@@ -10,7 +8,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 )
 
-// maxSeed bounds the random number behind a fixture's text and age (seconds).
 const maxSeed = 1_000_000
 
 func RandomNote() *domain.Note {

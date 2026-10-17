@@ -33,10 +33,8 @@ func New(notes transport.NotesService, db transport.Database, opts ...Option) *S
 	return server
 }
 
-// Start serves in the background and returns, so fx can finish starting and
-// later run Shutdown on SIGTERM. httpserver.Server.Start blocks until the
-// listener closes; when it fails (port taken, say), the shutdown hook stops the app.
 func (s *Server) Start(_ context.Context) error {
+	// httpserver.Server.Start blocks until the listener closes.
 	go func() {
 		if err := s.server.Start(s.register); err != nil {
 			s.shutdown()

@@ -163,8 +163,6 @@ func (s *HandlerSuite) TestDeleteRejectsMalformedID() {
 	s.Require().Equal(http.StatusBadRequest, rec.Code)
 }
 
-// wireJSON spells the wire contract of a note field by field, independent of
-// the domain's JSON encoding.
 func wireJSON(t *testing.T, n *domain.Note) string {
 	t.Helper()
 

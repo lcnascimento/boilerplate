@@ -4,14 +4,14 @@ export
 
 FRONTEND_PORT ?= 8080
 
-# psql runs inside the container: the host needs Docker only.
 DB_NAME := notes
 PSQL := docker exec -i postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
 
-# Debug build (no optimizations, no inlining) so the VS Code "Attach" config can set breakpoints.
+DEBUG_GCFLAGS := all=-N -l
+
 .PHONY: build.api.frontend
 build.api.frontend:
-	@go build -gcflags="all=-N -l" -o ./bin/notes_api_frontend ./cmd/api/frontend
+	@go build -gcflags="$(DEBUG_GCFLAGS)" -o ./bin/notes_api_frontend ./cmd/api/frontend
 
 .PHONY: run.api.frontend
 run.api.frontend:

@@ -134,8 +134,7 @@ func (s *ApplicationSuite) TestCreateRejectsInvalidInputWithEveryReason() {
 	}
 }
 
-// Under -race this proves concurrent invalid creates share no error state
-// (go-kit errors before v1.9.1 wrote validator failures into a shared map).
+// go-kit errors before v1.9.1 wrote validator failures into a shared map.
 func (s *ApplicationSuite) TestCreateValidatesConcurrently() {
 	var wg sync.WaitGroup
 

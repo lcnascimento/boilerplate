@@ -73,9 +73,8 @@ func TestComponentRepository_ListBreaksTimestampTiesByID(t *testing.T) {
 	repo := newRepository(t)
 	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
 	first := newNote("first", at)
-	second := newNote("second", at) // UUID v7: generated later, sorts higher
+	second := newNote("second", at)
 
-	// Inserted oldest-id first: without the tie-break, the scan order comes back.
 	require.NoError(t, repo.Create(t.Context(), first))
 	require.NoError(t, repo.Create(t.Context(), second))
 
