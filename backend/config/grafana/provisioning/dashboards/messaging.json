@@ -71,478 +71,10 @@
         "x": 0,
         "y": 10
       },
-      "id": 3,
-      "title": "Outbox",
-      "type": "row",
-      "panels": []
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Idade da mensagem mais antiga do outbox ainda não levada ao Kafka; 0 sem pendentes. O alerta dispara acima de 120s por 5 min.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 120
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 11
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "background",
-        "orientation": "auto",
-        "textMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max(notes_outbox_oldest_pending_age_seconds)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Pendente mais antiga",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Mensagens já encaminhadas há mais de 7 dias que a limpeza apagou.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 11
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "background",
-        "orientation": "auto",
-        "textMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(notes_outbox_purged_messages_total[24h])) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Encaminhadas apagadas (24h)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 11
-      },
-      "id": 6,
-      "options": {
-        "colorMode": "background",
-        "orientation": "auto",
-        "textMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(notes_outbox_purge_runs_total{outcome=\"failure\"}[24h])) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Limpezas com falha (24h)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Réplicas que reportam o gauge; 0 significa que nenhum forwarder está esvaziando o outbox.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 11
-      },
-      "id": 7,
-      "options": {
-        "colorMode": "background",
-        "orientation": "auto",
-        "textMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "count(notes_outbox_oldest_pending_age_seconds) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Réplicas do forwarder reportando",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 15
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max by (job) (notes_outbox_oldest_pending_age_seconds)",
-          "legendFormat": "{{job}}"
-        }
-      ],
-      "title": "Idade da pendente mais antiga",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 15
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (outcome) (increase(notes_outbox_purge_runs_total[$__rate_interval]))",
-          "legendFormat": "execuções {{outcome}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(notes_outbox_purged_messages_total[$__rate_interval]))",
-          "legendFormat": "mensagens apagadas"
-        }
-      ],
-      "title": "Limpeza",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
       "id": 10,
-      "title": "Forward",
+      "title": "Produce",
       "type": "row",
       "panels": []
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Cada tentativa do forwarder; erros entram em retry infinito, sem pular mensagens.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 24
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_destination_name) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
-          "legendFormat": "ok {{messaging_destination_name}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_destination_name, error_type) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{error_type}} {{messaging_destination_name}}"
-        }
-      ],
-      "title": "Envios ao Kafka (msg/s)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 24
-      },
-      "id": 12,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P50"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P99"
-        }
-      ],
-      "title": "Duração do envio",
-      "type": "timeseries"
     },
     {
       "datasource": {
@@ -565,9 +97,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 24
+        "w": 24,
+        "x": 0,
+        "y": 11
       },
       "id": 13,
       "options": {
@@ -601,7 +133,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 19
       },
       "id": 14,
       "title": "Consume",
@@ -631,7 +163,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 33
+        "y": 20
       },
       "id": 15,
       "options": {
@@ -682,7 +214,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 33
+        "y": 20
       },
       "id": 16,
       "options": {
@@ -742,7 +274,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 33
+        "y": 20
       },
       "id": 17,
       "options": {
@@ -802,7 +334,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 28
       },
       "id": 18,
       "options": {
@@ -853,7 +385,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 28
       },
       "id": 19,
       "options": {
@@ -896,7 +428,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 36
       },
       "id": 20,
       "title": "DLQ",
@@ -935,7 +467,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 50
+        "y": 37
       },
       "id": 21,
       "options": {
@@ -994,7 +526,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 50
+        "y": 37
       },
       "id": 22,
       "options": {
@@ -1048,7 +580,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 41
       },
       "id": 23,
       "options": {
@@ -1099,7 +631,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 54
+        "y": 41
       },
       "id": 24,
       "options": {
@@ -1198,7 +730,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Mensageria — Outbox · Forward · Consume · DLQ",
+  "title": "Mensageria — Produce · Consume · DLQ",
   "uid": "boilerplate-messaging",
   "weekStart": ""
 }

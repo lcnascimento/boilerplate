@@ -19,7 +19,7 @@ groups:
         annotations:
           summary: O outbox de notes tem mensagem pendente há mais de 120s, ou nenhum forwarder reporta a idade dela.
           description: O forwarder não está levando o outbox para o Kafka. Veja o health do notes-worker-forwarder e a conexão com o broker.
-          __dashboardUid__: boilerplate-messaging
+          __dashboardUid__: boilerplate-notes-outbox
           __panelId__: "8"
         data:
           - refId: A
