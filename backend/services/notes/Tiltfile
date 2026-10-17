@@ -1,12 +1,29 @@
 # -*- mode: Python -*-
 
 local_resource(
+    'notes-db',
+    labels=['notes'],
+    cmd='make db.setup -s',
+    resource_deps=['postgres'],
+)
+
+local_resource(
+    'notes-migrate',
+    labels=['notes'],
+    cmd='make db.migrate -s',
+    deps=['.env', '../../.env', 'internal/repository/migrations/', 'cmd/migrate/'],
+    ignore=['./**/*_test.go'],
+    resource_deps=['notes-db'],
+)
+
+local_resource(
     'notes-api-frontend',
     labels=['notes'],
     cmd='make build.api.frontend -s',
     serve_cmd='make run.api.frontend -s',
     deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod'],
-    ignore=['./**/mocks/', 'coverage*'],
+    ignore=['./**/mocks/', 'coverage*', 'cmd/migrate/', 'internal/repository/migrations/'],
+    resource_deps=['notes-migrate'],
     trigger_mode=TRIGGER_MODE_AUTO,
     allow_parallel=True,
     links=[link('http://localhost:8080/health', 'health')],

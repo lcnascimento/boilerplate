@@ -1,7 +1,5 @@
 name: ci-e2e
 
-# Playwright against the real stack: a production build of the web app plus
-# each backend service's binary (started by the Playwright webServer list).
 on:
   workflow_call:
     inputs:
@@ -13,6 +11,8 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "Tiltfile"
+      - "**/Tiltfile"
       - ".nvmrc"
       - ".github/workflows/ci-e2e.yml"
   push:
@@ -20,6 +20,8 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "Tiltfile"
+      - "**/Tiltfile"
       - ".nvmrc"
       - ".github/workflows/ci-e2e.yml"
 
@@ -29,6 +31,10 @@ permissions:
 concurrency:
   group: ci-e2e-${{ github.ref }}-${{ inputs.bootstrap }}
   cancel-in-progress: true
+
+env:
+  TILT_VERSION: 0.37.8
+  TILT_STACK: minimal
 
 defaults:
   run:
@@ -57,31 +63,84 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # example:begin
-      # The notes service binary, started by the Playwright webServer list.
       - uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.work
           cache-dependency-path: backend/**/go.sum
 
-      # Skipped once the service is gone, so the workflow still runs when it
-      # is called with `make clean-example` as the bootstrap.
-      - name: Build notes
-        if: hashFiles('backend/services/notes/Makefile') != ''
-        working-directory: backend/services/notes
-        run: make build.api.frontend
-      # example:end
-
       - name: Install Playwright Chromium
         run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
 
+      # `next dev` compiles each route on its first request; the cache speeds up later runs.
+      - name: Restore the next dev cache
+        uses: actions/cache@v6
+        with:
+          path: frontend/apps/web/.next/dev/cache
+          key: next-dev-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: next-dev-
+
+      - name: Install Tilt
+        working-directory: .
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/tilt-dev/tilt/releases/download/v${TILT_VERSION}/tilt.${TILT_VERSION}.linux.x86_64.tar.gz" |
+            tar -xz -C "$HOME/.local/bin" tilt
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/tilt" version
+
+      # No collector in CI: services log to stdout (for `tilt logs`) and export nothing.
+      - name: Env files
+        working-directory: .
+        run: |
+          make -C backend env
+          for env_file in backend/services/*/.env; do
+            [ -f "$env_file" ] || continue
+            printf '%s\n' \
+              OTEL_LOG_HANDLER=zap \
+              OTEL_TRACES_EXPORTER=none \
+              OTEL_METRICS_EXPORTER=none \
+              OTEL_LOGS_EXPORTER=none \
+              OTEL_PROFILES_EXPORTER=none >> "$env_file"
+          done
+
+      - name: Start the stack
+        working-directory: .
+        run: |
+          tilt up --stream > "$RUNNER_TEMP/tilt-up.log" 2>&1 &
+          for _ in $(seq 60); do
+            tilt get uiresource > /dev/null 2>&1 && break
+            sleep 1
+          done
+          # Every resource is registered once the Tiltfile has loaded.
+          tilt wait --for=condition=Ready 'uiresource/(Tiltfile)' --timeout=2m
+          tilt wait --for=condition=Ready --all uiresource --timeout=5m
+
       - name: e2e
-        run: pnpm turbo run test:e2e
+        run: pnpm test:e2e
+
+      - name: Tilt logs
+        if: failure()
+        working-directory: .
+        run: |
+          mkdir -p "$RUNNER_TEMP/tilt-logs"
+          cp "$RUNNER_TEMP/tilt-up.log" "$RUNNER_TEMP/tilt-logs/" || true
+          tilt get uiresource > "$RUNNER_TEMP/tilt-logs/uiresources.txt" 2>&1 || true
+          tilt logs 2>&1 | tee "$RUNNER_TEMP/tilt-logs/tilt.log" || true
+
+      - name: Upload Tilt logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tilt-logs
+          path: ${{ runner.temp }}/tilt-logs/
+          retention-days: 7
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
@@ -90,3 +149,8 @@ jobs:
           name: playwright-report
           path: frontend/apps/web/playwright-report/
           retention-days: 7
+
+      - name: tilt down
+        if: always()
+        working-directory: .
+        run: tilt down || true

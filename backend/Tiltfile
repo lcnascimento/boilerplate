@@ -1,48 +1,58 @@
 # -*- mode: Python -*-
 
-docker_compose('./docker-compose.yml')
+minimal = os.getenv('TILT_STACK', '') == 'minimal'
 
-dc_resource(
-    'alloy',
-    labels=['Monitoring'],
-    resource_deps=['prometheus', 'loki', 'tempo', 'pyroscope'],
-    links=[
-        link('http://localhost:12345', 'UI'),
-        link('http://localhost:4317', 'OTLP gRPC receiver'),
-        link('http://localhost:4318', 'OTLP HTTP receiver'),
-    ],
-)
+compose_files = ['./docker-compose.yml']
+if not minimal:
+    compose_files.append('./docker-compose.observability.yml')
+# wait=True runs `docker compose up --wait`: without it Tilt marks a compose
+# resource ready once its container starts, ignoring its healthcheck.
+docker_compose(compose_files, wait=True)
 
-dc_resource(
-    'prometheus',
-    labels=['Monitoring'],
-    links=[link('http://localhost:9090', 'UI')],
-)
+dc_resource('postgres', labels=['Database'])
 
-dc_resource(
-    'loki',
-    labels=['Monitoring'],
-    links=[link('http://localhost:3100', 'API')],
-)
+if not minimal:
+    dc_resource(
+        'alloy',
+        labels=['Monitoring'],
+        resource_deps=['prometheus', 'loki', 'tempo', 'pyroscope'],
+        links=[
+            link('http://localhost:12345', 'UI'),
+            link('http://localhost:4317', 'OTLP gRPC receiver'),
+            link('http://localhost:4318', 'OTLP HTTP receiver'),
+        ],
+    )
 
-dc_resource(
-    'tempo',
-    labels=['Monitoring'],
-    links=[link('http://localhost:3200', 'API')],
-)
+    dc_resource(
+        'prometheus',
+        labels=['Monitoring'],
+        links=[link('http://localhost:9090', 'UI')],
+    )
 
-dc_resource(
-    'pyroscope',
-    labels=['Monitoring'],
-    links=[link('http://localhost:4040', 'UI / API')],
-)
+    dc_resource(
+        'loki',
+        labels=['Monitoring'],
+        links=[link('http://localhost:3100', 'API')],
+    )
 
-dc_resource(
-    'grafana',
-    labels=['Monitoring'],
-    resource_deps=['alloy', 'prometheus', 'loki', 'tempo', 'pyroscope'],
-    links=[link('http://localhost:3010', 'UI')],
-)
+    dc_resource(
+        'tempo',
+        labels=['Monitoring'],
+        links=[link('http://localhost:3200', 'API')],
+    )
+
+    dc_resource(
+        'pyroscope',
+        labels=['Monitoring'],
+        links=[link('http://localhost:4040', 'UI / API')],
+    )
+
+    dc_resource(
+        'grafana',
+        labels=['Monitoring'],
+        resource_deps=['alloy', 'prometheus', 'loki', 'tempo', 'pyroscope'],
+        links=[link('http://localhost:3010', 'UI')],
+    )
 
 # Each service adds its own include below.
 # example:begin

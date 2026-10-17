@@ -2,28 +2,17 @@ package bundle
 
 import (
 	"context"
-	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"go.uber.org/fx"
 
 	"github.com/lcnascimento/go-kit/o11y"
-	"github.com/lcnascimento/go-kit/o11y/log"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend"
 )
-
-var logger = newLogger()
-
-func newLogger() *slog.Logger {
-	handler, err := log.NewHandler(pkg)
-	if err != nil {
-		panic(err)
-	}
-
-	return slog.New(handler)
-}
 
 func Run(app *fx.App) {
 	if code := run(app); code != 0 {
@@ -38,23 +27,32 @@ func run(app *fx.App) int {
 
 	defer func() {
 		if err := o11y.Shutdown(ctx); err != nil {
-			logger.ErrorContext(ctx, "failed to shutdown o11y", "error", err)
+			onO11yShutdownFailed(ctx, err)
 		}
 	}()
 
-	if err := app.Start(ctx); err != nil {
+	// fx only listens for signals from app.Wait on: until then a SIGTERM
+	// cancels the start instead of waiting out a slow OnStart hook.
+	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	err := app.Start(startCtx)
+
+	stopSignals()
+
+	if err != nil {
+		onStartFailed(ctx, err)
+
 		return 1
 	}
 
 	defer func() {
 		if err := app.Stop(ctx); err != nil {
-			logger.ErrorContext(ctx, "failed to stop app", "error", err)
+			onStopFailed(ctx, err)
 		}
 	}()
 
-	signal := <-app.Wait()
+	shutdown := <-app.Wait()
 
-	return signal.ExitCode
+	return shutdown.ExitCode
 }
 
 func NewFrontendServer() *fx.App {
@@ -65,10 +63,11 @@ func frontendServerOptions() []fx.Option {
 	return []fx.Option{
 		Logger(logger),
 		Validator(),
+		Database(),
 		Repositories(),
 		NotesService(),
-		fx.Provide(func(notes transport.NotesService, shutdowner fx.Shutdowner) *frontend.Server {
-			return frontend.New(notes, frontend.WithShutdown(func() {
+		fx.Provide(func(notes transport.NotesService, db transport.Database, shutdowner fx.Shutdowner) *frontend.Server {
+			return frontend.New(notes, db, frontend.WithShutdown(func() {
 				_ = shutdowner.Shutdown(fx.ExitCode(1))
 			}))
 		}),

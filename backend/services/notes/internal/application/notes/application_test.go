@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
@@ -31,6 +32,26 @@ type ApplicationSuite struct {
 func TestApplication(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(ApplicationSuite))
+}
+
+func TestApplication_DefaultClockIsUTCInMicroseconds(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	repo := mocks.NewMockNotesRepository(ctrl)
+	repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+
+	v, err := validator.New(validator.WithJSONFieldNames())
+	require.NoError(t, err)
+
+	before := time.Now()
+	got, err := notes.New(repo, v).Create(t.Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
+	after := time.Now()
+
+	require.NoError(t, err)
+	require.Equal(t, time.UTC, got.CreatedAt.Location())
+	require.Zero(t, got.CreatedAt.Nanosecond()%int(time.Microsecond))
+	require.WithinRange(t, got.CreatedAt, before.Truncate(time.Microsecond), after)
 }
 
 func (s *ApplicationSuite) SetupTest() {

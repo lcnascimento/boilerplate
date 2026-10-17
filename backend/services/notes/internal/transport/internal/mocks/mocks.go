@@ -100,3 +100,41 @@ func (mr *MockNotesServiceMockRecorder) List(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesService)(nil).List), ctx)
 }
+
+// MockDatabase is a mock of Database interface.
+type MockDatabase struct {
+	ctrl     *gomock.Controller
+	recorder *MockDatabaseMockRecorder
+	isgomock struct{}
+}
+
+// MockDatabaseMockRecorder is the mock recorder for MockDatabase.
+type MockDatabaseMockRecorder struct {
+	mock *MockDatabase
+}
+
+// NewMockDatabase creates a new mock instance.
+func NewMockDatabase(ctrl *gomock.Controller) *MockDatabase {
+	mock := &MockDatabase{ctrl: ctrl}
+	mock.recorder = &MockDatabaseMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDatabase) EXPECT() *MockDatabaseMockRecorder {
+	return m.recorder
+}
+
+// Ping mocks base method.
+func (m *MockDatabase) Ping(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ping", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ping indicates an expected call of Ping.
+func (mr *MockDatabaseMockRecorder) Ping(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockDatabase)(nil).Ping), ctx)
+}

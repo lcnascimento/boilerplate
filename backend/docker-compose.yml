@@ -1,102 +1,25 @@
 services:
-  alloy:
-    container_name: alloy
-    image: grafana/alloy:v1.20.1
-    command:
-      - run
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy/data
-      - /etc/alloy/config.alloy
-    ports:
-      - "12345:12345"   # Alloy UI
-      - "4317:4317"     # OTLP gRPC receiver
-      - "4318:4318"     # OTLP HTTP receiver
-    volumes:
-      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - alloy_data:/var/lib/alloy/data
-    depends_on:
-      - prometheus
-      - tempo
-      - loki
-    networks:
-      - boilerplate
-
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:v3.15.0
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --enable-feature=otlp-write-receiver
-      - --web.enable-remote-write-receiver
-    ports:
-      - "9090:9090"
-    volumes:
-      - prometheus_data:/prometheus
-    networks:
-      - boilerplate
-
-  loki:
-    container_name: loki
-    image: grafana/loki:3.7.8
-    command: -config.file=/etc/loki/local-config.yaml
-    ports:
-      - "3100:3100"   # Loki API
-    volumes:
-      - loki_data:/loki
-    networks:
-      - boilerplate
-
-  tempo:
-    container_name: tempo
-    # Tempo 3.x drops `ingester`, `local_blocks` and `traces_storage`, which config/tempo/tempo.yaml uses.
-    image: grafana/tempo:2.10.8
-    command: [ "-config.file=/etc/tempo.yaml" ]
-    volumes:
-      - ./config/tempo/tempo.yaml:/etc/tempo.yaml:ro
-      - tempo_data:/var/tempo
-    ports:
-      - "3200:3200"   # Tempo API
-    networks:
-      - boilerplate
-
-  pyroscope:
-    container_name: pyroscope
-    image: grafana/pyroscope:2.4.0
-    ports:
-      - "4040:4040"   # Pyroscope UI / API
-    volumes:
-      - pyroscope_data:/var/lib/pyroscope
-    networks:
-      - boilerplate
-
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:13.2.3
+  postgres:
+    container_name: postgres
+    image: postgres:18-alpine
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/overview.json
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "3010:3000"
+      - "5432:5432"
     volumes:
-      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
-      - tempo
-      - loki
-      - pyroscope
+      # Postgres 18+ images keep the data under /var/lib/postgresql/<major>.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
     networks:
       - boilerplate
 
 volumes:
-  alloy_data:
-  prometheus_data:
-  loki_data:
-  tempo_data:
-  grafana_data:
-  pyroscope_data:
+  postgres_data:
 
 networks:
   boilerplate:

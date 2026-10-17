@@ -1,10 +1,10 @@
 # -*- mode: Python -*-
 
 # Scalar only runs when there is at least one service spec (*.yaml) here.
-# With zero services (after clean-example) this Tiltfile adds no resource.
 specs = [f for f in listdir('.') if f.endswith('.yaml')]
+minimal = os.getenv('TILT_STACK', '') == 'minimal'
 
-if specs:
+if specs and not minimal:
     docker_compose('./docker-compose.yml')
 
     dc_resource(

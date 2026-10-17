@@ -13,13 +13,15 @@ import (
 
 type Server struct {
 	notes    transport.NotesService
+	db       transport.Database
 	server   *httpserver.Server
 	shutdown func()
 }
 
-func New(notes transport.NotesService, opts ...Option) *Server {
+func New(notes transport.NotesService, db transport.Database, opts ...Option) *Server {
 	server := &Server{
 		notes:    notes,
+		db:       db,
 		server:   httpserver.NewServer(),
 		shutdown: func() {},
 	}
@@ -49,7 +51,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) register(router *mux.Router) error {
-	routes.RegisterHealth(router)
+	routes.RegisterHealth(router, s.db)
 	routes.RegisterNotes(router, s.notes)
 
 	return nil

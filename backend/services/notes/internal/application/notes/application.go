@@ -21,7 +21,8 @@ func New(notes application.NotesRepository, v application.Validator, opts ...Opt
 	app := &Application{
 		notes:     notes,
 		validator: v,
-		now:       func() time.Time { return time.Now().UTC() },
+		// Microseconds, the precision of timestamptz: Create returns what Get reads back.
+		now: func() time.Time { return time.Now().UTC().Truncate(time.Microsecond) },
 	}
 
 	for _, opt := range opts {

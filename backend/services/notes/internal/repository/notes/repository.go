@@ -1,79 +1,88 @@
 package notes
 
 import (
-	"bytes"
 	"context"
-	"slices"
-	"sync"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/lcnascimento/go-kit/errors"
+
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes/internal/db"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 )
 
-// Repository keeps notes in memory; it starts empty on every boot.
-// It stores and returns copies, so callers never alias stored state.
+var ErrQuery = errors.New("notes query failed")
+
 type Repository struct {
-	mu    sync.RWMutex
-	notes map[domain.NoteID]domain.Note
+	queries *db.Queries
 }
 
-func New() *Repository {
-	return &Repository{notes: map[domain.NoteID]domain.Note{}}
+func New(pool *pgxpool.Pool) *Repository {
+	return &Repository{queries: db.New(pool)}
 }
 
-func (r *Repository) Create(_ context.Context, note *domain.Note) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.notes[note.ID] = *note
+func (r *Repository) Create(ctx context.Context, note *domain.Note) error {
+	err := r.queries.CreateNote(ctx, db.CreateNoteParams{
+		ID:        note.ID.UUID(),
+		CreatedAt: note.CreatedAt,
+		Title:     note.Title,
+		Body:      note.Body,
+	})
+	if err != nil {
+		return ErrQuery.WithCause(err)
+	}
 
 	return nil
 }
 
-func (r *Repository) Get(_ context.Context, id domain.NoteID) (*domain.Note, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	note, ok := r.notes[id]
-	if !ok {
+func (r *Repository) Get(ctx context.Context, id domain.NoteID) (*domain.Note, error) {
+	row, err := r.queries.GetNote(ctx, id.UUID())
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNoteNotFound
 	}
 
-	return &note, nil
+	if err != nil {
+		return nil, ErrQuery.WithCause(err)
+	}
+
+	return toDomain(row), nil
 }
 
 // List returns every note, newest first. Equal timestamps fall back to the
-// UUID v7 inside the ID, which is time-ordered.
-func (r *Repository) List(_ context.Context) ([]*domain.Note, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	out := make([]*domain.Note, 0, len(r.notes))
-	for _, note := range r.notes {
-		out = append(out, &note)
+// id, a UUID v7, which is time-ordered.
+func (r *Repository) List(ctx context.Context) ([]*domain.Note, error) {
+	rows, err := r.queries.ListNotes(ctx)
+	if err != nil {
+		return nil, ErrQuery.WithCause(err)
 	}
 
-	slices.SortFunc(out, func(a, b *domain.Note) int {
-		if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
-			return c
-		}
-
-		bID, aID := b.ID.UUID(), a.ID.UUID()
-
-		return bytes.Compare(bID[:], aID[:])
-	})
+	out := make([]*domain.Note, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, toDomain(row))
+	}
 
 	return out, nil
 }
 
-func (r *Repository) Delete(_ context.Context, id domain.NoteID) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Repository) Delete(ctx context.Context, id domain.NoteID) error {
+	deleted, err := r.queries.DeleteNote(ctx, id.UUID())
+	if err != nil {
+		return ErrQuery.WithCause(err)
+	}
 
-	if _, ok := r.notes[id]; !ok {
+	if deleted == 0 {
 		return domain.ErrNoteNotFound
 	}
 
-	delete(r.notes, id)
-
 	return nil
+}
+
+// toDomain returns CreatedAt in UTC: pgx reads timestamptz in the local zone.
+func toDomain(row db.Note) *domain.Note {
+	return &domain.Note{
+		ID:          domain.NoteIDFromUUID(row.ID),
+		NoteContent: domain.NoteContent{Title: row.Title, Body: row.Body},
+		CreatedAt:   row.CreatedAt.UTC(),
+	}
 }

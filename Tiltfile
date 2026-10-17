@@ -1,5 +1,8 @@
 # -*- mode: Python -*-
 
+if os.getenv('TILT_STACK', '') not in ['', 'minimal']:
+    fail('TILT_STACK must be unset or "minimal", got "{}"'.format(os.getenv('TILT_STACK')))
+
 # Root tooling: keeps root devDependencies and git hooks (lefthook) installed.
 # It also gives Tilt one resource, so the Tiltfile loads before any area exists.
 local_resource(

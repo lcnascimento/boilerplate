@@ -42,8 +42,21 @@ jobs:
       - name: Setup
         run: make setup
 
+      # Staged first, so a bootstrap's uncommitted changes don't count as drift.
+      - name: sqlc
+        run: |
+          git add -A
+          make sqlc
+          git diff --exit-code
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then echo "make sqlc created untracked files:"; echo "$untracked"; exit 1; fi
+
       - name: Lint
         run: make lint
+
+      # Up even with zero services, so CI also proves the compose file boots.
+      - name: Postgres
+        run: docker compose up -d --wait postgres
 
       - name: Test
         run: make test

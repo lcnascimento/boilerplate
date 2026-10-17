@@ -1,13 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
-// Against the real notes service. Each test creates its own note, with a
-// unique title, so tests running in parallel never see each other's data.
-
-function uniqueTitle(prefix: string) {
-  return `${prefix} ${randomUUID().slice(0, 8)}`;
-}
+import type { Page } from "@playwright/test";
 
 async function createNote(page: Page, title: string, body: string) {
   await page.goto("/notes");
@@ -28,8 +23,9 @@ function noteLink(page: Page, title: string) {
 
 test("creating a note through the dialog shows it in the list", async ({
   page,
+  marker,
 }) => {
-  const title = uniqueTitle("Compras");
+  const title = marker("compras");
 
   await createNote(page, title, "leite e pão");
 
@@ -37,13 +33,15 @@ test("creating a note through the dialog shows it in the list", async ({
   await expect(noteLink(page, title)).toContainText("leite e pão");
 });
 
-test("a note opens on its own page", async ({ page }) => {
-  const title = uniqueTitle("Ideias");
+test("a note opens on its own page", async ({ page, marker }) => {
+  const title = marker("ideias");
   await createNote(page, title, "uma ideia por linha");
 
   await noteLink(page, title).click();
 
-  await expect(page).toHaveURL(/\/notes\/note_[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(
+    /\/notes\/note_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+  );
   await expect(
     page.getByRole("heading", { level: 1, name: title })
   ).toBeVisible();
@@ -52,8 +50,9 @@ test("a note opens on its own page", async ({ page }) => {
 
 test("deleting a note after confirming removes it from the list", async ({
   page,
+  marker,
 }) => {
-  const title = uniqueTitle("Rascunho");
+  const title = marker("rascunho");
   await createNote(page, title, "apagar depois");
   await noteLink(page, title).click();
 
@@ -71,7 +70,8 @@ test("deleting a note after confirming removes it from the list", async ({
 
 for (const [name, id] of [
   ["an unknown note", `note_${randomUUID()}`],
-  ["a malformed note id", "not-a-note-id"],
+  ["a note id without its prefix", randomUUID()],
+  ["a note id with a malformed uuid", "note_not-a-uuid"],
 ]) {
   test(`${name} answers 404 with the not-found`, async ({ page }) => {
     const response = await page.goto(`/notes/${id}`);
