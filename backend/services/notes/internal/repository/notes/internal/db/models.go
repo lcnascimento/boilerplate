@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Note struct {
@@ -15,4 +16,19 @@ type Note struct {
 	CreatedAt time.Time
 	Title     string
 	Body      string
+}
+
+type WatermillNotesOutbox struct {
+	Offset        int64
+	Uuid          string
+	CreatedAt     time.Time
+	Payload       []byte
+	Metadata      []byte
+	TransactionID pgtype.Uint64
+}
+
+type WatermillOffsetsNotesOutbox struct {
+	ConsumerGroup              string
+	OffsetAcked                pgtype.Int8
+	LastProcessedTransactionID pgtype.Uint64
 }

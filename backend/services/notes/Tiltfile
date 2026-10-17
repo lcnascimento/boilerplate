@@ -40,7 +40,7 @@ local_resource(
     serve_cmd='make run.api.frontend -s',
     deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod'],
     ignore=['./**/mocks/', 'coverage*', 'cmd/migrate/', 'internal/repository/migrations/'],
-    resource_deps=['notes-migrate'],
+    resource_deps=['notes-migrate', 'notes-schemas'],
     trigger_mode=TRIGGER_MODE_AUTO,
     allow_parallel=True,
     links=[link('http://localhost:8080/health', 'health')],
