@@ -17,7 +17,6 @@ func New(outbox application.OutboxRepository) *Application {
 	return &Application{outbox: outbox}
 }
 
-// Purge deletes the messages forwarded more than seven days ago. Pending messages are never deleted.
 func (a *Application) Purge(ctx context.Context) error {
 	ctx, span := a.onPurgeStart(ctx)
 	defer span.End()
@@ -34,7 +33,6 @@ func (a *Application) Purge(ctx context.Context) error {
 	return nil
 }
 
-// OldestPendingAge is zero when every message has been forwarded.
 func (a *Application) OldestPendingAge(ctx context.Context) (time.Duration, error) {
 	age, err := a.outbox.OldestPendingAge(ctx)
 	if err != nil {

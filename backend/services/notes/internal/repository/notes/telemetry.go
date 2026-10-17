@@ -18,8 +18,6 @@ const pkg = "notes/repository/notes"
 
 var tracer = otel.Tracer(pkg)
 
-// onEmitStart opens the PRODUCER span and injects its context into msg, which carries it through
-// the outbox and Kafka to the forwarder and consumer spans that link back to it.
 func onEmitStart(ctx context.Context, msg *message.Message) (context.Context, trace.Span) {
 	ctx, span := tracer.Start(ctx, "create "+events.Topic,
 		trace.WithSpanKind(trace.SpanKindProducer),

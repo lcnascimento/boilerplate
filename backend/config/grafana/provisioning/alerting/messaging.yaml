@@ -11,7 +11,6 @@ groups:
         title: Outbox travado
         condition: C
         for: 5m
-        # The forwarder reports the gauge: no forwarder left means nothing drains the outbox.
         noDataState: Alerting
         execErrState: Error
         labels:

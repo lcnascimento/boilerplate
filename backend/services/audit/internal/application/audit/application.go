@@ -17,7 +17,6 @@ func New(repo application.AuditEntriesRepository) *Application {
 	return &Application{repo: repo}
 }
 
-// Record fails with events.ErrPermanent when the envelope cannot identify the Entry; any other error is transient.
 func (a *Application) Record(ctx context.Context, entry *idomain.Entry) error {
 	ctx, span := a.onRecordStart(ctx, entry)
 	defer span.End()

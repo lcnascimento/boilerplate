@@ -101,7 +101,6 @@ func TestApplication_PurgeCountsRunsByOutcomeAndPurgedMessages(t *testing.T) {
 	require.Equal(t, int64(5), after["notes.outbox.purged.messages"]-before["notes.outbox.purged.messages"])
 }
 
-// collect keys each counter data point by name and outcome, as in notes.outbox.purge.runs{outcome=failure}.
 func collect(t *testing.T) map[string]int64 {
 	t.Helper()
 

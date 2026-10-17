@@ -21,7 +21,6 @@ func New(pool *pgxpool.Pool) *Repository {
 	return &Repository{queries: db.New(pool)}
 }
 
-// Insert keeps the stored Entry when one with the same Source and ID exists.
 func (r *Repository) Insert(ctx context.Context, entry *idomain.Entry) error {
 	var subject *string
 	if entry.Subject != "" {

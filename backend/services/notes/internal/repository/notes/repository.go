@@ -17,7 +17,6 @@ import (
 
 var ErrQuery = errors.New("notes query failed")
 
-// Repository emits a NoteCreated or NoteDeleted Integration Event in the transaction of every effective mutation.
 type Repository struct {
 	pool      *pgxpool.Pool
 	queries   *db.Queries
@@ -83,7 +82,6 @@ func (r *Repository) List(ctx context.Context) ([]*domain.Note, error) {
 	return out, nil
 }
 
-// Delete holds the row lock until commit, so of concurrent deletes of one Note only the first emits NoteDeleted.
 func (r *Repository) Delete(ctx context.Context, id domain.NoteID) error {
 	return r.inTx(ctx, func(tx pgx.Tx) error {
 		deleted, err := r.queries.WithTx(tx).DeleteNote(ctx, id.UUID())

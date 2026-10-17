@@ -365,8 +365,6 @@ func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {
 	return f
 }
 
-// subscribe follows only the events of ids and of the ids passed to want later, since parallel tests
-// forward to the same topic.
 func (e *env) subscribe(t *testing.T, ids ...domain.NoteID) *recorder {
 	t.Helper()
 

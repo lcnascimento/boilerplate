@@ -27,7 +27,6 @@ var (
 				WithCode("ROUTER_STOPPED")
 )
 
-// Consumer records every Integration Event of events.Topic as an Audit Entry.
 type Consumer struct {
 	events.UnimplementedObserver
 
@@ -68,7 +67,6 @@ func (c *Consumer) OnAny(ctx context.Context, event *events.Event) error {
 	})
 }
 
-// Start returns once the subscriber is consuming. If it stops before Stop, Consumer calls the shutdown option.
 func (c *Consumer) Start(ctx context.Context) error {
 	subscriber, err := events.NewSubscriber(events.SubscriberConfig{Brokers: c.brokers, Group: Group, Observer: c})
 	if err != nil {
@@ -94,7 +92,6 @@ func (c *Consumer) Start(ctx context.Context) error {
 	}
 }
 
-// Stop waits for the events being recorded before it disconnects.
 func (c *Consumer) Stop(_ context.Context) error {
 	c.closing.Store(true)
 

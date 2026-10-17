@@ -167,7 +167,6 @@ func newRepository(t *testing.T) (*pgxpool.Pool, *outbox.Repository) {
 	return pool, outbox.New(pool)
 }
 
-// seed writes n messages in one transaction, created age ago.
 func seed(t *testing.T, pool *pgxpool.Pool, n int, age time.Duration) {
 	t.Helper()
 
@@ -190,7 +189,6 @@ func publish(t *testing.T, pool *pgxpool.Pool, uuid string) {
 	require.NoError(t, tx.Commit(t.Context()))
 }
 
-// ack moves the cursor of the forwarder's consumer group to the last message, as the subscriber does.
 func ack(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 

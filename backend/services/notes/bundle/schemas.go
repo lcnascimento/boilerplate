@@ -70,8 +70,6 @@ func register(ctx context.Context) (events.SchemaIDs, error) {
 	return events.RegisterSchemas(ctx, client)
 }
 
-// newSchemaIDs fills the IDs on start, never inside a transaction, and fails the start when a schema
-// is not registered: the API never auto-registers.
 func newSchemaIDs(lifecycle fx.Lifecycle) (events.SchemaIDs, error) {
 	client, err := newRegistryClient()
 	if err != nil {

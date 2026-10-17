@@ -2,8 +2,6 @@ package idomain
 
 import "time"
 
-// Entry is an Audit Entry: one received Integration Event, its envelope and payload stored uninterpreted.
-// Source and ID identify it, so a redelivered event is the same Entry.
 type Entry struct {
 	Source          string
 	ID              string
