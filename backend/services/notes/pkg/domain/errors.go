@@ -3,7 +3,6 @@ package domain
 import "github.com/lcnascimento/go-kit/errors"
 
 var (
-	// ErrInvalidInput carries one cause per validation failure, exposed as details.reasons.
 	ErrInvalidInput = errors.New("invalid input").
 			WithCode("INVALID_INPUT").
 			WithKind(errors.KindInvalidInput)

@@ -19,8 +19,6 @@ interface ThemePreferenceProps {
 export function ThemePreference({ labelledBy }: ThemePreferenceProps) {
   const t = useTranslations("profile");
   const { theme, setTheme } = useTheme();
-  // The stored theme is only known in the browser; until then nothing is
-  // checked, so the server HTML never shows a wrong choice.
   const mounted = useMounted();
 
   return (

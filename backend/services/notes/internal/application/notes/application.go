@@ -11,6 +11,8 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 )
 
+const timestamptzPrecision = time.Microsecond
+
 type Application struct {
 	notes     application.NotesRepository
 	validator application.Validator
@@ -21,8 +23,7 @@ func New(notes application.NotesRepository, v application.Validator, opts ...Opt
 	app := &Application{
 		notes:     notes,
 		validator: v,
-		// Microseconds, the precision of timestamptz: Create returns what Get reads back.
-		now: func() time.Time { return time.Now().UTC().Truncate(time.Microsecond) },
+		now:       func() time.Time { return time.Now().UTC().Truncate(timestamptzPrecision) },
 	}
 
 	for _, opt := range opts {
@@ -96,8 +97,6 @@ func (a *Application) Delete(ctx context.Context, id domain.NoteID) error {
 	return nil
 }
 
-// validate runs the validator and rebuilds its failure as domain.ErrInvalidInput
-// (go-kit's sentinel has another code), one cause per reason.
 func (a *Application) validate(note *domain.Note) error {
 	err := a.validator.Struct(note)
 	if err == nil {

@@ -8,9 +8,9 @@ services:
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/config.alloy
     ports:
-      - "12345:12345"   # Alloy UI
-      - "4317:4317"     # OTLP gRPC receiver
-      - "4318:4318"     # OTLP HTTP receiver
+      - "12345:12345"
+      - "4317:4317"
+      - "4318:4318"
     volumes:
       - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -41,7 +41,7 @@ services:
     image: grafana/loki:3.7.8
     command: -config.file=/etc/loki/local-config.yaml
     ports:
-      - "3100:3100"   # Loki API
+      - "3100:3100"
     volumes:
       - loki_data:/loki
     networks:
@@ -56,7 +56,7 @@ services:
       - ./config/tempo/tempo.yaml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
-      - "3200:3200"   # Tempo API
+      - "3200:3200"
     networks:
       - boilerplate
 
@@ -64,7 +64,7 @@ services:
     container_name: pyroscope
     image: grafana/pyroscope:2.4.0
     ports:
-      - "4040:4040"   # Pyroscope UI / API
+      - "4040:4040"
     volumes:
       - pyroscope_data:/var/lib/pyroscope
     networks:

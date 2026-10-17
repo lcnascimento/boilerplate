@@ -32,7 +32,6 @@ async function deleteMarkedNotes({ request, markers }: CleanupArgs) {
 // example:end
 
 const cleanups: readonly Cleanup[] = [
-  // One per service whose data the e2e creates.
   // example:begin
   deleteMarkedNotes,
   // example:end

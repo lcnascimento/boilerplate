@@ -21,16 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      # Set only when another workflow calls this one: the template's own CI
-      # passes `make init` / `make clean-example` here, then runs the checks.
       - name: Bootstrap
         if: inputs.bootstrap
         env:
           BOOTSTRAP: ${{ inputs.bootstrap }}
         run: bash -euo pipefail -c "$BOOTSTRAP"
 
-      # vacuum's default ruleset is the recommended one. With zero services
-      # (after clean-example) there is no spec to lint, and the job passes.
       - name: Lint OpenAPI specs
         run: |
           shopt -s nullglob

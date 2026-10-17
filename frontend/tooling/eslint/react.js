@@ -6,9 +6,6 @@ import globals from "globals";
 
 import { base } from "./base.js";
 
-/**
- * React preset: base + React, hooks (with the React Compiler rules) and a11y.
- */
 export const react = defineConfig(base, {
   files: ["**/*.tsx", "**/*.jsx"],
   extends: [

@@ -46,7 +46,6 @@ func Up(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-// Down rolls back the latest applied migration only.
 func Down(ctx context.Context, db *sql.DB) error {
 	provider, err := newProvider(ctx, db)
 	if err != nil {
@@ -85,7 +84,6 @@ func newProvider(ctx context.Context, db *sql.DB) (*goose.Provider, error) {
 		return nil, ErrMigrate.WithCause(err)
 	}
 
-	// Returned unwrapped: its message is the one thing the developer must read.
 	if err := checkAppliedVersionsAreKnown(ctx, db, store, provider.ListSources()); err != nil {
 		return nil, err
 	}

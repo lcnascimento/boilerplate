@@ -15,7 +15,6 @@ interface NotesErrorProps {
   error: Pick<APIError, "code">;
 }
 
-/** A failed read: says whether the service is down and offers a retry. */
 export function NotesError({ error }: NotesErrorProps) {
   const t = useTranslations("notes");
   const tCommon = useTranslations("common");

@@ -31,8 +31,7 @@ func run(app *fx.App) int {
 		}
 	}()
 
-	// fx only listens for signals from app.Wait on: until then a SIGTERM
-	// cancels the start instead of waiting out a slow OnStart hook.
+	// fx only listens for signals from app.Wait on.
 	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	err := app.Start(startCtx)
 

@@ -49,8 +49,6 @@ func (r *Repository) Get(ctx context.Context, id domain.NoteID) (*domain.Note, e
 	return toDomain(row), nil
 }
 
-// List returns every note, newest first. Equal timestamps fall back to the
-// id, a UUID v7, which is time-ordered.
 func (r *Repository) List(ctx context.Context) ([]*domain.Note, error) {
 	rows, err := r.queries.ListNotes(ctx)
 	if err != nil {

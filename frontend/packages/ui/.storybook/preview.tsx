@@ -16,7 +16,6 @@ const preview: Preview = {
     controls: {
       matchers: { color: /(background|color)$/i, date: /Date$/i },
     },
-    // Accessibility violations fail the story tests.
     a11y: { test: "error" },
   },
   globalTypes: {

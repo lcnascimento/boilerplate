@@ -15,7 +15,6 @@ export function isLocale(value: unknown): value is Locale {
   return locales.some((locale) => locale === value);
 }
 
-/** Parses an untrusted value (cookie, header, form field) into a `Locale`. */
 export function parseLocale(value: unknown): Locale {
   return isLocale(value) ? value : defaultLocale;
 }

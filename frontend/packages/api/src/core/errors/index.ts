@@ -1,16 +1,9 @@
 import type { APIError } from "../result";
 import type { z } from "zod";
 
-// Isomorphic: client components import this entry (`@boilerplate/api/core/errors`)
-// to branch on error codes; `request()` lives in the server-only `@boilerplate/api/core`.
-
-/** Codes of the errors this package builds itself instead of reading them from a service. */
 export const ErrorCode = {
-  /** The service could not be reached. */
   Unavailable: "UNAVAILABLE",
-  /** The service answered outside its schema. */
   Unexpected: "UNEXPECTED",
-  /** The input failed a local schema; same code as go-kit's validation error. */
   InvalidInput: "INVALID_INPUT",
 } as const;
 
@@ -28,7 +21,6 @@ export const unexpectedError: APIError = {
   status: 502,
 };
 
-/** A local Zod failure in the shape of the service's 400, one reason per issue. */
 export function invalidInputError(error: z.ZodError): APIError {
   return {
     code: ErrorCode.InvalidInput,

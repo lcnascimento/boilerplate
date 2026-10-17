@@ -11,8 +11,7 @@ import {
   type Note,
 } from "@boilerplate/api/notes";
 
-// Every function here is a public endpoint: arguments arrive as `unknown` and
-// are parsed before reaching the notes service.
+// Next exposes every Server Action as a public endpoint, so arguments arrive as `unknown`.
 
 function notesClient() {
   return createNotesClient({
@@ -24,7 +23,6 @@ export async function listNotes(): Promise<Result<Note[]>> {
   return notesClient().list();
 }
 
-/** The note, or the route's not-found when the id is malformed or unknown. */
 export async function getNote(id: unknown): Promise<Result<Note>> {
   const noteId = noteIdSchema.safeParse(id);
   if (!noteId.success) notFound();

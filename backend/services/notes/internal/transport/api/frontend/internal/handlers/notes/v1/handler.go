@@ -51,7 +51,6 @@ func (h *Notes) List(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The contract always has an array, never null.
 	if notes == nil {
 		notes = []*domain.Note{}
 	}

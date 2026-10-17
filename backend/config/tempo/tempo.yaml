@@ -33,8 +33,7 @@ metrics_generator:
         send_exemplars: true
   processor:
     local_blocks:
-      # Keep all spans so TraceQL metrics can aggregate by any attribute,
-      # not only server spans.
+      # Tempo's default feeds only server spans to TraceQL metrics.
       filter_server_spans: false
   traces_storage:
     path: /var/tempo/generator/traces

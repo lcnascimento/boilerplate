@@ -13,18 +13,14 @@ SQLC_VERSION := v1.31.1
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 
-# Every Go module listed in go.work. Targets iterate them, so they work with zero or N services.
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
 
-# Packages of the current module, without entrypoints and generated mocks.
 PACKAGES = go list ./... | { grep -v -e '/cmd/' -e '/mocks$$' || true; }
 
-# in_modules runs a shell snippet inside each module of go.work, stopping at the first failure.
-# The snippet sets its own errexit: make 3.81 (macOS) ignores .SHELLFLAGS, and the
-# subshell's status is read on its own line because `( ... ) || exit` would turn errexit off inside it.
+# make 3.81 (macOS) ignores .SHELLFLAGS, and `( ... ) || exit` turns errexit off inside the subshell.
 define in_modules
 	@for dir in $(MODULES); do \
 		echo "==> $(1) $${dir#$(CURDIR)/}"; \

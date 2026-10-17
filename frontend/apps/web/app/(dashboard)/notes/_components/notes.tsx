@@ -11,11 +11,9 @@ import type { Result } from "@boilerplate/api/core";
 import type { Note } from "@boilerplate/api/notes/schemas";
 
 interface NotesProps {
-  /** Started by the page, so the header streams before the list resolves. */
   notes: Promise<Result<Note[]>>;
 }
 
-/** The notes read: the list, its empty state or the error with a retry. */
 export function Notes({ notes }: NotesProps) {
   const t = useTranslations("notes");
   const result = use(notes);

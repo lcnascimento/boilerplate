@@ -11,9 +11,7 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-// No Suspense boundary and no loading.tsx in this group: a page that calls
-// notFound() before streaming starts answers a real 404. Pages stream their
-// own slow parts behind a local Suspense.
+// Next answers notFound() with a 404 only before streaming starts, so this group has no Suspense or loading.tsx.
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {

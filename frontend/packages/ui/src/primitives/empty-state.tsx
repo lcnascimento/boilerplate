@@ -7,7 +7,6 @@ interface EmptyStateProps extends Omit<React.ComponentProps<"div">, "title"> {
   icon?: LucideIcon;
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Call to action that fills the empty state, such as "Create". */
   action?: React.ReactNode;
 }
 

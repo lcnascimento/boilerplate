@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-// The shell survives `clean-example`: these tests need no backend service.
-
 test("home loads and switching the language changes the texts", async ({
   page,
 }) => {

@@ -20,8 +20,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 )
 
-// DefaultAdminURL is for tests only: the service's own role never needs CREATEDB.
-const DefaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" //nolint:gosec // local docker-compose credentials
+const defaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" //nolint:gosec // local docker-compose credentials
 
 const pingTimeout = 5 * time.Second
 
@@ -58,7 +57,7 @@ func reachableAdminConfig(t *testing.T) pgtestdb.Config {
 func adminConfig(t *testing.T) pgtestdb.Config {
 	t.Helper()
 
-	raw := env.Get("POSTGRES_ADMIN_URL", env.WithDefaultValue(DefaultAdminURL))
+	raw := env.Get("POSTGRES_ADMIN_URL", env.WithDefaultValue(defaultAdminURL))
 
 	u, err := url.Parse(raw)
 	if err != nil {

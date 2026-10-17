@@ -9,13 +9,10 @@ import type { Result } from "./result";
 export interface RequestOptions<T> {
   url: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  /** Sent as JSON. Translate it to the wire shape (`snake_case`) first. */
   body?: unknown;
-  /** Parses the success body; an empty body parses as `undefined`. */
   schema: z.ZodType<T>;
 }
 
-/** go-kit's `httpserver/util.APIError` as written to the response body. */
 const apiErrorBodySchema = z.object({
   code: z.string(),
   message: z.string(),
@@ -34,11 +31,6 @@ function parseBody(text: string): Body {
   }
 }
 
-/**
- * Calls a backend service and never throws: a network failure becomes
- * `UNAVAILABLE`, a body outside the schema becomes `UNEXPECTED`, and an error
- * status returns the service's `APIError`.
- */
 export async function request<T>({
   url,
   method = "GET",

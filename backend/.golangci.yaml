@@ -82,8 +82,8 @@ linters:
     cyclop:
       max-complexity: 16
     errcheck:
-      check-type-assertions: true # Report `a := b.(MyStruct)` when `a, ok := ...` should be.
-      check-blank: false # Report skipped checks:`num, _ := strconv.Atoi(numStr)`.
+      check-type-assertions: true
+      check-blank: false
       exclude-functions:
         - (io.Closer).Close
         - (*net/http.Response).Body.Close

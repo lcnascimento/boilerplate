@@ -6,7 +6,6 @@ import { NOTES_HREF } from "@/shared/navigation";
 import type { Note } from "@boilerplate/api/notes/schemas";
 
 interface NoteListProps {
-  /** Newest first, as the service lists them. */
   notes: Note[];
 }
 

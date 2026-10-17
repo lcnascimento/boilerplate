@@ -11,14 +11,9 @@ import type { AppMessages } from "@/shared/_messages";
 import type { Route } from "next";
 
 // example:begin
-/** The notes list; every link to the notes routes derives from it. */
 export const NOTES_HREF = "/notes" satisfies Route;
 // example:end
 
-/**
- * A message key qualified by its namespace (`nav.home`, `<feature>.title`), so a
- * feature labels its route with its own namespace.
- */
 type NavLabelKey = {
   [N in keyof AppMessages]: `${N}.${Extract<keyof AppMessages[N], string>}`;
 }[keyof AppMessages];
@@ -27,14 +22,9 @@ interface NavRoute {
   href: Route;
   labelKey: NavLabelKey;
   icon: LucideIcon;
-  /** Where the route is listed: the sidebar or the user menu. */
   area: "sidebar" | "userMenu";
 }
 
-/**
- * The single navigation config. The sidebar, the user menu and the breadcrumb
- * all read from it, so they can't disagree.
- */
 export const navRoutes = [
   { href: "/", labelKey: "nav.home", icon: House, area: "sidebar" },
   // example:begin
@@ -57,7 +47,6 @@ export function routesIn(area: NavRoute["area"]): NavRoute[] {
   return navRoutes.filter((route) => route.area === area);
 }
 
-/** Whether `pathname` is `href` or a page below it. `/` matches only itself. */
 export function isActiveHref(pathname: string, href: string): boolean {
   const path = trimTrailingSlash(pathname);
   if (href === "/") return path === "/";
@@ -67,14 +56,9 @@ export function isActiveHref(pathname: string, href: string): boolean {
 export interface Crumb {
   href: Route;
   labelKey: NavLabelKey;
-  /** The crumb is the page being shown, not a link. */
   current: boolean;
 }
 
-/**
- * The breadcrumb for `pathname`: home, then every route that contains the
- * path, outermost first. An unknown path keeps only the home link.
- */
 export function breadcrumbTrail(pathname: string): Crumb[] {
   const path = trimTrailingSlash(pathname);
   const home: Crumb = {

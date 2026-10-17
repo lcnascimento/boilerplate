@@ -9,8 +9,7 @@ allowBuilds:
   esbuild: true
   # napi-postinstall only re-checks the prebuilt binding pnpm already installed.
   unrs-resolver: false
-  # next-intl deps. Both ship prebuilt binaries; the scripts only verify them
-  # or build from source on request.
+  # next-intl deps that ship prebuilt binaries; their scripts only verify them.
   "@parcel/watcher": false
   "@swc/core": false
 

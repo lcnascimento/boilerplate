@@ -13,7 +13,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   title: "Components/Tooltip",
   component: Tooltip,
-  // Apps mount one TooltipProvider at the root.
   decorators: [
     (Story) => (
       <TooltipProvider>

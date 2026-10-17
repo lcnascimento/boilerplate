@@ -1,9 +1,7 @@
 import { defineProject } from "vitest/config";
 
 export default defineProject({
-  // `server-only` throws outside a React Server Components bundle. Inline it
-  // and resolve with the `react-server` condition, as Next does on the server,
-  // so it resolves to its empty module.
+  // `server-only` throws unless resolved with the `react-server` condition, as Next does.
   ssr: { resolve: { conditions: ["react-server"] } },
   test: {
     name: "api",
