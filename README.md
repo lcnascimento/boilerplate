@@ -75,7 +75,7 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 
 <!-- example:begin -->
 
-E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`).
+E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`) e o consumer do `audit`, que grava cada Integration Event de `notes.note.v1` como Audit Entry no banco `audit`, com health em <http://localhost:8092> (`/health`, `/ping`).
 
 <!-- example:end -->
 
@@ -274,14 +274,14 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
 
 ## Removendo o exemplo
 
-Para começar sem o serviço `notes`:
+Para começar sem os serviços de exemplo `notes` e `audit`:
 
 ```sh
 make clean-example
 ```
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
-- Apaga os arquivos do exemplo (`backend/services/notes/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
+- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 

@@ -71,4 +71,5 @@ if not minimal:
 
 # example:begin
 include('./services/notes/Tiltfile')
+include('./services/audit/Tiltfile')
 # example:end

@@ -1,0 +1,43 @@
+# -*- mode: Python -*-
+
+local_resource(
+    'audit-db',
+    labels=['audit'],
+    cmd='make db.setup -s',
+    resource_deps=['postgres'],
+)
+
+local_resource(
+    'audit-migrate',
+    labels=['audit'],
+    cmd='make db.migrate -s',
+    deps=['.env', '../../.env', 'internal/repository/migrations/', 'cmd/migrate/'],
+    ignore=['./**/*_test.go'],
+    resource_deps=['audit-db'],
+)
+
+local_resource(
+    'audit-topics',
+    labels=['audit'],
+    cmd='make kafka.topics -s',
+    deps=['Makefile'],
+    resource_deps=['schema-registry'],
+)
+
+local_resource(
+    'audit-consumer',
+    labels=['audit'],
+    cmd='make build.consumer -s',
+    serve_cmd='make run.consumer -s',
+    deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'go.mod', '../notes/pkg/events/'],
+    ignore=['./**/mocks/', 'coverage*', 'cmd/migrate/', 'internal/repository/migrations/', './**/*_test.go'],
+    resource_deps=['audit-migrate', 'audit-topics', 'notes-topics'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    allow_parallel=True,
+    links=[link('http://localhost:8092/health', 'health')],
+    readiness_probe=probe(
+        period_secs=5,
+        failure_threshold=10,
+        http_get=http_get_action(port=8092, path='/health'),
+    ),
+)
