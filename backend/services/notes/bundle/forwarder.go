@@ -40,16 +40,20 @@ func newForwarder(pool *pgxpool.Pool, shutdowner fx.Shutdowner) (*forwarder.Forw
 		return nil, err
 	}
 
-	return forwarder.New(subscriber, brokers, forwarder.WithShutdown(func() {
-		_ = shutdowner.Shutdown(fx.ExitCode(1))
-	}))
+	return forwarder.New(subscriber, brokers, forwarder.WithShutdown(exitWithFailure(shutdowner)))
 }
 
-func newForwarderHealthServer(db transport.Database, f *forwarder.Forwarder) (*forwarder.HealthServer, error) {
+func newForwarderHealthServer(
+	db transport.Database, f *forwarder.Forwarder, shutdowner fx.Shutdowner,
+) (*forwarder.HealthServer, error) {
 	port, err := config.HealthPort()
 	if err != nil {
 		return nil, err
 	}
 
-	return forwarder.NewHealthServer(port, db, f), nil
+	return forwarder.NewHealthServer(port, db, f, exitWithFailure(shutdowner)), nil
+}
+
+func exitWithFailure(shutdowner fx.Shutdowner) func() {
+	return func() { _ = shutdowner.Shutdown(fx.ExitCode(1)) }
 }

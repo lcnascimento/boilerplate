@@ -11,26 +11,26 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/handlers/health"
 )
 
-// HealthServer serves /ping and /health, which is ready while Postgres answers and the forwarder runs.
-// It never pings Kafka: a broker outage shows as a growing outbox, not as a restart.
 type HealthServer struct {
 	server    *httpserver.Server
 	db        transport.Database
 	forwarder *Forwarder
+	shutdown  func()
 }
 
-func NewHealthServer(port int, db transport.Database, forwarder *Forwarder) *HealthServer {
+func NewHealthServer(port int, db transport.Database, forwarder *Forwarder, shutdown func()) *HealthServer {
 	return &HealthServer{
 		server:    httpserver.NewServer(httpserver.WithPort(port)),
 		db:        db,
 		forwarder: forwarder,
+		shutdown:  shutdown,
 	}
 }
 
 func (s *HealthServer) Start(_ context.Context) error {
 	go func() {
 		if err := s.server.Start(s.register); err != nil {
-			s.forwarder.shutdown()
+			s.shutdown()
 		}
 	}()
 
