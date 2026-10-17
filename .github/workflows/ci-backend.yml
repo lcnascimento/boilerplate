@@ -42,8 +42,7 @@ jobs:
       - name: Setup
         run: make setup
 
-      # Fails when the committed sqlc code is stale. The tree is staged first, so
-      # only what `make sqlc` changes (or adds) shows up, even after a bootstrap.
+      # Staged first, so a bootstrap's uncommitted changes don't count as drift.
       - name: sqlc
         run: |
           git add -A
@@ -55,8 +54,7 @@ jobs:
       - name: Lint
         run: make lint
 
-      # Component tests run against the real database. Always up, even with zero
-      # services, so CI also proves the compose file boots.
+      # Up even with zero services, so CI also proves the compose file boots.
       - name: Postgres
         run: docker compose up -d --wait postgres
 

@@ -1,7 +1,3 @@
-# Local observability: Alloy receives OTLP and ships it to Prometheus, Loki,
-# Tempo and Pyroscope; Grafana reads them. Tilt loads this file on top of
-# docker-compose.yml unless TILT_STACK=minimal. Without Tilt:
-#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 services:
   alloy:
     container_name: alloy

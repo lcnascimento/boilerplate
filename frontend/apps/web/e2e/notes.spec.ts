@@ -4,10 +4,6 @@ import { expect, test } from "./fixtures";
 
 import type { Page } from "@playwright/test";
 
-// Against the notes service of Tilt's stack, which holds the dev data too.
-// Each test creates its own note, titled with a unique `e2e-` marker, and
-// asserts on it alone; the `marker` fixture deletes it afterwards.
-
 async function createNote(page: Page, title: string, body: string) {
   await page.goto("/notes");
   await page.getByRole("button", { name: "Nova nota" }).click();

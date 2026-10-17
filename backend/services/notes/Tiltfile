@@ -1,7 +1,5 @@
 # -*- mode: Python -*-
 
-# postgres → notes-db → notes-migrate → notes-api-*: the API boots on a
-# migrated database. `make db.reset` starts the database over.
 local_resource(
     'notes-db',
     labels=['notes'],

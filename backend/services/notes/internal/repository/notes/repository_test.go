@@ -28,7 +28,6 @@ func TestComponentRepository_CreateThenGet(t *testing.T) {
 	t.Parallel()
 
 	repo := newRepository(t)
-	// Microseconds: the precision of timestamptz, which the application's clock truncates to.
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC))
 
 	require.NoError(t, repo.Create(t.Context(), note))
@@ -109,7 +108,6 @@ func TestComponentRepository_DeleteUnknownIDReturnsNotFound(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
 
-// newRepository gives the test a repository on its own migrated database.
 func newRepository(t *testing.T) *notes.Repository {
 	t.Helper()
 

@@ -1,5 +1,3 @@
-// Package migrations holds the service's forward-only SQL migrations and
-// applies them with goose.
 package migrations
 
 import (
@@ -16,9 +14,6 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 )
 
-// FS holds the migration files. The component tests hash it to know when their
-// migrated template database is stale.
-//
 //go:embed *.sql
 var FS embed.FS
 
@@ -30,10 +25,6 @@ var (
 	ErrMigrate = errors.New("failed to apply migrations")
 )
 
-// Up applies every pending migration, each in its own transaction, under a
-// Postgres advisory lock so concurrent runs wait for each other. It refuses to
-// run when the database holds a version with no matching file: goose v3 skips
-// those silently, which would leave a branch's schema behind unnoticed.
 func Up(ctx context.Context, db *sql.DB) error {
 	store, err := database.NewStore(database.DialectPostgres, goose.DefaultTablename)
 	if err != nil {
@@ -62,6 +53,8 @@ func Up(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
+// goose v3 silently skips an applied version with no file, which would leave
+// another branch's schema behind unnoticed.
 func checkAppliedVersionsAreKnown(ctx context.Context, db *sql.DB, store database.Store, sources []*goose.Source) error {
 	extender, ok := store.(database.StoreExtender)
 	if !ok {

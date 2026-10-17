@@ -19,8 +19,7 @@ func newLogger() *slog.Logger {
 	return slog.New(handler)
 }
 
-// onStartFailed surfaces the error a constructor returned, with its cause,
-// which fx's own report buries under the dependency chain.
+// fx's own report buries the constructor's error under the dependency chain.
 func onStartFailed(ctx context.Context, err error) {
 	var cause errors.CustomError
 	if !errors.As(err, &cause) {

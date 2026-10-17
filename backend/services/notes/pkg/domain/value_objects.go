@@ -18,7 +18,6 @@ func NewNoteID() NoteID {
 	return NoteID{util.NewCanonicalID(noteIDPrefix)}
 }
 
-// NoteIDFromUUID rebuilds a NoteID from the UUID that NoteID.UUID returns.
 func NoteIDFromUUID(u uuid.UUID) NoteID {
 	return NoteID{util.CanonicalIDFromUUID(noteIDPrefix, u)}
 }

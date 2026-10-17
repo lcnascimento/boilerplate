@@ -28,12 +28,7 @@ local_resource(
     labels=['frontend'],
 )
 
-# Playwright UI Mode for the web app's e2e suite, on demand: start it from the
-# Tilt UI. Like `pnpm test:e2e`, it runs against this stack (the `web` above
-# and each service), so it waits for them. 9330 clears the app (3000),
-# Grafana (3010), Loki (3100), Tempo (3200), the services (8080...), Scalar
-# (8090) and Playwright's own report server (9323).
-# TILT_STACK=minimal does not register it.
+# 9330 clears every port the stack and Playwright's report server use.
 PLAYWRIGHT_UI_PORT = 9330
 
 if os.getenv('TILT_STACK', '') != 'minimal':

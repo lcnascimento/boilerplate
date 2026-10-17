@@ -1,5 +1,3 @@
-// Package notes stores notes in the service's Postgres database. Its queries
-// live in queries.sql; `make sqlc` generates internal/db from them.
 package notes
 
 import (
@@ -14,7 +12,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 )
 
-// ErrQuery wraps any database failure, so no driver error type leaves the repository.
 var ErrQuery = errors.New("notes query failed")
 
 type Repository struct {

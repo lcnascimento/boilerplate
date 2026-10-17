@@ -1,11 +1,8 @@
 import { stackProbes } from "./stack";
 
-// Fails the run before any browser starts when a server of the stack does not
-// answer: the suite never starts servers of its own. A stack that is down
-// refuses the connection at once, so the timeout only bounds a slow answer.
-// It is generous because Tilt marks `web` ready once `next dev` binds its
-// port, before it compiles any route: on a cold cache (a fresh CI runner) the
-// first `GET /` waits for that compile, which takes several seconds.
+// Generous: Tilt marks `web` ready once `next dev` binds its port, before it
+// compiles a route, so on a cold cache the first `GET /` waits for that compile.
+// A stack that is down refuses the connection at once.
 const PROBE_TIMEOUT_MS = 60_000;
 
 async function probe(url: string): Promise<string | undefined> {
@@ -15,8 +12,7 @@ async function probe(url: string): Promise<string | undefined> {
     });
     return response.ok ? undefined : `answered ${response.status}`;
   } catch (error) {
-    // fetch wraps the network error in `cause`, whose `code` (e.g.
-    // ECONNREFUSED) says more than its "fetch failed" message.
+    // `cause.code` (e.g. ECONNREFUSED) says more than fetch's "fetch failed".
     const cause = error instanceof Error ? error.cause : undefined;
     if (cause instanceof Error && "code" in cause) return String(cause.code);
     return error instanceof Error ? error.message : String(error);

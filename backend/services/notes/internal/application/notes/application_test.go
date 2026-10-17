@@ -34,8 +34,6 @@ func TestApplication(t *testing.T) {
 	suite.Run(t, new(ApplicationSuite))
 }
 
-// The default clock matches what timestamptz stores, so the note Create
-// returns is the note a later Get reads back.
 func TestApplication_DefaultClockIsUTCInMicroseconds(t *testing.T) {
 	t.Parallel()
 

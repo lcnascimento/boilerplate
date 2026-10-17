@@ -74,7 +74,6 @@ func TestComponentMigrations_AppliedVersionWithoutFileAsksForReset(t *testing.T)
 
 	require.NoError(t, migrations.Up(t.Context(), db))
 
-	// Another branch applied a migration this checkout does not have.
 	_, err := db.ExecContext(t.Context(), `INSERT INTO goose_db_version (version_id, is_applied) VALUES (99999, true)`)
 	require.NoError(t, err)
 

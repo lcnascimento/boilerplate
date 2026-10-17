@@ -1,5 +1,3 @@
-# sqlc generates each repository's typed queries (`make sqlc` in backend/).
-# The schema is the goose migrations; each repository adds one `sql:` block.
 version: "2"
 sql:
   - engine: postgresql

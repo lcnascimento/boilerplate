@@ -23,9 +23,7 @@ vi.mock("@/actions/notes", () => ({ listNotes: vi.fn() }));
 
 const listNotesMock = vi.mocked(listNotes);
 
-// The page is async only for its translations: awaiting it yields a tree of
-// sync components, and Notes resolves listNotes under the page's Suspense,
-// which the awaited act lets settle.
+// Awaiting the page yields sync components; the awaited act lets Suspense settle.
 async function renderPage() {
   await act(async () => {
     const page = await NotesPage();

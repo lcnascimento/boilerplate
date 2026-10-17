@@ -1,9 +1,4 @@
-# Backend dependencies every stack runs, TILT_STACK=minimal included.
-# Observability lives in docker-compose.observability.yml.
 services:
-  # One Postgres shared by every service: each service owns a database and a
-  # role named after it, created by its `make db.setup`. To wipe every
-  # database, remove the postgres_data volume.
   postgres:
     container_name: postgres
     image: postgres:18-alpine

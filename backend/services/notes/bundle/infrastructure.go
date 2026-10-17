@@ -49,9 +49,6 @@ func Validator() fx.Option {
 	)
 }
 
-// Database opens the service's Postgres pool on DATABASE_URL, traced and
-// measured through the global OTel providers, and fails the boot when the
-// database does not answer a ping. The pool also backs the /health probe.
 func Database() fx.Option {
 	return fx.Module(
 		"Database",

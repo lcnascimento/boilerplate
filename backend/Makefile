@@ -16,7 +16,6 @@ GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 # Every Go module listed in go.work. Targets iterate them, so they work with zero or N services.
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
-# Each service keeps its forward-only goose migrations here.
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
 
@@ -34,10 +33,8 @@ define in_modules
 	done
 endef
 
-# go_test runs go test with the given flags over the current module's packages.
 go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -race -cover $(1) $$pkgs; fi
 
-# env creates each missing .env from its .env.example; existing ones are kept.
 .PHONY: env
 env:
 	@for example in .env.example services/*/.env.example; do \
@@ -56,7 +53,6 @@ setup: env
 	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 	@$(MAKE) -s squawk
 
-# squawk ships as a release binary: downloaded only when missing or at another version.
 .PHONY: squawk
 squawk:
 	@if [ "$$($(GOBIN)/squawk --version 2>/dev/null)" != "squawk $(SQUAWK_VERSION:v%=%)" ]; then \
@@ -93,14 +89,10 @@ mocks:
 			$(GOBIN)/mockgen -source "$$src" -destination "$$dir/internal/mocks/mocks.go" -package mocks; \
 		done)
 
-# test runs unit and component tests; component tests need Postgres up
-# (`tilt up` or `docker compose up -d postgres`) and connect through
-# POSTGRES_ADMIN_URL, the compose superuser by default.
 .PHONY: test
 test:
 	$(call in_modules,test,$(call go_test,-coverprofile=coverage.out))
 
-# test.unit skips the component tests (-short): no Postgres needed.
 .PHONY: test.unit
 test.unit:
 	$(call in_modules,test.unit,$(call go_test,-short))
@@ -109,7 +101,6 @@ test.unit:
 test.component:
 	$(call in_modules,test.component,$(call go_test,-run Component))
 
-# sqlc regenerates each module's typed queries from its sqlc.yaml, then vets them.
 .PHONY: sqlc
 sqlc:
 	$(call in_modules,sqlc,if [ -f sqlc.yaml ]; then $(GOBIN)/sqlc generate && $(GOBIN)/sqlc vet; else echo "no sqlc.yaml"; fi)
@@ -119,9 +110,6 @@ vuln-check:
 	$(call in_modules,vuln-check,pkgs=$$($(PACKAGES)); \
 		if [ -z "$$pkgs" ]; then echo "no packages"; else $(GOBIN)/govulncheck ./...; fi)
 
-# migration.new name=<snake_case> [service=<name>] creates a service's next
-# migration, numbered with 5 digits, with an Up section only (forward-only).
-# service= may be left out while a single service has migrations.
 .PHONY: migration.new
 migration.new:
 	@[ -n "$(name)" ] || { echo "usage: make migration.new name=<snake_case> [service=<name>]" >&2; exit 1; }

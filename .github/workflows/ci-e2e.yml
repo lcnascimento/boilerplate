@@ -1,9 +1,5 @@
 name: ci-e2e
 
-# Playwright against Tilt's stack, the same path as on a dev machine:
-# `TILT_STACK=minimal tilt up` in background, wait until every resource is
-# ready, then `pnpm test:e2e`. No resource is named here, so the workflow
-# holds with any set of services, zero included.
 on:
   workflow_call:
     inputs:
@@ -74,7 +70,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # Tilt builds and runs each Go service.
       - uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.work
@@ -83,8 +78,7 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
 
-      # `next dev` compiles each route on its first request; its cache cuts
-      # that on the next runs.
+      # `next dev` compiles each route on its first request; the cache speeds up later runs.
       - name: Restore the next dev cache
         uses: actions/cache@v6
         with:
@@ -101,9 +95,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/tilt" version
 
-      # The .env files as on a dev machine, but with no collector to export
-      # to: each service logs to stdout (so `tilt logs` shows it) and exports
-      # nothing. The .env.example files stay as they are.
+      # No collector in CI: services log to stdout (for `tilt logs`) and export nothing.
       - name: Env files
         working-directory: .
         run: |

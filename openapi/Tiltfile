@@ -1,8 +1,6 @@
 # -*- mode: Python -*-
 
 # Scalar only runs when there is at least one service spec (*.yaml) here.
-# With zero services (after clean-example) or TILT_STACK=minimal this Tiltfile
-# adds no resource.
 specs = [f for f in listdir('.') if f.endswith('.yaml')]
 minimal = os.getenv('TILT_STACK', '') == 'minimal'
 

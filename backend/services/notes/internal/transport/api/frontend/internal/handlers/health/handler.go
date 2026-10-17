@@ -11,8 +11,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 )
 
-// pingTimeout bounds the database ping, so a slow database answers the probe
-// with 503 instead of hanging it.
 const pingTimeout = 2 * time.Second
 
 var ErrDatabaseUnhealthy = errors.New("database did not answer the health ping")
@@ -25,12 +23,10 @@ func New(db transport.Database) *Health {
 	return &Health{db: db}
 }
 
-// Ping is liveness: it answers while the process does, whatever the database says.
 func (h *Health) Ping(rw http.ResponseWriter, _ *http.Request) {
 	util.WriteMessage(rw, http.StatusOK, "pong")
 }
 
-// Health is readiness: it reflects whether the database answers.
 func (h *Health) Health(rw http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), pingTimeout)
 	defer cancel()
