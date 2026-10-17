@@ -10,8 +10,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 )
 
 func TestComponentMigrations_CreatesNotesTable(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )

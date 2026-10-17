@@ -75,7 +75,7 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 
 <!-- example:begin -->
 
-E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`).
+E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`), e o forwarder do `notes` em <http://localhost:8091> (`/health`, `/ping`).
 
 <!-- example:end -->
 
@@ -94,6 +94,12 @@ O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de c
 ### Mensageria
 
 O `backend/docker-compose.yml` sobe um broker Kafka, o Schema Registry e o Redpanda Console, nessa ordem; no Tilt, `kafka → schema-registry → kafka-console`. O auto-create de tópicos está desligado: produzir num tópico que não existe falha, em vez de criar um tópico de uma partição. Cada serviço declara os próprios tópicos num `make kafka.topics` idempotente, que o Tilt roda como o recurso `<name>-topics` depois do `schema-registry`. Os nomes de tópico usam só pontos (`<serviço>.<agregado>.v<N>`), nunca `_`. Os serviços Go no host falam com o broker em `localhost:9092`; containers e ferramentas dentro da rede `boilerplate` usam `kafka:19092`. Tópicos e schemas ficam no volume `kafka_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, em `backend/`: `docker compose up -d --wait kafka schema-registry` (mais `--profile console` para o Console).
+
+<!-- example:begin -->
+
+O `notes` grava cada Integration Event num outbox, na mesma transação da Note, e o runtime `notes-worker-forwarder` (`cmd/worker/forwarder`) leva o outbox ao tópico `notes.note.v1`, uma mensagem por vez, em ordem de commit, com o `NoteID` como key. Ele tenta publicar para sempre e nunca pula uma mensagem: com o Kafka fora do ar, a API continua aceitando escritas e o outbox cresce até o broker voltar. Várias réplicas podem rodar juntas, com uma ativa e as outras esperando. O start falha se o broker não responder ou se o tópico não existir (`TOPIC_MISSING`: rode `make kafka.topics`). O `/health` na `8091` olha o Postgres e o forwarder, nunca o broker.
+
+<!-- example:end -->
 
 Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
 
@@ -212,7 +218,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    <!-- example:end -->
 2. Escolha uma porta livre (ex.: `8082`) e use-a no `.env.example` do serviço (`FRONTEND_PORT`), no `FRONTEND_PORT ?=` do `Makefile` e na `readiness_probe` e no link do `Tiltfile` do serviço.
    <!-- example:begin -->
-   A `8080` é do `notes`.
+   A `8080` é do `notes`, e a `8091`, do health do forwarder dele.
    <!-- example:end -->
 3. Registre os dois módulos no `backend/go.work`:
 
