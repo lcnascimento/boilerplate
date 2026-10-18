@@ -31,6 +31,12 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events/eventstest"
 )
 
+var (
+	noteCreatedDescriptor = (&events.NoteCreated{}).ProtoReflect().Descriptor()
+	noteCreatedType       = string(noteCreatedDescriptor.FullName())
+	noteDeletedType       = string((&events.NoteDeleted{}).ProtoReflect().Descriptor().FullName())
+)
+
 const waitFor = 30 * time.Second
 
 var (
@@ -73,7 +79,7 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 		CreatedAt: timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
 	}
 	require.True(t, proto.Equal(wantCreated, created.Message), "want %v, got %v", wantCreated, created.Message)
-	require.Equal(t, "boilerplate.notes.v1.NoteCreated", created.Type)
+	require.Equal(t, noteCreatedType, created.Type)
 	require.Equal(t, "notes", created.Source)
 	require.Equal(t, note.ID.String(), created.Subject)
 	require.Equal(t, events.Topic, created.Topic)
@@ -82,7 +88,7 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 
 	wantDeleted := &events.NoteDeleted{Id: note.ID.String()}
 	require.True(t, proto.Equal(wantDeleted, deleted.Message), "want %v, got %v", wantDeleted, deleted.Message)
-	require.Equal(t, "boilerplate.notes.v1.NoteDeleted", deleted.Type)
+	require.Equal(t, noteDeletedType, deleted.Type)
 	require.True(t, deletedAt.Equal(deleted.Time), "want %v, got %v", deletedAt, deleted.Time)
 	require.NotEqual(t, created.ID, deleted.ID)
 }
@@ -108,9 +114,9 @@ func TestComponentForwarder_KeepsTheOrderOfANoteUnderItsIDAsKey(t *testing.T) {
 	records := consume(t, env.brokers, note.ID, 6)
 
 	wantTypes := []string{
-		"boilerplate.notes.v1.NoteCreated", "boilerplate.notes.v1.NoteDeleted",
-		"boilerplate.notes.v1.NoteCreated", "boilerplate.notes.v1.NoteDeleted",
-		"boilerplate.notes.v1.NoteCreated", "boilerplate.notes.v1.NoteDeleted",
+		noteCreatedType, noteDeletedType,
+		noteCreatedType, noteDeletedType,
+		noteCreatedType, noteDeletedType,
 	}
 	gotTypes := make([]string, 0, len(records))
 

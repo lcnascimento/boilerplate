@@ -18,9 +18,15 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
+var (
+	noteCreatedDescriptor = (&events.NoteCreated{}).ProtoReflect().Descriptor()
+	noteCreatedType       = string(noteCreatedDescriptor.FullName())
+	noteDeletedType       = string((&events.NoteDeleted{}).ProtoReflect().Descriptor().FullName())
+)
+
 var schemaIDs = events.SchemaIDs{
-	"boilerplate.notes.v1.NoteCreated": 7,
-	"boilerplate.notes.v1.NoteDeleted": 8,
+	noteCreatedType: 7,
+	noteDeletedType: 8,
 }
 
 func TestComponentRepository_CreateWritesNoteCreated(t *testing.T) {
@@ -36,7 +42,7 @@ func TestComponentRepository_CreateWritesNoteCreated(t *testing.T) {
 	require.Len(t, got, 1)
 	requireEnvelope(t, got[0], map[string]string{
 		"ce_source":       "notes",
-		"ce_type":         "boilerplate.notes.v1.NoteCreated",
+		"ce_type":         noteCreatedType,
 		"ce_time":         "2026-10-10T19:30:00.123456Z",
 		"ce_subject":      note.ID.String(),
 		"ce_partitionkey": note.ID.String(),
@@ -66,7 +72,7 @@ func TestComponentRepository_DeleteWritesNoteDeletedAtClockTime(t *testing.T) {
 	require.Len(t, got, 2)
 	requireEnvelope(t, got[1], map[string]string{
 		"ce_source":       "notes",
-		"ce_type":         "boilerplate.notes.v1.NoteDeleted",
+		"ce_type":         noteDeletedType,
 		"ce_time":         "2026-10-11T08:15:00Z",
 		"ce_subject":      note.ID.String(),
 		"ce_partitionkey": note.ID.String(),
@@ -133,7 +139,7 @@ func TestComponentRepository_ConcurrentDeletesWriteOneNoteDeleted(t *testing.T) 
 	}
 
 	require.Equal(t, 1, succeeded)
-	require.Equal(t, []string{"boilerplate.notes.v1.NoteCreated", "boilerplate.notes.v1.NoteDeleted"}, eventTypes(outboxEvents(t, pool)))
+	require.Equal(t, []string{noteCreatedType, noteDeletedType}, eventTypes(outboxEvents(t, pool)))
 }
 
 func TestComponentRepository_OutboxFailureLeavesNoNote(t *testing.T) {

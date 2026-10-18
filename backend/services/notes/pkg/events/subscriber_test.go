@@ -20,6 +20,13 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events/eventstest"
 )
 
+var (
+	noteCreatedDescriptor = (&events.NoteCreated{}).ProtoReflect().Descriptor()
+	noteCreatedType       = string(noteCreatedDescriptor.FullName())
+	noteDeletedType       = string((&events.NoteDeleted{}).ProtoReflect().Descriptor().FullName())
+	noteArchivedType      = string(noteCreatedDescriptor.FullName().Parent().Append("NoteArchived"))
+)
+
 const waitFor = 30 * time.Second
 
 func TestDLQTopic(t *testing.T) {
@@ -80,12 +87,12 @@ func TestComponentSubscriber_DeliversTypedThenOnAny(t *testing.T) {
 	event := anyCall.event
 	require.Equal(t, envelope.ID, event.ID)
 	require.Equal(t, "eventstest", event.Source)
-	require.Equal(t, "boilerplate.notes.v1.NoteCreated", event.Type)
+	require.Equal(t, noteCreatedType, event.Type)
 	require.Equal(t, "note_1", event.Subject)
 	require.Equal(t, "note_1", event.PartitionKey)
 	require.True(t, envelope.Time.Equal(event.Time), "want %v, got %v", envelope.Time, event.Time)
 	require.Equal(t, envelope.ID, event.Headers["ce_id"])
-	require.Equal(t, "boilerplate.notes.v1.NoteCreated", event.Headers["ce_type"])
+	require.Equal(t, noteCreatedType, event.Headers["ce_type"])
 	require.Equal(t, envelope.ID, event.Headers["_watermill_message_uuid"])
 	require.Equal(t, env.Topic, event.Topic)
 	require.Equal(t, int64(0), event.Offset)
@@ -107,7 +114,7 @@ func TestComponentSubscriber_UnknownTypeReachesOnlyOnAny(t *testing.T) {
 	t.Parallel()
 
 	env := eventstest.New(t)
-	headers := validHeaders("boilerplate.notes.v1.NoteArchived")
+	headers := validHeaders(noteArchivedType)
 	env.PublishRaw(t, headers["ce_id"], headers, []byte{0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x0a, 0x01, 'x'})
 
 	observer := newRecorder()
@@ -116,7 +123,7 @@ func TestComponentSubscriber_UnknownTypeReachesOnlyOnAny(t *testing.T) {
 	got := observer.next(t)
 
 	require.Equal(t, "OnAny", got.method)
-	require.Equal(t, "boilerplate.notes.v1.NoteArchived", got.event.Type)
+	require.Equal(t, noteArchivedType, got.event.Type)
 	require.Equal(t, 42, got.event.SchemaID)
 	require.Nil(t, got.event.Message)
 	observer.requireNoMoreCalls(t)
@@ -228,12 +235,12 @@ func TestComponentSubscriber_PermanentErrorGoesToTheDLQ(t *testing.T) {
 			require.Equal(t, "note_1", string(record.Key))
 			require.Equal(t, poisoned.ID, headers["ce_id"])
 			require.Equal(t, poisoned.ID, headers["_watermill_message_uuid"])
-			require.Equal(t, "boilerplate.notes.v1.NoteDeleted", headers["ce_type"])
+			require.Equal(t, noteDeletedType, headers["ce_type"])
 			require.Equal(t, "note_1", headers["ce_partitionkey"])
 			require.Contains(t, headers[middleware.ReasonForPoisonedKey], tt.wantReason)
 			require.Equal(t, env.Topic, headers[middleware.PoisonedTopicKey])
 
-			_, message, err := events.Decode("boilerplate.notes.v1.NoteDeleted", record.Value)
+			_, message, err := events.Decode(noteDeletedType, record.Value)
 			require.NoError(t, err)
 			require.True(t, proto.Equal(&events.NoteDeleted{Id: "note_1"}, message))
 		})
@@ -255,25 +262,25 @@ func TestComponentSubscriber_MalformedMessageGoesToTheDLQWithoutCallingTheObserv
 	}{
 		{
 			name:       "wrong magic byte",
-			headers:    validHeaders("boilerplate.notes.v1.NoteDeleted"),
+			headers:    validHeaders(noteDeletedType),
 			value:      []byte{0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0a, 0x01, 'x'},
 			wantReason: "Confluent wire format",
 		},
 		{
 			name:       "truncated schema ID",
-			headers:    validHeaders("boilerplate.notes.v1.NoteDeleted"),
+			headers:    validHeaders(noteDeletedType),
 			value:      []byte{0x00, 0x00, 0x01},
 			wantReason: "Confluent wire format",
 		},
 		{
 			name:       "payload that does not decode under any schema",
-			headers:    validHeaders("boilerplate.notes.v1.NoteDeleted"),
+			headers:    validHeaders(noteDeletedType),
 			value:      []byte{0x00, 0x7f, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff},
 			wantReason: "not a valid Protobuf message",
 		},
 		{
 			name:       "missing CloudEvents header",
-			headers:    withoutHeader(validHeaders("boilerplate.notes.v1.NoteDeleted"), "ce_type"),
+			headers:    withoutHeader(validHeaders(noteDeletedType), "ce_type"),
 			value:      []byte{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0a, 0x01, 'x'},
 			wantReason: "required CloudEvents header is missing",
 		},
