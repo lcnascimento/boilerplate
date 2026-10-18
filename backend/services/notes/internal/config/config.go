@@ -22,9 +22,9 @@ var (
 
 func errMissing(key string) errors.CustomError {
 	return errors.New(
-		"%s is not set: add the %s line of backend/services/notes/.env.example "+
-			"to backend/services/notes/.env (`make env` creates .env only when it is missing)",
-		key, key,
+		"%s is not set: run `make -C backend env` to add the missing keys of "+
+			"backend/services/notes/.env.example to backend/services/notes/.env",
+		key,
 	)
 }
 

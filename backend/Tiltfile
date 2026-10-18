@@ -2,6 +2,8 @@
 
 minimal = os.getenv('TILT_STACK', '') == 'minimal'
 
+local('make -s env')
+
 compose_files = ['./docker-compose.yml']
 if not minimal:
     compose_files.append('./docker-compose.observability.yml')

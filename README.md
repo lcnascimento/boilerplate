@@ -52,7 +52,7 @@ pnpm -C frontend install     # workspace do frontend
 make -C backend setup        # cria os .env a partir dos .env.example e instala as ferramentas Go
 ```
 
-O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) só quando eles ainda não existem; o `env` também roda sozinho, sem instalar as ferramentas. Para pegar um `.env.example` atualizado, apague o `.env` e rode de novo.
+O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) quando eles ainda não existem e, quando já existem, acrescenta só as chaves novas do `.env.example`, sem mexer nos valores que você mudou nem nas chaves que você comentou. O `env` também roda sozinho, sem instalar as ferramentas, e o `tilt up` o chama a cada carga do Tiltfile.
 
 ### Subindo tudo
 

@@ -24,8 +24,8 @@ func TestDatabaseURL_MissingSaysWhichKeyToAdd(t *testing.T) {
 
 	require.ErrorIs(t, err, config.ErrDatabaseURLMissing)
 	require.Equal(t,
-		"DATABASE_URL is not set: add the DATABASE_URL line of backend/services/notes/.env.example "+
-			"to backend/services/notes/.env (`make env` creates .env only when it is missing)",
+		"DATABASE_URL is not set: run `make -C backend env` to add the missing keys of "+
+			"backend/services/notes/.env.example to backend/services/notes/.env",
 		err.Error(),
 	)
 }
@@ -46,8 +46,8 @@ func TestKafkaBrokers_MissingSaysWhichKeyToAdd(t *testing.T) {
 
 	require.ErrorIs(t, err, config.ErrKafkaBrokersMissing)
 	require.Equal(t,
-		"KAFKA_BROKERS is not set: add the KAFKA_BROKERS line of backend/services/notes/.env.example "+
-			"to backend/services/notes/.env (`make env` creates .env only when it is missing)",
+		"KAFKA_BROKERS is not set: run `make -C backend env` to add the missing keys of "+
+			"backend/services/notes/.env.example to backend/services/notes/.env",
 		err.Error(),
 	)
 }
@@ -94,8 +94,8 @@ func TestSchemaRegistryURL_MissingSaysWhichKeyToAdd(t *testing.T) {
 
 	require.ErrorIs(t, err, config.ErrSchemaRegistryURLMissing)
 	require.Equal(t,
-		"SCHEMA_REGISTRY_URL is not set: add the SCHEMA_REGISTRY_URL line of backend/services/notes/.env.example "+
-			"to backend/services/notes/.env (`make env` creates .env only when it is missing)",
+		"SCHEMA_REGISTRY_URL is not set: run `make -C backend env` to add the missing keys of "+
+			"backend/services/notes/.env.example to backend/services/notes/.env",
 		err.Error(),
 	)
 }

@@ -24,8 +24,8 @@ func TestDatabaseURL_MissingSaysWhichKeyToAdd(t *testing.T) {
 
 	require.ErrorIs(t, err, config.ErrDatabaseURLMissing)
 	require.Equal(t,
-		"DATABASE_URL is not set: add the DATABASE_URL line of backend/services/audit/.env.example "+
-			"to backend/services/audit/.env (`make env` creates .env only when it is missing)",
+		"DATABASE_URL is not set: run `make -C backend env` to add the missing keys of "+
+			"backend/services/audit/.env.example to backend/services/audit/.env",
 		err.Error(),
 	)
 }
@@ -45,7 +45,7 @@ func TestKafkaBrokers_MissingSaysWhichKeyToAdd(t *testing.T) {
 	_, err := config.KafkaBrokers()
 
 	require.ErrorIs(t, err, config.ErrKafkaBrokersMissing)
-	require.Contains(t, err.Error(), "add the KAFKA_BROKERS line of backend/services/audit/.env.example")
+	require.Contains(t, err.Error(), "KAFKA_BROKERS is not set: run `make -C backend env`")
 }
 
 func TestHealthPort_Set(t *testing.T) {

@@ -50,7 +50,12 @@ env:
 	@for example in .env.example services/*/.env.example; do \
 		[ -f "$$example" ] || continue; \
 		env_file="$${example%.example}"; \
-		if [ ! -f "$$env_file" ]; then echo "==> Creating $$env_file"; cp "$$example" "$$env_file"; fi; \
+		if [ ! -f "$$env_file" ]; then echo "==> Creating $$env_file"; cp "$$example" "$$env_file"; continue; fi; \
+		missing=$$(awk -F= 'NR == FNR { if (sub(/^#?[ \t]*/, "", $$1)) seen[$$1] = 1; next } /^[A-Za-z_][A-Za-z0-9_]*=/ && !($$1 in seen)' "$$env_file" "$$example"); \
+		[ -n "$$missing" ] || continue; \
+		echo "==> Adding $$(printf '%s\n' "$$missing" | cut -d= -f1 | paste -sd, -) to $$env_file"; \
+		[ -z "$$(tail -c1 "$$env_file")" ] || echo >> "$$env_file"; \
+		printf '%s\n' "$$missing" >> "$$env_file"; \
 	done
 
 .PHONY: setup
