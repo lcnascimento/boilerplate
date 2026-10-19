@@ -40,7 +40,7 @@ otelcol.receiver.otlp "default" {
   output {
     metrics = [otelcol.exporter.prometheus.local_prom.input]
     traces  = [otelcol.processor.filter.drop_infra_noise.input]
-    logs    = [otelcol.exporter.loki.local_loki.input]
+    logs    = [otelcol.exporter.otlphttp.loki.input]
   }
 }
 
@@ -89,8 +89,10 @@ otelcol.exporter.otlp "tempo" {
   }
 }
 
-otelcol.exporter.loki "local_loki" {
-  forward_to = [loki.write.local_loki.receiver]
+otelcol.exporter.otlphttp "loki" {
+  client {
+    endpoint = "http://loki:3100/otlp"
+  }
 }
 
 loki.write "local_loki" {

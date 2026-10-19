@@ -253,7 +253,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum by (service_name) (count_over_time({service_name=~\".+\"} |~ \"(?i)(error|fatal|panic)\" [$__interval]))",
+          "expr": "sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__interval]))",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }

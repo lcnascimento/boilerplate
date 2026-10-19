@@ -62,7 +62,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} |~ \"(?i)error\" [1h]))", "instant": true, "queryType": "instant", "refId": "A" }],
+      "targets": [{ "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"error\" [1h]))", "instant": true, "queryType": "instant", "refId": "A" }],
       "title": "Total Errors (1h)",
       "type": "stat"
     },
@@ -88,7 +88,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "targets": [{ "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} |~ \"(?i)warn\" [1h]))", "instant": true, "queryType": "instant", "refId": "A" }],
+      "targets": [{ "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"warn\" [1h]))", "instant": true, "queryType": "instant", "refId": "A" }],
       "title": "Total Warnings (1h)",
       "type": "stat"
     },
@@ -126,7 +126,7 @@
         "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "targets": [{ "expr": "sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} |~ \"(?i)(error|fatal|panic)\" [$__interval]))", "legendFormat": "{{service_name}}", "refId": "A" }],
+      "targets": [{ "expr": "sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=~\"error|critical|fatal\" [$__interval]))", "legendFormat": "{{service_name}}", "refId": "A" }],
       "title": "Errors by Service",
       "type": "timeseries"
     },
@@ -162,7 +162,7 @@
         "sortOrder": "Descending",
         "wrapLogMessage": false
       },
-      "targets": [{ "expr": "{service_name=~\"${service:regex}\", container=~\"${container:regex}\"} |~ \"(?i)(error|fatal|exception|panic)\"", "legendFormat": "", "refId": "A" }],
+      "targets": [{ "expr": "{service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=~\"error|critical|fatal\"", "legendFormat": "", "refId": "A" }],
       "title": "Error Logs",
       "type": "logs"
     }

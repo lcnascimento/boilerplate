@@ -20,7 +20,8 @@ datasources:
     jsonData:
       derivedFields:
         - name: TraceID
-          matcherRegex: '"trace_id":"(\w+)"'
+          matcherType: label
+          matcherRegex: trace_id
           url: '$${__value.raw}'
           datasourceUid: tempo
 
@@ -32,7 +33,8 @@ datasources:
     jsonData:
       tracesToLogsV2:
         datasourceUid: loki
-        filterByTraceID: true
+        customQuery: true
+        query: '{service_name=~".+"} | trace_id="$${__span.traceId}"'
       tracesToMetrics:
         datasourceUid: prometheus
       serviceMap:

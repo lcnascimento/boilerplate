@@ -47,7 +47,7 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=~\".+\"} |~ \"(?i)(error|fatal|exception|panic)\"", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=~\".+\"} | detected_level=~\"error|critical|fatal\"", "refId": "A" }],
       "title": "Logs de Erro (APM)",
       "type": "logs"
     },
@@ -92,7 +92,7 @@
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "textMode": "auto"
       },
-      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "expr": "count(sum by (service_name) (count_over_time({service_name=~\".+\"} |~ \"(?i)(error|fatal|exception|panic)\" [1h])))", "queryType": "instant", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "expr": "count(sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [1h])))", "queryType": "instant", "refId": "A" }],
       "title": "Serviços com Erros (1h)",
       "type": "stat"
     },
@@ -104,7 +104,7 @@
       },
       "gridPos": { "h": 4, "w": 8, "x": 16, "y": 20 },
       "id": 6,
-      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "expr": "sum by (service_name) (rate({service_name=~\".+\"} |~ \"(?i)(error|fatal|exception|panic)\" [5m]))", "legendFormat": "{{service_name}}", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "loki", "uid": "loki" }, "expr": "sum by (service_name) (rate({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [5m]))", "legendFormat": "{{service_name}}", "refId": "A" }],
       "title": "Volume de Erros por Serviço (5m)",
       "type": "timeseries"
     }
