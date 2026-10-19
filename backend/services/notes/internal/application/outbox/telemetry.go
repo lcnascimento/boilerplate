@@ -39,14 +39,12 @@ func (a *Application) onPurgeStart(ctx context.Context) (context.Context, trace.
 
 func (a *Application) onPurged(ctx context.Context, purged int64) {
 	purgedMessages.Add(ctx, purged)
-}
-
-func (a *Application) onPurgeSucceeded(ctx context.Context) {
 	purgeRuns.Add(ctx, 1, outcomeSuccess)
 	logger.Info(ctx, "outbox purged")
 }
 
-func (a *Application) onPurgeFailed(ctx context.Context, err error) error {
+func (a *Application) onPurgeFailed(ctx context.Context, purged int64, err error) error {
+	purgedMessages.Add(ctx, purged)
 	purgeRuns.Add(ctx, 1, outcomeFailure)
 
 	span := trace.SpanFromContext(ctx)

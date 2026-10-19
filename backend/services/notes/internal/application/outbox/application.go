@@ -22,13 +22,11 @@ func (a *Application) Purge(ctx context.Context) error {
 	defer span.End()
 
 	purged, err := a.outbox.Purge(ctx, retention)
-	a.onPurged(ctx, purged)
-
 	if err != nil {
-		return a.onPurgeFailed(ctx, ErrPurge.WithCause(err))
+		return a.onPurgeFailed(ctx, purged, ErrPurge.WithCause(err))
 	}
 
-	a.onPurgeSucceeded(ctx)
+	a.onPurged(ctx, purged)
 
 	return nil
 }
