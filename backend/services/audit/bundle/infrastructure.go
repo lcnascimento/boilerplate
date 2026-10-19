@@ -11,6 +11,7 @@ import (
 	"go.uber.org/fx/fxevent"
 
 	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/validator"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/config"
@@ -33,6 +34,18 @@ func Logger(logger *slog.Logger) fx.Option {
 		fx.WithLogger(func() fxevent.Logger {
 			return &fxevent.SlogLogger{Logger: logger}
 		}),
+	)
+}
+
+func Validator() fx.Option {
+	return fx.Module(
+		"Validator",
+		fx.Provide(fx.Annotate(
+			func() (*validator.Validator, error) {
+				return validator.New(validator.WithJSONFieldNames())
+			},
+			fx.As(new(application.Validator)),
+		)),
 	)
 }
 

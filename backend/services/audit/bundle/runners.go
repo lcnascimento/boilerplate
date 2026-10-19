@@ -63,6 +63,7 @@ func NewConsumer() *fx.App {
 func consumerOptions() []fx.Option {
 	return []fx.Option{
 		Logger(logger),
+		Validator(),
 		Database(),
 		Repositories(),
 		AuditService(),

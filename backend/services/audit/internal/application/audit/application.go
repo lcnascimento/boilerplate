@@ -3,6 +3,8 @@ package audit
 import (
 	"context"
 
+	"github.com/lcnascimento/go-kit/errors"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application"
@@ -10,18 +12,19 @@ import (
 )
 
 type Application struct {
-	repo application.AuditEntriesRepository
+	repo      application.AuditEntriesRepository
+	validator application.Validator
 }
 
-func New(repo application.AuditEntriesRepository) *Application {
-	return &Application{repo: repo}
+func New(repo application.AuditEntriesRepository, v application.Validator) *Application {
+	return &Application{repo: repo, validator: v}
 }
 
 func (a *Application) Record(ctx context.Context, entry *idomain.Entry) error {
 	ctx, span := a.onRecordStart(ctx, entry)
 	defer span.End()
 
-	if err := validateEnvelope(entry); err != nil {
+	if err := a.validate(entry); err != nil {
 		return a.onError(ctx, events.ErrPermanent.WithCause(err))
 	}
 
@@ -34,24 +37,20 @@ func (a *Application) Record(ctx context.Context, entry *idomain.Entry) error {
 	return nil
 }
 
-func validateEnvelope(entry *idomain.Entry) error {
-	required := []struct {
-		attribute string
-		missing   bool
-	}{
-		{"id", entry.ID == ""},
-		{"source", entry.Source == ""},
-		{"type", entry.Type == ""},
-		{"specversion", entry.SpecVersion == ""},
-		{"time", entry.Time.IsZero()},
-		{"datacontenttype", entry.DataContentType == ""},
+func (a *Application) validate(entry *idomain.Entry) error {
+	err := a.validator.Struct(entry)
+	if err == nil {
+		return nil
 	}
 
-	for _, r := range required {
-		if r.missing {
-			return ErrInvalidEnvelope.WithAttribute("attribute", r.attribute)
-		}
+	if !errors.Is(err, errors.ErrInvalidInput) {
+		return err
 	}
 
-	return nil
+	out := ErrInvalidEnvelope
+	for _, reason := range errors.SafeReasons(err) {
+		out = out.WithCause(errors.New("%s", reason))
+	}
+
+	return out
 }

@@ -8,6 +8,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/validator"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 
@@ -22,7 +23,7 @@ func TestRecord_InsertsTheEntry(t *testing.T) {
 	repo := mocks.NewMockAuditEntriesRepository(gomock.NewController(t))
 	repo.EXPECT().Insert(gomock.Any(), validEntry()).Return(nil)
 
-	require.NoError(t, audit.New(repo).Record(t.Context(), validEntry()))
+	require.NoError(t, audit.New(repo, newValidator(t)).Record(t.Context(), validEntry()))
 }
 
 func TestRecord_RepositoryErrorIsTransient(t *testing.T) {
@@ -31,7 +32,7 @@ func TestRecord_RepositoryErrorIsTransient(t *testing.T) {
 	repo := mocks.NewMockAuditEntriesRepository(gomock.NewController(t))
 	repo.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(errors.ErrMock)
 
-	err := audit.New(repo).Record(t.Context(), validEntry())
+	err := audit.New(repo, newValidator(t)).Record(t.Context(), validEntry())
 
 	require.ErrorIs(t, err, audit.ErrRecordEntry)
 	require.ErrorIs(t, err, errors.ErrMock)
@@ -41,27 +42,31 @@ func TestRecord_RepositoryErrorIsTransient(t *testing.T) {
 func TestRecord_InvalidEnvelopeIsPermanentAndNotInserted(t *testing.T) {
 	t.Parallel()
 
-	cases := map[string]func(*idomain.Entry){
-		"missing id":                func(e *idomain.Entry) { e.ID = "" },
-		"missing source":            func(e *idomain.Entry) { e.Source = "" },
-		"missing type":              func(e *idomain.Entry) { e.Type = "" },
-		"missing spec version":      func(e *idomain.Entry) { e.SpecVersion = "" },
-		"missing time":              func(e *idomain.Entry) { e.Time = time.Time{} },
-		"missing data content type": func(e *idomain.Entry) { e.DataContentType = "" },
+	cases := map[string]struct {
+		invalidate func(*idomain.Entry)
+		reason     string
+	}{
+		"missing id":                {func(e *idomain.Entry) { e.ID = "" }, "[id] is a required field"},
+		"missing source":            {func(e *idomain.Entry) { e.Source = "" }, "[source] is a required field"},
+		"missing type":              {func(e *idomain.Entry) { e.Type = "" }, "[type] is a required field"},
+		"missing spec version":      {func(e *idomain.Entry) { e.SpecVersion = "" }, "[specversion] is a required field"},
+		"missing time":              {func(e *idomain.Entry) { e.Time = time.Time{} }, "[time] is a required field"},
+		"missing data content type": {func(e *idomain.Entry) { e.DataContentType = "" }, "[datacontenttype] is a required field"},
 	}
 
-	for name, invalidate := range cases {
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			repo := mocks.NewMockAuditEntriesRepository(gomock.NewController(t))
 			entry := validEntry()
-			invalidate(entry)
+			tc.invalidate(entry)
 
-			err := audit.New(repo).Record(t.Context(), entry)
+			err := audit.New(repo, newValidator(t)).Record(t.Context(), entry)
 
 			require.ErrorIs(t, err, events.ErrPermanent)
 			require.ErrorIs(t, err, audit.ErrInvalidEnvelope)
+			require.Contains(t, errors.SafeReasons(err), tc.reason)
 		})
 	}
 }
@@ -75,7 +80,16 @@ func TestRecord_WithoutSubjectIsValid(t *testing.T) {
 	repo := mocks.NewMockAuditEntriesRepository(gomock.NewController(t))
 	repo.EXPECT().Insert(gomock.Any(), entry).Return(nil)
 
-	require.NoError(t, audit.New(repo).Record(t.Context(), entry))
+	require.NoError(t, audit.New(repo, newValidator(t)).Record(t.Context(), entry))
+}
+
+func newValidator(t *testing.T) *validator.Validator {
+	t.Helper()
+
+	v, err := validator.New(validator.WithJSONFieldNames())
+	require.NoError(t, err)
+
+	return v
 }
 
 func validEntry() *idomain.Entry {
