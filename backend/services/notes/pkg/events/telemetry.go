@@ -39,8 +39,6 @@ var (
 
 var semconvMessagingDurationBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
 
-// MustDurationHistogram creates a messaging duration histogram in seconds with the OTel semantic
-// convention buckets. It panics when meter rejects the instrument.
 func MustDurationHistogram(meter otelmetric.Meter, name, description string) otelmetric.Float64Histogram {
 	histogram, err := meter.Float64Histogram(name,
 		otelmetric.WithDescription(description),

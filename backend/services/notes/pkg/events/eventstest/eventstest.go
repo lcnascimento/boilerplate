@@ -1,4 +1,3 @@
-// Package eventstest runs component tests against a real Kafka broker and Schema Registry (Redpanda).
 package eventstest
 
 import (
@@ -64,7 +63,6 @@ var startCluster = sync.OnceValues(func() (cluster, error) {
 	return cluster{brokers: []string{broker}, registryURL: registryURL, schemaIDs: schemaIDs}, nil
 })
 
-// Env is one test's slice of the package-wide Redpanda: its own topic and consumer group.
 type Env struct {
 	Brokers     []string
 	RegistryURL string
@@ -119,7 +117,6 @@ func (e *Env) Registry(t *testing.T) *sr.Client {
 	return client
 }
 
-// Publish sends m to the Env's topic as the forwarder does: CloudEvents headers, Confluent framing, key.
 func (e *Env) Publish(t *testing.T, key string, m proto.Message) events.Envelope {
 	t.Helper()
 
@@ -142,7 +139,6 @@ func (e *Env) Publish(t *testing.T, key string, m proto.Message) events.Envelope
 	return envelope
 }
 
-// PublishRaw sends headers and value untouched, so tests can publish malformed messages; the key is ce_partitionkey.
 func (e *Env) PublishRaw(t *testing.T, messageID string, headers map[string]string, value []byte) {
 	t.Helper()
 

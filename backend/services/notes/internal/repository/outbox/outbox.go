@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	// ForwarderTopic names the outbox tables: watermill_notes_outbox and watermill_offsets_notes_outbox.
+	// ForwarderTopic is what watermill-sql derives the table names watermill_notes_outbox and watermill_offsets_notes_outbox from.
 	ForwarderTopic = "notes_outbox"
 	ConsumerGroup  = "notes-forwarder"
 )
@@ -30,11 +30,9 @@ func NewPublisher(tx pgx.Tx) (message.Publisher, error) {
 	return forwarder.NewPublisher(publisher, forwarder.PublisherConfig{ForwarderTopic: ForwarderTopic}), nil
 }
 
-// NewSubscriber reads the outbox one message at a time, in commit order, for ConsumerGroup. Its transaction
-// locks the group's offset row, so of several subscribers only one consumes and the others wait.
+// NewSubscriber relies on watermill-sql locking the group's offset row in each transaction, so only one replica consumes and commit order holds.
 func NewSubscriber(pool *pgxpool.Pool) (message.Subscriber, error) {
-	// A deadline would redeliver a message while its handler may still be publishing it, so the next
-	// message could reach Kafka first.
+	// watermill-sql redelivers a message whose ack deadline passes while its handler may still be publishing it.
 	noAckDeadline := time.Duration(0)
 
 	return sql.NewSubscriber(

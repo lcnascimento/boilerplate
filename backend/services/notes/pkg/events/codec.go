@@ -10,10 +10,8 @@ import (
 // firstMessage is the Confluent message index of the only message in each .proto file.
 var firstMessage = []int{0}
 
-// SchemaIDs maps each subject to its Schema Registry ID, which differs between environments.
 type SchemaIDs map[string]int
 
-// Encode frames m in the Confluent wire format: magic byte, schema ID, message index, Protobuf.
 func (ids SchemaIDs) Encode(m proto.Message) ([]byte, error) {
 	subject := string(m.ProtoReflect().Descriptor().FullName())
 
@@ -37,8 +35,6 @@ func (ids SchemaIDs) Encode(m proto.Message) ([]byte, error) {
 	return value, nil
 }
 
-// Decode reads a Confluent-framed value without calling the Schema Registry: eventType (ce_type) picks
-// the Go type, so message is nil, with no error, for a type this package does not know.
 func Decode(eventType string, value []byte) (schemaID int, message proto.Message, err error) {
 	var header sr.ConfluentHeader
 

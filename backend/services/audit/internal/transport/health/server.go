@@ -27,7 +27,6 @@ func New(db transport.Database, consumer transport.Consumer, port int, shutdown 
 }
 
 func (s *Server) Start(_ context.Context) error {
-	// httpserver.Server.Start blocks until the listener closes.
 	go func() {
 		if err := s.server.Start(s.register); err != nil {
 			s.shutdown()

@@ -29,12 +29,10 @@ type SubscriberConfig struct {
 	Observer Observer
 }
 
-// DLQTopic is where a consumer group's permanently failed messages of topic go.
 func DLQTopic(topic, group string) string {
 	return topic + "." + group + ".dlq"
 }
 
-// Subscriber consumes Topic in a consumer group, starting from the oldest offset for a new group.
 type Subscriber struct {
 	topic    string
 	group    string
@@ -45,7 +43,6 @@ type Subscriber struct {
 	dlq        *kafka.Publisher
 }
 
-// NewSubscriber fails with ErrTopicMissing when the topic or its DLQ does not exist.
 func NewSubscriber(cfg SubscriberConfig) (*Subscriber, error) {
 	return newSubscriber(cfg, Topic)
 }
@@ -88,7 +85,6 @@ func newSubscriber(cfg SubscriberConfig, topic string) (*Subscriber, error) {
 	return s, nil
 }
 
-// Run blocks until ctx is done or Close is called.
 func (s *Subscriber) Run(ctx context.Context) error {
 	if err := s.router.Run(ctx); err != nil {
 		return ErrSubscriberStopped.WithCause(err)
@@ -97,12 +93,10 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	return nil
 }
 
-// Running is closed once Run is consuming, and stays closed after it stops.
 func (s *Subscriber) Running() <-chan struct{} {
 	return s.router.Running()
 }
 
-// Close waits for the messages being processed, then disconnects from Kafka.
 func (s *Subscriber) Close() error {
 	routerErr := s.router.Close()
 	subscriberErr := s.subscriber.Close()
@@ -239,7 +233,6 @@ func classify(err error) error {
 	return err
 }
 
-// fullReasonError makes the DLQ's reason_poisoned header carry the causes, not only the outer message.
 type fullReasonError struct {
 	error
 }

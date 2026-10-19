@@ -9,9 +9,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Observer receives every Integration Event of the topic: first the typed method, when this package knows
-// the type, then OnAny. Return an error wrapping ErrPermanent to send the message to the DLQ; any other
-// error is retried forever and blocks the partition.
 type Observer interface {
 	OnNoteCreated(ctx context.Context, event *Event, note *NoteCreated) error
 	OnNoteDeleted(ctx context.Context, event *Event, note *NoteDeleted) error
@@ -26,7 +23,6 @@ func (UnimplementedObserver) OnNoteDeleted(context.Context, *Event, *NoteDeleted
 
 func (UnimplementedObserver) OnAny(context.Context, *Event) error { return nil }
 
-// Event is one consumed Kafka record. Message is nil when this package does not know Envelope.Type.
 type Event struct {
 	Envelope
 

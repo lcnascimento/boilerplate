@@ -41,7 +41,6 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      # Each probe starts a JVM: a short interval keeps the broker busy at idle.
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:19092 > /dev/null 2>&1"]
       interval: 10s
       timeout: 10s

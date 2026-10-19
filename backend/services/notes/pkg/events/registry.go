@@ -6,8 +6,6 @@ import (
 	"github.com/twmb/franz-go/pkg/sr"
 )
 
-// RegisterSchemas sets FULL_TRANSITIVE on every subject and registers its normalized .proto.
-// Running it again with unchanged schemas returns the same IDs.
 func RegisterSchemas(ctx context.Context, client *sr.Client) (SchemaIDs, error) {
 	schemas, err := loadSchemas()
 	if err != nil {
@@ -35,7 +33,6 @@ func RegisterSchemas(ctx context.Context, client *sr.Client) (SchemaIDs, error) 
 	return ids, nil
 }
 
-// LookupSchemaIDs finds the ID of every subject without registering anything.
 func LookupSchemaIDs(ctx context.Context, client *sr.Client) (SchemaIDs, error) {
 	schemas, err := loadSchemas()
 	if err != nil {

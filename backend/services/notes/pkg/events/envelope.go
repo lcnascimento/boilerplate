@@ -18,7 +18,6 @@ const (
 	headerContentType  = "content-type"
 )
 
-// Envelope is a CloudEvents 1.0 event in Kafka binary mode: every attribute is a Kafka header.
 type Envelope struct {
 	ID              string
 	Source          string
