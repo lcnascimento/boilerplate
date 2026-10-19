@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/lcnascimento/go-kit/o11y/baggage"
 	"github.com/lcnascimento/go-kit/o11y/log"
 	"github.com/lcnascimento/go-kit/o11y/metric"
 
@@ -24,11 +24,12 @@ var (
 )
 
 func (a *Application) onRecordStart(ctx context.Context, entry *idomain.Entry) (context.Context, trace.Span) {
-	ctx, span := tracer.Start(ctx, "RecordAuditEntry", trace.WithAttributes(
-		attribute.String("cloudevents.event_id", entry.ID),
-		attribute.String("cloudevents.event_source", entry.Source),
-		attribute.String("cloudevents.event_type", entry.Type),
-	))
+	ctx, span := tracer.Start(ctx, "RecordAuditEntry")
+	ctx = baggage.ContextWithMembers(ctx,
+		baggage.NewMember("cloudevents.event_id", entry.ID),
+		baggage.NewMember("cloudevents.event_source", entry.Source),
+		baggage.NewMember("cloudevents.event_type", entry.Type),
+	)
 
 	logger.Debug(ctx, "recording audit entry")
 
