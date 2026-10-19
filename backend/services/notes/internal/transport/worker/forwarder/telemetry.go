@@ -8,7 +8,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
@@ -32,7 +31,7 @@ var (
 
 	sentMessages = metric.MustIntCounter(meter, "messaging.client.sent.messages",
 		"Number of attempts to send a message to Kafka")
-	operationDuration = events.MustDurationHistogram(meter, "messaging.client.operation.duration",
+	operationDuration = metric.MustDurationHistogram(meter, "messaging.client.operation.duration",
 		"Duration of one attempt to send a message to Kafka")
 
 	oldestPendingAge = mustOldestPendingAgeGauge()
@@ -125,8 +124,6 @@ func onSendStart(msg *message.Message, topic string, attempt int) func(error) {
 			metricAttributes = append(metricAttributes, errType)
 
 			span.SetAttributes(errType)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, ErrSend.WithCause(err).WithAttribute("messaging.delivery.attempt", strconv.Itoa(attempt)))
 		}
 

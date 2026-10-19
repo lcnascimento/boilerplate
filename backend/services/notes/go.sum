@@ -129,8 +129,8 @@ github.com/lcnascimento/go-kit/errors v1.9.3 h1:T6m8f+aKfzLoYrzyqDEnN4hxySCsD0Ob
 github.com/lcnascimento/go-kit/errors v1.9.3/go.mod h1:7ylrdAwBRUk2OYeoWarZUDfdRXjgQjyAq8WViHP5x2k=
 github.com/lcnascimento/go-kit/http v1.4.7 h1:q3SPf4ZjB7ErwBZYDIpnk6lEYPOgckljUyZlx9BjtM0=
 github.com/lcnascimento/go-kit/http v1.4.7/go.mod h1:at2aIj9druXXk5OOM8/y0LKj2iKizRfbkQ8eCFL05MI=
-github.com/lcnascimento/go-kit/o11y v1.6.5 h1:8t3EGxdpSS8oJMQ4pumAIffWUYk5XO06qNMhIVTxkYQ=
-github.com/lcnascimento/go-kit/o11y v1.6.5/go.mod h1:xeNI5V3gYiD6p5gBe2W9nhSrCwM57qNf0Hrm6Juk+fw=
+github.com/lcnascimento/go-kit/o11y v1.7.0 h1:Wsdrml5Ot4LhvHraooxmVi1MIBcLUGCCcGKY4nbFs4M=
+github.com/lcnascimento/go-kit/o11y v1.7.0/go.mod h1:qJkdNz6Qw6yTAzhZIH30ILIUgteejgQmyMJHXpY2AXc=
 github.com/lcnascimento/go-kit/util v1.4.5 h1:13ECiVYRAPrBa8BY3Jo4sgO9b+IKRywa3cAUGgSZ3SU=
 github.com/lcnascimento/go-kit/util v1.4.5/go.mod h1:iF1w2ZkSVC1Eyd8pRcSXJbRXSWUmWPmFzJrYOLWXUIQ=
 github.com/lcnascimento/go-kit/validator v1.11.0 h1:HhVphTQRnO2nDqvTj4deNa/QrfYq+VhyG2MuTDe28Lo=

@@ -9,7 +9,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/google/uuid v1.6.0
 	github.com/lcnascimento/go-kit/errors v1.9.3
-	github.com/lcnascimento/go-kit/o11y v1.6.5
+	github.com/lcnascimento/go-kit/o11y v1.7.0
 	github.com/lcnascimento/go-kit/util v1.4.5
 	github.com/lcnascimento/go-kit/validator v1.11.0
 	github.com/stretchr/testify v1.12.1

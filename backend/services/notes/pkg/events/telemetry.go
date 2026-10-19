@@ -9,7 +9,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
@@ -31,25 +30,11 @@ var (
 
 	consumedMessages = metric.MustIntCounter(meter, "messaging.client.consumed.messages",
 		"Number of messages the consumer finished handling, acked or nacked")
-	processDuration = MustDurationHistogram(meter, "messaging.process.duration",
+	processDuration = metric.MustDurationHistogram(meter, "messaging.process.duration",
 		"Duration of one processing attempt of a message")
 	dlqSentMessages = metric.MustIntCounter(meter, "messaging.dlq.sent.messages",
 		"Number of messages sent to the DLQ")
 )
-
-var semconvMessagingDurationBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
-
-func MustDurationHistogram(meter otelmetric.Meter, name, description string) otelmetric.Float64Histogram {
-	histogram, err := meter.Float64Histogram(name,
-		otelmetric.WithDescription(description),
-		otelmetric.WithUnit("s"),
-		otelmetric.WithExplicitBucketBoundaries(semconvMessagingDurationBuckets...))
-	if err != nil {
-		panic(err)
-	}
-
-	return histogram
-}
 
 func deliveryAttempt(n int) attribute.KeyValue {
 	return attribute.Int("messaging.delivery.attempt", n)
@@ -106,8 +91,6 @@ func (s *Subscriber) onAttemptStart(msg *message.Message, attempt int) (context.
 			metricAttributes = append(metricAttributes, errType)
 
 			span.SetAttributes(errType)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			logger.ErrorBySeverity(ctx, err)
 		}
 

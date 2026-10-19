@@ -5,7 +5,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -46,10 +45,6 @@ func (a *Application) onPurged(ctx context.Context, purged int64) {
 func (a *Application) onPurgeFailed(ctx context.Context, purged int64, err error) error {
 	purgedMessages.Add(ctx, purged)
 	purgeRuns.Add(ctx, 1, outcomeFailure)
-
-	span := trace.SpanFromContext(ctx)
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
 
 	logger.ErrorBySeverity(ctx, err)
 

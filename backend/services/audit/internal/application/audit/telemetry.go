@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/lcnascimento/go-kit/o11y/baggage"
@@ -42,10 +41,6 @@ func (a *Application) onRecorded(ctx context.Context) {
 }
 
 func (a *Application) onError(ctx context.Context, err error) error {
-	span := trace.SpanFromContext(ctx)
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-
 	logger.ErrorBySeverity(ctx, err)
 
 	return err
