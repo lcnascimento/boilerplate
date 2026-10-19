@@ -11,8 +11,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/routes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/mocks"
+	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/health"
+	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/internal/mocks"
 )
 
 func TestHealth_Routes(t *testing.T) {
@@ -21,7 +21,7 @@ func TestHealth_Routes(t *testing.T) {
 	cases := map[string]struct {
 		path    string
 		pingErr error
-		pinged  bool
+		running bool
 		status  int
 		body    string
 	}{
@@ -30,16 +30,22 @@ func TestHealth_Routes(t *testing.T) {
 			status: http.StatusOK,
 			body:   `{"message":"pong"}`,
 		},
-		"health is healthy when the database answers": {
-			path:   "/health",
-			pinged: true,
-			status: http.StatusOK,
-			body:   `{"message":"healthy"}`,
+		"health is healthy when the database answers and the consumer runs": {
+			path:    "/health",
+			running: true,
+			status:  http.StatusOK,
+			body:    `{"message":"healthy"}`,
 		},
 		"health is unhealthy when the database fails": {
 			path:    "/health",
-			pinged:  true,
+			running: true,
 			pingErr: errors.ErrMock,
+			status:  http.StatusServiceUnavailable,
+			body:    `{"message":"unhealthy"}`,
+		},
+		"health is unhealthy when the consumer is not running": {
+			path:    "/health",
+			running: false,
 			status:  http.StatusServiceUnavailable,
 			body:    `{"message":"unhealthy"}`,
 		},
@@ -49,13 +55,15 @@ func TestHealth_Routes(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			db := mocks.NewMockDatabase(gomock.NewController(t))
-			if tc.pinged {
-				db.EXPECT().Ping(gomock.Any()).Return(tc.pingErr)
-			}
+			ctrl := gomock.NewController(t)
+			db := mocks.NewMockDatabase(ctrl)
+			db.EXPECT().Ping(gomock.Any()).Return(tc.pingErr).AnyTimes()
+
+			consumer := mocks.NewMockConsumer(ctrl)
+			consumer.EXPECT().Running().Return(tc.running).AnyTimes()
 
 			router := mux.NewRouter()
-			routes.RegisterHealth(router, db)
+			health.Register(router, db, consumer)
 
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.path, http.NoBody))

@@ -13,13 +13,14 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Área | O que tem |
 | --- | --- |
 | Backend (`backend/`) | Go (versão no `go.work`) com [uber/fx](https://github.com/uber-go/fx) e [go-kit](https://github.com/lcnascimento/go-kit) (`errors`, `http`, `o11y`, `env`, `util`, `validator`), `golangci-lint`, `mockgen`, `govulncheck` e coleção [Bruno](https://www.usebruno.com/) |
-| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs` e `traces` |
+| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs`, `traces` e `messaging`, e os alertas de mensageria |
 | Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Acesso com [pgx](https://github.com/jackc/pgx) (`pgxpool`, instrumentado com [otelpgx](https://github.com/exaring/otelpgx)) e queries tipadas pelo [sqlc](https://sqlc.dev/). Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
+| Mensageria local (`backend/`) | Kafka 4.3 (KRaft, nó único, sem auto-create de tópicos), Confluent Schema Registry e [Redpanda Console](https://github.com/redpanda-data/console) via Docker Compose |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
 | Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit) e commitlint (Conventional Commits no commit-msg) |
-| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e` e `ci-openapi`, cada um disparado pelos caminhos da sua área |
+| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e`, `ci-openapi` e `ci-proto`, cada um disparado pelos caminhos da sua área |
 
 ```text
 backend/
@@ -51,7 +52,7 @@ pnpm -C frontend install     # workspace do frontend
 make -C backend setup        # cria os .env a partir dos .env.example e instala as ferramentas Go
 ```
 
-O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) só quando eles ainda não existem; o `env` também roda sozinho, sem instalar as ferramentas. Para pegar um `.env.example` atualizado, apague o `.env` e rode de novo.
+O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) quando eles ainda não existem e, quando já existem, acrescenta só as chaves novas do `.env.example`, sem mexer nos valores que você mudou nem nas chaves que você comentou. O `env` também roda sozinho, sem instalar as ferramentas, e o `tilt up` o chama a cada carga do Tiltfile.
 
 ### Subindo tudo
 
@@ -67,25 +68,48 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 | Postgres (superuser `postgres`/`postgres`) | `localhost:5432` |
 | Grafana (home = dashboard `overview`) | <http://localhost:3010> |
 | Scalar (referência das APIs) | <http://localhost:8090> |
+| Kafka (bootstrap server para os serviços no host) | `localhost:9092` |
+| Schema Registry | <http://localhost:8081> |
+| Redpanda Console (tópicos, mensagens e schemas) | <http://localhost:8085> |
 | Prometheus, Loki, Tempo, Pyroscope, Alloy | `9090`, `3100`, `3200`, `4040`, `12345` (links na UI do Tilt) |
 
 <!-- example:begin -->
 
-E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`).
+E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`), o forwarder do `notes` em <http://localhost:8091> (`/health`, `/ping`) e o consumer do `audit`, que grava cada Integration Event de `notes.note.v1` como Audit Entry no banco `audit`, com health em <http://localhost:8092> (`/health`, `/ping`).
 
 <!-- example:end -->
 
-Para um stack leve, sem observabilidade, Scalar nem `web-e2e-ui`, suba o modo mínimo:
+Para um stack leve, sem observabilidade, Redpanda Console, Scalar nem `web-e2e-ui`, suba o modo mínimo:
 
 ```sh
 TILT_STACK=minimal tilt up
 ```
 
-Ele sobe só o Postgres, os serviços Go (com os recursos de banco), o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
+Ele sobe só o Postgres, o Kafka, o Schema Registry, os serviços Go (com os recursos de banco), o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe, exceto o Redpanda Console, que fica no profile `console` do compose. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
 
 Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem no dashboard `logs` do Grafana, filtrados por `service_name`, e não no painel do Tilt.
 
 O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de cada serviço para o `next dev`. Para rodar o `next dev` sem o Tilt, copie `frontend/apps/web/.env.example` para `frontend/apps/web/.env.local`. Sem essas variáveis, o servidor recusa subir.
+
+### Mensageria
+
+O `backend/docker-compose.yml` sobe um broker Kafka, o Schema Registry e o Redpanda Console, nessa ordem; no Tilt, `kafka → schema-registry → kafka-console`. O auto-create de tópicos está desligado: produzir num tópico que não existe falha, em vez de criar um tópico de uma partição. Cada serviço declara os próprios tópicos num `make kafka.topics` idempotente, que o Tilt roda como o recurso `<name>-topics` depois do `schema-registry`. Os nomes de tópico usam só pontos (`<serviço>.<agregado>.v<N>`), nunca `_`. Os serviços Go no host falam com o broker em `localhost:9092`; containers e ferramentas dentro da rede `boilerplate` usam `kafka:19092`. Tópicos e schemas ficam no volume `kafka_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, em `backend/`: `docker compose up -d --wait kafka schema-registry` (mais `--profile console` para o Console).
+
+<!-- example:begin -->
+
+O `notes` grava cada Integration Event num outbox, na mesma transação da Note, e o runtime `notes-worker-forwarder` (`cmd/worker/forwarder`) leva o outbox ao tópico `notes.note.v1`, uma mensagem por vez, em ordem de commit, com o `NoteID` como key. Ele tenta publicar para sempre e nunca pula uma mensagem: com o Kafka fora do ar, a API continua aceitando escritas e o outbox cresce até o broker voltar. Várias réplicas podem rodar juntas, com uma ativa e as outras esperando. O start falha se o broker não responder ou se o tópico não existir (`TOPIC_MISSING`: rode `make kafka.topics`). O `/health` na `8091` olha o Postgres e o forwarder, nunca o broker.
+
+<!-- example:end -->
+
+Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
+
+Fora do modo mínimo, o Alloy lê do broker o lag de cada consumer group e os high-water marks de cada tópico (`prometheus.exporter.kafka`), sem instrumentar o Kafka, e só sobe depois do `kafka` saudável. O dashboard `messaging` do Grafana junta esses números às métricas `messaging.*` dos serviços, em seções Produce, Consume e DLQ, com o estado dos alertas no topo. Os alertas são Grafana-managed, provisionados em `backend/config/grafana/provisioning/alerting/messaging.yaml`, sem contact point: aparecem em Alerting no Grafana e no topo do dashboard. O alerta de DLQ dispara na hora em que qualquer mensagem nova chega a um tópico `*.dlq`.
+
+<!-- example:begin -->
+
+O exemplo traz mais dois alertas. O de lag dispara quando o group `audit` fica mais de 100 mensagens atrás por 5 minutos. O de outbox travado dispara quando a mensagem pendente mais antiga do outbox do `notes` passa de 120s por 5 minutos, ou quando nenhum forwarder reporta essa idade há mais de 2 minutos, também por 5 minutos, já que sem forwarder ninguém esvazia o outbox. As seções Outbox e Forward do `notes` ficam no dashboard `notes-outbox`, para onde aponta esse alerta.
+
+<!-- example:end -->
 
 ### Banco de dados
 
@@ -119,16 +143,25 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 
 ```sh
 make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
-make test             # go test -race com cobertura: unit + componente (exige o Postgres no ar)
-make test.unit        # só os de unidade (-short), sem banco
-make test.component   # só os de componente (-run Component)
+make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
+make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
+make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
+make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
+make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
+make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
 make mocks            # regenera internal/mocks/mocks.go a partir de cada contracts.go
 make tidy             # go mod tidy
 make vuln-check       # govulncheck (só local, fora do CI)
 ```
 
 Os testes de componente (`TestComponent<Unit>_<Scenario>`, pulados com `-short`) rodam contra o Postgres de verdade, sem precisar do `<name>-db` nem do `<name>-migrate`: basta o container (`tilt up` ou `docker compose up -d postgres` em `backend/`). Cada teste ganha um database próprio, clonado de um template já migrado pelo [pgtestdb](https://github.com/peterldowns/pgtestdb), então eles rodam em paralelo e nunca tocam o database de dev. O template é reaproveitado entre execuções e só é recriado quando as migrations mudam; o database de um teste que falha fica no servidor, com o nome no log do teste. A conexão de admin vem de `POSTGRES_ADMIN_URL` (padrão: o superuser do compose, `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`). Com o Postgres fora do ar, eles falham (não pulam) com uma mensagem dizendo o que rodar.
+
+<!-- example:begin -->
+
+Os testes de componente de mensageria usam o helper público `eventstest` (em `notes/pkg/events/eventstest`): um container Redpanda (broker e Schema Registry) por pacote de teste, via [testcontainers](https://golang.testcontainers.org/), com os schemas já registrados, e tópico e consumer group `test_<uuid>` próprios de cada teste. O `Publish` dele produz no envelope CloudEvents e no wire format Confluent reais, então um consumidor é testado sem o forwarder. Eles só exigem o Docker; o pull e o start do container cabem no timeout de 3 minutos.
+
+<!-- example:end -->
 
 **Frontend** (em `frontend/`, via Turborepo):
 
@@ -193,7 +226,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    <!-- example:end -->
 2. Escolha uma porta livre (ex.: `8082`) e use-a no `.env.example` do serviço (`FRONTEND_PORT`), no `FRONTEND_PORT ?=` do `Makefile` e na `readiness_probe` e no link do `Tiltfile` do serviço.
    <!-- example:begin -->
-   A `8080` é do `notes`.
+   A `8080` é do `notes`, e a `8091`, do health do forwarder dele.
    <!-- example:end -->
 3. Registre os dois módulos no `backend/go.work`:
 
@@ -255,14 +288,14 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
 
 ## Removendo o exemplo
 
-Para começar sem o serviço `notes`:
+Para começar sem os serviços de exemplo `notes` e `audit`:
 
 ```sh
 make clean-example
 ```
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
-- Apaga os arquivos do exemplo (`backend/services/notes/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
+- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, o dashboard `notes-outbox` do Grafana, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 

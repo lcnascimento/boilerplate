@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package boilerplate.notes.v1;
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events;events";
+
+message NoteDeleted {
+  string id = 1;
+}

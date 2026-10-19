@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package boilerplate.notes.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events;events";
+
+message NoteCreated {
+  string id = 1;
+  string title = 2;
+  string body = 3;
+  google.protobuf.Timestamp created_at = 4;
+}

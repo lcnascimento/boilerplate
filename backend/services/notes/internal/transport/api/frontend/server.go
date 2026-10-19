@@ -9,6 +9,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/routes"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/handlers/health"
 )
 
 type Server struct {
@@ -49,7 +50,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) register(router *mux.Router) error {
-	routes.RegisterHealth(router, s.db)
+	health.Register(router, s.db.Ping)
 	routes.RegisterNotes(router, s.notes)
 
 	return nil

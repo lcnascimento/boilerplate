@@ -9,5 +9,5 @@ import (
 var logger = log.MustNewLogger("notes/transport/health")
 
 func onUnhealthy(ctx context.Context, err error) {
-	logger.Error(ctx, ErrDatabaseUnhealthy.WithCause(err))
+	logger.Error(ctx, ErrUnhealthy.WithCause(err))
 }

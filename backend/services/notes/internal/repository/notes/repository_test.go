@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/fixture"
 )
@@ -110,11 +111,21 @@ func TestComponentRepository_DeleteUnknownIDReturnsNotFound(t *testing.T) {
 func newRepository(t *testing.T) *notes.Repository {
 	t.Helper()
 
+	repo, _ := newRepositoryWithPool(t)
+
+	return repo
+}
+
+func newRepositoryWithPool(t *testing.T, opts ...notes.Option) (*notes.Repository, *pgxpool.Pool) {
+	t.Helper()
+
 	if testing.Short() {
 		t.Skip("component test: needs Postgres")
 	}
 
-	return notes.New(testdb.New(t))
+	pool := testdb.New(t)
+
+	return notes.New(pool, schemaIDs, opts...), pool
 }
 
 func newNote(title string, createdAt time.Time) *domain.Note {

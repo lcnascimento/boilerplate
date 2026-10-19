@@ -10,10 +10,15 @@ GOVULNCHECK_VERSION := v1.8.0
 GOOSE_VERSION := v3.29.0
 SQUAWK_VERSION := v2.68.0
 SQLC_VERSION := v1.31.1
+BUF_VERSION := v1.74.0
+PROTOC_GEN_GO_VERSION := v1.36.12
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 
 MODULES := $(shell go list -m -f '{{.Dir}}')
+
+BUF_DIRS := $(patsubst %/buf.yaml,%,$(shell find services -name buf.yaml -not -path '*/node_modules/*'))
+AGAINST ?= main
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
@@ -29,14 +34,28 @@ define in_modules
 	done
 endef
 
-go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout 30s -race -cover $(1) $$pkgs; fi
+define in_buf_dirs
+	@if [ -z "$(BUF_DIRS)" ]; then echo "no buf.yaml"; fi
+	@for dir in $(BUF_DIRS); do \
+		echo "==> $(1) $$dir"; \
+		(set -eu -o pipefail; cd "$$dir"; $(2)); status=$$?; \
+		if [ $$status -ne 0 ]; then exit $$status; fi; \
+	done
+endef
+
+go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
 env:
 	@for example in .env.example services/*/.env.example; do \
 		[ -f "$$example" ] || continue; \
 		env_file="$${example%.example}"; \
-		if [ ! -f "$$env_file" ]; then echo "==> Creating $$env_file"; cp "$$example" "$$env_file"; fi; \
+		if [ ! -f "$$env_file" ]; then echo "==> Creating $$env_file"; cp "$$example" "$$env_file"; continue; fi; \
+		missing=$$(awk -F= 'NR == FNR { if (sub(/^#?[ \t]*/, "", $$1)) seen[$$1] = 1; next } /^[A-Za-z_][A-Za-z0-9_]*=/ && !($$1 in seen)' "$$env_file" "$$example"); \
+		[ -n "$$missing" ] || continue; \
+		echo "==> Adding $$(printf '%s\n' "$$missing" | cut -d= -f1 | paste -sd, -) to $$env_file"; \
+		[ -z "$$(tail -c1 "$$env_file")" ] || echo >> "$$env_file"; \
+		printf '%s\n' "$$missing" >> "$$env_file"; \
 	done
 
 .PHONY: setup
@@ -47,7 +66,12 @@ setup: env
 	@go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 	@go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
 	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
-	@$(MAKE) -s squawk
+	@$(MAKE) -s squawk proto.tools
+
+.PHONY: proto.tools
+proto.tools:
+	@go install github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
 
 .PHONY: squawk
 squawk:
@@ -87,19 +111,35 @@ mocks:
 
 .PHONY: test
 test:
-	$(call in_modules,test,$(call go_test,-coverprofile=coverage.out))
+	$(call in_modules,test,$(call go_test,3m,-coverprofile=coverage.out))
 
 .PHONY: test.unit
 test.unit:
-	$(call in_modules,test.unit,$(call go_test,-short))
+	$(call in_modules,test.unit,$(call go_test,30s,-short))
 
 .PHONY: test.component
 test.component:
-	$(call in_modules,test.component,$(call go_test,-run Component))
+	$(call in_modules,test.component,$(call go_test,3m,-run Component))
 
 .PHONY: sqlc
 sqlc:
 	$(call in_modules,sqlc,if [ -f sqlc.yaml ]; then $(GOBIN)/sqlc generate && $(GOBIN)/sqlc vet; else echo "no sqlc.yaml"; fi)
+
+.PHONY: proto.lint
+proto.lint:
+	$(call in_buf_dirs,proto.lint,$(GOBIN)/buf lint)
+
+.PHONY: proto.generate
+proto.generate:
+	$(call in_buf_dirs,proto.generate,find . -maxdepth 1 -name '*.pb.go' -delete; PATH="$(GOBIN):$$PATH" $(GOBIN)/buf generate)
+
+.PHONY: proto.breaking
+proto.breaking:
+	$(call in_buf_dirs,proto.breaking,module=$$(git rev-parse --show-prefix); \
+		if ! git cat-file -e "$(AGAINST):$${module}buf.yaml" 2>/dev/null; then echo "$(AGAINST) has no buf module at $$module"; exit 0; fi; \
+		against=$$(mktemp -d); trap 'rm -rf "$$against"' EXIT; \
+		git -C "$$(git rev-parse --show-toplevel)" archive "$(AGAINST)" "$$module" | tar -x -C "$$against"; \
+		$(GOBIN)/buf breaking --against "$$against/$$module")
 
 .PHONY: vuln-check
 vuln-check:

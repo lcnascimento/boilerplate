@@ -4,6 +4,7 @@ use ./quality
 
 // example:begin
 use (
+	./services/audit
 	./services/notes
 	./services/notes/pkg
 )

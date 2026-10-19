@@ -2,19 +2,37 @@
 
 minimal = os.getenv('TILT_STACK', '') == 'minimal'
 
+local('make -s env')
+
 compose_files = ['./docker-compose.yml']
 if not minimal:
     compose_files.append('./docker-compose.observability.yml')
 # Without wait=True, Tilt marks a compose resource ready once its container starts, ignoring its healthcheck.
-docker_compose(compose_files, wait=True)
+docker_compose(compose_files, wait=True, profiles=[] if minimal else ['console'])
 
 dc_resource('postgres', labels=['Database'])
 
+dc_resource('kafka', labels=['Messaging'])
+
+dc_resource(
+    'schema-registry',
+    labels=['Messaging'],
+    resource_deps=['kafka'],
+    links=[link('http://localhost:8081/subjects', 'API')],
+)
+
 if not minimal:
+    dc_resource(
+        'kafka-console',
+        labels=['Messaging'],
+        resource_deps=['schema-registry'],
+        links=[link('http://localhost:8085', 'UI')],
+    )
+
     dc_resource(
         'alloy',
         labels=['Monitoring'],
-        resource_deps=['prometheus', 'loki', 'tempo', 'pyroscope'],
+        resource_deps=['kafka', 'prometheus', 'loki', 'tempo', 'pyroscope'],
         links=[
             link('http://localhost:12345', 'UI'),
             link('http://localhost:4317', 'OTLP gRPC receiver'),
@@ -55,4 +73,5 @@ if not minimal:
 
 # example:begin
 include('./services/notes/Tiltfile')
+include('./services/audit/Tiltfile')
 # example:end
