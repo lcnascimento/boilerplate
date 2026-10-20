@@ -37,6 +37,12 @@ jobs:
           go-version-file: backend/go.work
           cache-dependency-path: backend/**/go.sum
 
+      - name: Restore the Go tool binaries
+        uses: actions/cache@v6
+        with:
+          path: ~/go/bin
+          key: gobin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/Makefile') }}
+
       - name: Setup
         run: make setup
 
@@ -55,6 +61,9 @@ jobs:
           git diff --exit-code
           untracked=$(git ls-files --others --exclude-standard)
           if [ -n "$untracked" ]; then echo "make o11y.generate created untracked files:"; echo "$untracked"; exit 1; fi
+
+      - name: o11y.lint
+        run: make o11y.lint
 
       - name: Lint
         run: make lint
