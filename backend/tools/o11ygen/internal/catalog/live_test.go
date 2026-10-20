@@ -62,7 +62,7 @@ func TestLiveProbes_ExpectWhatEachDeclaredProcessEmits(t *testing.T) {
 		`present_over_time(http_server_request_total{job="boilerplate/orders-api"}[15m])`,
 		`present_over_time(http_server_request_duration_seconds_count{job="boilerplate/orders-api"}[15m])`,
 		`present_over_time(pgxpool_acquired_connections{job="boilerplate/orders-api"}[15m])`,
-		`present_over_time(service:log_records:rate1m{service="orders-api"}[15m])`,
+		`present_over_time(service:log_records:rate1m[15m])`,
 		`present_over_time(pg_up[15m])`,
 	} {
 		assert.Contains(t, got, want)
@@ -72,7 +72,8 @@ func TestLiveProbes_ExpectWhatEachDeclaredProcessEmits(t *testing.T) {
 		`present_over_time(target_info{job="boilerplate/orders-migrate"}[15m])`,
 		`present_over_time(messaging_client_sent_messages_total{job="boilerplate/orders-api"}[15m])`,
 		`present_over_time(kafka_consumergroup_current_offset[15m])`,
-		`present_over_time(service:log_records_critical:rate1m{service="orders-api"}[15m])`,
+		`present_over_time(service:log_records:rate1m{service="orders-api"}[15m])`,
+		`present_over_time(service:log_records_critical:rate1m[15m])`,
 	} {
 		assert.NotContains(t, got, unwanted)
 	}

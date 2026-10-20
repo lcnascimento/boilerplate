@@ -230,14 +230,14 @@ func readGenerated(t *testing.T) generatedArtifacts {
 			content, err := os.ReadFile(file) //nolint:gosec // The path comes from globbing a generated kind's directory.
 			require.NoError(t, err)
 
-			// The stack reports a rule file by its path inside the container, which ends with the kind's directory.
-			name := path.Join(filepath.Base(kind.Dir), filepath.Base(file))
-
 			switch kind.LoadedBy {
 			case artifact.Prometheus:
+				// Prometheus reports a rule file by its path inside the container, which ends with the kind's directory.
+				name := path.Join(filepath.Base(kind.Dir), filepath.Base(file))
 				generated.prometheusGroups = append(generated.prometheusGroups, ruleGroups(t, name, content)...)
 			case artifact.LokiRuler:
-				generated.lokiGroups = append(generated.lokiGroups, ruleGroups(t, name, content)...)
+				// The Loki ruler reports the file name alone: it is the rule namespace inside the tenant directory.
+				generated.lokiGroups = append(generated.lokiGroups, ruleGroups(t, filepath.Base(file), content)...)
 			case artifact.Grafana:
 				var board grafanaObject
 

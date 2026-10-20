@@ -33,13 +33,13 @@ func outboxOf(serviceName string) Emitter {
 // liveWindow spans a whole CI run, so a process that logged or exported once since it started counts as present.
 const liveWindow = "15m"
 
-// processSelectors scopes a series to the process that emits it; a source missing here carries no process label.
+// processSelectors scopes a series to the process that emits it. The other sources are probed once: Scrape carries
+// no process label, and a Loki recording exists only for a process that logged within the window, which a quiet
+// worker does not.
 var processSelectors = map[Source]func(process string) string{
-	OTLP:              jobSelector,
-	OTLPResource:      jobSelector,
-	RecordingRule:     jobSelector,
-	LokiRecordingRule: func(process string) string { return fmt.Sprintf(`{service=%q}`, process) },
-	SlothRecording:    func(process string) string { return fmt.Sprintf(`{service=%q}`, process) },
+	OTLP:          jobSelector,
+	OTLPResource:  jobSelector,
+	RecordingRule: jobSelector,
 }
 
 var prometheusSources = map[Source]bool{
