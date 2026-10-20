@@ -15,10 +15,18 @@ const (
 	Browser  Component = "browser"
 )
 
+type Runtime int
+
+const (
+	Go Runtime = iota
+	Node
+)
+
 const DefaultSeriesBudget = 2000
 
 type Service struct {
 	Name         string
+	Runtime      Runtime
 	Processes    []Process
 	SeriesBudget int
 	LogAlerts    []LogAlert
@@ -118,6 +126,10 @@ func Validate(services []Service) error {
 			if err := validateProcess(svc.Name, process, processNames); err != nil {
 				return err
 			}
+
+			if err := validateRuntime(svc.Runtime, process); err != nil {
+				return err
+			}
 		}
 
 		if err := validateLogAlerts(&svc); err != nil {
@@ -158,6 +170,22 @@ func validateLogAlerts(svc *Service) error {
 	}
 
 	return nil
+}
+
+func validateRuntime(runtime Runtime, process Process) error {
+	switch runtime {
+	case Go:
+		return nil
+	case Node:
+		goKitOnly := func(c Component) bool { return c != API && c != Browser }
+		if process.dbPool || slices.ContainsFunc(process.components, goKitOnly) {
+			return errors.New("process %q runs on Node, which only instruments api and browser", process.name)
+		}
+
+		return nil
+	default:
+		return errors.New("process %q declares unknown runtime %d", process.name, runtime)
+	}
 }
 
 func validateProcess(svc string, process Process, seen map[string]bool) error {

@@ -28,7 +28,7 @@ type inheritedSLO struct {
 	slo       func(p service.Process, svc string) service.SLO
 }
 
-var defaults = []inheritedSLO{
+var goKitDefaults = []inheritedSLO{
 	{component: service.API, slo: func(p service.Process, _ string) service.SLO {
 		return service.SLO{
 			Name:        "api-availability",

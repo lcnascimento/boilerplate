@@ -29,6 +29,7 @@ const (
 	RecordingRule
 	LokiRecordingRule
 	SlothRecording
+	TempoSpanMetrics
 )
 
 type Metric struct {
@@ -92,6 +93,14 @@ const (
 
 	ProcessCPUTime     = "process_cpu_time_seconds_total"
 	ProcessMemoryUsage = "process_memory_usage_bytes"
+
+	NodejsEventloopDelayP99    = "nodejs_eventloop_delay_p99_seconds"
+	NodejsEventloopUtilization = "nodejs_eventloop_utilization_ratio"
+	V8jsMemoryHeapUsed         = "v8js_memory_heap_used_bytes"
+	V8jsGCDuration             = "v8js_gc_duration_seconds"
+
+	TracesSpanMetricsCalls   = "traces_spanmetrics_calls_total"
+	TracesSpanMetricsLatency = "traces_spanmetrics_latency"
 )
 
 // The series Sloth records for every SLO, read by the SLO panels of the dashboards.
@@ -223,6 +232,14 @@ var metrics = map[string]Metric{
 	ProcessCPUTime:     {Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}},
 	ProcessMemoryUsage: {Type: Gauge, Source: OTLP},
 
+	NodejsEventloopDelayP99:    {Type: Gauge, Source: OTLP},
+	NodejsEventloopUtilization: {Type: Gauge, Source: OTLP},
+	V8jsMemoryHeapUsed:         {Type: Gauge, Source: OTLP, Labels: []string{"v8js_heap_space_name"}},
+	V8jsGCDuration:             {Type: Histogram, Source: OTLP, Labels: []string{"v8js_gc_type"}},
+
+	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics},
+	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics},
+
 	// example:begin
 	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP},
 	OutboxPurgedMessages("notes"):   {Type: Counter, Source: OTLP},
@@ -237,6 +254,8 @@ var sourceLabels = map[Source][]string{
 	RecordingRule: {"job"},
 	// service is the process that emits the SLI.
 	SlothRecording: {"sloth_id", "sloth_service", "sloth_slo", "service"},
+	// service is the span's service.name; source is the external label of Tempo's metrics generator.
+	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "source"},
 }
 
 var (

@@ -1,0 +1,7 @@
+groups:
+  - name: web
+    rules:
+      - record: service:log_records:rate1m
+        expr: sum by (service,level)(rate({service_namespace="boilerplate", service_name="web"} | label_format service=service_name,level=detected_level[1m]))
+      - record: service:log_records_critical:rate1m
+        expr: sum by (service)(rate({service_namespace="boilerplate", service_name="web"} | severity_number>=21 | label_format service=service_name[1m]))

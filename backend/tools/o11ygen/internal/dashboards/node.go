@@ -1,0 +1,128 @@
+package dashboards
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
+)
+
+// Next.js emits no http_server_* series, only a SERVER span per request named after its route.
+func spanMetricsAPISection(processes []service.Process) section {
+	names := make([]string, 0, len(processes))
+	for _, p := range processes {
+		names = append(names, p.Name())
+	}
+
+	selector := `service=~` + strconv.Quote(strings.Join(names, "|")) + `, span_kind="SPAN_KIND_SERVER"`
+	failed := `status_code="STATUS_CODE_ERROR"`
+	calls := func(extra, by string) string {
+		matchers := selector
+		if extra != "" {
+			matchers += ", " + extra
+		}
+
+		return "sum" + by + " (rate(" + catalog.TracesSpanMetricsCalls + "{" + matchers + "}" + rate + "))"
+	}
+
+	return section{title: string(service.API), panels: []panel{
+		&single{
+			title:       "Taxa",
+			description: "Requisições por segundo que o servidor atendeu.",
+			unit:        "reqps",
+			width:       thirdWidth,
+			queries:     []query{{expr: calls("", "")}},
+		},
+		&single{
+			title:       "Erros",
+			description: "Fração das requisições cujo span terminou com erro: render, Server Action ou route handler que falhou.",
+			unit:        "percentunit",
+			width:       thirdWidth,
+			queries:     []query{{expr: "(" + calls(failed, "") + " or vector(0)) / " + calls("", "")}},
+		},
+		&single{
+			title:       "p99",
+			description: "Percentil 99 da duração das requisições no intervalo.",
+			unit:        "s",
+			width:       thirdWidth,
+			queries:     []query{{expr: quantile("0.99", catalog.TracesSpanMetricsLatency, selector, "le")}},
+		},
+		&graph{
+			title:       "Taxa por rota",
+			description: "Requisições por segundo por método e rota (o nome do span).",
+			unit:        "reqps",
+			width:       halfWidth,
+			queries:     []query{{expr: calls("", " by (span_name)"), legend: "{{span_name}}"}},
+		},
+		&graph{
+			title:       "Erros por rota",
+			description: "Requisições com erro por segundo, por método e rota.",
+			unit:        "reqps",
+			width:       halfWidth,
+			queries:     []query{{expr: calls(failed, " by (span_name)"), legend: "{{span_name}}"}},
+		},
+		&graph{
+			title:       "Latência p50/p99",
+			description: "Percentis 50 e 99 da duração das requisições. Os pontos são exemplars: abrem o trace.",
+			unit:        "s",
+			width:       halfWidth,
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector),
+		},
+		&graph{
+			title:       "Latência p99 por rota",
+			description: "Percentil 99 da duração por método e rota.",
+			unit:        "s",
+			width:       halfWidth,
+			queries: []query{{
+				expr:     quantile("0.99", catalog.TracesSpanMetricsLatency, selector, "le, span_name"),
+				legend:   "{{span_name}}",
+				exemplar: true,
+			}},
+		},
+	}}
+}
+
+func nodeRuntimeSection() section {
+	selected := "{" + selectedJob + "}"
+
+	return section{title: "Runtime", collapsed: true, panels: []panel{
+		&graph{
+			title:       "Event loop",
+			description: "Percentil 99 do atraso do event loop por processo: o tempo que um callback pronto espera para rodar.",
+			unit:        "s",
+			width:       halfWidth,
+			queries: []query{{
+				expr: "max by (job) (" + catalog.NodejsEventloopDelayP99 + selected + ")", legend: "{{job}}",
+			}},
+		},
+		&graph{
+			title:       "Utilização do event loop",
+			description: "Fração do tempo em que o event loop esteve ocupado; perto de 1, o processo está saturado.",
+			unit:        "percentunit",
+			width:       halfWidth,
+			queries: []query{{
+				expr: "max by (job) (" + catalog.NodejsEventloopUtilization + selected + ")", legend: "{{job}}",
+			}},
+		},
+		&graph{
+			title:       "Heap",
+			description: "Heap do V8 em uso por processo; uma subida sem volta costuma ser vazamento.",
+			unit:        "bytes",
+			width:       halfWidth,
+			queries: []query{{
+				expr: "sum by (job) (" + catalog.V8jsMemoryHeapUsed + selected + ")", legend: "{{job}}",
+			}},
+		},
+		&graph{
+			title:       "GC",
+			description: "Segundos gastos em GC por segundo, por processo e tipo de coleta.",
+			unit:        "s",
+			width:       halfWidth,
+			queries: []query{{
+				expr:   "sum by (job, v8js_gc_type) (rate(" + catalog.V8jsGCDuration + "_sum" + selected + rate + "))",
+				legend: "{{job}} {{v8js_gc_type}}",
+			}},
+		},
+	}}
+}
