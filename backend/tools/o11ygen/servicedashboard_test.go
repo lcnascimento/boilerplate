@@ -400,3 +400,25 @@ func TestGenerate_ServiceDashboardReadsLogsOfTheSelectedProcesses(t *testing.T) 
 			`detected_level=~"error|critical|fatal"`,
 	}, queries)
 }
+
+func TestGenerate_ServiceDashboardShowsTheCPUAndRSSOfEachProcessInTheRuntimeSection(t *testing.T) {
+	_, orders := generateOrders(t)
+
+	runtime := orders.section(t, "Runtime")
+	titles := make([]string, 0, len(runtime.panels))
+	queries := map[string][]string{}
+
+	for _, panel := range runtime.panels {
+		titles = append(titles, panel.Title)
+
+		for _, target := range panel.Targets {
+			queries[panel.Title] = append(queries[panel.Title], target.Expr)
+		}
+	}
+
+	assert.Equal(t, []string{"CPU", "RSS", "Goroutines", "Memória Go", "GC"}, titles)
+	assert.Equal(t, []string{
+		`sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~"boilerplate/$process"}[$__rate_interval]))`,
+	}, queries["CPU"])
+	assert.Equal(t, []string{`sum by (job) (process_memory_usage_bytes{job=~"boilerplate/$process"})`}, queries["RSS"])
+}
