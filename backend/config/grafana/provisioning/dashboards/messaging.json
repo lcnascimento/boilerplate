@@ -8,7 +8,7 @@
     "sre"
   ],
   "timezone": "browser",
-  "editable": true,
+  "editable": false,
   "graphTooltip": 1,
   "time": {
     "from": "now-1h",
@@ -98,7 +98,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{topic}}",
@@ -110,7 +110,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -165,7 +165,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"$group\", topic=~\"$topic\"})",
           "legendFormat": "{{consumergroup}} {{topic}}",
@@ -177,7 +177,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -219,7 +219,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (messaging_consumer_group_name) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "ok {{messaging_consumer_group_name}}",
@@ -228,7 +228,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -236,10 +236,11 @@
         }
       ],
       "title": "Mensagens consumidas (msg/s)",
+      "description": "Mensagens que os consumers terminaram de tratar por segundo: sucesso e falha por error_type.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -281,7 +282,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P50 {{messaging_consumer_group_name}}",
@@ -290,7 +291,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P99 {{messaging_consumer_group_name}}",
@@ -298,10 +299,11 @@
         }
       ],
       "title": "Duração do processamento",
+      "description": "Percentis 50 e 99 da duração de uma tentativa de processamento, por consumer group.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -343,7 +345,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_process_duration_seconds_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -355,7 +357,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -397,7 +399,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (consumergroup, topic) (kafka_consumergroup_current_offset{consumergroup=~\"$group\", topic=~\"$topic\"})",
           "legendFormat": "confirmado {{consumergroup}}",
@@ -406,7 +408,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\"$topic\"})",
           "legendFormat": "high-water {{topic}}",
@@ -414,10 +416,11 @@
         }
       ],
       "title": "Offset confirmado vs. high-water mark",
+      "description": "Offset confirmado de cada consumer group comparado ao último offset de cada tópico.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -472,7 +475,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}) or vector(0)",
           "refId": "A"
@@ -483,7 +486,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -537,7 +540,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum(increase(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)",
           "refId": "A"
@@ -548,7 +551,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -602,7 +605,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (increase(messaging_dlq_sent_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -610,10 +613,11 @@
         }
       ],
       "title": "Enviadas à DLQ por causa",
+      "description": "Mensagens enviadas à DLQ por consumer group e error_type.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -659,7 +663,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"})",
           "legendFormat": "{{topic}}",
@@ -667,10 +671,11 @@
         }
       ],
       "title": "High-water mark das DLQs",
+      "description": "Último offset de cada tópico de DLQ; um degrau é uma mensagem nova na DLQ.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -710,8 +715,8 @@
     "list": [
       {
         "type": "datasource",
-        "name": "prometheus",
-        "label": "Prometheus",
+        "name": "prometheus_datasource",
+        "label": "Prometheus data source",
         "skipUrlSync": false,
         "query": "prometheus",
         "multi": false,
@@ -732,7 +737,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus}"
+          "uid": "${prometheus_datasource}"
         },
         "current": {
           "selected": true,
@@ -762,7 +767,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus}"
+          "uid": "${prometheus_datasource}"
         },
         "current": {
           "selected": true,

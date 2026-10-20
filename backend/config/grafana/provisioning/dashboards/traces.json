@@ -8,7 +8,7 @@
     "boilerplate"
   ],
   "timezone": "browser",
-  "editable": true,
+  "editable": false,
   "graphTooltip": 0,
   "time": {
     "from": "now-1h",
@@ -43,7 +43,7 @@
           "filters": [],
           "datasource": {
             "type": "tempo",
-            "uid": "${tempo}"
+            "uid": "${tempo_datasource}"
           }
         }
       ],
@@ -51,7 +51,7 @@
       "transparent": false,
       "datasource": {
         "type": "tempo",
-        "uid": "${tempo}"
+        "uid": "${tempo_datasource}"
       },
       "gridPos": {
         "h": 10,
@@ -74,7 +74,7 @@
           "filters": [],
           "datasource": {
             "type": "tempo",
-            "uid": "${tempo}"
+            "uid": "${tempo_datasource}"
           }
         }
       ],
@@ -82,7 +82,7 @@
       "transparent": false,
       "datasource": {
         "type": "tempo",
-        "uid": "${tempo}"
+        "uid": "${tempo_datasource}"
       },
       "gridPos": {
         "h": 10,
@@ -105,7 +105,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki}"
+            "uid": "${loki_datasource}"
           }
         }
       ],
@@ -113,7 +113,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 10,
@@ -146,15 +146,16 @@
           "filters": [],
           "datasource": {
             "type": "tempo",
-            "uid": "${tempo}"
+            "uid": "${tempo_datasource}"
           }
         }
       ],
       "title": "Traces na Última Hora",
+      "description": "Quantidade de traces que a busca do Tempo encontra.",
       "transparent": false,
       "datasource": {
         "type": "tempo",
-        "uid": "${tempo}"
+        "uid": "${tempo_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -199,20 +200,21 @@
       "id": 5,
       "targets": [
         {
-          "expr": "count(sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [1h])))",
+          "expr": "count(sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__auto])))",
           "refId": "A",
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki}"
+            "uid": "${loki_datasource}"
           }
         }
       ],
-      "title": "Serviços com Erros (1h)",
+      "title": "Serviços com Erros",
+      "description": "Serviços com ao menos um log de error, critical ou fatal no intervalo selecionado.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -265,20 +267,21 @@
       "id": 6,
       "targets": [
         {
-          "expr": "sum by (service_name) (rate({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [5m]))",
+          "expr": "sum by (service_name) (rate({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__auto]))",
           "legendFormat": "{{service_name}}",
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki}"
+            "uid": "${loki_datasource}"
           }
         }
       ],
-      "title": "Volume de Erros por Serviço (5m)",
+      "title": "Volume de Erros por Serviço",
+      "description": "Linhas de log de error, critical ou fatal por segundo, por service_name.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -315,10 +318,10 @@
     "list": [
       {
         "type": "datasource",
-        "name": "loki",
-        "label": "Loki",
+        "name": "tempo_datasource",
+        "label": "Tempo data source",
         "skipUrlSync": false,
-        "query": "loki",
+        "query": "tempo",
         "multi": false,
         "allowCustomValue": true,
         "includeAll": false,
@@ -328,10 +331,10 @@
       },
       {
         "type": "datasource",
-        "name": "tempo",
-        "label": "Tempo",
+        "name": "loki_datasource",
+        "label": "Loki data source",
         "skipUrlSync": false,
-        "query": "tempo",
+        "query": "loki",
         "multi": false,
         "allowCustomValue": true,
         "includeAll": false,

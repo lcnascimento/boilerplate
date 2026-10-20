@@ -18,7 +18,7 @@ func logsDashboard() *dashboard.DashboardBuilder {
 		Uid(config.Namespace+"-logs").
 		Tags([]string{config.Namespace,
 			"logs"}).
-		Editable().
+		Readonly().
 		Tooltip(0).
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
@@ -68,11 +68,13 @@ func logsPanel1() cog.Builder[dashboard.Panel] {
 	return stat.NewPanelBuilder().
 		Id(1).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [1h]))").
+			Expr("sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [$__auto]))").
 			Instant(true).
 			RefId("A").
 			QueryType("instant")}).
-		Title("Total Logs (1h)").
+		Title("Total Logs").
+		Description("Linhas de log no intervalo selecionado.").
+		Unit("short").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 8, X: 0, Y: 0}).
 		Thresholds(dashboard.NewThresholdsConfigBuilder().
@@ -95,11 +97,13 @@ func logsPanel2() cog.Builder[dashboard.Panel] {
 	return stat.NewPanelBuilder().
 		Id(2).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"error\" [1h]))").
+			Expr("sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"error\" [$__auto]))").
 			Instant(true).
 			RefId("A").
 			QueryType("instant")}).
-		Title("Total Errors (1h)").
+		Title("Total Errors").
+		Description("Linhas de log com nível error no intervalo selecionado.").
+		Unit("short").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 8, X: 8, Y: 0}).
 		Thresholds(dashboard.NewThresholdsConfigBuilder().
@@ -124,11 +128,13 @@ func logsPanel3() cog.Builder[dashboard.Panel] {
 	return stat.NewPanelBuilder().
 		Id(3).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"warn\" [1h]))").
+			Expr("sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"warn\" [$__auto]))").
 			Instant(true).
 			RefId("A").
 			QueryType("instant")}).
-		Title("Total Warnings (1h)").
+		Title("Total Warnings").
+		Description("Linhas de log com nível warn no intervalo selecionado.").
+		Unit("short").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 8, X: 16, Y: 0}).
 		Thresholds(dashboard.NewThresholdsConfigBuilder().
@@ -153,10 +159,12 @@ func logsPanel4() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(4).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [$__interval]))").
+			Expr("sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [$__auto]))").
 			LegendFormat("{{service_name}}").
 			RefId("A")}).
 		Title("Log Volume by Service").
+		Description("Linhas de log por service_name ao longo do tempo.").
+		Unit("short").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 4}).
 		ColorScheme(dashboard.NewFieldColorBuilder().
@@ -179,10 +187,12 @@ func logsPanel5() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(5).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=~\"error|critical|fatal\" [$__interval]))").
+			Expr("sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=~\"error|critical|fatal\" [$__auto]))").
 			LegendFormat("{{service_name}}").
 			RefId("A")}).
 		Title("Errors by Service").
+		Description("Linhas de log com error, critical ou fatal, por service_name, ao longo do tempo.").
+		Unit("short").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 4}).
 		ColorScheme(dashboard.NewFieldColorBuilder().

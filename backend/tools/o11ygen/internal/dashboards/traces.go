@@ -22,13 +22,13 @@ func tracesDashboard() *dashboard.DashboardBuilder {
 			"apm",
 			"tempo",
 			config.Namespace}).
-		Editable().
+		Readonly().
 		Tooltip(0).
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(lokiDS),
-			datasourceVariable(tempoDS)}).
+		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(tempoDS),
+			datasourceVariable(lokiDS)}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
 			Datasource(common.DataSourceRef{Type: cog.ToPtr[string]("grafana"), Uid: cog.ToPtr[string]("-- Grafana --")}).
@@ -106,6 +106,7 @@ func tracesPanel4() cog.Builder[dashboard.Panel] {
 			Limit(100).
 			Datasource(datasourceRef(tempoDS))}).
 		Title("Traces na Última Hora").
+		Description("Quantidade de traces que a busca do Tempo encontra.").
 		Datasource(datasourceRef(tempoDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 8, X: 0, Y: 20}).
 		Unit("short").
@@ -126,11 +127,12 @@ func tracesPanel5() cog.Builder[dashboard.Panel] {
 	return stat.NewPanelBuilder().
 		Id(5).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("count(sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [1h])))").
+			Expr("count(sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__auto])))").
 			RefId("A").
 			QueryType("instant").
 			Datasource(datasourceRef(lokiDS))}).
-		Title("Serviços com Erros (1h)").
+		Title("Serviços com Erros").
+		Description("Serviços com ao menos um log de error, critical ou fatal no intervalo selecionado.").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 8, X: 8, Y: 20}).
 		Unit("short").
@@ -153,11 +155,12 @@ func tracesPanel6() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(6).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum by (service_name) (rate({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [5m]))").
+			Expr("sum by (service_name) (rate({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__auto]))").
 			LegendFormat("{{service_name}}").
 			RefId("A").
 			Datasource(datasourceRef(lokiDS))}).
-		Title("Volume de Erros por Serviço (5m)").
+		Title("Volume de Erros por Serviço").
+		Description("Linhas de log de error, critical ou fatal por segundo, por service_name.").
 		Datasource(datasourceRef(lokiDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 8, X: 16, Y: 20}).
 		Unit("short").
