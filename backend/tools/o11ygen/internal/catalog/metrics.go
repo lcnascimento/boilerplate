@@ -242,8 +242,8 @@ var metrics = map[string]Metric{
 	GoMemoryAllocated: {Type: Counter, Source: OTLP, EmittedBy: everyProcess},
 	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
 
-	ProcessCPUTime:     {Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}},
-	ProcessMemoryUsage: {Type: Gauge, Source: OTLP},
+	ProcessCPUTime:     {Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}, EmittedBy: everyProcess},
+	ProcessMemoryUsage: {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
 
 	// example:begin
 	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
