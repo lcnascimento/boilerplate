@@ -163,7 +163,7 @@ o11y.generate:
 	@go run ./tools/o11ygen -root .
 
 .PHONY: o11y.lint
-o11y.lint: o11y.lint.dashboards o11y.lint.rules
+o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki
 
 .PHONY: o11y.lint.rules
 o11y.lint.rules:
@@ -180,6 +180,15 @@ o11y.lint.dashboards:
 		echo "==> dashboard-linter $$dashboard"; \
 		out=$$($(GOBIN)/dashboard-linter lint --strict "$$dashboard" 2>&1) || { echo "$$out" | grep -v '^Checks that'; exit 1; }; \
 	done
+
+.PHONY: o11y.lint.loki
+o11y.lint.loki:
+	@rules=$$(find config/loki/rules -name '*.yaml' | sort); \
+	if [ -z "$$rules" ]; then echo "==> lokitool: no Loki rules"; exit 0; fi; \
+	echo "==> lokitool rules lint"; \
+	out=$$($(GOBIN)/lokitool rules lint --dry-run $$rules 2>&1) || { echo "$$out"; exit 1; }; \
+	echo "==> lokitool rules check"; \
+	$(GOBIN)/lokitool rules check --strict $$rules
 
 .PHONY: proto.lint
 proto.lint:

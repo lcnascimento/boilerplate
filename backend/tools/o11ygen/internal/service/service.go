@@ -18,6 +18,26 @@ const (
 type Service struct {
 	Name      string
 	Processes []Process
+	LogAlerts []LogAlert
+}
+
+type Severity string
+
+const (
+	Critical Severity = "critical"
+	Warning  Severity = "warning"
+)
+
+// LogAlert fires when more than MaxRecordsPer5m log records of Process pass Pipeline, the LogQL stages appended to the
+// process's stream selector (e.g. `|= "payment declined"`). Its runbook is docs/runbooks/<Name>.md.
+type LogAlert struct {
+	Name            string
+	Process         string
+	Pipeline        string
+	MaxRecordsPer5m int
+	Severity        Severity
+	Summary         string
+	Description     string
 }
 
 type Process struct {
@@ -83,6 +103,38 @@ func Validate(services []Service) error {
 				return err
 			}
 		}
+
+		if err := validateLogAlerts(&svc); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateLogAlerts(svc *Service) error {
+	longRunning := map[string]bool{}
+	for _, process := range svc.Processes {
+		longRunning[process.name] = process.LongRunning()
+	}
+
+	names := map[string]bool{}
+
+	for i := range svc.LogAlerts {
+		alert := &svc.LogAlerts[i]
+
+		switch {
+		case alert.Name == "" || alert.Pipeline == "":
+			return errors.New("service %q has a log alert with no name or pipeline", svc.Name)
+		case names[alert.Name]:
+			return errors.New("service %q declares log alert %s twice", svc.Name, alert.Name)
+		case !longRunning[alert.Process]:
+			return errors.New("log alert %s names %q, not a long-running process of service %q", alert.Name, alert.Process, svc.Name)
+		case alert.MaxRecordsPer5m < 0:
+			return errors.New("log alert %s has a negative threshold", alert.Name)
+		}
+
+		names[alert.Name] = true
 	}
 
 	return nil

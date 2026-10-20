@@ -87,6 +87,10 @@ func serviceGroup(svc service.Service) group {
 		}
 	}
 
+	for i := range svc.LogAlerts {
+		out.alerts = append(out.alerts, logAlert(&svc.LogAlerts[i]))
+	}
+
 	return out
 }
 

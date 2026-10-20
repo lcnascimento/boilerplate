@@ -2,7 +2,9 @@ package rules
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strconv"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 const (
 	overviewDashboard  = "overview"
 	messagingDashboard = "messaging"
+	logsDashboard      = "logs"
 
 	sustainedFor = 5 * time.Minute
 )
@@ -116,6 +119,45 @@ var processAlerts = []inheritedAlert{
 			}
 		},
 	},
+	{
+		inheritedBy: func(p *process) bool { return p.LongRunning() },
+		alert: func(p *process) alert {
+			return alert{
+				name:     "CriticalLogRecorded",
+				expr:     recordsIn5m(catalog.ServiceLogRecordsCritical, p.Name(), nil) + " * 60 > 0",
+				severity: critical,
+				summary:  "{{ $value | humanize }} log(s) Critical ou Fatal de " + p.Name() + " nos últimos 5 minutos",
+				description: p.Name() + " registrou um log com severidade Critical ou Fatal (severity_number >= 21), " +
+					"o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no " +
+					"dashboard logs e o trace ligado a cada um.",
+				dashboard: logsDashboard,
+			}
+		},
+	},
+}
+
+// recordsIn5m sums a Loki recorded rate1m over 5 minutes: the ruler writes one sample a minute, absent when no log
+// matched, so increase() would miss a single record.
+func recordsIn5m(series, process string, extra map[string]string) string {
+	matchers := `service=` + strconv.Quote(process)
+	for _, name := range slices.Sorted(maps.Keys(extra)) {
+		matchers += `, ` + name + `=` + strconv.Quote(extra[name])
+	}
+
+	return fmt.Sprintf("sum_over_time(%s{%s}[5m])", series, matchers)
+}
+
+func logAlert(declared *service.LogAlert) alert {
+	return alert{
+		name: declared.Name,
+		expr: fmt.Sprintf("%s * 60 > %d", recordsIn5m(catalog.ServiceLogAlertRecords, declared.Process,
+			map[string]string{"log_alert": declared.Name}), declared.MaxRecordsPer5m),
+		severity:    severity(declared.Severity),
+		summary:     declared.Summary,
+		description: declared.Description,
+		dashboard:   logsDashboard,
+		service:     declared.Process,
+	}
 }
 
 func infra(name string, alerts ...alert) group {

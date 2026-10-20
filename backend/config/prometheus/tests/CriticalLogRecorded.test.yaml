@@ -1,0 +1,41 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires on a single critical log, which the Loki ruler records as one sample
+    interval: 1m
+    input_series:
+      - series: service:log_records_critical:rate1m{service="fixture-api"}
+        values: _ _ _ 0.016666666666666666 _ _ _ _ _ _ _ _
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: CriticalLogRecorded
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: CriticalLogRecorded
+        exp_alerts:
+          - exp_labels:
+              service: fixture-api
+              severity: critical
+            exp_annotations:
+              summary: "1 log(s) Critical ou Fatal de fixture-api nos últimos 5 minutos"
+              description: "fixture-api registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a eles."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-logs"
+      - eval_time: 9m
+        alertname: CriticalLogRecorded
+        exp_alerts: []
+
+  - name: stays quiet without critical logs and for other processes
+    interval: 1m
+    input_series:
+      - series: service:log_records:rate1m{service="fixture-api", level="error"}
+        values: 5x10
+      - series: service:log_records_critical:rate1m{service="fixture-migrate"}
+        values: 1x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CriticalLogRecorded
+        exp_alerts: []

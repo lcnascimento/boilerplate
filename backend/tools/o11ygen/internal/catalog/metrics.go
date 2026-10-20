@@ -26,6 +26,7 @@ const (
 	OTLP Source = iota
 	OTLPResource
 	Scrape
+	LokiRecordingRule
 )
 
 type Metric struct {
@@ -62,6 +63,10 @@ const (
 	KafkaTopicPartitionCurrentOffset     = "kafka_topic_partition_current_offset"
 	KafkaConsumerGroupCurrentOffset      = "kafka_consumergroup_current_offset"
 	KafkaConsumerGroupUncommittedOffsets = "kafka_consumergroup_uncommitted_offsets"
+
+	ServiceLogRecords         = "service:log_records:rate1m"
+	ServiceLogRecordsCritical = "service:log_records_critical:rate1m"
+	ServiceLogAlertRecords    = "service:log_alert_records:rate1m"
 
 	// example:begin
 
@@ -122,6 +127,12 @@ var metrics = map[string]Metric{
 	KafkaTopicPartitionCurrentOffset:     {Type: Gauge, Source: Scrape, Labels: kafkaPartition},
 	KafkaConsumerGroupCurrentOffset:      {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
 	KafkaConsumerGroupUncommittedOffsets: {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
+
+	ServiceLogRecords:         {Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "level"}},
+	ServiceLogRecordsCritical: {Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service"}, Presence: PresenceOnEvent},
+	ServiceLogAlertRecords: {
+		Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "log_alert"}, Presence: PresenceOnEvent,
+	},
 
 	// example:begin
 	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP},
