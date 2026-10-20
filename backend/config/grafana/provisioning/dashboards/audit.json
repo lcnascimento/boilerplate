@@ -419,6 +419,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "showPoints": "never",
+            "axisSoftMax": 1,
             "spanNulls": false
           }
         },

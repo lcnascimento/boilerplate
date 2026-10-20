@@ -256,11 +256,11 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 		},
 		&graph{
 			title: "Idade da pendente mais antiga",
-			description: "Idade da mensagem pendente mais antiga do outbox, por réplica; a linha é o limite do SLO " +
+			description: "Idade da mensagem pendente mais antiga do outbox, por processo; a linha é o limite do SLO " +
 				"outbox-freshness.",
 			unit:    "s",
 			width:   halfWidth,
-			queries: []query{{expr: "max by (instance) (" + age + ")", legend: "{{instance}}"}},
+			queries: []query{{expr: "max by (job) (" + age + ")", legend: "{{job}}"}},
 			sloLine: seconds(slo.OutboxFreshnessThresholdSeconds),
 		},
 		&graph{

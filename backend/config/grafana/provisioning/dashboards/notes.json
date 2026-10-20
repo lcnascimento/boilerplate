@@ -630,6 +630,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "showPoints": "never",
+            "axisSoftMax": 0.25,
             "spanNulls": false
           }
         },
@@ -716,6 +717,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "showPoints": "never",
+            "axisSoftMax": 0.25,
             "spanNulls": false
           }
         },
@@ -876,13 +878,13 @@
             "type": "prometheus",
             "uid": "${prometheus_datasource}"
           },
-          "expr": "max by (instance) (notes_outbox_oldest_pending_age_seconds{job=~\"boilerplate/(notes-worker-forwarder)\"})",
-          "legendFormat": "{{instance}}",
+          "expr": "max by (job) (notes_outbox_oldest_pending_age_seconds{job=~\"boilerplate/(notes-worker-forwarder)\"})",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
       "title": "Idade da pendente mais antiga",
-      "description": "Idade da mensagem pendente mais antiga do outbox, por réplica; a linha é o limite do SLO outbox-freshness.",
+      "description": "Idade da mensagem pendente mais antiga do outbox, por processo; a linha é o limite do SLO outbox-freshness.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
@@ -931,6 +933,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "showPoints": "never",
+            "axisSoftMax": 30,
             "spanNulls": false
           }
         },

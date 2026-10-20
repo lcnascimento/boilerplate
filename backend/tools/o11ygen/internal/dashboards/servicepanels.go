@@ -130,7 +130,8 @@ func (g *graph) build(id uint32) cog.Builder[dashboard.Panel] {
 
 	if g.sloLine != nil {
 		out.Thresholds(thresholds([]step{{color: "green"}, at(*g.sloLine, "red")})).
-			ThresholdsStyle(common.NewGraphThresholdsStyleConfigBuilder().Mode(common.GraphThresholdsStyleModeLine))
+			ThresholdsStyle(common.NewGraphThresholdsStyleConfigBuilder().Mode(common.GraphThresholdsStyleModeLine)).
+			AxisSoftMax(*g.sloLine)
 	}
 
 	if len(g.links) > 0 {
