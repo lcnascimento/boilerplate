@@ -14,6 +14,11 @@ var (
 	ErrSchemaRegistryURLMissing = errMissing("SCHEMA_REGISTRY_URL").WithCode("SCHEMA_REGISTRY_URL_MISSING")
 	ErrKafkaBrokersMissing      = errMissing("KAFKA_BROKERS").WithCode("KAFKA_BROKERS_MISSING")
 
+	ErrServiceNameMissing = errors.New(
+		"OTEL_SERVICE_NAME is not set: start the process with its make run.* target, " +
+			"which sets it to the process's service.name",
+	).WithCode("SERVICE_NAME_MISSING")
+
 	ErrInvalidHealthPort = errors.New(
 		"HEALTH_PORT must be a TCP port: start the worker with its make run.* target, " +
 			"which sets it from the service's .env (e.g. FORWARDER_HEALTH_PORT)",
@@ -30,6 +35,10 @@ func errMissing(key string) errors.CustomError {
 
 func DatabaseURL() (string, error) {
 	return required("DATABASE_URL", ErrDatabaseURLMissing)
+}
+
+func ServiceName() (string, error) {
+	return required("OTEL_SERVICE_NAME", ErrServiceNameMissing)
 }
 
 func SchemaRegistryURL() (string, error) {
