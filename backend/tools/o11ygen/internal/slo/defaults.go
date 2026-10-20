@@ -35,7 +35,7 @@ var defaults = []inheritedSLO{
 			Objective:   threeNines,
 			Description: "Requisições HTTP de " + p.Name() + " respondidas sem 5xx, fora as de health e readiness.",
 			SLI: service.EventsSLI(
-				rate(catalog.HTTPServerRequestTotal, apiSelector(p), `http_response_status_code=~"5.."`),
+				orZero(rate(catalog.HTTPServerRequestTotal, apiSelector(p), `http_response_status_code=~"5.."`)),
 				rate(catalog.HTTPServerRequestTotal, apiSelector(p)),
 			),
 		}
@@ -54,7 +54,7 @@ var defaults = []inheritedSLO{
 			Objective:   threeNines,
 			Description: "Tentativas de processamento de mensagens de " + p.Name() + " que terminam sem erro.",
 			SLI: service.EventsSLI(
-				rate(catalog.MessagingProcessDuration+"_count", job(p), `error_type!=""`),
+				orZero(rate(catalog.MessagingProcessDuration+"_count", job(p), `error_type!=""`)),
 				rate(catalog.MessagingProcessDuration+"_count", job(p)),
 			),
 		}
@@ -91,6 +91,12 @@ func apiSelector(p service.Process) string {
 
 func rate(series string, matchers ...string) string {
 	return "sum(rate(" + series + "{" + strings.Join(matchers, ",") + "}[" + window + "]))"
+}
+
+// orZero keeps the SLI at 0, instead of absent, while no bad event has happened yet: the series of a bad event only
+// exists after the first one.
+func orZero(query string) string {
+	return query + " or vector(0)"
 }
 
 func slowerThan(histogram, selector string, seconds float64) service.SLI {

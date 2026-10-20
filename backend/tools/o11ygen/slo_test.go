@@ -117,7 +117,7 @@ func TestGenerate_WritesASlothSpecWithTheDefaultSLOsOfEachComponent(t *testing.T
 	assert.Equal(t, map[string]slo{
 		"api-availability": {
 			service: "orders-api", objective: 99.9,
-			errorQuery: `sum(rate(http_server_request_total{` + api + `,http_response_status_code=~"5.."}[{{.window}}]))`,
+			errorQuery: `sum(rate(http_server_request_total{` + api + `,http_response_status_code=~"5.."}[{{.window}}])) or vector(0)`,
 			totalQuery: `sum(rate(http_server_request_total{` + api + `}[{{.window}}]))`,
 		},
 		"api-latency": {
@@ -128,7 +128,7 @@ func TestGenerate_WritesASlothSpecWithTheDefaultSLOsOfEachComponent(t *testing.T
 		},
 		"consumer-success": {
 			service: "orders-consumer", objective: 99.9,
-			errorQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `,error_type!=""}[{{.window}}]))`,
+			errorQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `,error_type!=""}[{{.window}}])) or vector(0)`,
 			totalQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))`,
 		},
 		"consumer-latency": {
@@ -223,7 +223,7 @@ func TestGenerate_EvaluatesTheSLIOverTheWhole30DayWindowWithoutOptimizing(t *tes
 
 	assert.Equal(t, map[string]string{
 		"api-availability": "(sum(rate(http_server_request_total{" +
-			`job="boilerplate/orders-api",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d])))` +
+			`job="boilerplate/orders-api",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d])) or vector(0))` +
 			"\n/\n" +
 			`(sum(rate(http_server_request_total{job="boilerplate/orders-api",http_route!~"/ping|/health"}[30d])))` + "\n",
 		"api-latency": "(sum(rate(http_server_request_duration_seconds_count{" + `job="boilerplate/orders-api",` +
@@ -232,7 +232,7 @@ func TestGenerate_EvaluatesTheSLIOverTheWhole30DayWindowWithoutOptimizing(t *tes
 			"(sum(rate(http_server_request_duration_seconds_count{" +
 			`job="boilerplate/orders-api",http_route!~"/ping|/health"}[30d])))` + "\n",
 		"consumer-success": `(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer",` +
-			`error_type!=""}[30d])))` + "\n/\n" +
+			`error_type!=""}[30d])) or vector(0))` + "\n/\n" +
 			`(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d])))` + "\n",
 		"consumer-latency": `(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d]))` +
 			` - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/orders-consumer",le="1"}[30d])))` +

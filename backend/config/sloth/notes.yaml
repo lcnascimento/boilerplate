@@ -13,7 +13,7 @@ slos:
       service: notes-api-frontend
     sli:
       events:
-        error_query: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[{{.window}}]))
+        error_query: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[{{.window}}])) or vector(0)
         total_query: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
