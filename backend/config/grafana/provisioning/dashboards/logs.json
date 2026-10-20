@@ -6,7 +6,7 @@
     "logs"
   ],
   "timezone": "browser",
-  "editable": true,
+  "editable": false,
   "graphTooltip": 0,
   "time": {
     "from": "now-1h",
@@ -36,17 +36,18 @@
       "id": 1,
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [1h]))",
+          "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [$__auto]))",
           "instant": true,
           "refId": "A",
           "queryType": "instant"
         }
       ],
-      "title": "Total Logs (1h)",
+      "title": "Total Logs",
+      "description": "Linhas de log no intervalo selecionado.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -73,6 +74,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -94,17 +96,18 @@
       "id": 2,
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"error\" [1h]))",
+          "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"error\" [$__auto]))",
           "instant": true,
           "refId": "A",
           "queryType": "instant"
         }
       ],
-      "title": "Total Errors (1h)",
+      "title": "Total Errors",
+      "description": "Linhas de log com nível error no intervalo selecionado.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -131,6 +134,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -160,17 +164,18 @@
       "id": 3,
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"warn\" [1h]))",
+          "expr": "sum(count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=\"warn\" [$__auto]))",
           "instant": true,
           "refId": "A",
           "queryType": "instant"
         }
       ],
-      "title": "Total Warnings (1h)",
+      "title": "Total Warnings",
+      "description": "Linhas de log com nível warn no intervalo selecionado.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -197,6 +202,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -226,16 +232,17 @@
       "id": 4,
       "targets": [
         {
-          "expr": "sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [$__interval]))",
+          "expr": "sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} [$__auto]))",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }
       ],
       "title": "Log Volume by Service",
+      "description": "Linhas de log por service_name ao longo do tempo.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -260,6 +267,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "color": {
             "mode": "palette-classic"
           },
@@ -278,16 +286,17 @@
       "id": 5,
       "targets": [
         {
-          "expr": "sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=~\"error|critical|fatal\" [$__interval]))",
+          "expr": "sum by (service_name) (count_over_time({service_name=~\"${service:regex}\", container=~\"${container:regex}\"} | detected_level=~\"error|critical|fatal\" [$__auto]))",
           "legendFormat": "{{service_name}}",
           "refId": "A"
         }
       ],
       "title": "Errors by Service",
+      "description": "Linhas de log com error, critical ou fatal, por service_name, ao longo do tempo.",
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -312,6 +321,7 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "color": {
             "mode": "palette-classic"
           },
@@ -338,7 +348,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 12,
@@ -372,7 +382,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki}"
+        "uid": "${loki_datasource}"
       },
       "gridPos": {
         "h": 12,
@@ -398,8 +408,8 @@
     "list": [
       {
         "type": "datasource",
-        "name": "loki",
-        "label": "Loki",
+        "name": "loki_datasource",
+        "label": "Loki data source",
         "skipUrlSync": false,
         "query": "loki",
         "multi": false,
@@ -418,7 +428,7 @@
         "query": "label_values(service_name)",
         "datasource": {
           "type": "loki",
-          "uid": "${loki}"
+          "uid": "${loki_datasource}"
         },
         "current": {
           "text": null,
@@ -444,7 +454,7 @@
         "query": "label_values(container)",
         "datasource": {
           "type": "loki",
-          "uid": "${loki}"
+          "uid": "${loki_datasource}"
         },
         "current": {
           "text": null,

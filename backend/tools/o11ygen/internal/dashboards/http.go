@@ -20,7 +20,7 @@ func httpDashboard() *dashboard.DashboardBuilder {
 			"red",
 			config.Namespace,
 			"sre"}).
-		Editable().
+		Readonly().
 		Tooltip(0).
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
@@ -74,6 +74,7 @@ func httpPanel2() cog.Builder[dashboard.Panel] {
 			Expr("sum(rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			RefId("A")}).
 		Title("Rate (req/s)").
+		Description("Requisições HTTP por segundo dos serviços selecionados, sem health e ping.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 6, X: 0, Y: 1}).
 		Unit("reqps").
@@ -95,6 +96,7 @@ func httpPanel3() cog.Builder[dashboard.Panel] {
 			Expr("100 * (sum(rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			RefId("A")}).
 		Title("Error Rate 5xx (%)").
+		Description("Percentual de respostas 5xx sobre o total de requisições, sem health e ping.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 6, X: 6, Y: 1}).
 		Unit("percent").
@@ -121,6 +123,7 @@ func httpPanel4() cog.Builder[dashboard.Panel] {
 			Expr("histogram_quantile(0.50, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			RefId("A")}).
 		Title("P50 Latência").
+		Description("Mediana da duração das requisições HTTP, sem health e ping.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 6, X: 12, Y: 1}).
 		Unit("s").
@@ -147,6 +150,7 @@ func httpPanel5() cog.Builder[dashboard.Panel] {
 			Expr("histogram_quantile(0.99, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			RefId("A")}).
 		Title("P99 Latência").
+		Description("Percentil 99 da duração das requisições HTTP, sem health e ping.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 6, X: 18, Y: 1}).
 		Unit("s").
@@ -180,6 +184,7 @@ func httpPanel7() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Requests por Serviço (req/s)").
+		Description("Requisições HTTP por segundo de cada serviço (job).").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 6}).
 		Unit("reqps").
@@ -208,6 +213,7 @@ func httpPanel8() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{http_request_method}} {{http_route}}").
 			RefId("A")}).
 		Title("Requests por Rota (req/s)").
+		Description("Requisições HTTP por segundo, por rota e método.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 6}).
 		Unit("reqps").
@@ -242,6 +248,7 @@ func httpPanel10() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Error Rate por Serviço (%)").
+		Description("Percentual de respostas 5xx de cada serviço (job).").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 15}).
 		Unit("percent").
@@ -276,6 +283,7 @@ func httpPanel11() cog.Builder[dashboard.Panel] {
 				LegendFormat("{{http_response_status_code}} {{http_route}}").
 				RefId("B")}).
 		Title("Respostas 4xx/5xx por Rota (req/s)").
+		Description("Respostas 4xx e 5xx por segundo, por rota e código.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 15}).
 		Unit("reqps").
@@ -320,6 +328,7 @@ func httpPanel13() cog.Builder[dashboard.Panel] {
 				LegendFormat("P99").
 				RefId("C")}).
 		Title("Latência Global (P50 / P90 / P99)").
+		Description("Percentis 50, 90 e 99 da duração das requisições HTTP dos serviços selecionados.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 24}).
 		Unit("s").
@@ -348,6 +357,7 @@ func httpPanel14() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{http_route}}").
 			RefId("A")}).
 		Title("P99 por Rota").
+		Description("Percentil 99 da duração das requisições HTTP, por rota.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 24}).
 		Unit("s").

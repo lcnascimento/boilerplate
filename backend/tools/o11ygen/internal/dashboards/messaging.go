@@ -20,7 +20,7 @@ func messagingDashboard() *dashboard.DashboardBuilder {
 			"kafka",
 			config.Namespace,
 			"sre"}).
-		Editable().
+		Readonly().
 		Tooltip(1).
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
@@ -186,6 +186,7 @@ func messagingPanel16() cog.Builder[dashboard.Panel] {
 				LegendFormat("{{error_type}} {{messaging_consumer_group_name}}").
 				RefId("B")}).
 		Title("Mensagens consumidas (msg/s)").
+		Description("Mensagens que os consumers terminaram de tratar por segundo: sucesso e falha por error_type.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 8, X: 8, Y: 20}).
 		Unit("ops").
@@ -217,6 +218,7 @@ func messagingPanel17() cog.Builder[dashboard.Panel] {
 				LegendFormat("P99 {{messaging_consumer_group_name}}").
 				RefId("B")}).
 		Title("Duração do processamento").
+		Description("Percentis 50 e 99 da duração de uma tentativa de processamento, por consumer group.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 8, X: 16, Y: 20}).
 		Unit("s").
@@ -275,6 +277,7 @@ func messagingPanel19() cog.Builder[dashboard.Panel] {
 				LegendFormat("high-water {{topic}}").
 				RefId("B")}).
 		Title("Offset confirmado vs. high-water mark").
+		Description("Offset confirmado de cada consumer group comparado ao último offset de cada tópico.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 28}).
 		Unit("short").
@@ -363,6 +366,7 @@ func messagingPanel23() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{error_type}} {{messaging_consumer_group_name}}").
 			RefId("A")}).
 		Title("Enviadas à DLQ por causa").
+		Description("Mensagens enviadas à DLQ por consumer group e error_type.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 41}).
 		Unit("short").
@@ -392,6 +396,7 @@ func messagingPanel24() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{topic}}").
 			RefId("A")}).
 		Title("High-water mark das DLQs").
+		Description("Último offset de cada tópico de DLQ; um degrau é uma mensagem nova na DLQ.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 41}).
 		Unit("short").

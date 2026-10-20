@@ -20,7 +20,7 @@ func notesOutboxDashboard() *dashboard.DashboardBuilder {
 			"notes",
 			config.Namespace,
 			"sre"}).
-		Editable().
+		Readonly().
 		Tooltip(1).
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
@@ -122,6 +122,7 @@ func notesOutboxPanel6() cog.Builder[dashboard.Panel] {
 			Expr("sum(increase(" + catalog.NotesOutboxPurgeRuns + "{outcome=\"failure\"}[24h])) or vector(0)").
 			RefId("A")}).
 		Title("Limpezas com falha (24h)").
+		Description("Execuções da limpeza do outbox que falharam nas últimas 24h.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 4, W: 6, X: 12, Y: 1}).
 		Unit("short").
@@ -178,6 +179,7 @@ func notesOutboxPanel8() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Idade da pendente mais antiga").
+		Description("Idade da mensagem pendente mais antiga do outbox, por réplica do forwarder.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 5}).
 		Unit("s").
@@ -209,6 +211,7 @@ func notesOutboxPanel9() cog.Builder[dashboard.Panel] {
 				LegendFormat("mensagens apagadas").
 				RefId("B")}).
 		Title("Limpeza").
+		Description("Execuções da limpeza do outbox por resultado, e mensagens apagadas.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 5}).
 		Unit("short").
@@ -278,6 +281,7 @@ func notesOutboxPanel12() cog.Builder[dashboard.Panel] {
 				LegendFormat("P99").
 				RefId("B")}).
 		Title("Duração do envio").
+		Description("Percentis 50 e 99 da duração de uma tentativa de envio ao Kafka.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 14}).
 		Unit("s").

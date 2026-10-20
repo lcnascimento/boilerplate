@@ -18,12 +18,13 @@ func overviewDashboard() *dashboard.DashboardBuilder {
 		Uid(config.Namespace+"-overview").
 		Tags([]string{config.Namespace,
 			"overview"}).
-		Editable().
+		Readonly().
 		Tooltip(1).
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(prometheusDS),
+		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(tempoDS),
+			datasourceVariable(prometheusDS),
 			datasourceVariable(lokiDS)}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
@@ -137,7 +138,7 @@ func overviewPanel4() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(4).
 		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Expr("sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__interval]))").
+			Expr("sum by (service_name) (count_over_time({service_name=~\".+\"} | detected_level=~\"error|critical|fatal\" [$__auto]))").
 			LegendFormat("{{service_name}}").
 			RefId("A").
 			Datasource(datasourceRef(lokiDS))}).

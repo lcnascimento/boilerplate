@@ -12,6 +12,11 @@ SQUAWK_VERSION := v2.68.0
 SQLC_VERSION := v1.31.1
 BUF_VERSION := v1.74.0
 PROTOC_GEN_GO_VERSION := v1.36.12
+SLOTH_VERSION := v0.16.0
+PROMTOOL_VERSION := v3.15.0
+DASHBOARD_LINTER_VERSION := v0.3.0
+PINT_VERSION := v0.89.3
+LOKITOOL_VERSION := v3.7.8
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 
@@ -43,6 +48,17 @@ define in_buf_dirs
 	done
 endef
 
+# $(1) binary, $(2) command printing the installed "$$bin" version, $(3) that version, $(4) download into "$$bin" ($$os, $$arch set).
+define install_release
+	@bin="$(GOBIN)/$(1)"; \
+	if [ "$$({ $(2); } 2>/dev/null)" != "$(3)" ]; then \
+		os=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		case "$$(uname -m)" in x86_64|amd64) arch=amd64;; aarch64|arm64) arch=arm64;; *) echo "$(1): unsupported arch $$(uname -m)" >&2; exit 1;; esac; \
+		echo "==> Installing $(1) $(3) into $(GOBIN)"; \
+		$(4) && chmod +x "$$bin"; \
+	fi
+endef
+
 go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
@@ -66,7 +82,7 @@ setup: env
 	@go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 	@go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
 	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
-	@$(MAKE) -s squawk proto.tools
+	@$(MAKE) -s squawk proto.tools o11y.tools
 
 .PHONY: proto.tools
 proto.tools:
@@ -82,6 +98,23 @@ squawk:
 		curl -fsSL -o "$(GOBIN)/squawk" "https://github.com/sbdchd/squawk/releases/download/$(SQUAWK_VERSION)/squawk-$$os-$$arch" \
 			&& chmod +x "$(GOBIN)/squawk"; \
 	fi
+
+.PHONY: o11y.tools
+o11y.tools:
+	$(call install_release,dashboard-linter,go version -m "$$bin" | grep -o 'dashboard-linter.v[0-9.]*' | cut -c18-,$(DASHBOARD_LINTER_VERSION),\
+		curl -fsSL "https://github.com/grafana/dashboard-linter/releases/download/$(DASHBOARD_LINTER_VERSION)/dashboard-linter_$(DASHBOARD_LINTER_VERSION:v%=%)_$${os}_$$arch.tar.gz" \
+			| tar -xzO dashboard-linter > "$$bin")
+	$(call install_release,sloth,"$$bin" version,$(SLOTH_VERSION),\
+		curl -fsSL -o "$$bin" "https://github.com/slok/sloth/releases/download/$(SLOTH_VERSION)/sloth-$$os-$$arch")
+	$(call install_release,promtool,"$$bin" --version | head -1 | cut -d' ' -f3,$(PROMTOOL_VERSION:v%=%),\
+		curl -fsSL "https://github.com/prometheus/prometheus/releases/download/$(PROMTOOL_VERSION)/prometheus-$(PROMTOOL_VERSION:v%=%).$$os-$$arch.tar.gz" \
+			| tar -xzO "prometheus-$(PROMTOOL_VERSION:v%=%).$$os-$$arch/promtool" > "$$bin")
+	$(call install_release,pint,"$$bin" version | cut -d' ' -f1,$(PINT_VERSION:v%=%),\
+		curl -fsSL "https://github.com/cloudflare/pint/releases/download/$(PINT_VERSION)/pint-$(PINT_VERSION:v%=%)-$$os-$$arch.tar.gz" \
+			| tar -xzO "pint-$$os-$$arch" > "$$bin")
+	$(call install_release,lokitool,"$$bin" version | head -1 | cut -d' ' -f3,$(LOKITOOL_VERSION:v%=%),\
+		zip=$$(mktemp) && curl -fsSL -o "$$zip" "https://github.com/grafana/loki/releases/download/$(LOKITOOL_VERSION)/lokitool-$$os-$$arch.zip" \
+			&& unzip -p "$$zip" > "$$bin" && rm -f "$$zip")
 
 .PHONY: lint
 lint:
@@ -128,6 +161,16 @@ sqlc:
 .PHONY: o11y.generate
 o11y.generate:
 	@go run ./tools/o11ygen -root .
+
+.PHONY: o11y.lint
+o11y.lint: o11y.lint.dashboards
+
+.PHONY: o11y.lint.dashboards
+o11y.lint.dashboards:
+	@for dashboard in config/grafana/provisioning/dashboards/*.json; do \
+		echo "==> dashboard-linter $$dashboard"; \
+		out=$$($(GOBIN)/dashboard-linter lint --strict "$$dashboard" 2>&1) || { echo "$$out" | grep -v '^Checks that'; exit 1; }; \
+	done
 
 .PHONY: proto.lint
 proto.lint:

@@ -87,7 +87,7 @@ func TestGenerate_ReferencesDatasourcesThroughVariables(t *testing.T) {
 	uids := map[string]bool{}
 	collectDatasourceUIDs(board, uids)
 
-	assert.Equal(t, map[string]bool{"-- Grafana --": true, "${loki}": true, "${tempo}": true}, uids)
+	assert.Equal(t, map[string]bool{"-- Grafana --": true, "${loki_datasource}": true, "${tempo_datasource}": true}, uids)
 
 	var variables []string
 
@@ -98,7 +98,7 @@ func TestGenerate_ReferencesDatasourcesThroughVariables(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, []string{"loki=loki", "tempo=tempo"}, variables)
+	assert.Equal(t, []string{"tempo_datasource=tempo", "loki_datasource=loki"}, variables)
 }
 
 func TestGenerate_RemovesStaleDashboardsAndKeepsTheProvider(t *testing.T) {

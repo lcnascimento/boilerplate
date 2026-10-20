@@ -8,7 +8,7 @@
     "sre"
   ],
   "timezone": "browser",
-  "editable": true,
+  "editable": false,
   "graphTooltip": 1,
   "time": {
     "from": "now-1h",
@@ -53,7 +53,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "max(notes_outbox_oldest_pending_age_seconds)",
           "refId": "A"
@@ -64,7 +64,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -122,7 +122,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum(increase(notes_outbox_purged_messages_total[24h])) or vector(0)",
           "refId": "A"
@@ -133,7 +133,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -171,17 +171,18 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum(increase(notes_outbox_purge_runs_total{outcome=\"failure\"}[24h])) or vector(0)",
           "refId": "A"
         }
       ],
       "title": "Limpezas com falha (24h)",
+      "description": "Execuções da limpeza do outbox que falharam nas últimas 24h.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -235,7 +236,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "count(notes_outbox_oldest_pending_age_seconds) or vector(0)",
           "refId": "A"
@@ -246,7 +247,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 4,
@@ -300,7 +301,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "max by (job) (notes_outbox_oldest_pending_age_seconds)",
           "legendFormat": "{{job}}",
@@ -308,10 +309,11 @@
         }
       ],
       "title": "Idade da pendente mais antiga",
+      "description": "Idade da mensagem pendente mais antiga do outbox, por réplica do forwarder.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -353,7 +355,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (outcome) (increase(notes_outbox_purge_runs_total[$__rate_interval]))",
           "legendFormat": "execuções {{outcome}}",
@@ -362,7 +364,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum(increase(notes_outbox_purged_messages_total[$__rate_interval]))",
           "legendFormat": "mensagens apagadas",
@@ -370,10 +372,11 @@
         }
       ],
       "title": "Limpeza",
+      "description": "Execuções da limpeza do outbox por resultado, e mensagens apagadas.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -428,7 +431,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (messaging_destination_name) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "ok {{messaging_destination_name}}",
@@ -437,7 +440,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "sum by (messaging_destination_name, error_type) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_destination_name}}",
@@ -449,7 +452,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -491,7 +494,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P50",
@@ -500,7 +503,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus}"
+            "uid": "${prometheus_datasource}"
           },
           "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P99",
@@ -508,10 +511,11 @@
         }
       ],
       "title": "Duração do envio",
+      "description": "Percentis 50 e 99 da duração de uma tentativa de envio ao Kafka.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus}"
+        "uid": "${prometheus_datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -551,8 +555,8 @@
     "list": [
       {
         "type": "datasource",
-        "name": "prometheus",
-        "label": "Prometheus",
+        "name": "prometheus_datasource",
+        "label": "Prometheus data source",
         "skipUrlSync": false,
         "query": "prometheus",
         "multi": false,
@@ -573,7 +577,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus}"
+          "uid": "${prometheus_datasource}"
         },
         "current": {
           "selected": true,
