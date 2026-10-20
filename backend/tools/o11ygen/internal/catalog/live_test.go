@@ -94,6 +94,34 @@ func TestLiveProbes_ExpectTheConsumerGroupSeriesOnceAConsumerIsDeclared(t *testi
 	assert.NotContains(t, got, `present_over_time(http_server_request_total{job="boilerplate/billing-consumer"}[15m])`)
 }
 
+func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.T) {
+	declared := []service.Service{{
+		Name:      "web",
+		Runtime:   service.Node,
+		Processes: []service.Process{service.Daemon("web", service.API, service.Browser)},
+	}}
+
+	got := exprs(t, declared)
+
+	for _, want := range []string{
+		`present_over_time(target_info{job="boilerplate/web"}[15m])`,
+		`present_over_time(nodejs_eventloop_utilization_ratio{job="boilerplate/web"}[15m])`,
+		`present_over_time(v8js_gc_duration_seconds_count{job="boilerplate/web"}[15m])`,
+		`present_over_time(traces_spanmetrics_calls_total{service="web"}[15m])`,
+		`present_over_time(traces_spanmetrics_latency_count{service="web"}[15m])`,
+	} {
+		assert.Contains(t, got, want)
+	}
+
+	for _, unwanted := range []string{
+		`present_over_time(http_server_request_total{job="boilerplate/web"}[15m])`,
+		`present_over_time(go_goroutine_count{job="boilerplate/web"}[15m])`,
+		`present_over_time(process_memory_usage_bytes{job="boilerplate/web"}[15m])`,
+	} {
+		assert.NotContains(t, got, unwanted)
+	}
+}
+
 func TestLiveProbes_StayInsideTheCatalog(t *testing.T) {
 	declared := []service.Service{{
 		Name: "every",

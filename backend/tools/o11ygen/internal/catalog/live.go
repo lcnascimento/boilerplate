@@ -24,6 +24,14 @@ func runs(components ...service.Component) Emitter {
 	}
 }
 
+// on narrows an emitter to the services of one runtime: go-kit emits the Go and HTTP server series, the NodeSDK the
+// Node ones.
+func on(runtime service.Runtime, emitter Emitter) Emitter {
+	return func(svc *service.Service, process service.Process) bool {
+		return svc.Runtime == runtime && emitter(svc, process)
+	}
+}
+
 func outboxOf(serviceName string) Emitter {
 	return func(svc *service.Service, process service.Process) bool {
 		return svc.Name == serviceName && process.Runs(service.Worker)
@@ -37,13 +45,15 @@ const liveWindow = "15m"
 // no process label, and a Loki recording exists only for a process that logged within the window, which a quiet
 // worker does not.
 var processSelectors = map[Source]func(process string) string{
-	OTLP:          jobSelector,
-	OTLPResource:  jobSelector,
-	RecordingRule: jobSelector,
+	OTLP:             jobSelector,
+	OTLPResource:     jobSelector,
+	RecordingRule:    jobSelector,
+	TempoSpanMetrics: func(process string) string { return fmt.Sprintf(`{service=%q}`, process) },
 }
 
 var prometheusSources = map[Source]bool{
 	OTLP: true, OTLPResource: true, Scrape: true, RecordingRule: true, LokiRecordingRule: true, SlothRecording: true,
+	TempoSpanMetrics: true,
 }
 
 func jobSelector(process string) string {

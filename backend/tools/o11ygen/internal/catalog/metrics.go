@@ -181,10 +181,12 @@ var metrics = map[string]Metric{
 
 	JobSeriesCount: {Type: Gauge, Source: RecordingRule},
 
-	HTTPServerRequestTotal: {Type: Counter, Source: OTLP, Labels: httpServerLabels, EmittedBy: runs(service.API)},
+	HTTPServerRequestTotal: {
+		Type: Counter, Source: OTLP, Labels: httpServerLabels, EmittedBy: on(service.Go, runs(service.API)),
+	},
 	HTTPServerRequestDuration: {
 		Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...),
-		EmittedBy: runs(service.API),
+		EmittedBy: on(service.Go, runs(service.API)),
 	},
 	HTTPClientRequestTotal: {
 		Type: Counter, Source: OTLP, Presence: PresenceOnEvent,
@@ -246,21 +248,27 @@ var metrics = map[string]Metric{
 		Labels: []string{"sloth_mode", "sloth_objective", "sloth_spec", "sloth_version"},
 	},
 
-	GoGoroutineCount:  {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
-	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}, EmittedBy: everyProcess},
-	GoMemoryAllocated: {Type: Counter, Source: OTLP, EmittedBy: everyProcess},
-	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
+	GoGoroutineCount:  {Type: Gauge, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
+	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}, EmittedBy: on(service.Go, everyProcess)},
+	GoMemoryAllocated: {Type: Counter, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
+	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
 
-	ProcessCPUTime:     {Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}, EmittedBy: everyProcess},
-	ProcessMemoryUsage: {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
+	ProcessCPUTime: {
+		Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}, EmittedBy: on(service.Go, everyProcess),
+	},
+	ProcessMemoryUsage: {Type: Gauge, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
 
-	NodejsEventloopDelayP99:    {Type: Gauge, Source: OTLP},
-	NodejsEventloopUtilization: {Type: Gauge, Source: OTLP},
-	V8jsMemoryHeapUsed:         {Type: Gauge, Source: OTLP, Labels: []string{"v8js_heap_space_name"}},
-	V8jsGCDuration:             {Type: Histogram, Source: OTLP, Labels: []string{"v8js_gc_type"}},
+	NodejsEventloopDelayP99:    {Type: Gauge, Source: OTLP, EmittedBy: on(service.Node, everyProcess)},
+	NodejsEventloopUtilization: {Type: Gauge, Source: OTLP, EmittedBy: on(service.Node, everyProcess)},
+	V8jsMemoryHeapUsed: {
+		Type: Gauge, Source: OTLP, Labels: []string{"v8js_heap_space_name"}, EmittedBy: on(service.Node, everyProcess),
+	},
+	V8jsGCDuration: {
+		Type: Histogram, Source: OTLP, Labels: []string{"v8js_gc_type"}, EmittedBy: on(service.Node, everyProcess),
+	},
 
-	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics},
-	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics},
+	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
+	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
 
 	// example:begin
 	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
