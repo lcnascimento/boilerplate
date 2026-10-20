@@ -20,6 +20,16 @@ func TestCheck_AcceptsQueriesInsideTheCatalog(t *testing.T) {
 			Language: artifact.PromQL,
 			Expr:     `histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[5m])))`,
 		},
+		"client metrics by peer, method and status": {
+			Language: artifact.PromQL,
+			Expr: `sum by (network_peer_address, http_request_method, http_response_status_code) ` +
+				`(rate(http_client_request_total[5m])) / on (network_peer_address, http_request_method) group_left ` +
+				`sum by (network_peer_address, http_request_method) (http_client_active_requests{server_address!="", server_port="80"})`,
+		},
+		"client latency buckets": {
+			Language: artifact.PromQL,
+			Expr:     `histogram_quantile(0.95, sum by (le, server_address) (rate(http_client_request_duration_seconds_bucket[5m])))`,
+		},
 		"labels of both sides of a binary operation": {
 			Language: artifact.PromQL,
 			Expr: `sum by (consumergroup, topic) (kafka_consumergroup_current_offset) ` +
@@ -58,6 +68,10 @@ func TestCheck_RejectsQueriesOutsideTheCatalog(t *testing.T) {
 		"matcher on a label the metric does not allow": {
 			query: artifact.Query{Language: artifact.PromQL, Expr: `rate(http_server_request_total{url_path="/notes/1"}[5m])`},
 			err:   `label "url_path" is not allowed on metric "http_server_request_total"`,
+		},
+		"route on a client metric": {
+			query: artifact.Query{Language: artifact.PromQL, Expr: `sum by (http_route) (rate(http_client_request_total[5m]))`},
+			err:   `grouping by label "http_route", which the expression does not carry`,
 		},
 		"grouping by a label the metric does not allow": {
 			query: artifact.Query{Language: artifact.PromQL, Expr: `sum by (url_path) (rate(http_server_request_total[5m]))`},
