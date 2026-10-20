@@ -25,9 +25,9 @@ tests:
               severity: warning
             exp_annotations:
               summary: "Postgres com 90% de max_connections em uso"
-              description: "Mais de 80% de max_connections do Postgres está em uso há 5 minutos; perto do teto, novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões em pg_stat_activity."
+              description: "Mais de 80% de max_connections do Postgres está em uso há 5 minutos; perto do teto, novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões no dashboard postgres."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresConnectionsNearMax.md"
-              dashboard_url: "http://localhost:3010/d/boilerplate-overview"
+              dashboard_url: "http://localhost:3010/d/boilerplate-postgres"
 
   - name: stays quiet at 80% of max_connections or less
     interval: 1m

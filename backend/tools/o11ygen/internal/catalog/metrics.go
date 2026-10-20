@@ -48,6 +48,19 @@ const (
 	PgSettingsMaxConnections = "pg_settings_max_connections"
 	PgStatActivityCount      = "pg_stat_activity_count"
 
+	PgStatActivityMaxTxDuration = "pg_stat_activity_max_tx_duration"
+	PgClientConnections         = "pg_client_connections_count"
+	PgLocksCount                = "pg_locks_count"
+	PgDatabaseSizeBytes         = "pg_database_size_bytes"
+	PgStatDatabaseBlksHit       = "pg_stat_database_blks_hit"
+	PgStatDatabaseBlksRead      = "pg_stat_database_blks_read"
+	PgStatDatabaseXactCommit    = "pg_stat_database_xact_commit"
+	PgStatDatabaseXactRollback  = "pg_stat_database_xact_rollback"
+	PgStatDatabaseDeadlocks     = "pg_stat_database_deadlocks"
+	PgStatStatementsSeconds     = "pg_stat_statements_seconds_total"
+	PgStatStatementsCalls       = "pg_stat_statements_calls_total"
+	PgStatStatementsRows        = "pg_stat_statements_rows_total"
+
 	KafkaBrokers = "kafka_brokers"
 
 	JobSeriesCount = "job:series:count"
@@ -109,6 +122,9 @@ var (
 	}
 	messagingProcess   = append([]string{"messaging_consumer_group_name"}, messagingSend...)
 	pgxpool            = []string{"db_system_name", "db_client_connection_pool_name"}
+	pgActivity         = []string{"datname", "state", "server"}
+	pgDatabase         = []string{"datid", "datname"}
+	pgStatement        = []string{"datname", "user", "queryid"}
 	kafkaPartition     = []string{"topic", "partition"}
 	kafkaConsumerGroup = []string{"consumergroup", "topic", "partition"}
 )
@@ -125,11 +141,23 @@ var metrics = map[string]Metric{
 	PgxpoolAcquiredConnections: {Type: Gauge, Source: OTLP, Labels: pgxpool},
 	PgxpoolMaxConnections:      {Type: Gauge, Source: OTLP, Labels: pgxpool},
 
-	PgUp:                     {Type: Gauge, Source: Scrape},
-	PgSettingsMaxConnections: {Type: Gauge, Source: Scrape},
-	PgStatActivityCount: {Type: Gauge, Source: Scrape, Labels: []string{
-		"datname", "state", "usename", "application_name", "backend_type",
-	}},
+	PgUp:                        {Type: Gauge, Source: Scrape},
+	PgSettingsMaxConnections:    {Type: Gauge, Source: Scrape},
+	PgStatActivityCount:         {Type: Gauge, Source: Scrape, Labels: pgActivity},
+	PgStatActivityMaxTxDuration: {Type: Gauge, Source: Scrape, Labels: pgActivity},
+	PgClientConnections: {
+		Type: Gauge, Source: Scrape, Labels: append([]string{"usename", "application_name"}, pgActivity...),
+	},
+	PgLocksCount:               {Type: Gauge, Source: Scrape, Labels: []string{"datname", "mode"}},
+	PgDatabaseSizeBytes:        {Type: Gauge, Source: Scrape, Labels: []string{"datname"}},
+	PgStatDatabaseBlksHit:      {Type: Counter, Source: Scrape, Labels: pgDatabase},
+	PgStatDatabaseBlksRead:     {Type: Counter, Source: Scrape, Labels: pgDatabase},
+	PgStatDatabaseXactCommit:   {Type: Counter, Source: Scrape, Labels: pgDatabase},
+	PgStatDatabaseXactRollback: {Type: Counter, Source: Scrape, Labels: pgDatabase},
+	PgStatDatabaseDeadlocks:    {Type: Counter, Source: Scrape, Labels: pgDatabase},
+	PgStatStatementsSeconds:    {Type: Counter, Source: Scrape, Labels: pgStatement},
+	PgStatStatementsCalls:      {Type: Counter, Source: Scrape, Labels: pgStatement},
+	PgStatStatementsRows:       {Type: Counter, Source: Scrape, Labels: pgStatement},
 
 	KafkaBrokers: {Type: Gauge, Source: Scrape},
 

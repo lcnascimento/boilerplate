@@ -24,9 +24,9 @@ tests:
               severity: warning
             exp_annotations:
               summary: Consumer group fixture de fixture-consumer com 150 mensagens atrasadas
-              description: "O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento no dashboard messaging."
+              description: "O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento no dashboard kafka."
               runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
-              dashboard_url: http://localhost:3010/d/boilerplate-messaging
+              dashboard_url: http://localhost:3010/d/boilerplate-kafka
 
   - name: stays quiet with its group at 100 messages or less, whatever other groups lag
     interval: 1m

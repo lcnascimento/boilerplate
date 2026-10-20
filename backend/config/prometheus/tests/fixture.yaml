@@ -29,7 +29,7 @@ groups:
           service: fixture-api
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
           description: 'fixture-api mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: fixture-api com {{ $value | humanize }} séries, acima do teto de 5
@@ -60,8 +60,8 @@ groups:
           service: fixture-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-messaging
-          description: 'O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento no dashboard messaging.'
+          dashboard_url: http://localhost:3010/d/boilerplate-kafka
+          description: 'O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento no dashboard kafka.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
           summary: Consumer group fixture de fixture-consumer com {{ $value | humanize }} mensagens atrasadas
       - alert: DLQMessageReceived
@@ -70,8 +70,8 @@ groups:
           service: fixture-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-messaging
-          description: 'fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard messaging e os logs de fixture-consumer.'
+          dashboard_url: http://localhost:3010/d/boilerplate-kafka
+          description: 'fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard kafka e os logs de fixture-consumer.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
           summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de fixture-consumer'
       - alert: SeriesBudgetExceeded
@@ -81,7 +81,7 @@ groups:
           service: fixture-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
           description: 'fixture-consumer mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: fixture-consumer com {{ $value | humanize }} séries, acima do teto de 5
@@ -112,7 +112,7 @@ groups:
           service: fixture-worker
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-messaging
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
           description: 'fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
           summary: fixture-worker não reporta a idade do outbox há 5 minutos
@@ -123,7 +123,7 @@ groups:
           service: fixture-worker
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
           description: 'fixture-worker mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: fixture-worker com {{ $value | humanize }} séries, acima do teto de 5

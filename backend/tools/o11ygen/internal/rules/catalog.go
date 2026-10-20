@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	overviewDashboard  = "overview"
-	messagingDashboard = "messaging"
-	logsDashboard      = "logs"
+	overviewDashboard = "overview"
+	kafkaDashboard    = "kafka"
+	postgresDashboard = "postgres"
+	logsDashboard     = "logs"
 
 	sustainedFor = 5 * time.Minute
 
@@ -83,8 +84,9 @@ var processAlerts = []inheritedAlert{
 					" com {{ $value | humanize }} mensagens atrasadas",
 				description: "O consumer group " + p.ConsumerGroup() + " está mais de 100 mensagens atrás há 5 minutos: " +
 					"o consumo está mais lento que a produção, ou parado. Veja primeiro se " + p.Name() +
-					" está no ar e a duração do processamento no dashboard messaging.",
-				dashboard: messagingDashboard,
+					" está no ar e a duração do processamento no dashboard kafka.",
+				dashboard: kafkaDashboard,
+				listedOn:  []string{kafkaDashboard},
 			}
 		},
 	},
@@ -98,9 +100,10 @@ var processAlerts = []inheritedAlert{
 				severity: critical,
 				summary:  "{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de " + p.Name(),
 				description: p.Name() + " mandou mensagens à DLQ: elas falharam de forma permanente e não serão " +
-					"reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard messaging " +
+					"reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard kafka " +
 					"e os logs de " + p.Name() + ".",
-				dashboard: messagingDashboard,
+				dashboard: kafkaDashboard,
+				listedOn:  []string{kafkaDashboard},
 			}
 		},
 	},
@@ -117,7 +120,7 @@ var processAlerts = []inheritedAlert{
 				summary:     p.Name() + " não reporta a idade do outbox há 5 minutos",
 				description: p.Name() + " não reporta " + gauge + ": sem forwarder ninguém esvazia o outbox e os " +
 					"Integration Events param de sair. Veja primeiro se " + p.Name() + " está no ar e os logs dele.",
-				dashboard: messagingDashboard,
+				dashboard: overviewDashboard,
 			}
 		},
 	},
@@ -135,7 +138,7 @@ var processAlerts = []inheritedAlert{
 				description: p.Name() + " mantém mais de " + budget + " séries no Prometheus há 15 minutos: " +
 					"algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). " +
 					"Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.",
-				dashboard: overviewDashboard,
+				dashboard: postgresDashboard,
 			}
 		},
 	},
@@ -204,7 +207,7 @@ var infraGroups = []group{
 		summary:  "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos",
 		description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: " +
 			"nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy.",
-		dashboard: messagingDashboard,
+		dashboard: kafkaDashboard,
 	}),
 	infra("postgres", alert{
 		name:     "PostgresDown",
@@ -213,7 +216,7 @@ var infraGroups = []group{
 		summary:  "Postgres fora do ar, ou sem métricas do exporter há 5 minutos",
 		description: "O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: " +
 			"todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.",
-		dashboard: overviewDashboard,
+		dashboard: postgresDashboard,
 	}, alert{
 		name: "PostgresConnectionsNearMax",
 		expr: fmt.Sprintf("sum(%s) / max(%s) > 0.8",
@@ -222,7 +225,7 @@ var infraGroups = []group{
 		severity:    warning,
 		summary:     "Postgres com {{ $value | humanizePercentage }} de max_connections em uso",
 		description: "Mais de 80% de max_connections do Postgres está em uso há 5 minutos; perto do teto, " +
-			"novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões em pg_stat_activity.",
-		dashboard: overviewDashboard,
+			"novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões no dashboard postgres.",
+		dashboard: postgresDashboard,
 	}),
 }
