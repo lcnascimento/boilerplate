@@ -1,0 +1,59 @@
+rule_files:
+  - ../rules/infra.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires when the exporter sees no broker
+    interval: 1m
+    input_series:
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1 1 0 0
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: KafkaBrokersDown
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: KafkaBrokersDown
+        exp_alerts:
+          - exp_labels:
+              job: integrations/kafka
+              instance: kafka:19092
+              service: kafka
+              severity: critical
+            exp_annotations:
+              summary: "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos"
+              description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+
+  - name: fires when the exporter stops sending metrics for five minutes
+    interval: 1m
+    input_series:
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x3
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: KafkaBrokersDown
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: KafkaBrokersDown
+        exp_alerts:
+          - exp_labels:
+              service: kafka
+              severity: critical
+            exp_annotations:
+              summary: "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos"
+              description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+
+  - name: stays quiet with a broker up
+    interval: 1m
+    input_series:
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: KafkaBrokersDown
+        exp_alerts: []

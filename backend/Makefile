@@ -163,7 +163,16 @@ o11y.generate:
 	@go run ./tools/o11ygen -root .
 
 .PHONY: o11y.lint
-o11y.lint: o11y.lint.dashboards
+o11y.lint: o11y.lint.dashboards o11y.lint.rules
+
+.PHONY: o11y.lint.rules
+o11y.lint.rules:
+	@echo "==> promtool check rules"
+	@$(GOBIN)/promtool check rules config/prometheus/rules/*.yaml config/prometheus/tests/fixture.yaml
+	@echo "==> promtool test rules"
+	@$(GOBIN)/promtool test rules config/prometheus/tests/*.test.yaml
+	@echo "==> pint lint"
+	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture.yaml
 
 .PHONY: o11y.lint.dashboards
 o11y.lint.dashboards:

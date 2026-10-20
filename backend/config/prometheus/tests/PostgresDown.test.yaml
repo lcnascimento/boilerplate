@@ -1,0 +1,59 @@
+rule_files:
+  - ../rules/infra.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires when the exporter cannot reach Postgres
+    interval: 1m
+    input_series:
+      - series: pg_up{job="integrations/postgres", instance="postgres:5432"}
+        values: 1 1 0 0
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: PostgresDown
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: PostgresDown
+        exp_alerts:
+          - exp_labels:
+              job: integrations/postgres
+              instance: postgres:5432
+              service: postgres
+              severity: critical
+            exp_annotations:
+              summary: "Postgres fora do ar, ou sem métricas do exporter há 5 minutos"
+              description: "O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-overview"
+
+  - name: fires when the exporter stops sending metrics for five minutes
+    interval: 1m
+    input_series:
+      - series: pg_up{job="integrations/postgres", instance="postgres:5432"}
+        values: 1x3
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: PostgresDown
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: PostgresDown
+        exp_alerts:
+          - exp_labels:
+              service: postgres
+              severity: critical
+            exp_annotations:
+              summary: "Postgres fora do ar, ou sem métricas do exporter há 5 minutos"
+              description: "O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-overview"
+
+  - name: stays quiet with Postgres up
+    interval: 1m
+    input_series:
+      - series: pg_up{job="integrations/postgres", instance="postgres:5432"}
+        values: 1x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PostgresDown
+        exp_alerts: []

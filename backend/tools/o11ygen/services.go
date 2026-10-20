@@ -9,8 +9,8 @@ var services = []service.Service{
 	{
 		Name: "notes",
 		Processes: []service.Process{
-			service.Daemon("notes-api-frontend", service.API),
-			service.Daemon("notes-worker-forwarder", service.Worker),
+			service.Daemon("notes-api-frontend", service.API).WithDBPool(),
+			service.Daemon("notes-worker-forwarder", service.Worker).WithDBPool(),
 			service.OneShot("notes-migrate"),
 			service.OneShot("notes-schemas"),
 		},
@@ -18,7 +18,7 @@ var services = []service.Service{
 	{
 		Name: "audit",
 		Processes: []service.Process{
-			service.Daemon("audit-consumer", service.Consumer),
+			service.Daemon("audit-consumer", service.Consumer).WithConsumerGroup("audit").WithDBPool(),
 			service.OneShot("audit-migrate"),
 		},
 	},

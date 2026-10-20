@@ -10,6 +10,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/artifact"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/dashboards"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/rules"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
@@ -29,9 +30,10 @@ func generate(root string, declared []service.Service) error {
 		return err
 	}
 
-	return artifact.Generate(root, declared, kinds()...)
+	return artifact.Generate(root, declared, append(kinds(), rules.FixtureKind())...)
 }
 
+// kinds are the artifacts the stack loads. The rule fixture stays out: its fixture service emits no cataloged metric.
 func kinds() []artifact.Kind {
-	return []artifact.Kind{dashboards.Kind()}
+	return []artifact.Kind{dashboards.Kind(), rules.Kind()}
 }

@@ -1,0 +1,39 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires five minutes after the worker stops reporting the outbox age
+    interval: 1m
+    input_series:
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}
+        values: 0x5
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: OutboxAgeAbsent
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: OutboxAgeAbsent
+        exp_alerts:
+          - exp_labels:
+              job: boilerplate/fixture-worker
+              service: fixture-worker
+              severity: critical
+            exp_annotations:
+              summary: "fixture-worker não reporta a idade do outbox há 5 minutos"
+              description: "fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+
+  - name: stays quiet while the worker reports the outbox age, even when another worker stops
+    interval: 1m
+    input_series:
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}
+        values: 0x30
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker-old"}
+        values: 0x2
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: OutboxAgeAbsent
+        exp_alerts: []
