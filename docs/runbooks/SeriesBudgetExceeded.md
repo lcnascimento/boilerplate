@@ -12,7 +12,7 @@ Ainda nenhum: a política é detectar, não remover. Mas uma série nova por val
 
 ## Diagnóstico
 
-1. Veja quais métricas do processo têm mais séries: `topk(10, count by (__name__) ({job="<service.namespace>/<service.name>"}))`.
+1. Veja quais métricas do processo têm mais séries: no dashboard `postgres`, seção Cardinalidade, escolha o `job` do processo no painel de top métricas por número de séries, ou rode `topk(10, count by (__name__) ({job="<service.namespace>/<service.name>"}))`.
 2. Para a métrica do topo, veja qual label multiplica as séries: `count(count by (<label>) (<métrica>{job="<service.namespace>/<service.name>"}))` para cada label dela. O label com centenas de valores é o vazamento.
 3. Ache no código do serviço onde esse atributo é gravado (os hooks `on<Event>` em `telemetry.go`) e qual valor sem limite entra nele.
 4. Se o crescimento é legítimo (mais rotas, mais partições, mais consumer groups), o teto é que ficou pequeno.

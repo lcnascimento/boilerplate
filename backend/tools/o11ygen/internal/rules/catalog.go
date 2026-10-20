@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	overviewDashboard  = "overview"
-	messagingDashboard = "messaging"
+	overviewDashboard = "overview"
+	kafkaDashboard    = "kafka"
+	postgresDashboard = "postgres"
 
 	sustainedFor = 5 * time.Minute
 
@@ -84,6 +85,7 @@ var processAlerts = []inheritedAlert{
 					"o consumo está mais lento que a produção, ou parado. Veja primeiro se " + p.Name() +
 					" está no ar e a duração do processamento na seção consumer do dashboard do serviço.",
 				dashboard: p.service.Name,
+				listedOn:  []string{kafkaDashboard},
 			}
 		},
 	},
@@ -100,6 +102,7 @@ var processAlerts = []inheritedAlert{
 					"reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço " +
 					"e os logs de " + p.Name() + ".",
 				dashboard: p.service.Name,
+				listedOn:  []string{kafkaDashboard},
 			}
 		},
 	},
@@ -134,7 +137,7 @@ var processAlerts = []inheritedAlert{
 				description: p.Name() + " mantém mais de " + budget + " séries no Prometheus há 15 minutos: " +
 					"algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). " +
 					"Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.",
-				dashboard: p.service.Name,
+				dashboard: postgresDashboard,
 			}
 		},
 	},
@@ -203,7 +206,7 @@ var infraGroups = []group{
 		summary:  "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos",
 		description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: " +
 			"nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy.",
-		dashboard: messagingDashboard,
+		dashboard: kafkaDashboard,
 	}),
 	infra("postgres", alert{
 		name:     "PostgresDown",
@@ -212,7 +215,7 @@ var infraGroups = []group{
 		summary:  "Postgres fora do ar, ou sem métricas do exporter há 5 minutos",
 		description: "O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: " +
 			"todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.",
-		dashboard: overviewDashboard,
+		dashboard: postgresDashboard,
 	}, alert{
 		name: "PostgresConnectionsNearMax",
 		expr: fmt.Sprintf("sum(%s) / max(%s) > 0.8",
@@ -221,7 +224,7 @@ var infraGroups = []group{
 		severity:    warning,
 		summary:     "Postgres com {{ $value | humanizePercentage }} de max_connections em uso",
 		description: "Mais de 80% de max_connections do Postgres está em uso há 5 minutos; perto do teto, " +
-			"novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões em pg_stat_activity.",
-		dashboard: overviewDashboard,
+			"novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões no dashboard postgres.",
+		dashboard: postgresDashboard,
 	}),
 }

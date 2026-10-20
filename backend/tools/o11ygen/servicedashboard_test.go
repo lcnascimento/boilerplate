@@ -137,19 +137,30 @@ func TestGenerate_WritesOneDashboardPerServiceUnderTheUIDItsAlertsPointTo(t *tes
 
 	assert.Equal(t, "boilerplate-orders", orders.UID)
 
-	pointed := map[string]bool{}
+	pointed := map[string]string{}
 
 	for _, file := range []string{filepath.Join(sloRulesDir, "orders.yaml"), filepath.Join(rulesDir, "orders.yaml")} {
 		for _, group := range readRules(t, filepath.Join(root, file)).Groups {
 			for _, rule := range group.Rules {
 				if rule.Alert != "" {
-					pointed[rule.Annotations["dashboard_url"]] = true
+					pointed[rule.Alert] = rule.Annotations["dashboard_url"]
 				}
 			}
 		}
 	}
 
-	assert.Equal(t, map[string]bool{"http://localhost:3010/d/boilerplate-orders": true}, pointed)
+	ordersBoard := "http://localhost:3010/d/boilerplate-orders"
+
+	assert.Equal(t, map[string]string{
+		"SLOBurnRate":            ordersBoard,
+		"ServiceTelemetryAbsent": ordersBoard,
+		"CriticalLogRecorded":    ordersBoard,
+		"DBPoolSaturated":        ordersBoard,
+		"ConsumerLagHigh":        ordersBoard,
+		"DLQMessageReceived":     ordersBoard,
+		"OutboxAgeAbsent":        ordersBoard,
+		"SeriesBudgetExceeded":   "http://localhost:3010/d/boilerplate-postgres",
+	}, pointed)
 }
 
 func TestGenerate_ServiceDashboardStacksSLOsComponentsAndCommonSections(t *testing.T) {

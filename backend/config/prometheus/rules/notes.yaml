@@ -29,7 +29,7 @@ groups:
           service: notes-api-frontend
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
           description: 'notes-api-frontend mantém mais de 2000 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: notes-api-frontend com {{ $value | humanize }} séries, acima do teto de 2000
@@ -82,7 +82,7 @@ groups:
           service: notes-worker-forwarder
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
           description: 'notes-worker-forwarder mantém mais de 2000 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: notes-worker-forwarder com {{ $value | humanize }} séries, acima do teto de 2000

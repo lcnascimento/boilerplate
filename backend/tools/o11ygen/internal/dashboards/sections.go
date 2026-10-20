@@ -57,7 +57,7 @@ func sloSection(svc *service.Service) section {
 			queries: []query{{expr: bySLO(catalog.SLOCurrentBurnRateRatio), legend: "{{sloth_slo}}"}},
 			steps:   []step{{color: "green"}, at(burnRateTicket, "yellow"), at(burnRatePage, "red")},
 		},
-		alertList{
+		serviceAlerts{
 			title:       "Alertas do serviço",
 			description: "Alertas de cada processo de " + svc.Name + ", inclusive os de burn rate dos SLOs.",
 			filter:      `{service=~` + strconv.Quote(svc.Name+"-.*") + `}`,
@@ -370,7 +370,7 @@ func databaseSection() section {
 			unit:        "short",
 			width:       halfWidth,
 			queries: []query{{
-				expr:   "sum by (application_name, state) (" + catalog.PgStatActivityCount + applications + ")",
+				expr:   "sum by (application_name, state) (" + catalog.PgClientConnections + applications + ")",
 				legend: "{{application_name}} {{state}}",
 			}},
 		},

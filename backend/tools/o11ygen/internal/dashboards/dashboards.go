@@ -22,8 +22,9 @@ type board struct {
 
 func build(services []service.Service) ([]artifact.File, error) {
 	boards := []board{
-		{"messaging", messagingDashboard()},
+		{"kafka", kafkaDashboard()},
 		{"overview", overviewDashboard()},
+		{"postgres", postgresDashboard()},
 	}
 
 	taken := map[string]bool{}

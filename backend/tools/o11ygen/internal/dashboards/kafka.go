@@ -1,8 +1,6 @@
 package dashboards
 
 import (
-	"strings"
-
 	"github.com/grafana/grafana-foundation-sdk/go/cog"
 	"github.com/grafana/grafana-foundation-sdk/go/cog/variants"
 	"github.com/grafana/grafana-foundation-sdk/go/common"
@@ -16,9 +14,9 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/rules"
 )
 
-func messagingDashboard() *dashboard.DashboardBuilder {
-	return dashboard.NewDashboardBuilder("Mensageria — Produce · Consume · DLQ").
-		Uid(config.Namespace+"-messaging").
+func kafkaDashboard() *dashboard.DashboardBuilder {
+	return dashboard.NewDashboardBuilder("Kafka — Tópicos · Consumer groups · DLQ").
+		Uid(config.Namespace+"-kafka").
 		Tags([]string{"messaging",
 			"kafka",
 			config.Namespace,
@@ -59,63 +57,51 @@ func messagingDashboard() *dashboard.DashboardBuilder {
 			IconColor("rgba(0, 211, 255, 1)").
 			Type("dashboard").
 			BuiltIn(1)}).
-		WithRow(messagingRow1()).
-		WithPanel(messagingPanel2()).
-		WithRow(messagingRow10()).
-		WithPanel(messagingPanel13()).
-		WithRow(messagingRow14()).
-		WithPanel(messagingPanel15()).
-		WithPanel(messagingPanel16()).
-		WithPanel(messagingPanel17()).
-		WithPanel(messagingPanel18()).
-		WithPanel(messagingPanel19()).
-		WithRow(messagingRow20()).
-		WithPanel(messagingPanel21()).
-		WithPanel(messagingPanel22()).
-		WithPanel(messagingPanel23()).
-		WithPanel(messagingPanel24())
+		WithRow(kafkaRow1()).
+		WithPanel(kafkaPanel2()).
+		WithPanel(kafkaPanel3()).
+		WithRow(kafkaRow10()).
+		WithPanel(kafkaPanel13()).
+		WithRow(kafkaRow14()).
+		WithPanel(kafkaPanel15()).
+		WithPanel(kafkaPanel16()).
+		WithPanel(kafkaPanel17()).
+		WithPanel(kafkaPanel18()).
+		WithPanel(kafkaPanel19()).
+		WithRow(kafkaRow20()).
+		WithPanel(kafkaPanel21()).
+		WithPanel(kafkaPanel22()).
+		WithPanel(kafkaPanel23()).
+		WithPanel(kafkaPanel24())
 }
 
-func messagingRow1() *dashboard.RowBuilder {
+func kafkaRow1() *dashboard.RowBuilder {
 	return dashboard.NewRowBuilder("Alertas").
 		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: 0}).
 		Id(1)
 }
 
-func messagingPanel2() cog.Builder[dashboard.Panel] {
-	return dashboard.NewPanelBuilder().
-		Type("alertlist").
-		Id(2).
-		Title("Estado dos alertas de mensageria").
-		GridPos(dashboard.GridPos{H: 9, W: 24, X: 0, Y: 1}).
-		Options(map[string]any{
-			"viewMode":                 "list",
-			"groupMode":                "default",
-			"groupBy":                  []string{},
-			"maxItems":                 20,
-			"sortOrder":                1,
-			"dashboardAlerts":          false,
-			"alertName":                "",
-			"alertInstanceLabelFilter": `{alertname=~"` + strings.Join(rules.AlertNames("messaging"), "|") + `"}`,
-			"stateFilter": map[string]bool{
-				"firing":     true,
-				"pending":    true,
-				"noData":     true,
-				"normal":     true,
-				"error":      true,
-				"recovering": true,
-			},
-			"showInstances": false,
-		})
+func kafkaPanel2() cog.Builder[dashboard.Panel] {
+	return alertList(2, "Estado dos alertas de mensageria",
+		"Alertas do broker e dos consumers: lag, DLQ e brokers fora do ar.",
+		alertsNamed(rules.AlertNames("kafka")), true).
+		GridPos(dashboard.GridPos{H: 9, W: 18, X: 0, Y: 1})
 }
 
-func messagingRow10() *dashboard.RowBuilder {
+func kafkaPanel3() cog.Builder[dashboard.Panel] {
+	return statPanel(3, "Brokers no ar",
+		"Brokers que o exporter Kafka do Alloy enxerga. Sem valor, o exporter parou de mandar métricas.",
+		"short", dashboard.GridPos{H: 9, W: 6, X: 18, Y: 1}, "max("+catalog.KafkaBrokers+")",
+		[]dashboard.Threshold{{Color: "red"}, {Value: cog.ToPtr[float64](1), Color: "green"}})
+}
+
+func kafkaRow10() *dashboard.RowBuilder {
 	return dashboard.NewRowBuilder("Produce").
 		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: 10}).
 		Id(10)
 }
 
-func messagingPanel13() cog.Builder[dashboard.Panel] {
+func kafkaPanel13() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(13).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -142,13 +128,13 @@ func messagingPanel13() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingRow14() *dashboard.RowBuilder {
+func kafkaRow14() *dashboard.RowBuilder {
 	return dashboard.NewRowBuilder("Consume").
 		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: 19}).
 		Id(14)
 }
 
-func messagingPanel15() cog.Builder[dashboard.Panel] {
+func kafkaPanel15() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(15).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -157,7 +143,7 @@ func messagingPanel15() cog.Builder[dashboard.Panel] {
 			LegendFormat("{{consumergroup}} {{topic}}").
 			RefId("A")}).
 		Title("Lag por consumer group").
-		Description("Mensagens ainda não confirmadas pelo group. O alerta do group audit dispara acima de 100 por 5 min.").
+		Description("Mensagens ainda não confirmadas pelo group. O alerta ConsumerLagHigh dispara acima de 100 por 5 min.").
 		Datasource(datasourceRef(prometheusDS)).
 		GridPos(dashboard.GridPos{H: 8, W: 8, X: 0, Y: 20}).
 		Unit("short").
@@ -175,7 +161,7 @@ func messagingPanel15() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingPanel16() cog.Builder[dashboard.Panel] {
+func kafkaPanel16() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(16).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -207,7 +193,7 @@ func messagingPanel16() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingPanel17() cog.Builder[dashboard.Panel] {
+func kafkaPanel17() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(17).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -239,7 +225,7 @@ func messagingPanel17() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingPanel18() cog.Builder[dashboard.Panel] {
+func kafkaPanel18() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(18).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -266,7 +252,7 @@ func messagingPanel18() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingPanel19() cog.Builder[dashboard.Panel] {
+func kafkaPanel19() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(19).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -298,13 +284,13 @@ func messagingPanel19() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingRow20() *dashboard.RowBuilder {
+func kafkaRow20() *dashboard.RowBuilder {
 	return dashboard.NewRowBuilder("DLQ").
 		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: 36}).
 		Id(20)
 }
 
-func messagingPanel21() cog.Builder[dashboard.Panel] {
+func kafkaPanel21() cog.Builder[dashboard.Panel] {
 	return stat.NewPanelBuilder().
 		Id(21).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -332,7 +318,7 @@ func messagingPanel21() cog.Builder[dashboard.Panel] {
 		Orientation("auto")
 }
 
-func messagingPanel22() cog.Builder[dashboard.Panel] {
+func kafkaPanel22() cog.Builder[dashboard.Panel] {
 	return stat.NewPanelBuilder().
 		Id(22).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -360,7 +346,7 @@ func messagingPanel22() cog.Builder[dashboard.Panel] {
 		Orientation("auto")
 }
 
-func messagingPanel23() cog.Builder[dashboard.Panel] {
+func kafkaPanel23() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(23).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
@@ -390,7 +376,7 @@ func messagingPanel23() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func messagingPanel24() cog.Builder[dashboard.Panel] {
+func kafkaPanel24() cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
 		Id(24).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().

@@ -26,6 +26,7 @@ type alert struct {
 	summary     string
 	description string
 	dashboard   string
+	listedOn    []string
 	service     string
 }
 

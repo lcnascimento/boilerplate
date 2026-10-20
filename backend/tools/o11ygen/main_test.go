@@ -66,8 +66,9 @@ func TestGenerate_WritesTheDashboards(t *testing.T) {
 	}
 
 	assert.Equal(t, map[string]string{
-		"messaging.json": "boilerplate-messaging",
-		"overview.json":  "boilerplate-overview",
+		"kafka.json":    "boilerplate-kafka",
+		"overview.json": "boilerplate-overview",
+		"postgres.json": "boilerplate-postgres",
 		// example:begin
 		"audit.json": "boilerplate-audit",
 		"notes.json": "boilerplate-notes",

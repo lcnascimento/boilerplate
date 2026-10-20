@@ -1,6 +1,6 @@
 {
-  "uid": "boilerplate-messaging",
-  "title": "Mensageria — Produce · Consume · DLQ",
+  "uid": "boilerplate-kafka",
+  "title": "Kafka — Tópicos · Consumer groups · DLQ",
   "tags": [
     "messaging",
     "kafka",
@@ -50,21 +50,22 @@
       "type": "alertlist",
       "id": 2,
       "title": "Estado dos alertas de mensageria",
+      "description": "Alertas do broker e dos consumers: lag, DLQ e brokers fora do ar.",
       "transparent": false,
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 18,
         "x": 0,
         "y": 1
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{alertname=~\"KafkaBrokersDown\"}",
+        "alertInstanceLabelFilter": "{alertname=~\"ConsumerLagHigh|DLQMessageReceived|KafkaBrokersDown\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],
         "groupMode": "default",
-        "maxItems": 20,
+        "maxItems": 50,
         "showInstances": false,
         "sortOrder": 1,
         "stateFilter": {
@@ -76,6 +77,72 @@
           "recovering": true
         },
         "viewMode": "list"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "expr": "max(kafka_brokers)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Brokers no ar",
+      "description": "Brokers que o exporter Kafka do Alloy enxerga. Sem valor, o exporter parou de mandar métricas.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "none",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": ""
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
       }
     },
     {
@@ -173,7 +240,7 @@
         }
       ],
       "title": "Lag por consumer group",
-      "description": "Mensagens ainda não confirmadas pelo group. O alerta do group audit dispara acima de 100 por 5 min.",
+      "description": "Mensagens ainda não confirmadas pelo group. O alerta ConsumerLagHigh dispara acima de 100 por 5 min.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",

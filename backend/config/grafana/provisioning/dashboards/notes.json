@@ -254,8 +254,8 @@
         "dashboardAlerts": false,
         "groupBy": [],
         "groupMode": "default",
-        "maxItems": 20,
-        "showInstances": true,
+        "maxItems": 50,
+        "showInstances": false,
         "sortOrder": 1,
         "stateFilter": {
           "error": true,
@@ -1397,7 +1397,7 @@
                 "type": "prometheus",
                 "uid": "${prometheus_datasource}"
               },
-              "expr": "sum by (application_name, state) (pg_stat_activity_count{application_name=~\"$process\"})",
+              "expr": "sum by (application_name, state) (pg_client_connections_count{application_name=~\"$process\"})",
               "legendFormat": "{{application_name}} {{state}}",
               "refId": "A"
             }

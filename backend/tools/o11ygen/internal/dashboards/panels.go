@@ -5,229 +5,95 @@ import (
 	"github.com/grafana/grafana-foundation-sdk/go/cog/variants"
 	"github.com/grafana/grafana-foundation-sdk/go/common"
 	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
-	"github.com/grafana/grafana-foundation-sdk/go/logs"
-	"github.com/grafana/grafana-foundation-sdk/go/loki"
 	"github.com/grafana/grafana-foundation-sdk/go/prometheus"
 	"github.com/grafana/grafana-foundation-sdk/go/stat"
 	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
 )
 
-const (
-	fullWidth  = 24
-	halfWidth  = 12
-	thirdWidth = 8
-	quarter    = 6
-
-	statHeight  = 5
-	graphHeight = 8
-	listHeight  = 10
-)
-
-type panel interface {
-	build(id uint32) cog.Builder[dashboard.Panel]
+func grafanaAnnotations() []cog.Builder[dashboard.AnnotationQuery] {
+	return []cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
+		Name("Annotations & Alerts").
+		Datasource(common.DataSourceRef{Type: cog.ToPtr("grafana"), Uid: cog.ToPtr("-- Grafana --")}).
+		Hide(true).
+		IconColor("rgba(0, 211, 255, 1)").
+		Type("dashboard").
+		BuiltIn(1)}
 }
 
-type query struct {
-	expr     string
-	legend   string
-	exemplar bool
-}
-
-func (q query) prometheus(refID string) *prometheus.DataqueryBuilder {
-	target := prometheus.NewDataqueryBuilder().
+func promQuery(refID, expr, legend string) *prometheus.DataqueryBuilder {
+	return prometheus.NewDataqueryBuilder().
 		Datasource(datasourceRef(prometheusDS)).
-		Expr(q.expr).
-		LegendFormat(q.legend).
+		Expr(expr).
+		LegendFormat(legend).
 		RefId(refID)
-	if q.exemplar {
-		target.Exemplar(true)
-	}
-
-	return target
 }
 
-const refIDs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func refID(i int) string {
-	return refIDs[i : i+1]
+func promInstantTable(refID, expr string) *prometheus.DataqueryBuilder {
+	return prometheus.NewDataqueryBuilder().
+		Datasource(datasourceRef(prometheusDS)).
+		Expr(expr).
+		Instant().
+		Format(prometheus.PromQueryFormatTable).
+		RefId(refID)
 }
 
-func prometheusTargets(queries []query) []cog.Builder[variants.Dataquery] {
-	out := make([]cog.Builder[variants.Dataquery], 0, len(queries))
-	for i, q := range queries {
-		out = append(out, q.prometheus(refID(i)))
+func promTargets(builders ...*prometheus.DataqueryBuilder) []cog.Builder[variants.Dataquery] {
+	out := make([]cog.Builder[variants.Dataquery], 0, len(builders))
+	for _, b := range builders {
+		out = append(out, b)
 	}
 
 	return out
 }
 
-type step struct {
-	from  *float64
-	color string
-}
-
-func at(value float64, color string) step {
-	return step{from: &value, color: color}
-}
-
-func thresholds(steps []step) *dashboard.ThresholdsConfigBuilder {
-	out := make([]dashboard.Threshold, 0, len(steps))
-	for _, s := range steps {
-		out = append(out, dashboard.Threshold{Value: s.from, Color: s.color})
-	}
-
-	return dashboard.NewThresholdsConfigBuilder().Mode(dashboard.ThresholdsModeAbsolute).Steps(out)
-}
-
-type graph struct {
-	title       string
-	description string
-	unit        string
-	width       uint32
-	queries     []query
-	sloLine     *float64
-	links       []cog.Builder[dashboard.DashboardLink]
-	logQL       bool
-}
-
-func (g *graph) build(id uint32) cog.Builder[dashboard.Panel] {
-	ds := prometheusDS
-	targets := prometheusTargets(g.queries)
-
-	if g.logQL {
-		ds = lokiDS
-		targets = targets[:0]
-
-		for i, q := range g.queries {
-			targets = append(targets, loki.NewDataqueryBuilder().
-				Datasource(datasourceRef(lokiDS)).
-				Expr(q.expr).
-				LegendFormat(q.legend).
-				RefId(refID(i)))
-		}
-	}
-
-	out := timeseries.NewPanelBuilder().
+func row(id uint32, title string, y uint32) *dashboard.RowBuilder {
+	return dashboard.NewRowBuilder(title).
 		Id(id).
-		Title(g.title).
-		Description(g.description).
-		Datasource(datasourceRef(ds)).
-		Targets(targets).
-		GridPos(dashboard.GridPos{W: g.width, H: graphHeight}).
-		Unit(g.unit).
+		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: y})
+}
+
+func timeseriesPanel(id uint32, title, description, unit string, pos dashboard.GridPos,
+	targets ...*prometheus.DataqueryBuilder,
+) *timeseries.PanelBuilder {
+	return timeseries.NewPanelBuilder().
+		Id(id).
+		Title(title).
+		Description(description).
+		Datasource(datasourceRef(prometheusDS)).
+		Targets(promTargets(targets...)).
+		GridPos(pos).
+		Unit(unit).
 		Legend(common.NewVizLegendOptionsBuilder().
-			DisplayMode(common.LegendDisplayModeList).
-			Placement(common.LegendPlacementBottom).
+			DisplayMode("list").
+			Placement("bottom").
 			ShowLegend(true)).
 		Tooltip(common.NewVizTooltipOptionsBuilder().
-			Mode(common.TooltipDisplayModeMulti).
-			Sort(common.SortOrderDescending)).
-		DrawStyle(common.GraphDrawStyleLine).
+			Mode("multi").
+			Sort("desc")).
+		DrawStyle("line").
 		LineWidth(1).
 		FillOpacity(10).
-		ShowPoints(common.VisibilityModeNever).
-		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr(false)})
-
-	if g.sloLine != nil {
-		out.Thresholds(thresholds([]step{{color: "green"}, at(*g.sloLine, "red")})).
-			ThresholdsStyle(common.NewGraphThresholdsStyleConfigBuilder().Mode(common.GraphThresholdsStyleModeLine))
-	}
-
-	if len(g.links) > 0 {
-		out.DataLinks(g.links)
-	}
-
-	return out
+		ShowPoints("never")
 }
 
-type single struct {
-	title       string
-	description string
-	unit        string
-	width       uint32
-	queries     []query
-	steps       []step
-}
-
-func (s *single) build(id uint32) cog.Builder[dashboard.Panel] {
-	out := stat.NewPanelBuilder().
+func statPanel(id uint32, title, description, unit string, pos dashboard.GridPos, expr string,
+	steps []dashboard.Threshold,
+) *stat.PanelBuilder {
+	return stat.NewPanelBuilder().
 		Id(id).
-		Title(s.title).
-		Description(s.description).
+		Title(title).
+		Description(description).
 		Datasource(datasourceRef(prometheusDS)).
-		Targets(prometheusTargets(s.queries)).
-		GridPos(dashboard.GridPos{W: s.width, H: statHeight}).
-		Unit(s.unit).
-		GraphMode(common.BigValueGraphModeArea).
-		ColorMode(common.BigValueColorModeValue).
-		JustifyMode(common.BigValueJustifyModeAuto).
-		TextMode(common.BigValueTextModeAuto).
-		ReduceOptions(common.NewReduceDataOptionsBuilder().Calcs([]string{"lastNotNull"})).
-		Orientation(common.VizOrientationAuto)
-
-	if len(s.steps) > 0 {
-		out.Thresholds(thresholds(s.steps)).
-			ColorScheme(dashboard.NewFieldColorBuilder().Mode(dashboard.FieldColorModeIdThresholds))
-	}
-
-	return out
-}
-
-type alertList struct {
-	title       string
-	description string
-	filter      string
-}
-
-func (a alertList) build(id uint32) cog.Builder[dashboard.Panel] {
-	return dashboard.NewPanelBuilder().
-		Type("alertlist").
-		Id(id).
-		Title(a.title).
-		Description(a.description).
-		GridPos(dashboard.GridPos{W: fullWidth, H: listHeight}).
-		Options(map[string]any{
-			"viewMode":                 "list",
-			"groupMode":                "default",
-			"groupBy":                  []string{},
-			"maxItems":                 20,
-			"sortOrder":                1,
-			"dashboardAlerts":          false,
-			"alertName":                "",
-			"alertInstanceLabelFilter": a.filter,
-			"stateFilter": map[string]bool{
-				"firing":     true,
-				"pending":    true,
-				"noData":     true,
-				"normal":     true,
-				"error":      true,
-				"recovering": true,
-			},
-			"showInstances": true,
-		})
-}
-
-type logLines struct {
-	title       string
-	description string
-	expr        string
-}
-
-func (l logLines) build(id uint32) cog.Builder[dashboard.Panel] {
-	return logs.NewPanelBuilder().
-		Id(id).
-		Title(l.title).
-		Description(l.description).
-		Datasource(datasourceRef(lokiDS)).
-		Targets([]cog.Builder[variants.Dataquery]{loki.NewDataqueryBuilder().
-			Datasource(datasourceRef(lokiDS)).
-			Expr(l.expr).
-			RefId("A")}).
-		GridPos(dashboard.GridPos{W: fullWidth, H: listHeight}).
-		ShowTime(true).
-		ShowLabels(true).
-		WrapLogMessage(true).
-		EnableLogDetails(true).
-		SortOrder(common.LogsSortOrderDescending).
-		DedupStrategy(common.LogsDedupStrategyNone)
+		Targets(promTargets(promQuery("A", expr, ""))).
+		GridPos(pos).
+		Unit(unit).
+		Thresholds(dashboard.NewThresholdsConfigBuilder().
+			Mode("absolute").
+			Steps(steps)).
+		ColorScheme(dashboard.NewFieldColorBuilder().
+			Mode("thresholds")).
+		ColorMode("background").
+		GraphMode("none").
+		ReduceOptions(common.NewReduceDataOptionsBuilder().
+			Calcs([]string{"lastNotNull"}))
 }

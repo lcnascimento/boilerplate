@@ -60,8 +60,8 @@ func AlertNames(dashboard string) []string {
 	var names []string
 
 	for _, group := range append([]group{serviceGroup(&fixture)}, infraGroups...) {
-		for _, a := range group.alerts {
-			if a.dashboard == dashboard && !slices.Contains(names, a.name) {
+		for i := range group.alerts {
+			if a := &group.alerts[i]; (a.dashboard == dashboard || slices.Contains(a.listedOn, dashboard)) && !slices.Contains(names, a.name) {
 				names = append(names, a.name)
 			}
 		}
@@ -137,8 +137,8 @@ func encode(name string, groups ...group) (artifact.File, error) {
 			ruleGroup.Rules = append(ruleGroup.Rules, rule)
 		}
 
-		for _, a := range g.alerts {
-			rule, err := a.rule()
+		for i := range g.alerts {
+			rule, err := g.alerts[i].rule()
 			if err != nil {
 				return artifact.File{}, errors.New("rules %s", name).WithCause(err)
 			}
