@@ -202,7 +202,7 @@ O e2e divide os dados com o seu dev: cada teste cria os próprios registros com 
 
 No CI, o `ci-e2e` faz o mesmo caminho: sobe o stack completo (`tilt up`, com observabilidade e telemetria de verdade; o `minimal` é só para desenvolvimento) em background, espera ficarem prontos todos os recursos que iniciam sozinhos, roda o `pnpm test:e2e`, depois o `make o11y.check-live`, e sempre faz `tilt down`. Em falha, os logs do Tilt vão para o log do passo e para o artefato `tilt-logs`.
 
-O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/live_test.go`), ligado por `O11Y_LIVE_PROMETHEUS_URL` e pulado sem ela; o alvo do Make aponta para as portas do Tilt (`O11Y_LIVE_PROMETHEUS_URL`, `O11Y_LIVE_LOKI_URL` e `O11Y_LIVE_GRAFANA_URL`, com o usuário `admin` na URL do Grafana). Ele repete as consultas por até 3 minutos, o tempo de um processo recém-iniciado chegar a uma recording rule (o primeiro export, a próxima avaliação e o `rule_query_offset`), e falha se faltar:
+O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/live_test.go`), ligado por `O11Y_LIVE_PROMETHEUS_URL` e pulado sem ela; o alvo do Make aponta para as portas do Tilt (`O11Y_LIVE_PROMETHEUS_URL`, `O11Y_LIVE_LOKI_URL` e `O11Y_LIVE_GRAFANA_URL`, com o usuário `admin` na URL do Grafana). Ele repete as consultas por até 4 minutos: um processo recém-iniciado leva até uns 3 minutos para chegar a uma recording rule (o primeiro export, a próxima avaliação e o `rule_query_offset`), e falha se faltar:
 
 - uma métrica `PresenceAlways` do catálogo: as do stack sempre, e as de um serviço para cada processo que a emite (o `EmittedBy` da métrica, em `internal/catalog/metrics.go`);
 - o `job:series:count` de cada processo abaixo do teto do serviço;
