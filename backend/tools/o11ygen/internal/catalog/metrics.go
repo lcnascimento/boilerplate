@@ -26,6 +26,7 @@ const (
 	OTLP Source = iota
 	OTLPResource
 	Scrape
+	RecordingRule
 )
 
 type Metric struct {
@@ -46,6 +47,8 @@ const (
 	PgStatActivityCount      = "pg_stat_activity_count"
 
 	KafkaBrokers = "kafka_brokers"
+
+	JobSeriesCount = "job:series:count"
 
 	HTTPServerRequestTotal    = "http_server_request_total"
 	HTTPServerRequestDuration = "http_server_request_duration_seconds"
@@ -98,6 +101,8 @@ var metrics = map[string]Metric{
 
 	KafkaBrokers: {Type: Gauge, Source: Scrape},
 
+	JobSeriesCount: {Type: Gauge, Source: RecordingRule},
+
 	HTTPServerRequestTotal:    {Type: Counter, Source: OTLP, Labels: httpServerLabels},
 	HTTPServerRequestDuration: {Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...)},
 	HTTPClientRequestTotal: {
@@ -131,9 +136,10 @@ var metrics = map[string]Metric{
 }
 
 var sourceLabels = map[Source][]string{
-	OTLP:         {"job", "instance", "service_name", "service_namespace"},
-	OTLPResource: {"job", "instance"},
-	Scrape:       {"job", "instance"},
+	OTLP:          {"job", "instance", "service_name", "service_namespace"},
+	OTLPResource:  {"job", "instance"},
+	Scrape:        {"job", "instance"},
+	RecordingRule: {"job"},
 }
 
 var (
