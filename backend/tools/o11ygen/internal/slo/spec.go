@@ -199,8 +199,9 @@ func specs(services []service.Service) ([]serviceSpec, error) {
 // SpecKind writes one Sloth spec per service that declares or inherits an SLO.
 func SpecKind() artifact.Kind {
 	return artifact.Kind{
-		Dir:  "config/sloth",
-		Glob: "*.yaml",
+		Dir:      "config/sloth",
+		LoadedBy: artifact.Sloth,
+		Glob:     "*.yaml",
 		Build: func(services []service.Service) ([]artifact.File, error) {
 			serviceSpecs, err := specs(services)
 			if err != nil {

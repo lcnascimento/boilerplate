@@ -163,6 +163,7 @@ make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
 make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
 make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki; sloth validate, promtool e pint nos SLOs (ferramentas instaladas pelo make setup)
+make o11y.check-live  # confere o gerado contra o stack completo no ar (tilt up, não o minimal): métricas do catálogo, teto de séries, regras, dashboards e datasources
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
 make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
 make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
@@ -201,7 +202,16 @@ O e2e depende do Tilt: o `pnpm test:e2e` roda contra o stack já de pé (`tilt u
 
 O e2e divide os dados com o seu dev: cada teste cria os próprios registros com um marcador único `e2e-` (a fixture `marker`, em `e2e/fixtures.ts`), só faz asserções sobre eles e, no fim do teste, mesmo em falha, a fixture apaga pela API de cada serviço os registros com esses marcadores.
 
-No CI, o `ci-e2e` faz o mesmo caminho: sobe `TILT_STACK=minimal tilt up` em background, espera todos os recursos ficarem prontos, roda o `pnpm test:e2e` e sempre faz `tilt down`. Em falha, os logs do Tilt vão para o log do passo e para o artefato `tilt-logs`.
+No CI, o `ci-e2e` faz o mesmo caminho: sobe o stack completo (`tilt up`, com observabilidade e telemetria de verdade; o `minimal` é só para desenvolvimento) em background, espera ficarem prontos todos os recursos que iniciam sozinhos, roda o `pnpm test:e2e`, depois o `make o11y.check-live`, e sempre faz `tilt down`. Em falha, os logs do Tilt vão para o log do passo e para o artefato `tilt-logs`.
+
+O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/live_test.go`), ligado por `O11Y_LIVE_PROMETHEUS_URL` e pulado sem ela; o alvo do Make aponta para as portas do Tilt (`O11Y_LIVE_PROMETHEUS_URL`, `O11Y_LIVE_LOKI_URL` e `O11Y_LIVE_GRAFANA_URL`, com o usuário `admin` na URL do Grafana). Ele repete as consultas por até 4 minutos: um processo recém-iniciado leva até uns 3 minutos para chegar a uma recording rule (o primeiro export, a próxima avaliação e o `rule_query_offset`), e falha se faltar:
+
+- uma métrica `PresenceAlways` do catálogo: as do stack sempre, e as de um serviço para cada processo que a emite (o `EmittedBy` da métrica, em `internal/catalog/metrics.go`);
+- o `job:series:count` de cada processo abaixo do teto do serviço;
+- um grupo gerado no `/api/v1/rules` do Prometheus ou do ruler do Loki, ou uma regra dele sem `health: ok`;
+- um dashboard gerado (pelo UID) no `/api/search` do Grafana, ou um datasource provisionado sem health OK.
+
+O que conferir vem do catálogo e dos arquivos gerados, então uma métrica, um dashboard ou um serviço novo entram na checagem sem mexer no teste. Uma métrica que vem do SDK de um processo (`OTLP`) precisa declarar o `EmittedBy`, e um tipo de artefato novo precisa dizer quem o carrega (`LoadedBy`): o `make test` falha sem isso.
 
 Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, contra o mesmo stack.
 
