@@ -115,6 +115,8 @@ O exemplo traz mais dois alertas. O de lag dispara quando o group `audit` fica m
 
 Um único container `postgres` (em `backend/docker-compose.yml`) atende todos os serviços; cada serviço tem um database e um role com o nome dele, e o database pertence ao role. No Tilt, cada serviço encadeia `postgres → <name>-db → <name>-migrate → <name>-api-*`, então a API só sobe com o banco criado e migrado. Os dados ficam no volume `postgres_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, suba só o banco com `docker compose up -d --wait postgres` em `backend/`.
 
+O Postgres sobe com `shared_preload_libraries=pg_stat_statements`, e o recurso `postgres-extensions` do Tilt roda, a cada `tilt up`, um `CREATE EXTENSION IF NOT EXISTS pg_stat_statements` no database `postgres` (sem o Tilt: `docker compose run --rm --no-deps postgres-extensions` em `backend/`). Fora do modo mínimo, o Alloy lê as métricas do servidor (`prometheus.exporter.postgres`, conectado só ao database `postgres`) e descarta as séries dos databases `testdb_*` dos testes de componente. Cada pool pgx se identifica pelo `application_name`, que é o `OTEL_SERVICE_NAME` do processo, então as conexões de cada processo aparecem separadas em `pg_stat_activity_count`.
+
 No diretório do serviço (`backend/services/<name>/`), com o `postgres` no ar:
 
 ```sh

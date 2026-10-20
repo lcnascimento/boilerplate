@@ -63,11 +63,17 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
+	serviceName, err := config.ServiceName()
+	if err != nil {
+		return nil, err
+	}
+
 	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		return nil, ErrConnectDatabase.WithCause(err)
 	}
 
+	cfg.ConnConfig.RuntimeParams["application_name"] = serviceName
 	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
