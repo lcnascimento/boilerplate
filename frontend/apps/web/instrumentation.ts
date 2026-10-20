@@ -1,5 +1,10 @@
+import type { Instrumentation } from "next";
+
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  await import("./instrumentation.node");
+  const { logger } = await import("@/shared/logger");
 
   await Promise.all([
     // example:begin
@@ -8,4 +13,15 @@ export async function register(): Promise<void> {
     ),
     // example:end
   ]);
+
+  logger.info("server started");
 }
+
+export const onRequestError: Instrumentation.onRequestError = async (
+  ...args
+) => {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  const { recordRequestError } = await import("@/shared/request-error");
+  await recordRequestError(...args);
+};
