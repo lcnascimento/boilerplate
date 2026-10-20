@@ -3,6 +3,8 @@ package catalog
 import (
 	"slices"
 	"strings"
+
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
 type Type int
@@ -32,11 +34,14 @@ const (
 	TempoSpanMetrics
 )
 
+// Metric is a cataloged series. Its EmittedBy is nil when the stack itself emits it, otherwise it picks the declared
+// processes that emit it.
 type Metric struct {
-	Type     Type
-	Source   Source
-	Labels   []string
-	Presence Presence
+	Type      Type
+	Source    Source
+	Labels    []string
+	Presence  Presence
+	EmittedBy Emitter
 }
 
 const (
@@ -146,10 +151,13 @@ var (
 )
 
 var metrics = map[string]Metric{
-	TargetInfo: {Type: Gauge, Source: OTLPResource, Labels: []string{"service_version", "deployment_environment"}},
+	TargetInfo: {
+		Type: Gauge, Source: OTLPResource, Labels: []string{"service_version", "deployment_environment"},
+		EmittedBy: everyProcess,
+	},
 
-	PgxpoolAcquiredConnections: {Type: Gauge, Source: OTLP, Labels: pgxpool},
-	PgxpoolMaxConnections:      {Type: Gauge, Source: OTLP, Labels: pgxpool},
+	PgxpoolAcquiredConnections: {Type: Gauge, Source: OTLP, Labels: pgxpool, EmittedBy: dbPool},
+	PgxpoolMaxConnections:      {Type: Gauge, Source: OTLP, Labels: pgxpool, EmittedBy: dbPool},
 
 	PgUp:                        {Type: Gauge, Source: Scrape},
 	PgSettingsMaxConnections:    {Type: Gauge, Source: Scrape},
@@ -173,8 +181,13 @@ var metrics = map[string]Metric{
 
 	JobSeriesCount: {Type: Gauge, Source: RecordingRule},
 
-	HTTPServerRequestTotal:    {Type: Counter, Source: OTLP, Labels: httpServerLabels},
-	HTTPServerRequestDuration: {Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...)},
+	HTTPServerRequestTotal: {
+		Type: Counter, Source: OTLP, Labels: httpServerLabels, EmittedBy: on(service.Go, runs(service.API)),
+	},
+	HTTPServerRequestDuration: {
+		Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...),
+		EmittedBy: on(service.Go, runs(service.API)),
+	},
 	HTTPClientRequestTotal: {
 		Type: Counter, Source: OTLP, Presence: PresenceOnEvent,
 		Labels: append([]string{"http_response_status_code"}, httpClientLabels...),
@@ -188,17 +201,28 @@ var metrics = map[string]Metric{
 		Labels: slices.Concat(httpClientServer, httpClientLabels),
 	},
 
-	MessagingClientConsumedMessages:  {Type: Counter, Source: OTLP, Labels: messagingProcess},
-	MessagingProcessDuration:         {Type: Histogram, Source: OTLP, Labels: messagingProcess},
-	MessagingDLQSentMessages:         {Type: Counter, Source: OTLP, Labels: messagingProcess, Presence: PresenceOnEvent},
-	MessagingClientSentMessages:      {Type: Counter, Source: OTLP, Labels: messagingSend},
-	MessagingClientOperationDuration: {Type: Histogram, Source: OTLP, Labels: messagingSend},
+	MessagingClientConsumedMessages: {Type: Counter, Source: OTLP, Labels: messagingProcess, EmittedBy: runs(service.Consumer)},
+	MessagingProcessDuration:        {Type: Histogram, Source: OTLP, Labels: messagingProcess, EmittedBy: runs(service.Consumer)},
+	MessagingDLQSentMessages:        {Type: Counter, Source: OTLP, Labels: messagingProcess, Presence: PresenceOnEvent},
+	MessagingClientSentMessages:     {Type: Counter, Source: OTLP, Labels: messagingSend, EmittedBy: runs(service.Worker)},
+	MessagingClientOperationDuration: {
+		Type: Histogram, Source: OTLP, Labels: messagingSend, EmittedBy: runs(service.Worker),
+	},
 
-	KafkaTopicPartitionCurrentOffset:     {Type: Gauge, Source: Scrape, Labels: kafkaPartition},
-	KafkaConsumerGroupCurrentOffset:      {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
-	KafkaConsumerGroupUncommittedOffsets: {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
+	// The exporter lists only the topics a producer or a consumer created.
+	KafkaTopicPartitionCurrentOffset: {
+		Type: Gauge, Source: Scrape, Labels: kafkaPartition, EmittedBy: runs(service.Consumer, service.Worker),
+	},
+	KafkaConsumerGroupCurrentOffset: {
+		Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup, EmittedBy: runs(service.Consumer),
+	},
+	KafkaConsumerGroupUncommittedOffsets: {
+		Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup, EmittedBy: runs(service.Consumer),
+	},
 
-	ServiceLogRecords:         {Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "level"}},
+	ServiceLogRecords: {
+		Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "level"}, EmittedBy: everyProcess,
+	},
 	ServiceLogRecordsCritical: {Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service"}, Presence: PresenceOnEvent},
 	ServiceLogAlertRecords: {
 		Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "log_alert"}, Presence: PresenceOnEvent,
@@ -224,26 +248,32 @@ var metrics = map[string]Metric{
 		Labels: []string{"sloth_mode", "sloth_objective", "sloth_spec", "sloth_version"},
 	},
 
-	GoGoroutineCount:  {Type: Gauge, Source: OTLP},
-	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}},
-	GoMemoryAllocated: {Type: Counter, Source: OTLP},
-	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP},
+	GoGoroutineCount:  {Type: Gauge, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
+	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}, EmittedBy: on(service.Go, everyProcess)},
+	GoMemoryAllocated: {Type: Counter, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
+	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
 
-	ProcessCPUTime:     {Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}},
-	ProcessMemoryUsage: {Type: Gauge, Source: OTLP},
+	ProcessCPUTime: {
+		Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}, EmittedBy: on(service.Go, everyProcess),
+	},
+	ProcessMemoryUsage: {Type: Gauge, Source: OTLP, EmittedBy: on(service.Go, everyProcess)},
 
-	NodejsEventloopDelayP99:    {Type: Gauge, Source: OTLP},
-	NodejsEventloopUtilization: {Type: Gauge, Source: OTLP},
-	V8jsMemoryHeapUsed:         {Type: Gauge, Source: OTLP, Labels: []string{"v8js_heap_space_name"}},
-	V8jsGCDuration:             {Type: Histogram, Source: OTLP, Labels: []string{"v8js_gc_type"}},
+	NodejsEventloopDelayP99:    {Type: Gauge, Source: OTLP, EmittedBy: on(service.Node, everyProcess)},
+	NodejsEventloopUtilization: {Type: Gauge, Source: OTLP, EmittedBy: on(service.Node, everyProcess)},
+	V8jsMemoryHeapUsed: {
+		Type: Gauge, Source: OTLP, Labels: []string{"v8js_heap_space_name"}, EmittedBy: on(service.Node, everyProcess),
+	},
+	V8jsGCDuration: {
+		Type: Histogram, Source: OTLP, Labels: []string{"v8js_gc_type"}, EmittedBy: on(service.Node, everyProcess),
+	},
 
-	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics},
-	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics},
+	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
+	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
 
 	// example:begin
-	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP},
-	OutboxPurgedMessages("notes"):   {Type: Counter, Source: OTLP},
-	OutboxPurgeRuns("notes"):        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}},
+	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
+	OutboxPurgedMessages("notes"):   {Type: Counter, Source: OTLP, EmittedBy: outboxOf("notes")},
+	OutboxPurgeRuns("notes"):        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}, EmittedBy: outboxOf("notes")},
 	// example:end
 }
 
@@ -263,18 +293,18 @@ var (
 	logLabels    = []string{"service_name", "service_namespace", "container", "detected_level", "severity_number"}
 )
 
-func OutboxOldestPendingAge(service string) string {
-	return outboxMetric(service, "oldest_pending_age_seconds")
+func OutboxOldestPendingAge(serviceName string) string {
+	return outboxMetric(serviceName, "oldest_pending_age_seconds")
 }
 
-func OutboxPurgedMessages(service string) string {
-	return outboxMetric(service, "purged_messages_total")
+func OutboxPurgedMessages(serviceName string) string {
+	return outboxMetric(serviceName, "purged_messages_total")
 }
 
-func OutboxPurgeRuns(service string) string {
-	return outboxMetric(service, "purge_runs_total")
+func OutboxPurgeRuns(serviceName string) string {
+	return outboxMetric(serviceName, "purge_runs_total")
 }
 
-func outboxMetric(service, name string) string {
-	return strings.ReplaceAll(service, "-", "_") + "_outbox_" + name
+func outboxMetric(serviceName, name string) string {
+	return strings.ReplaceAll(serviceName, "-", "_") + "_outbox_" + name
 }
