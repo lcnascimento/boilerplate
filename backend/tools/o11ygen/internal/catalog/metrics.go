@@ -1,5 +1,7 @@
 package catalog
 
+import "slices"
+
 type Type int
 
 const (
@@ -32,6 +34,9 @@ type Metric struct {
 const (
 	HTTPServerRequestTotal    = "http_server_request_total"
 	HTTPServerRequestDuration = "http_server_request_duration_seconds"
+	HTTPClientRequestTotal    = "http_client_request_total"
+	HTTPClientRequestDuration = "http_client_request_duration_seconds"
+	HTTPClientActiveRequests  = "http_client_active_requests"
 
 	MessagingClientConsumedMessages  = "messaging_client_consumed_messages_total"
 	MessagingProcessDuration         = "messaging_process_duration_seconds"
@@ -53,6 +58,8 @@ const (
 
 var (
 	httpServerLabels = []string{"http_request_method", "http_route", "http_response_status_code"}
+	httpClientLabels = []string{"network_peer_address", "http_request_method"}
+	httpClientServer = []string{"server_address", "server_port"}
 	messagingSend    = []string{
 		"messaging_system", "messaging_destination_name", "messaging_operation_name", "messaging_operation_type", "error_type",
 	}
@@ -64,6 +71,18 @@ var (
 var metrics = map[string]Metric{
 	HTTPServerRequestTotal:    {Type: Counter, Source: OTLP, Labels: httpServerLabels},
 	HTTPServerRequestDuration: {Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...)},
+	HTTPClientRequestTotal: {
+		Type: Counter, Source: OTLP, Presence: PresenceOnEvent,
+		Labels: append([]string{"http_response_status_code"}, httpClientLabels...),
+	},
+	HTTPClientRequestDuration: {
+		Type: Histogram, Source: OTLP, Presence: PresenceOnEvent,
+		Labels: slices.Concat(httpClientServer, httpClientLabels, []string{"http_response_status_code"}),
+	},
+	HTTPClientActiveRequests: {
+		Type: Gauge, Source: OTLP, Presence: PresenceOnEvent,
+		Labels: slices.Concat(httpClientServer, httpClientLabels),
+	},
 
 	MessagingClientConsumedMessages:  {Type: Counter, Source: OTLP, Labels: messagingProcess},
 	MessagingProcessDuration:         {Type: Histogram, Source: OTLP, Labels: messagingProcess},
