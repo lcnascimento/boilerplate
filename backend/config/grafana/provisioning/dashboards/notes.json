@@ -249,7 +249,7 @@
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{service=~\"notes-.*\"}",
+        "alertInstanceLabelFilter": "{service=~\"notes-api-frontend|notes-worker-forwarder\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],

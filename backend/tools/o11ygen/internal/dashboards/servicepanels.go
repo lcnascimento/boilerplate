@@ -90,22 +90,38 @@ type graph struct {
 	logQL       bool
 }
 
-func (g *graph) build(id uint32) cog.Builder[dashboard.Panel] {
-	ds := prometheusDS
-	targets := prometheusTargets(g.queries)
+type lokiQueryType string
 
-	if g.logQL {
-		ds = lokiDS
-		targets = targets[:0]
+const (
+	lokiRange   lokiQueryType = "range"
+	lokiInstant lokiQueryType = "instant"
+)
 
-		for i, q := range g.queries {
-			targets = append(targets, loki.NewDataqueryBuilder().
-				Datasource(datasourceRef(lokiDS)).
-				Expr(q.expr).
-				LegendFormat(q.legend).
-				RefId(refID(i)))
-		}
+func targetsOf(queries []query, logQL bool, lokiType lokiQueryType) (datasource, []cog.Builder[variants.Dataquery]) {
+	if !logQL {
+		return prometheusDS, prometheusTargets(queries)
 	}
+
+	out := make([]cog.Builder[variants.Dataquery], 0, len(queries))
+
+	for i, q := range queries {
+		target := loki.NewDataqueryBuilder().
+			Datasource(datasourceRef(lokiDS)).
+			Expr(q.expr).
+			LegendFormat(q.legend).
+			RefId(refID(i))
+		if lokiType == lokiInstant {
+			target.QueryType(string(lokiInstant))
+		}
+
+		out = append(out, target)
+	}
+
+	return lokiDS, out
+}
+
+func (g *graph) build(id uint32) cog.Builder[dashboard.Panel] {
+	ds, targets := targetsOf(g.queries, g.logQL, lokiRange)
 
 	out := timeseries.NewPanelBuilder().
 		Id(id).
@@ -148,15 +164,19 @@ type single struct {
 	width       uint32
 	queries     []query
 	steps       []step
+	logQL       bool
 }
 
+// A LogQL stat is an instant query, so its [$__auto] range spans the whole dashboard time range.
 func (s *single) build(id uint32) cog.Builder[dashboard.Panel] {
+	ds, targets := targetsOf(s.queries, s.logQL, lokiInstant)
+
 	out := stat.NewPanelBuilder().
 		Id(id).
 		Title(s.title).
 		Description(s.description).
-		Datasource(datasourceRef(prometheusDS)).
-		Targets(prometheusTargets(s.queries)).
+		Datasource(datasourceRef(ds)).
+		Targets(targets).
 		GridPos(dashboard.GridPos{W: s.width, H: statHeight}).
 		Unit(s.unit).
 		GraphMode(common.BigValueGraphModeArea).

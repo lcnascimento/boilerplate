@@ -89,6 +89,8 @@ Ele sobe só o Postgres, o Kafka, o Schema Registry, os serviços Go (com os rec
 
 Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem na seção Logs do dashboard de cada serviço no Grafana e no Logs Drilldown, filtrados por `service_name`, e não no painel do Tilt.
 
+No browser, o `web` manda RUM pelo [Grafana Faro](https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/), iniciado em `frontend/apps/web/instrumentation-client.ts`: Web Vitals, erros de JS, `console` a partir de `warn`, page loads e os traces de `fetch`. Fora do modo mínimo, o Tilt passa `NEXT_PUBLIC_FARO_URL=http://localhost:12347/collect`, o `faro.receiver` do Alloy; sem essa variável, o Faro não inicializa. `NEXT_PUBLIC_FARO_SAMPLE_RATE` (de 0 a 1, padrão 1) define a fração de sessões amostradas, e apontar para o Grafana Cloud é só trocar a URL. O Alloy grava os sinais do Faro no Loki com `service_name="web"`, cada campo como structured metadata (`kind`, `type`, `value_lcp`...), e manda os traces ao Tempo. Com o `experimental.clientTraceMetadata` do `next.config.ts`, o page load entra no trace do SSR, e uma Server Action continua o trace do browser até a API Go e o Kafka. A seção `browser` do dashboard `web` mostra o p75 de LCP, INP, CLS, FCP e TTFB, os erros de JS e os page loads; o `error.tsx` e o `global-error.tsx` reportam o erro ao Faro por `reportBoundaryError` (`shared/faro.ts`).
+
 O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de cada serviço para o `next dev`. Para rodar o `next dev` sem o Tilt, copie `frontend/apps/web/.env.example` para `frontend/apps/web/.env.local`. Sem essas variáveis, o servidor recusa subir.
 
 ### Mensageria
@@ -205,6 +207,7 @@ No CI, o `ci-e2e` faz o mesmo caminho: sobe o stack completo (`tilt up`, com obs
 O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/live_test.go`), ligado por `O11Y_LIVE_PROMETHEUS_URL` e pulado sem ela; o alvo do Make aponta para as portas do Tilt (`O11Y_LIVE_PROMETHEUS_URL`, `O11Y_LIVE_LOKI_URL` e `O11Y_LIVE_GRAFANA_URL`, com o usuário `admin` na URL do Grafana). Ele repete as consultas por até 4 minutos: um processo recém-iniciado leva até uns 3 minutos para chegar a uma recording rule (o primeiro export, a próxima avaliação e o `rule_query_offset`), e falha se faltar:
 
 - uma métrica `PresenceAlways` do catálogo: as do stack sempre, e as de um serviço para cada processo que a emite (o `EmittedBy` da métrica, em `internal/catalog/metrics.go`);
+- os logs do Faro no Loki de cada processo com `browser` (o evento de page load e as medidas de Web Vitals, em `internal/catalog/faro.go`);
 - o `job:series:count` de cada processo abaixo do teto do serviço;
 - um grupo gerado no `/api/v1/rules` do Prometheus ou do ruler do Loki, ou uma regra dele sem `health: ok`;
 - um dashboard gerado (pelo UID) no `/api/search` do Grafana, ou um datasource provisionado sem health OK.

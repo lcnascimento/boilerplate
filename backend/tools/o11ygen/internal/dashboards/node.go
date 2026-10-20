@@ -10,12 +10,7 @@ import (
 
 // Next.js emits no http_server_* series, only a SERVER span per request named after its route.
 func spanMetricsAPISection(processes []service.Process) section {
-	names := make([]string, 0, len(processes))
-	for _, p := range processes {
-		names = append(names, p.Name())
-	}
-
-	selector := `service=~` + strconv.Quote(strings.Join(names, "|")) + `, span_kind="SPAN_KIND_SERVER"`
+	selector := `service=~` + strconv.Quote(strings.Join(processNames(processes), "|")) + `, span_kind="SPAN_KIND_SERVER"`
 	failed := `status_code="STATUS_CODE_ERROR"`
 	calls := func(extra, by string) string {
 		matchers := selector

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import {
   defaultLocale,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@boilerplate/ui/components/button";
 
 import { LOCALE_COOKIE_NAME } from "@/shared/cookies";
+import { reportBoundaryError } from "@/shared/faro";
 
 import "./globals.css";
 
@@ -36,6 +37,10 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     () => defaultLocale
   );
   const { common, errors } = messages[locale];
+
+  useEffect(() => {
+    reportBoundaryError(error);
+  }, [error]);
 
   return (
     <html lang={locale}>

@@ -73,7 +73,7 @@ func TestGenerate_NodeServiceShowsTheNodeRuntime(t *testing.T) {
 		rows = append(rows, sections[i].row.Title)
 	}
 
-	assert.Equal(t, []string{"SLOs e alertas", "api", "Runtime", "Logs"}, rows)
+	assert.Equal(t, []string{"Alertas", "api", "browser", "Runtime", "Logs"}, rows)
 
 	job := `{job=~"boilerplate/$process"}`
 
@@ -124,4 +124,58 @@ func TestGenerate_RejectsANodeProcessThatRunsWhatOnlyGoKitInstruments(t *testing
 			require.ErrorContains(t, err, `process "storefront" runs on Node, which only instruments api and browser`)
 		})
 	}
+}
+
+func TestGenerate_ServiceWithoutSLOsTopsWithItsAlertsOnly(t *testing.T) {
+	_, storefront := generateStorefront(t)
+
+	top := storefront.section(t, "Alertas")
+
+	require.Len(t, top.panels, 1)
+	assert.Equal(t, "alertlist", top.panels[0].Type)
+	assert.Equal(t, `{service=~"storefront"}`, top.panels[0].Options["alertInstanceLabelFilter"])
+}
+
+func TestGenerate_BrowserSectionReadsTheFaroWebVitalsErrorsAndPageLoadsFromLoki(t *testing.T) {
+	_, storefront := generateStorefront(t)
+
+	stream := `{service_namespace="boilerplate", service_name=~"storefront"}`
+	p75 := func(vital string) string {
+		return `quantile_over_time(0.75, ` + stream + ` | kind="measurement" | type="web-vitals" | value_` + vital +
+			`!="" | unwrap value_` + vital + ` [$__auto]) by ()`
+	}
+	pageLoads := `sum(count_over_time(` + stream + ` | kind="event" | event_name="faro.performance.navigation" [$__auto]))`
+	jsErrors := func(by string) string {
+		return `sum` + by + `(count_over_time(` + stream + ` | kind="exception" [$__auto]))`
+	}
+
+	browser := storefront.section(t, "browser").panels
+
+	assert.Equal(t, map[string][]string{
+		"LCP":                       {p75("lcp")},
+		"INP":                       {p75("inp")},
+		"CLS":                       {p75("cls")},
+		"FCP":                       {p75("fcp")},
+		"TTFB":                      {p75("ttfb")},
+		"Erros de JS por page load": {"(" + jsErrors("") + " or vector(0)) / " + pageLoads},
+		"Web Vitals de tempo (p75)": {p75("lcp"), p75("inp"), p75("fcp"), p75("ttfb")},
+		"CLS (p75)":                 {p75("cls")},
+		"Page loads":                {pageLoads},
+		"Erros de JS por tipo":      {jsErrors(" by (type) ")},
+	}, exprsByTitle(browser))
+
+	kinds := map[string]string{}
+
+	for i := range browser {
+		for _, target := range browser[i].Targets {
+			kinds[browser[i].Title] = browser[i].Type + " " + target.QueryType
+		}
+	}
+
+	assert.Equal(t, map[string]string{
+		"LCP": "stat instant", "INP": "stat instant", "CLS": "stat instant", "FCP": "stat instant",
+		"TTFB": "stat instant", "Erros de JS por page load": "stat instant",
+		"Web Vitals de tempo (p75)": "timeseries ", "CLS (p75)": "timeseries ", "Page loads": "timeseries ",
+		"Erros de JS por tipo": "timeseries ",
+	}, kinds)
 }

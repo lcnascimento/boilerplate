@@ -35,7 +35,7 @@
     {
       "type": "row",
       "collapsed": false,
-      "title": "SLOs e alertas",
+      "title": "Alertas",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -46,198 +46,8 @@
       "panels": []
     },
     {
-      "type": "stat",
-      "id": 2,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "1 - max by (sloth_slo) (slo:sli_error:ratio_rate5m{sloth_service=\"web\"})",
-          "legendFormat": "{{sloth_slo}}",
-          "refId": "A"
-        }
-      ],
-      "title": "SLI atual",
-      "description": "Fração de eventos bons de cada SLO nos últimos 5 minutos, segundo as recording rules do Sloth.",
-      "transparent": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 0,
-        "y": 1
-      },
-      "repeatDirection": "h",
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "id": 3,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "max by (sloth_slo) (slo:period_error_budget_remaining:ratio{sloth_service=\"web\"})",
-          "legendFormat": "{{sloth_slo}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Budget restante (30d)",
-      "description": "Fração do error budget de 30 dias que cada SLO ainda tem; abaixo de zero, o SLO já foi descumprido na janela.",
-      "transparent": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "repeatDirection": "h",
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 0,
-                "color": "yellow"
-              },
-              {
-                "value": 0.25,
-                "color": "green"
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "id": 4,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "max by (sloth_slo) (slo:current_burn_rate:ratio{sloth_service=\"web\"})",
-          "legendFormat": "{{sloth_slo}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Burn rate",
-      "description": "Velocidade com que cada SLO queima o budget nos últimos 5 minutos: 1 gasta o budget exatamente em 30 dias.",
-      "transparent": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "repeatDirection": "h",
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 1,
-                "color": "yellow"
-              },
-              {
-                "value": 6,
-                "color": "red"
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
       "type": "alertlist",
-      "id": 5,
+      "id": 2,
       "title": "Alertas do serviço",
       "description": "Alertas de cada processo de web, inclusive os de burn rate dos SLOs.",
       "transparent": false,
@@ -245,11 +55,11 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 1
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{service=~\"web-.*\"}",
+        "alertInstanceLabelFilter": "{service=~\"web\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],
@@ -276,14 +86,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 11
       },
-      "id": 6,
+      "id": 3,
       "panels": []
     },
     {
       "type": "stat",
-      "id": 7,
+      "id": 4,
       "targets": [
         {
           "datasource": {
@@ -306,7 +116,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 12
       },
       "repeatDirection": "h",
       "options": {
@@ -333,7 +143,7 @@
     },
     {
       "type": "stat",
-      "id": 8,
+      "id": 5,
       "targets": [
         {
           "datasource": {
@@ -356,7 +166,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 12
       },
       "repeatDirection": "h",
       "options": {
@@ -383,7 +193,7 @@
     },
     {
       "type": "stat",
-      "id": 9,
+      "id": 6,
       "targets": [
         {
           "datasource": {
@@ -406,7 +216,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 12
       },
       "repeatDirection": "h",
       "options": {
@@ -433,7 +243,7 @@
     },
     {
       "type": "timeseries",
-      "id": 10,
+      "id": 7,
       "targets": [
         {
           "datasource": {
@@ -456,7 +266,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 17
       },
       "repeatDirection": "h",
       "options": {
@@ -487,7 +297,7 @@
     },
     {
       "type": "timeseries",
-      "id": 11,
+      "id": 8,
       "targets": [
         {
           "datasource": {
@@ -510,7 +320,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 17
       },
       "repeatDirection": "h",
       "options": {
@@ -541,7 +351,7 @@
     },
     {
       "type": "timeseries",
-      "id": 12,
+      "id": 9,
       "targets": [
         {
           "datasource": {
@@ -575,7 +385,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 25
       },
       "repeatDirection": "h",
       "options": {
@@ -606,7 +416,7 @@
     },
     {
       "type": "timeseries",
-      "id": 13,
+      "id": 10,
       "targets": [
         {
           "datasource": {
@@ -630,7 +440,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 30
+        "y": 25
       },
       "repeatDirection": "h",
       "options": {
@@ -661,19 +471,681 @@
     },
     {
       "type": "row",
+      "collapsed": false,
+      "title": "browser",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 11,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 12,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_lcp!=\"\" | unwrap value_lcp [$__auto]) by ()",
+          "legendFormat": "lcp",
+          "refId": "A",
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "LCP",
+      "description": "Largest Contentful Paint: quando o maior elemento da página aparece. Percentil 75 no intervalo do dashboard.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 34
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 2500,
+                "color": "yellow"
+              },
+              {
+                "value": 4000,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 13,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_inp!=\"\" | unwrap value_inp [$__auto]) by ()",
+          "legendFormat": "inp",
+          "refId": "A",
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "INP",
+      "description": "Interaction to Next Paint: quanto a página demora para responder a uma interação. Percentil 75 no intervalo do dashboard.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 34
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 200,
+                "color": "yellow"
+              },
+              {
+                "value": 500,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 14,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_cls!=\"\" | unwrap value_cls [$__auto]) by ()",
+          "legendFormat": "cls",
+          "refId": "A",
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "CLS",
+      "description": "Cumulative Layout Shift: quanto o layout se desloca sem o usuário pedir. Percentil 75 no intervalo do dashboard.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 34
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.1,
+                "color": "yellow"
+              },
+              {
+                "value": 0.25,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 15,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_fcp!=\"\" | unwrap value_fcp [$__auto]) by ()",
+          "legendFormat": "fcp",
+          "refId": "A",
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "FCP",
+      "description": "First Contentful Paint: quando o primeiro conteúdo aparece. Percentil 75 no intervalo do dashboard.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 34
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1800,
+                "color": "yellow"
+              },
+              {
+                "value": 3000,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 16,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_ttfb!=\"\" | unwrap value_ttfb [$__auto]) by ()",
+          "legendFormat": "ttfb",
+          "refId": "A",
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "TTFB",
+      "description": "Time to First Byte: quanto o primeiro byte do documento demora a chegar. Percentil 75 no intervalo do dashboard.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 34
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 800,
+                "color": "yellow"
+              },
+              {
+                "value": 1800,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 17,
+      "targets": [
+        {
+          "expr": "(sum(count_over_time({service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"exception\" [$__auto])) or vector(0)) / sum(count_over_time({service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"event\" | event_name=\"faro.performance.navigation\" [$__auto]))",
+          "legendFormat": "",
+          "refId": "A",
+          "queryType": "instant",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "Erros de JS por page load",
+      "description": "Exceções que o Faro capturou no browser, por page load, no intervalo do dashboard.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 34
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 18,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_lcp!=\"\" | unwrap value_lcp [$__auto]) by ()",
+          "legendFormat": "lcp",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        },
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_inp!=\"\" | unwrap value_inp [$__auto]) by ()",
+          "legendFormat": "inp",
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        },
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_fcp!=\"\" | unwrap value_fcp [$__auto]) by ()",
+          "legendFormat": "fcp",
+          "refId": "C",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        },
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_ttfb!=\"\" | unwrap value_ttfb [$__auto]) by ()",
+          "legendFormat": "ttfb",
+          "refId": "D",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "Web Vitals de tempo (p75)",
+      "description": "Percentil 75 de LCP, INP, FCP e TTFB ao longo do tempo.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 19,
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.75, {service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"measurement\" | type=\"web-vitals\" | value_cls!=\"\" | unwrap value_cls [$__auto]) by ()",
+          "legendFormat": "cls",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "CLS (p75)",
+      "description": "Percentil 75 do Cumulative Layout Shift ao longo do tempo.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 20,
+      "targets": [
+        {
+          "expr": "sum(count_over_time({service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"event\" | event_name=\"faro.performance.navigation\" [$__auto]))",
+          "legendFormat": "page loads",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "Page loads",
+      "description": "Carregamentos completos de página que o browser reportou; navegações do lado do cliente não contam.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 47
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 21,
+      "targets": [
+        {
+          "expr": "sum by (type) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"web\"} | kind=\"exception\" [$__auto]))",
+          "legendFormat": "{{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${loki_datasource}"
+          }
+        }
+      ],
+      "title": "Erros de JS por tipo",
+      "description": "Exceções capturadas no browser, por tipo de erro.",
+      "transparent": false,
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki_datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 47
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
       "collapsed": true,
       "title": "Runtime",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 55
       },
-      "id": 14,
+      "id": 22,
       "panels": [
         {
           "type": "timeseries",
-          "id": 15,
+          "id": 23,
           "targets": [
             {
               "datasource": {
@@ -696,7 +1168,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 39
+            "y": 56
           },
           "repeatDirection": "h",
           "options": {
@@ -727,7 +1199,7 @@
         },
         {
           "type": "timeseries",
-          "id": 16,
+          "id": 24,
           "targets": [
             {
               "datasource": {
@@ -750,7 +1222,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 39
+            "y": 56
           },
           "repeatDirection": "h",
           "options": {
@@ -781,7 +1253,7 @@
         },
         {
           "type": "timeseries",
-          "id": 17,
+          "id": 25,
           "targets": [
             {
               "datasource": {
@@ -804,7 +1276,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 64
           },
           "repeatDirection": "h",
           "options": {
@@ -835,7 +1307,7 @@
         },
         {
           "type": "timeseries",
-          "id": 18,
+          "id": 26,
           "targets": [
             {
               "datasource": {
@@ -858,7 +1330,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 47
+            "y": 64
           },
           "repeatDirection": "h",
           "options": {
@@ -897,14 +1369,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 72
       },
-      "id": 19,
+      "id": 27,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 20,
+      "id": 28,
       "targets": [
         {
           "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
@@ -927,7 +1399,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 73
       },
       "repeatDirection": "h",
       "options": {
@@ -958,7 +1430,7 @@
     },
     {
       "type": "logs",
-      "id": 21,
+      "id": 29,
       "targets": [
         {
           "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
@@ -980,7 +1452,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 81
       },
       "repeatDirection": "h",
       "options": {

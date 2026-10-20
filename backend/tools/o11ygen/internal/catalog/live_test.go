@@ -109,6 +109,8 @@ func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.
 		`present_over_time(v8js_gc_duration_seconds_count{job="boilerplate/web"}[15m])`,
 		`present_over_time(traces_spanmetrics_calls_total{service="web"}[15m])`,
 		`present_over_time(traces_spanmetrics_latency_count{service="web"}[15m])`,
+		`sum(count_over_time({service_namespace="boilerplate", service_name=~"web"} | kind="event" [15m]))`,
+		`sum(count_over_time({service_namespace="boilerplate", service_name=~"web"} | kind="measurement" [15m]))`,
 	} {
 		assert.Contains(t, got, want)
 	}
@@ -117,6 +119,7 @@ func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.
 		`present_over_time(http_server_request_total{job="boilerplate/web"}[15m])`,
 		`present_over_time(go_goroutine_count{job="boilerplate/web"}[15m])`,
 		`present_over_time(process_memory_usage_bytes{job="boilerplate/web"}[15m])`,
+		`sum(count_over_time({service_namespace="boilerplate", service_name=~"web"} | kind="exception" [15m]))`,
 	} {
 		assert.NotContains(t, got, unwanted)
 	}

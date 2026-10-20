@@ -70,8 +70,7 @@ type alert struct {
 	Labels map[string]string `yaml:"labels"`
 }
 
-// declaredSLOs lists the SLOs each process inherits from its components, then the ones the service adds.
-func declaredSLOs(svc *service.Service) ([]service.SLO, error) {
+func Declared(svc *service.Service) ([]service.SLO, error) {
 	var out []service.SLO
 
 	for _, p := range svc.Processes {
@@ -177,7 +176,7 @@ func specs(services []service.Service) ([]serviceSpec, error) {
 	var out []serviceSpec
 
 	for _, svc := range services {
-		slos, err := declaredSLOs(&svc)
+		slos, err := Declared(&svc)
 		if err != nil {
 			return nil, err
 		}

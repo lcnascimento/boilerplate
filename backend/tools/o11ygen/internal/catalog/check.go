@@ -242,7 +242,7 @@ func checkLogQL(input string) error {
 		return errors.New("parsing LogQL %q", input).WithCause(err)
 	}
 
-	allowed := setOf(logLabels)
+	allowed := setOf(logLabels, faroLabels())
 
 	var (
 		used    []string
