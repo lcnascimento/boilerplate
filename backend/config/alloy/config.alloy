@@ -70,6 +70,28 @@ prometheus.scrape "kafka" {
   forward_to      = [prometheus.remote_write.local_prometheus.receiver]
 }
 
+prometheus.exporter.postgres "local_postgres" {
+  data_source_names  = ["postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable"]
+  enabled_collectors = ["database", "locks", "replication", "replication_slot", "stat_bgwriter", "stat_checkpointer", "stat_database", "stat_statements", "wal"]
+}
+
+prometheus.scrape "postgres" {
+  targets         = prometheus.exporter.postgres.local_postgres.targets
+  scrape_interval = "15s"
+  forward_to      = [prometheus.relabel.drop_test_databases.receiver]
+}
+
+// The exporter's database denylist takes exact names, not the per-test testdb_* databases pgtestdb creates.
+prometheus.relabel "drop_test_databases" {
+  forward_to = [prometheus.remote_write.local_prometheus.receiver]
+
+  rule {
+    source_labels = ["datname"]
+    regex         = "testdb_.*"
+    action        = "drop"
+  }
+}
+
 prometheus.remote_write "local_prometheus" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
