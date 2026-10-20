@@ -68,6 +68,7 @@ git grep -lzE "$marker_re" -- ":!$self" | xargs -0 perl -0777 -i -ne '
 	print $text;
 '
 
+gofmt -w backend
 make -C backend o11y.generate
 
 drop_section() {
