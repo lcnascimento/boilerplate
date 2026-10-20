@@ -19,6 +19,8 @@ PINT_VERSION := v0.89.3
 LOKITOOL_VERSION := v3.7.8
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
+# The o11ygen tests and make o11y.generate run sloth.
+export PATH := $(GOBIN):$(PATH)
 
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
@@ -163,7 +165,7 @@ o11y.generate:
 	@go run ./tools/o11ygen -root .
 
 .PHONY: o11y.lint
-o11y.lint: o11y.lint.dashboards o11y.lint.rules
+o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.slo
 
 .PHONY: o11y.lint.rules
 o11y.lint.rules:
@@ -173,6 +175,14 @@ o11y.lint.rules:
 	@$(GOBIN)/promtool test rules config/prometheus/tests/*.test.yaml
 	@echo "==> pint lint"
 	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture.yaml
+
+.PHONY: o11y.lint.slo
+o11y.lint.slo:
+	@if ! ls config/sloth/*.yaml >/dev/null 2>&1; then echo "no SLO specs"; exit 0; fi; \
+	echo "==> sloth validate" && $(GOBIN)/sloth validate --no-log --input config/sloth \
+	&& echo "==> promtool check rules (SLO)" && $(GOBIN)/promtool check rules config/prometheus/slo/*.yaml \
+	&& echo "==> pint lint (SLO)" \
+	&& $(GOBIN)/pint --no-color --log-level warn --offline --disabled rule/dependency lint config/prometheus/slo
 
 .PHONY: o11y.lint.dashboards
 o11y.lint.dashboards:

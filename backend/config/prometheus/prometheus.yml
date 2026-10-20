@@ -5,6 +5,7 @@ global:
 
 rule_files:
   - /etc/prometheus/rules/*.yaml
+  - /etc/prometheus/slo/*.yaml
 
 otlp:
   promote_resource_attributes:

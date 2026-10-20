@@ -18,6 +18,7 @@ const (
 type Service struct {
 	Name      string
 	Processes []Process
+	SLOs      []SLO
 }
 
 type Process struct {
@@ -82,6 +83,10 @@ func Validate(services []Service) error {
 			if err := validateProcess(svc.Name, process, processNames); err != nil {
 				return err
 			}
+		}
+
+		if err := validateSLOs(svc); err != nil {
+			return err
 		}
 	}
 

@@ -1,0 +1,403 @@
+groups:
+  - name: sloth-slo-sli-recordings-audit-consumer-success
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[5m])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 5m
+      - record: slo:sli_error:ratio_rate30m
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[30m])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 30m
+      - record: slo:sli_error:ratio_rate1h
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[1h])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 1h
+      - record: slo:sli_error:ratio_rate2h
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[2h])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 2h
+      - record: slo:sli_error:ratio_rate6h
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[6h])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 6h
+      - record: slo:sli_error:ratio_rate1d
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[1d])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 1d
+      - record: slo:sli_error:ratio_rate3d
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[3d])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 3d
+      - record: slo:sli_error:ratio_rate30d
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[30d])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_window: 30d
+  - name: sloth-slo-meta-recordings-audit-consumer-success
+    rules:
+      - record: slo:objective:ratio
+        expr: vector(0.9990000000000001)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+      - record: slo:error_budget:ratio
+        expr: vector(1-0.9990000000000001)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+      - record: slo:time_period:days
+        expr: vector(30)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+      - record: slo:current_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate5m{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"}
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+      - record: slo:period_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate30d{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"}
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+      - record: slo:period_error_budget_remaining:ratio
+        expr: 1 - slo:period_burn_rate:ratio{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"}
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_service: audit
+          sloth_slo: consumer-success
+      - record: sloth_slo_info
+        expr: vector(1)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-success
+          sloth_mode: cli-gen-prom
+          sloth_objective: "99.9"
+          sloth_service: audit
+          sloth_slo: consumer-success
+          sloth_spec: prometheus/v1
+          sloth_version: v0.16.0
+  - name: sloth-slo-alerts-audit-consumer-success
+    rules:
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate5m{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (14.4 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1h{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (14.4 * 0.0009999999999999432)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate30m{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (6 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate6h{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (6 * 0.0009999999999999432)) without (sloth_window)
+          )
+        labels:
+          service: audit-consumer
+          severity: critical
+          sloth_severity: page
+          sloth_slo: consumer-success
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO consumer-success de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta ({{ $labels.sloth_severity }})'
+          title: SLO consumer-success de audit-consumer queimando o error budget rápido demais
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate2h{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (3 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1d{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (3 * 0.0009999999999999432)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate6h{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (1 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate3d{sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success"} > (1 * 0.0009999999999999432)) without (sloth_window)
+          )
+        labels:
+          service: audit-consumer
+          severity: warning
+          sloth_severity: ticket
+          sloth_slo: consumer-success
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO consumer-success de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta ({{ $labels.sloth_severity }})'
+          title: SLO consumer-success de audit-consumer queimando o error budget rápido demais
+  - name: sloth-slo-sli-recordings-audit-consumer-latency
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[5m])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 5m
+      - record: slo:sli_error:ratio_rate30m
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[30m])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 30m
+      - record: slo:sli_error:ratio_rate1h
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[1h])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 1h
+      - record: slo:sli_error:ratio_rate2h
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[2h])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 2h
+      - record: slo:sli_error:ratio_rate6h
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[6h])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 6h
+      - record: slo:sli_error:ratio_rate1d
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[1d])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 1d
+      - record: slo:sli_error:ratio_rate3d
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[3d])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 3d
+      - record: slo:sli_error:ratio_rate30d
+        expr: |
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[30d])))
+          /
+          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_window: 30d
+  - name: sloth-slo-meta-recordings-audit-consumer-latency
+    rules:
+      - record: slo:objective:ratio
+        expr: vector(0.99)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+      - record: slo:error_budget:ratio
+        expr: vector(1-0.99)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+      - record: slo:time_period:days
+        expr: vector(30)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+      - record: slo:current_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate5m{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"}
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+      - record: slo:period_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate30d{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"}
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+      - record: slo:period_error_budget_remaining:ratio
+        expr: 1 - slo:period_burn_rate:ratio{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"}
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_service: audit
+          sloth_slo: consumer-latency
+      - record: sloth_slo_info
+        expr: vector(1)
+        labels:
+          service: audit-consumer
+          sloth_id: audit-consumer-latency
+          sloth_mode: cli-gen-prom
+          sloth_objective: "99"
+          sloth_service: audit
+          sloth_slo: consumer-latency
+          sloth_spec: prometheus/v1
+          sloth_version: v0.16.0
+  - name: sloth-slo-alerts-audit-consumer-latency
+    rules:
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate5m{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (14.4 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1h{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (14.4 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate30m{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (6 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate6h{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (6 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: audit-consumer
+          severity: critical
+          sloth_severity: page
+          sloth_slo: consumer-latency
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: Tentativas de processamento de mensagens de audit-consumer que terminam em até 1s. No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO consumer-latency de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta ({{ $labels.sloth_severity }})'
+          title: SLO consumer-latency de audit-consumer queimando o error budget rápido demais
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate2h{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (3 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1d{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (3 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate6h{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (1 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate3d{sloth_id="audit-consumer-latency", sloth_service="audit", sloth_slo="consumer-latency"} > (1 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: audit-consumer
+          severity: warning
+          sloth_severity: ticket
+          sloth_slo: consumer-latency
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: Tentativas de processamento de mensagens de audit-consumer que terminam em até 1s. No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO consumer-latency de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta ({{ $labels.sloth_severity }})'
+          title: SLO consumer-latency de audit-consumer queimando o error budget rápido demais
