@@ -5,6 +5,11 @@ import (
 )
 
 var services = []service.Service{
+	{
+		Name:      "web",
+		Runtime:   service.Node,
+		Processes: []service.Process{service.Daemon("web", service.API, service.Browser)},
+	},
 	// example:begin
 	{
 		Name: "notes",

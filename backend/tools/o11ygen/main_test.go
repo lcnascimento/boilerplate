@@ -69,6 +69,7 @@ func TestGenerate_WritesTheDashboards(t *testing.T) {
 		"kafka.json":    "boilerplate-kafka",
 		"overview.json": "boilerplate-overview",
 		"postgres.json": "boilerplate-postgres",
+		"web.json":      "boilerplate-web",
 		// example:begin
 		"audit.json": "boilerplate-audit",
 		"notes.json": "boilerplate-notes",

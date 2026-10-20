@@ -75,8 +75,8 @@ func declaredSLOs(svc *service.Service) ([]service.SLO, error) {
 	var out []service.SLO
 
 	for _, p := range svc.Processes {
-		for _, inherited := range defaults {
-			if p.Runs(inherited.component) {
+		for _, inherited := range goKitDefaults {
+			if svc.Runtime == service.Go && p.Runs(inherited.component) {
 				slo := inherited.slo(p, svc.Name)
 				slo.Process = p.Name()
 				out = append(out, slo)
