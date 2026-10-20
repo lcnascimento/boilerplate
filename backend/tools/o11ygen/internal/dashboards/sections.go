@@ -316,6 +316,23 @@ func runtimeSection() section {
 
 	return section{title: "Runtime", collapsed: true, panels: []panel{
 		&graph{
+			title:       "CPU",
+			description: "CPU usada por processo em user e system; 100% é um núcleo inteiro.",
+			unit:        "percentunit",
+			width:       halfWidth,
+			queries: []query{{
+				expr:   "sum by (job, cpu_mode) (rate(" + catalog.ProcessCPUTime + "{" + selectedJob + "}" + rate + "))",
+				legend: "{{job}} {{cpu_mode}}",
+			}},
+		},
+		&graph{
+			title:       "RSS",
+			description: "Memória residente (RSS) por processo, como o kernel a vê: inclui o que o runtime Go não conta.",
+			unit:        "bytes",
+			width:       halfWidth,
+			queries:     []query{{expr: byJob(catalog.ProcessMemoryUsage + "{" + selectedJob + "}"), legend: "{{job}}"}},
+		},
+		&graph{
 			title:       "Goroutines",
 			description: "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
 			unit:        "short",
@@ -323,7 +340,7 @@ func runtimeSection() section {
 			queries:     []query{{expr: byJob(catalog.GoGoroutineCount + "{" + selectedJob + "}"), legend: "{{job}}"}},
 		},
 		&graph{
-			title:       "Memória",
+			title:       "Memória Go",
 			description: "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
 			unit:        "bytes",
 			width:       thirdWidth,
