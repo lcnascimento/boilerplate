@@ -15,20 +15,30 @@ func Kind() artifact.Kind {
 	return artifact.Kind{Dir: "config/grafana/provisioning/dashboards", Glob: "*.json", Build: build, Queries: queries}
 }
 
-func build(_ []service.Service) ([]artifact.File, error) {
-	boards := []struct {
-		name    string
-		builder *dashboard.DashboardBuilder
-	}{
-		{"http", httpDashboard()},
-		{"logs", logsDashboard()},
+type board struct {
+	name    string
+	builder *dashboard.DashboardBuilder
+}
+
+func build(services []service.Service) ([]artifact.File, error) {
+	boards := []board{
 		{"kafka", kafkaDashboard()},
-		// example:begin
-		{"notes-outbox", notesOutboxDashboard()},
-		// example:end
 		{"overview", overviewDashboard()},
 		{"postgres", postgresDashboard()},
-		{"traces", tracesDashboard()},
+	}
+
+	taken := map[string]bool{}
+	for _, b := range boards {
+		taken[b.name] = true
+	}
+
+	for i := range services {
+		svc := &services[i]
+		if taken[svc.Name] {
+			return nil, errors.New("service name %q is taken by a dashboard", svc.Name)
+		}
+
+		boards = append(boards, board{svc.Name, serviceDashboard(svc)})
 	}
 
 	files := make([]artifact.File, 0, len(boards))

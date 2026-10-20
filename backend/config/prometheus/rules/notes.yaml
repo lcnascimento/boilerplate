@@ -7,7 +7,7 @@ groups:
           service: notes-api-frontend
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
           description: 'Nenhum target_info de notes-api-frontend chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: notes-api-frontend não envia telemetria há 5 minutos
@@ -18,7 +18,7 @@ groups:
           service: notes-api-frontend
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
           description: Mais de 90% das conexões do pool pgx de notes-api-frontend estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de notes-api-frontend com {{ $value | humanizePercentage }} das conexões em uso
@@ -39,8 +39,8 @@ groups:
           service: notes-api-frontend
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: notes-api-frontend registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: notes-api-frontend registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de notes-api-frontend nos últimos 5 minutos'
       - alert: ServiceTelemetryAbsent
@@ -49,7 +49,7 @@ groups:
           service: notes-worker-forwarder
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
           description: 'Nenhum target_info de notes-worker-forwarder chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: notes-worker-forwarder não envia telemetria há 5 minutos
@@ -60,7 +60,7 @@ groups:
           service: notes-worker-forwarder
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
           description: Mais de 90% das conexões do pool pgx de notes-worker-forwarder estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de notes-worker-forwarder com {{ $value | humanizePercentage }} das conexões em uso
@@ -71,7 +71,7 @@ groups:
           service: notes-worker-forwarder
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
           description: 'notes-worker-forwarder não reporta notes_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se notes-worker-forwarder está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
           summary: notes-worker-forwarder não reporta a idade do outbox há 5 minutos
@@ -92,7 +92,7 @@ groups:
           service: notes-worker-forwarder
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: notes-worker-forwarder registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: notes-worker-forwarder registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de notes-worker-forwarder nos últimos 5 minutos'
