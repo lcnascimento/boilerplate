@@ -207,6 +207,7 @@ No CI, o `ci-e2e` faz o mesmo caminho: sobe o stack completo (`tilt up`, com obs
 O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/live_test.go`), ligado por `O11Y_LIVE_PROMETHEUS_URL` e pulado sem ela; o alvo do Make aponta para as portas do Tilt (`O11Y_LIVE_PROMETHEUS_URL`, `O11Y_LIVE_LOKI_URL` e `O11Y_LIVE_GRAFANA_URL`, com o usuário `admin` na URL do Grafana). Ele repete as consultas por até 4 minutos: um processo recém-iniciado leva até uns 3 minutos para chegar a uma recording rule (o primeiro export, a próxima avaliação e o `rule_query_offset`), e falha se faltar:
 
 - uma métrica `PresenceAlways` do catálogo: as do stack sempre, e as de um serviço para cada processo que a emite (o `EmittedBy` da métrica, em `internal/catalog/metrics.go`);
+- os logs do Faro no Loki de cada processo com `browser` (o evento de page load e as medidas de Web Vitals, em `internal/catalog/faro.go`);
 - o `job:series:count` de cada processo abaixo do teto do serviço;
 - um grupo gerado no `/api/v1/rules` do Prometheus ou do ruler do Loki, ou uma regra dele sem `health: ok`;
 - um dashboard gerado (pelo UID) no `/api/search` do Grafana, ou um datasource provisionado sem health OK.

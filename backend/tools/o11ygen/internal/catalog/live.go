@@ -89,7 +89,7 @@ func LiveProbes(services []service.Service) ([]artifact.Query, error) {
 		probes = append(probes, metric.probes(name, services)...)
 	}
 
-	return probes, nil
+	return append(probes, faroProbes(services, liveWindow)...), nil
 }
 
 func (m *Metric) probes(name string, services []service.Service) []artifact.Query {

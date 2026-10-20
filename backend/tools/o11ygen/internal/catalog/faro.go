@@ -71,7 +71,7 @@ func FaroStream(kind FaroKind, processes []string) string {
 		faroKindLabel + `=` + strconv.Quote(string(kind))
 }
 
-func FaroProbes(services []service.Service, window string) []artifact.Query {
+func faroProbes(services []service.Service, window string) []artifact.Query {
 	kinds := make([]FaroKind, 0, len(faroStreams))
 	for kind, stream := range faroStreams {
 		if stream.presence == PresenceAlways {

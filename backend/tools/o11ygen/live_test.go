@@ -95,7 +95,7 @@ func (s *liveStack) checkPresence(t *testing.T) {
 
 	eventually(t, func(c *assert.CollectT) {
 		for _, probe := range probes {
-			result, err := s.query(probe.Expr)
+			result, err := s.probe(probe)
 			if assert.NoError(c, err, probe.Origin) {
 				assert.NotEmpty(c, result, "%s is absent: %s", probe.Origin, probe.Expr)
 			}
@@ -374,13 +374,25 @@ func (s sample) number() (float64, error) {
 }
 
 func (s *liveStack) query(expr string) ([]sample, error) {
+	return instantQuery(s.prometheus+"/api/v1/query", expr)
+}
+
+func (s *liveStack) probe(probe artifact.Query) ([]sample, error) {
+	if probe.Language == artifact.LogQL {
+		return instantQuery(s.loki+"/loki/api/v1/query", probe.Expr)
+	}
+
+	return s.query(probe.Expr)
+}
+
+func instantQuery(endpoint, expr string) ([]sample, error) {
 	var response struct {
 		Data struct {
 			Result []sample `json:"result"`
 		} `json:"data"`
 	}
 
-	err := getJSON(s.prometheus+"/api/v1/query?query="+url.QueryEscape(expr), &response)
+	err := getJSON(endpoint+"?query="+url.QueryEscape(expr), &response)
 
 	return response.Data.Result, err
 }
