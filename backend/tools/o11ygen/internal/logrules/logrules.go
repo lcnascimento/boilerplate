@@ -39,7 +39,9 @@ type recordingRule struct {
 
 // Kind writes the Loki ruler's recording rules of the `fake` tenant, the one Loki serves without auth_enabled.
 func Kind() artifact.Kind {
-	return artifact.Kind{Dir: "config/loki/rules/fake", Glob: "*.yaml", Build: build, Queries: queries}
+	return artifact.Kind{
+		Dir: "config/loki/rules/fake", Glob: "*.yaml", LoadedBy: artifact.LokiRuler, Build: build, Queries: queries,
+	}
 }
 
 func build(services []service.Service) ([]artifact.File, error) {

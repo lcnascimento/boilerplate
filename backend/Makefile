@@ -200,6 +200,14 @@ o11y.lint.loki:
 	echo "==> lokitool rules check"; \
 	$(GOBIN)/lokitool rules check --strict $$rules
 
+.PHONY: o11y.check-live
+o11y.check-live:
+	@cd tools && \
+		O11Y_LIVE_PROMETHEUS_URL="$${O11Y_LIVE_PROMETHEUS_URL:-http://localhost:9090}" \
+		O11Y_LIVE_LOKI_URL="$${O11Y_LIVE_LOKI_URL:-http://localhost:3100}" \
+		O11Y_LIVE_GRAFANA_URL="$${O11Y_LIVE_GRAFANA_URL:-http://admin:admin@localhost:3010}" \
+		go test -count=1 -timeout 5m -v -run '^TestLive$$' ./o11ygen
+
 .PHONY: proto.lint
 proto.lint:
 	$(call in_buf_dirs,proto.lint,$(GOBIN)/buf lint)

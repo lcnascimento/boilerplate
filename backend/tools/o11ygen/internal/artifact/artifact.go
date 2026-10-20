@@ -28,11 +28,25 @@ type Query struct {
 	Origin   string
 }
 
+// Loader is what reads a kind's files; check-live asks the running stack for what the Prometheus, Loki ruler and
+// Grafana kinds generated.
+type Loader int
+
+const (
+	_ Loader = iota
+	Sloth
+	Promtool
+	Prometheus
+	LokiRuler
+	Grafana
+)
+
 type Kind struct {
-	Dir     string
-	Glob    string
-	Build   func(services []service.Service) ([]File, error)
-	Queries func(content []byte) ([]Query, error)
+	Dir      string
+	Glob     string
+	LoadedBy Loader
+	Build    func(services []service.Service) ([]File, error)
+	Queries  func(content []byte) ([]Query, error)
 }
 
 // World-readable: the observability containers read these files through bind mounts as another user.

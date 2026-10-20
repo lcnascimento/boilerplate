@@ -12,7 +12,9 @@ import (
 )
 
 func Kind() artifact.Kind {
-	return artifact.Kind{Dir: "config/grafana/provisioning/dashboards", Glob: "*.json", Build: build, Queries: queries}
+	return artifact.Kind{
+		Dir: "config/grafana/provisioning/dashboards", Glob: "*.json", LoadedBy: artifact.Grafana, Build: build, Queries: queries,
+	}
 }
 
 func build(_ []service.Service) ([]artifact.File, error) {

@@ -27,7 +27,9 @@ const (
 // RuleKind runs `sloth generate` on the spec of each service. It owns its own directory: the alert rules kind deletes
 // any file it did not write in config/prometheus/rules.
 func RuleKind() artifact.Kind {
-	return artifact.Kind{Dir: "config/prometheus/slo", Glob: "*.yaml", Build: buildRules, Queries: ruleQueries}
+	return artifact.Kind{
+		Dir: "config/prometheus/slo", Glob: "*.yaml", LoadedBy: artifact.Prometheus, Build: buildRules, Queries: ruleQueries,
+	}
 }
 
 func buildRules(services []service.Service) ([]artifact.File, error) {

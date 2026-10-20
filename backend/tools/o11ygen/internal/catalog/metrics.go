@@ -3,6 +3,8 @@ package catalog
 import (
 	"slices"
 	"strings"
+
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
 type Type int
@@ -31,11 +33,14 @@ const (
 	SlothRecording
 )
 
+// Metric is a cataloged series. Its EmittedBy is nil when the stack itself emits it, otherwise it picks the declared
+// processes that emit it.
 type Metric struct {
-	Type     Type
-	Source   Source
-	Labels   []string
-	Presence Presence
+	Type      Type
+	Source    Source
+	Labels    []string
+	Presence  Presence
+	EmittedBy Emitter
 }
 
 const (
@@ -136,10 +141,13 @@ var (
 )
 
 var metrics = map[string]Metric{
-	TargetInfo: {Type: Gauge, Source: OTLPResource, Labels: []string{"service_version", "deployment_environment"}},
+	TargetInfo: {
+		Type: Gauge, Source: OTLPResource, Labels: []string{"service_version", "deployment_environment"},
+		EmittedBy: everyProcess,
+	},
 
-	PgxpoolAcquiredConnections: {Type: Gauge, Source: OTLP, Labels: pgxpool},
-	PgxpoolMaxConnections:      {Type: Gauge, Source: OTLP, Labels: pgxpool},
+	PgxpoolAcquiredConnections: {Type: Gauge, Source: OTLP, Labels: pgxpool, EmittedBy: dbPool},
+	PgxpoolMaxConnections:      {Type: Gauge, Source: OTLP, Labels: pgxpool, EmittedBy: dbPool},
 
 	PgUp:                        {Type: Gauge, Source: Scrape},
 	PgSettingsMaxConnections:    {Type: Gauge, Source: Scrape},
@@ -163,8 +171,11 @@ var metrics = map[string]Metric{
 
 	JobSeriesCount: {Type: Gauge, Source: RecordingRule},
 
-	HTTPServerRequestTotal:    {Type: Counter, Source: OTLP, Labels: httpServerLabels},
-	HTTPServerRequestDuration: {Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...)},
+	HTTPServerRequestTotal: {Type: Counter, Source: OTLP, Labels: httpServerLabels, EmittedBy: runs(service.API)},
+	HTTPServerRequestDuration: {
+		Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...),
+		EmittedBy: runs(service.API),
+	},
 	HTTPClientRequestTotal: {
 		Type: Counter, Source: OTLP, Presence: PresenceOnEvent,
 		Labels: append([]string{"http_response_status_code"}, httpClientLabels...),
@@ -178,17 +189,28 @@ var metrics = map[string]Metric{
 		Labels: slices.Concat(httpClientServer, httpClientLabels),
 	},
 
-	MessagingClientConsumedMessages:  {Type: Counter, Source: OTLP, Labels: messagingProcess},
-	MessagingProcessDuration:         {Type: Histogram, Source: OTLP, Labels: messagingProcess},
-	MessagingDLQSentMessages:         {Type: Counter, Source: OTLP, Labels: messagingProcess, Presence: PresenceOnEvent},
-	MessagingClientSentMessages:      {Type: Counter, Source: OTLP, Labels: messagingSend},
-	MessagingClientOperationDuration: {Type: Histogram, Source: OTLP, Labels: messagingSend},
+	MessagingClientConsumedMessages: {Type: Counter, Source: OTLP, Labels: messagingProcess, EmittedBy: runs(service.Consumer)},
+	MessagingProcessDuration:        {Type: Histogram, Source: OTLP, Labels: messagingProcess, EmittedBy: runs(service.Consumer)},
+	MessagingDLQSentMessages:        {Type: Counter, Source: OTLP, Labels: messagingProcess, Presence: PresenceOnEvent},
+	MessagingClientSentMessages:     {Type: Counter, Source: OTLP, Labels: messagingSend, EmittedBy: runs(service.Worker)},
+	MessagingClientOperationDuration: {
+		Type: Histogram, Source: OTLP, Labels: messagingSend, EmittedBy: runs(service.Worker),
+	},
 
-	KafkaTopicPartitionCurrentOffset:     {Type: Gauge, Source: Scrape, Labels: kafkaPartition},
-	KafkaConsumerGroupCurrentOffset:      {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
-	KafkaConsumerGroupUncommittedOffsets: {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
+	// The exporter lists only the topics a producer or a consumer created.
+	KafkaTopicPartitionCurrentOffset: {
+		Type: Gauge, Source: Scrape, Labels: kafkaPartition, EmittedBy: runs(service.Consumer, service.Worker),
+	},
+	KafkaConsumerGroupCurrentOffset: {
+		Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup, EmittedBy: runs(service.Consumer),
+	},
+	KafkaConsumerGroupUncommittedOffsets: {
+		Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup, EmittedBy: runs(service.Consumer),
+	},
 
-	ServiceLogRecords:         {Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "level"}},
+	ServiceLogRecords: {
+		Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "level"}, EmittedBy: everyProcess,
+	},
 	ServiceLogRecordsCritical: {Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service"}, Presence: PresenceOnEvent},
 	ServiceLogAlertRecords: {
 		Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "log_alert"}, Presence: PresenceOnEvent,
@@ -215,9 +237,9 @@ var metrics = map[string]Metric{
 	},
 
 	// example:begin
-	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP},
-	NotesOutboxPurgedMessages:   {Type: Counter, Source: OTLP},
-	NotesOutboxPurgeRuns:        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}},
+	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
+	NotesOutboxPurgedMessages:   {Type: Counter, Source: OTLP, EmittedBy: outboxOf("notes")},
+	NotesOutboxPurgeRuns:        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}, EmittedBy: outboxOf("notes")},
 	// example:end
 }
 
@@ -235,6 +257,6 @@ var (
 	logLabels    = []string{"service_name", "service_namespace", "container", "detected_level", "severity_number"}
 )
 
-func OutboxOldestPendingAge(service string) string {
-	return strings.ReplaceAll(service, "-", "_") + "_outbox_oldest_pending_age_seconds"
+func OutboxOldestPendingAge(serviceName string) string {
+	return strings.ReplaceAll(serviceName, "-", "_") + "_outbox_oldest_pending_age_seconds"
 }

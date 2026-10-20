@@ -159,6 +159,12 @@ func TestGenerate_QueriesStayInsideTheCatalog(t *testing.T) {
 	assert.Positive(t, checked, "no generated query was checked")
 }
 
+func TestKinds_NameWhatLoadsThem(t *testing.T) {
+	for _, kind := range kinds() {
+		assert.NotZero(t, kind.LoadedBy, "kind %s/%s does not say what loads it, so check-live cannot verify it", kind.Dir, kind.Glob)
+	}
+}
+
 func describe(err error) string {
 	if err == nil {
 		return ""
