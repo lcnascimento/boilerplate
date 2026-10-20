@@ -12,7 +12,7 @@ A mensagem falhou de forma permanente (erro não retentável, ou retentativas es
 
 ## Diagnóstico
 
-1. No dashboard `messaging`, veja na seção DLQ o painel de envios à DLQ por causa: o `error_type` diz por que a mensagem foi rejeitada.
+1. No dashboard do serviço (`dashboard_url`), veja na seção `consumer` o painel de envios à DLQ por causa: o `error_type` diz por que a mensagem foi rejeitada.
 2. No Loki, procure o aviso de envio à DLQ do processo: `{service_name="<service.name>"} |= "message sent to the DLQ"`. O log traz o `message.id` e o `error.type`, e o `trace_id` leva ao trace no Tempo.
 3. Leia a mensagem na DLQ pelo Kafka Console (`http://localhost:8085`, perfil `console`): payload, headers e o motivo da falha.
 4. Decida se o problema é a mensagem (payload inválido, versão de schema inesperada) ou o consumer (bug, dependência fora do ar tratada como erro permanente).

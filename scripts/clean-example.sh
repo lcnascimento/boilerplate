@@ -7,7 +7,6 @@ example_paths=(
 	backend/services/notes
 	backend/services/audit
 	backend/config/bruno/collections/Notes
-	backend/tools/o11ygen/internal/dashboards/notesoutbox.go
 	openapi/notes.yaml
 	frontend/apps/web/app/\(dashboard\)/notes
 	frontend/apps/web/actions/notes.ts

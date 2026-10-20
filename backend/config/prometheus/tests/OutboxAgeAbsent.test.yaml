@@ -24,7 +24,7 @@ tests:
               summary: "fixture-worker não reporta a idade do outbox há 5 minutos"
               description: "fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md"
-              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
 
   - name: stays quiet while the worker reports the outbox age, even when another worker stops
     interval: 1m

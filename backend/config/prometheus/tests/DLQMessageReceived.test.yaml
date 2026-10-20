@@ -22,9 +22,9 @@ tests:
               severity: critical
             exp_annotations:
               summary: "1 mensagem(ns) nova(s) na DLQ orders.order.v1.fixture.dlq de fixture-consumer"
-              description: "fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard messaging e os logs de fixture-consumer."
+              description: "fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço e os logs de fixture-consumer."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md"
-              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
       - eval_time: 14m
         alertname: DLQMessageReceived
         exp_alerts: []

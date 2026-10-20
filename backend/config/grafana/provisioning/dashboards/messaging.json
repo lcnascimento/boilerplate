@@ -59,7 +59,7 @@
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{alertname=~\"ConsumerLagHigh|DLQMessageReceived|OutboxAgeAbsent|KafkaBrokersDown\"}",
+        "alertInstanceLabelFilter": "{alertname=~\"KafkaBrokersDown\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],

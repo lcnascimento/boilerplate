@@ -66,28 +66,28 @@ func TestGenerate_WritesTheDashboards(t *testing.T) {
 	}
 
 	assert.Equal(t, map[string]string{
-		"http.json":      "boilerplate-http",
-		"logs.json":      "boilerplate-logs",
 		"messaging.json": "boilerplate-messaging",
+		"overview.json":  "boilerplate-overview",
 		// example:begin
-		"notes-outbox.json": "boilerplate-notes-outbox",
+		"audit.json": "boilerplate-audit",
+		"notes.json": "boilerplate-notes",
 		// example:end
-		"overview.json": "boilerplate-overview",
-		"traces.json":   "boilerplate-traces",
 	}, uids)
 }
 
 func TestGenerate_ReferencesDatasourcesThroughVariables(t *testing.T) {
 	root := t.TempDir()
 
-	require.NoError(t, generate(root, services))
+	require.NoError(t, generate(root, []service.Service{ordersService}))
 
-	board := readDashboard(t, root, "traces.json")
+	board := readDashboard(t, root, "orders.json")
 
 	uids := map[string]bool{}
 	collectDatasourceUIDs(board, uids)
 
-	assert.Equal(t, map[string]bool{"-- Grafana --": true, "${loki_datasource}": true, "${tempo_datasource}": true}, uids)
+	assert.Equal(t, map[string]bool{
+		"-- Grafana --": true, "${prometheus_datasource}": true, "${loki_datasource}": true,
+	}, uids)
 
 	var variables []string
 
@@ -98,7 +98,9 @@ func TestGenerate_ReferencesDatasourcesThroughVariables(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, []string{"tempo_datasource=tempo", "loki_datasource=loki"}, variables)
+	assert.Equal(t, []string{
+		"tempo_datasource=tempo", "prometheus_datasource=prometheus", "loki_datasource=loki",
+	}, variables)
 }
 
 func TestGenerate_RemovesStaleDashboardsAndKeepsTheProvider(t *testing.T) {

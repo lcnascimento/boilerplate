@@ -12,7 +12,7 @@ Os Integration Events chegam ao serviço consumidor com atraso. O que depende de
 
 ## Diagnóstico
 
-1. Veja no dashboard `messaging` a seção Consume: o lag por tópico e partição, a taxa de consumo e a duração do processamento.
+1. Abra o dashboard do serviço (`dashboard_url`) e veja a seção `consumer`: o lag do group por tópico, as mensagens/s e a duração do processamento.
 2. Lag crescendo e consumo em zero: o consumer está parado. Veja se o processo está no ar (há um `ServiceTelemetryAbsent` junto?) e os logs dele no Loki.
 3. Consumo estável mas abaixo da produção: o processamento ficou lento. Veja a duração em `messaging_process_duration_seconds` e os traces do consumer no Tempo (banco lento, `DBPoolSaturated`, dependência externa).
 4. Lag só numa partição: uma mensagem pode estar em retentativa. Procure retentativas e erros nos logs do processo.

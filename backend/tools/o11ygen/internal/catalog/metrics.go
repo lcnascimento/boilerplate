@@ -72,12 +72,10 @@ const (
 	ServiceLogRecordsCritical = "service:log_records_critical:rate1m"
 	ServiceLogAlertRecords    = "service:log_alert_records:rate1m"
 
-	// example:begin
-
-	NotesOutboxOldestPendingAge = "notes_outbox_oldest_pending_age_seconds"
-	NotesOutboxPurgedMessages   = "notes_outbox_purged_messages_total"
-	NotesOutboxPurgeRuns        = "notes_outbox_purge_runs_total"
-	// example:end
+	GoGoroutineCount  = "go_goroutine_count"
+	GoMemoryUsed      = "go_memory_used_bytes"
+	GoMemoryAllocated = "go_memory_allocated_bytes_total"
+	GoMemoryGCGoal    = "go_memory_gc_goal_bytes"
 )
 
 // The series Sloth records for every SLO, read by the SLO panels of the dashboards.
@@ -186,10 +184,15 @@ var metrics = map[string]Metric{
 		Labels: []string{"sloth_mode", "sloth_objective", "sloth_spec", "sloth_version"},
 	},
 
+	GoGoroutineCount:  {Type: Gauge, Source: OTLP},
+	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}},
+	GoMemoryAllocated: {Type: Counter, Source: OTLP},
+	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP},
+
 	// example:begin
-	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP},
-	NotesOutboxPurgedMessages:   {Type: Counter, Source: OTLP},
-	NotesOutboxPurgeRuns:        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}},
+	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP},
+	OutboxPurgedMessages("notes"):   {Type: Counter, Source: OTLP},
+	OutboxPurgeRuns("notes"):        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}},
 	// example:end
 }
 
@@ -208,5 +211,17 @@ var (
 )
 
 func OutboxOldestPendingAge(service string) string {
-	return strings.ReplaceAll(service, "-", "_") + "_outbox_oldest_pending_age_seconds"
+	return outboxMetric(service, "oldest_pending_age_seconds")
+}
+
+func OutboxPurgedMessages(service string) string {
+	return outboxMetric(service, "purged_messages_total")
+}
+
+func OutboxPurgeRuns(service string) string {
+	return outboxMetric(service, "purge_runs_total")
+}
+
+func outboxMetric(service, name string) string {
+	return strings.ReplaceAll(service, "-", "_") + "_outbox_" + name
 }

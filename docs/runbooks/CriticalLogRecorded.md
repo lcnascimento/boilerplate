@@ -12,7 +12,7 @@ Um log crítico costuma ser um panic recuperado, um `Fatal` logo antes de o proc
 
 ## Diagnóstico
 
-1. No dashboard `logs`, ou no Explore do Loki, filtre os logs críticos do processo: `{service_name="<service.name>"} | severity_number >= 21`.
+1. Na seção Logs do dashboard do serviço (`dashboard_url`), ou no Explore do Loki, filtre os logs críticos do processo: `{service_name="<service.name>"} | severity_number >= 21`.
 2. Leia a mensagem e os atributos do log (o erro e, num panic, o stack trace) e abra o trace pelo `trace_id` para ver a requisição ou a mensagem que causou o erro.
 3. Veja se o processo continua no ar: um `Fatal` derruba o processo, e então `ServiceTelemetryAbsent` também deve disparar.
 4. Confira se o erro se repete (o valor do alerta, ou o volume por nível em `service:log_records:rate1m{service="<service.name>"}`) ou foi um caso isolado.
