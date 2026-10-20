@@ -15,10 +15,24 @@ type File struct {
 	Content []byte
 }
 
+type Language string
+
+const (
+	PromQL Language = "PromQL"
+	LogQL  Language = "LogQL"
+)
+
+type Query struct {
+	Language Language
+	Expr     string
+	Origin   string
+}
+
 type Kind struct {
-	Dir   string
-	Glob  string
-	Build func(services []service.Service) ([]File, error)
+	Dir     string
+	Glob    string
+	Build   func(services []service.Service) ([]File, error)
+	Queries func(content []byte) ([]Query, error)
 }
 
 // World-readable: the observability containers read these files through bind mounts as another user.

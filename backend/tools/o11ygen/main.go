@@ -29,5 +29,9 @@ func generate(root string, declared []service.Service) error {
 		return err
 	}
 
-	return artifact.Generate(root, declared, dashboards.Kind())
+	return artifact.Generate(root, declared, kinds()...)
+}
+
+func kinds() []artifact.Kind {
+	return []artifact.Kind{dashboards.Kind()}
 }

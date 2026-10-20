@@ -1,0 +1,93 @@
+package catalog
+
+type Type int
+
+const (
+	Counter Type = iota
+	Gauge
+	Histogram
+)
+
+type Presence int
+
+const (
+	PresenceAlways Presence = iota
+	PresenceOnEvent
+)
+
+type Source int
+
+const (
+	OTLP Source = iota
+	Scrape
+)
+
+type Metric struct {
+	Type     Type
+	Source   Source
+	Labels   []string
+	Presence Presence
+}
+
+const (
+	HTTPServerRequestTotal    = "http_server_request_total"
+	HTTPServerRequestDuration = "http_server_request_duration_seconds"
+
+	MessagingClientConsumedMessages  = "messaging_client_consumed_messages_total"
+	MessagingProcessDuration         = "messaging_process_duration_seconds"
+	MessagingDLQSentMessages         = "messaging_dlq_sent_messages_total"
+	MessagingClientSentMessages      = "messaging_client_sent_messages_total"
+	MessagingClientOperationDuration = "messaging_client_operation_duration_seconds"
+
+	KafkaTopicPartitionCurrentOffset     = "kafka_topic_partition_current_offset"
+	KafkaConsumerGroupCurrentOffset      = "kafka_consumergroup_current_offset"
+	KafkaConsumerGroupUncommittedOffsets = "kafka_consumergroup_uncommitted_offsets"
+
+	// example:begin
+
+	NotesOutboxOldestPendingAge = "notes_outbox_oldest_pending_age_seconds"
+	NotesOutboxPurgedMessages   = "notes_outbox_purged_messages_total"
+	NotesOutboxPurgeRuns        = "notes_outbox_purge_runs_total"
+	// example:end
+)
+
+var (
+	httpServerLabels = []string{"http_request_method", "http_route", "http_response_status_code"}
+	messagingSend    = []string{
+		"messaging_system", "messaging_destination_name", "messaging_operation_name", "messaging_operation_type", "error_type",
+	}
+	messagingProcess   = append([]string{"messaging_consumer_group_name"}, messagingSend...)
+	kafkaPartition     = []string{"topic", "partition"}
+	kafkaConsumerGroup = []string{"consumergroup", "topic", "partition"}
+)
+
+var metrics = map[string]Metric{
+	HTTPServerRequestTotal:    {Type: Counter, Source: OTLP, Labels: httpServerLabels},
+	HTTPServerRequestDuration: {Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...)},
+
+	MessagingClientConsumedMessages:  {Type: Counter, Source: OTLP, Labels: messagingProcess},
+	MessagingProcessDuration:         {Type: Histogram, Source: OTLP, Labels: messagingProcess},
+	MessagingDLQSentMessages:         {Type: Counter, Source: OTLP, Labels: messagingProcess, Presence: PresenceOnEvent},
+	MessagingClientSentMessages:      {Type: Counter, Source: OTLP, Labels: messagingSend},
+	MessagingClientOperationDuration: {Type: Histogram, Source: OTLP, Labels: messagingSend},
+
+	KafkaTopicPartitionCurrentOffset:     {Type: Gauge, Source: Scrape, Labels: kafkaPartition},
+	KafkaConsumerGroupCurrentOffset:      {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
+	KafkaConsumerGroupUncommittedOffsets: {Type: Gauge, Source: Scrape, Labels: kafkaConsumerGroup},
+
+	// example:begin
+	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP},
+	NotesOutboxPurgedMessages:   {Type: Counter, Source: OTLP},
+	NotesOutboxPurgeRuns:        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}},
+	// example:end
+}
+
+var sourceLabels = map[Source][]string{
+	OTLP:   {"job", "instance", "service_name", "service_namespace"},
+	Scrape: {"job", "instance"},
+}
+
+var (
+	targetLabels = []string{"__name__", "job", "instance"}
+	logLabels    = []string{"service_name", "service_namespace", "container", "detected_level", "severity_number"}
+)
