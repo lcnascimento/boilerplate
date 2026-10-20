@@ -59,6 +59,48 @@ otelcol.processor.filter "drop_infra_noise" {
   }
 }
 
+faro.receiver "web" {
+  server {
+    listen_address       = "0.0.0.0"
+    listen_port          = 12347
+    cors_allowed_origins = ["http://localhost:3000"]
+  }
+
+  sourcemaps {
+    download = false
+  }
+
+  output {
+    logs   = [otelcol.receiver.loki.faro.receiver]
+    traces = [otelcol.processor.filter.drop_infra_noise.input]
+  }
+}
+
+otelcol.receiver.loki "faro" {
+  output {
+    logs = [otelcol.processor.transform.faro.input]
+  }
+}
+
+// faro.receiver writes each signal as a logfmt line without labels: its fields become structured metadata, and the
+// Faro app becomes the OTLP service.
+otelcol.processor.transform "faro" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "log"
+    statements = [
+      `merge_maps(log.attributes, ParseKeyValue(log.body), "upsert")`,
+      `set(resource.attributes["service.name"], log.attributes["app_name"])`,
+      `set(resource.attributes["service.namespace"], log.attributes["app_namespace"])`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.loki.input]
+  }
+}
+
 prometheus.exporter.kafka "local_kafka" {
   kafka_uris          = ["kafka:19092"]
   topics_filter_regex = "^[^_].*"

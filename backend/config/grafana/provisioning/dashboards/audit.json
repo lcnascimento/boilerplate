@@ -249,7 +249,7 @@
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{service=~\"audit-.*\"}",
+        "alertInstanceLabelFilter": "{service=~\"audit-consumer\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],

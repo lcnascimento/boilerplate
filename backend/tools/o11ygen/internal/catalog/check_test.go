@@ -43,6 +43,11 @@ func TestCheck_AcceptsQueriesInsideTheCatalog(t *testing.T) {
 			Language: artifact.LogQL,
 			Expr:     `sum by (service_name) (count_over_time({service_name=~"${service:regex}"} | detected_level=~"error|critical" [$__auto]))`,
 		},
+		"faro fields kept as structured metadata": {
+			Language: artifact.LogQL,
+			Expr: `quantile_over_time(0.75, {service_name=~"web"} | kind="measurement" | type="web-vitals" | ` +
+				`value_lcp!="" | unwrap value_lcp [$__auto]) by ()`,
+		},
 		"labels a label_format introduces": {
 			Language: artifact.LogQL,
 			Expr:     `sum by (service) (count_over_time({service_name=~".+"} | label_format service=service_name [1m]))`,

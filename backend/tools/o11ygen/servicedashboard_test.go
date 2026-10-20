@@ -14,8 +14,9 @@ import (
 )
 
 type boardTarget struct {
-	Expr     string `json:"expr"`
-	Exemplar bool   `json:"exemplar"`
+	Expr      string `json:"expr"`
+	Exemplar  bool   `json:"exemplar"`
+	QueryType string `json:"queryType"` //nolint:tagliatelle // Grafana's dashboard schema.
 }
 
 type boardLink struct {
@@ -247,7 +248,7 @@ func TestGenerate_ServiceDashboardTopsWithTheSlothSLOsAndTheServiceAlerts(t *tes
 		"Budget restante (30d)": `max by (sloth_slo) (slo:period_error_budget_remaining:ratio{sloth_service="orders"})`,
 		"Burn rate":             `max by (sloth_slo) (slo:current_burn_rate:ratio{sloth_service="orders"})`,
 	}, queries)
-	assert.Equal(t, `{service=~"orders-.*"}`, filter)
+	assert.Equal(t, `{service=~"orders-api|orders-consumer|orders-worker"}`, filter)
 }
 
 func TestGenerate_ServiceDashboardAsksForExemplarsOnlyOnLatencyHistograms(t *testing.T) {

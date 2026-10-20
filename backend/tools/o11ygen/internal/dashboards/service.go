@@ -27,10 +27,11 @@ var componentSections = []struct {
 	{service.API, apiSection},
 	{service.Consumer, consumerSection},
 	{service.Worker, workerSection},
+	{service.Browser, browserSection},
 }
 
-func serviceDashboard(svc *service.Service) *dashboard.DashboardBuilder {
-	sections := []section{sloSection(svc)}
+func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.DashboardBuilder {
+	sections := []section{topSection(svc, declaresSLOs)}
 
 	for _, c := range componentSections {
 		if running := processesRunning(svc, c.component); len(running) > 0 {
@@ -126,13 +127,7 @@ func hasDBPool(svc *service.Service) bool {
 }
 
 func processVariableOf(svc *service.Service) *dashboard.CustomVariableBuilder {
-	var names []string
-
-	for _, p := range svc.Processes {
-		if p.LongRunning() {
-			names = append(names, p.Name())
-		}
-	}
+	names := processNames(longRunning(svc))
 
 	return dashboard.NewCustomVariableBuilder(processVariable).
 		Label("Processo").
@@ -146,13 +141,29 @@ func processVariableOf(svc *service.Service) *dashboard.CustomVariableBuilder {
 		IncludeAll(true)
 }
 
-func job(processes []service.Process) string {
+func processNames(processes []service.Process) []string {
 	names := make([]string, 0, len(processes))
 	for _, p := range processes {
 		names = append(names, p.Name())
 	}
 
-	return `job=~` + strconv.Quote(config.Namespace+"/("+strings.Join(names, "|")+")")
+	return names
+}
+
+func longRunning(svc *service.Service) []service.Process {
+	var out []service.Process
+
+	for _, p := range svc.Processes {
+		if p.LongRunning() {
+			out = append(out, p)
+		}
+	}
+
+	return out
+}
+
+func job(processes []service.Process) string {
+	return `job=~` + strconv.Quote(config.Namespace+"/("+strings.Join(processNames(processes), "|")+")")
 }
 
 const selectedJob = `job=~"` + config.Namespace + `/$` + processVariable + `"`

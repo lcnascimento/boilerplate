@@ -2,9 +2,12 @@
 
 import { CircleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
 
 import { Button } from "@boilerplate/ui/components/button";
 import { EmptyState } from "@boilerplate/ui/primitives/empty-state";
+
+import { reportBoundaryError } from "@/shared/faro";
 
 interface DashboardErrorProps {
   error: Error & { digest?: string };
@@ -14,6 +17,10 @@ interface DashboardErrorProps {
 export default function DashboardError({ error, reset }: DashboardErrorProps) {
   const t = useTranslations("errors");
   const tCommon = useTranslations("common");
+
+  useEffect(() => {
+    reportBoundaryError(error);
+  }, [error]);
 
   return (
     <EmptyState

@@ -9,6 +9,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/artifact"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
 )
 
 func Kind() artifact.Kind {
@@ -38,7 +39,12 @@ func build(services []service.Service) ([]artifact.File, error) {
 			return nil, errors.New("service name %q is taken by a dashboard", svc.Name)
 		}
 
-		boards = append(boards, board{svc.Name, serviceDashboard(svc)})
+		slos, err := slo.Declared(svc)
+		if err != nil {
+			return nil, err
+		}
+
+		boards = append(boards, board{svc.Name, serviceDashboard(svc, len(slos) > 0)})
 	}
 
 	files := make([]artifact.File, 0, len(boards))

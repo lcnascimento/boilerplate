@@ -7,18 +7,25 @@ local_resource(
     labels=['frontend'],
 )
 
+MINIMAL_STACK = os.getenv('TILT_STACK', '') == 'minimal'
+
+web_env = {
+    'OTEL_SERVICE_NAME': 'web',
+    'OTEL_RESOURCE_ATTRIBUTES': 'service.version=v0.1.0,service.namespace=boilerplate,deployment.environment=local',
+    # Otherwise Next opens a second client span beside undici's on every fetch.
+    'NEXT_OTEL_FETCH_DISABLED': '1',
+    # example:begin
+    'NOTES_API_URL': 'http://localhost:8080',
+    # example:end
+}
+
+if not MINIMAL_STACK:
+    web_env['NEXT_PUBLIC_FARO_URL'] = 'http://localhost:12347/collect'
+
 local_resource(
     'web',
     serve_cmd='pnpm --filter @boilerplate/web dev',
-    serve_env={
-        'OTEL_SERVICE_NAME': 'web',
-        'OTEL_RESOURCE_ATTRIBUTES': 'service.version=v0.1.0,service.namespace=boilerplate,deployment.environment=local',
-        # Otherwise Next opens a second client span beside undici's on every fetch.
-        'NEXT_OTEL_FETCH_DISABLED': '1',
-        # example:begin
-        'NOTES_API_URL': 'http://localhost:8080',
-        # example:end
-    },
+    serve_env=web_env,
     resource_deps=['frontend-deps'],
     # TCP, not HTTP: an HTTP probe logs the whole page on every success.
     readiness_probe=probe(
@@ -31,7 +38,7 @@ local_resource(
 
 PLAYWRIGHT_UI_PORT = 9330
 
-if os.getenv('TILT_STACK', '') != 'minimal':
+if not MINIMAL_STACK:
     local_resource(
         'web-e2e-ui',
         serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),

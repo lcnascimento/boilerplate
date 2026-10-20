@@ -27,7 +27,17 @@ const (
 	budgetLow      = 0.25
 )
 
-func sloSection(svc *service.Service) section {
+func topSection(svc *service.Service, declaresSLOs bool) section {
+	alerts := serviceAlerts{
+		title:       "Alertas do serviço",
+		description: "Alertas de cada processo de " + svc.Name + ", inclusive os de burn rate dos SLOs.",
+		filter:      `{service=~` + strconv.Quote(strings.Join(processNames(longRunning(svc)), "|")) + `}`,
+	}
+
+	if !declaresSLOs {
+		return section{title: "Alertas", panels: []panel{alerts}}
+	}
+
 	sloth := `{sloth_service=` + strconv.Quote(svc.Name) + `}`
 	bySLO := func(series string) string { return "max by (sloth_slo) (" + series + sloth + ")" }
 
@@ -57,11 +67,7 @@ func sloSection(svc *service.Service) section {
 			queries: []query{{expr: bySLO(catalog.SLOCurrentBurnRateRatio), legend: "{{sloth_slo}}"}},
 			steps:   []step{{color: "green"}, at(burnRateTicket, "yellow"), at(burnRatePage, "red")},
 		},
-		serviceAlerts{
-			title:       "Alertas do serviço",
-			description: "Alertas de cada processo de " + svc.Name + ", inclusive os de burn rate dos SLOs.",
-			filter:      `{service=~` + strconv.Quote(svc.Name+"-.*") + `}`,
-		},
+		alerts,
 	}}
 }
 
