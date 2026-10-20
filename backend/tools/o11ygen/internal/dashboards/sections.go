@@ -78,7 +78,11 @@ func quantiles(histogram, selector string) []query {
 
 func seconds(value float64) *float64 { return &value }
 
-func apiSection(_ *service.Service, processes []service.Process) section {
+func apiSection(svc *service.Service, processes []service.Process) section {
+	if svc.Runtime == service.Node {
+		return spanMetricsAPISection(processes)
+	}
+
 	selector := job(processes) + `, http_route!~` + strconv.Quote(slo.ProbeRoutes)
 	requests := func(extra, by string) string {
 		matchers := selector
@@ -434,6 +438,10 @@ func drilldownLinks(svc *service.Service) []cog.Builder[dashboard.DashboardLink]
 		out = append(out, link("Logs "+name, "Logs de "+name+" no Logs Drilldown",
 			"/a/grafana-lokiexplore-app/explore/service_name/"+url.PathEscape(name)+"/logs?var-ds=${"+lokiDS.variable()+"}"+
 				"&var-filters="+filter("service_name", "=", name)))
+	}
+
+	if svc.Runtime != service.Go {
+		return out
 	}
 
 	for _, name := range names {

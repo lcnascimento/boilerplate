@@ -38,7 +38,11 @@ func serviceDashboard(svc *service.Service) *dashboard.DashboardBuilder {
 		}
 	}
 
-	sections = append(sections, runtimeSection())
+	if svc.Runtime == service.Node {
+		sections = append(sections, nodeRuntimeSection())
+	} else {
+		sections = append(sections, runtimeSection())
+	}
 
 	if hasDBPool(svc) {
 		sections = append(sections, databaseSection())
