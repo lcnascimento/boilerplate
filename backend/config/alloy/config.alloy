@@ -38,7 +38,7 @@ otelcol.receiver.otlp "default" {
   }
 
   output {
-    metrics = [otelcol.exporter.prometheus.local_prom.input]
+    metrics = [otelcol.exporter.otlphttp.prometheus.input]
     traces  = [otelcol.processor.filter.drop_infra_noise.input]
     logs    = [otelcol.exporter.otlphttp.loki.input]
   }
@@ -57,10 +57,6 @@ otelcol.processor.filter "drop_infra_noise" {
   output {
     traces = [otelcol.exporter.otlp.tempo.input]
   }
-}
-
-otelcol.exporter.prometheus "local_prom" {
-  forward_to = [prometheus.remote_write.local_prometheus.receiver]
 }
 
 prometheus.exporter.kafka "local_kafka" {
@@ -86,6 +82,12 @@ otelcol.exporter.otlp "tempo" {
     tls {
       insecure = true
     }
+  }
+}
+
+otelcol.exporter.otlphttp "prometheus" {
+  client {
+    endpoint = "http://prometheus:9090/api/v1/otlp"
   }
 }
 
