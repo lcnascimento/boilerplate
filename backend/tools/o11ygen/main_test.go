@@ -62,12 +62,14 @@ func TestGenerate_WritesTheDashboards(t *testing.T) {
 	}
 
 	assert.Equal(t, map[string]string{
-		"http.json":         "boilerplate-http",
-		"logs.json":         "boilerplate-logs",
-		"messaging.json":    "boilerplate-messaging",
+		"http.json":      "boilerplate-http",
+		"logs.json":      "boilerplate-logs",
+		"messaging.json": "boilerplate-messaging",
+		// example:begin
 		"notes-outbox.json": "boilerplate-notes-outbox",
-		"overview.json":     "boilerplate-overview",
-		"traces.json":       "boilerplate-traces",
+		// example:end
+		"overview.json": "boilerplate-overview",
+		"traces.json":   "boilerplate-traces",
 	}, uids)
 }
 
