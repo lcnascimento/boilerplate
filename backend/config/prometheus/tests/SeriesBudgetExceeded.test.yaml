@@ -1,0 +1,45 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires only for the process above the fixture budget of 5 series for 15 minutes
+    interval: 1m
+    input_series:
+      - series: target_info{job="boilerplate/fixture-api"}
+        values: 1x30
+      - series: target_info{job="boilerplate/fixture-consumer"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-api", id="1"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-api", id="2"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-api", id="3"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-api", id="4"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-api", id="5"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-api", id="6"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-consumer", id="1"}
+        values: 1x30
+      - series: fixture_metric{job="boilerplate/fixture-consumer", id="2"}
+        values: 1x30
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SeriesBudgetExceeded
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: SeriesBudgetExceeded
+        exp_alerts:
+          - exp_labels:
+              job: boilerplate/fixture-api
+              service: fixture-api
+              severity: warning
+            exp_annotations:
+              summary: fixture-api com 10 séries, acima do teto de 5
+              description: "fixture-api mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica."
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+              dashboard_url: http://localhost:3010/d/boilerplate-overview

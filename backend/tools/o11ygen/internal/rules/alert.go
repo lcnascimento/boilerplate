@@ -54,3 +54,16 @@ func (a *alert) rule() (rulefmt.Rule, error) {
 		},
 	}, nil
 }
+
+type recording struct {
+	name string
+	expr string
+}
+
+func (r *recording) rule() (rulefmt.Rule, error) {
+	if r.name == "" || r.expr == "" {
+		return rulefmt.Rule{}, errors.New("recording rule %q has no name or expression", r.name)
+	}
+
+	return rulefmt.Rule{Record: r.name, Expr: r.expr}, nil
+}

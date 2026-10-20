@@ -19,10 +19,13 @@ import (
 const (
 	infraFile  = "infra"
 	yamlIndent = 2
+
+	fixtureSeriesBudget = 5
 )
 
 var fixture = service.Service{
-	Name: "fixture",
+	Name:         "fixture",
+	SeriesBudget: fixtureSeriesBudget,
 	Processes: []service.Process{
 		service.Daemon("fixture-api", service.API).WithDBPool(),
 		service.Daemon("fixture-consumer", service.Consumer).WithConsumerGroup("fixture"),
@@ -42,7 +45,7 @@ func FixtureKind() artifact.Kind {
 		Dir:  "config/prometheus/tests",
 		Glob: "fixture.yaml",
 		Build: func([]service.Service) ([]artifact.File, error) {
-			file, err := encode(fixture.Name, serviceGroup(fixture))
+			file, err := encode(fixture.Name, append([]group{serviceGroup(fixture)}, recordingGroups...)...)
 			if err != nil {
 				return nil, err
 			}
@@ -68,8 +71,9 @@ func AlertNames(dashboard string) []string {
 }
 
 type group struct {
-	name   string
-	alerts []alert
+	name    string
+	records []recording
+	alerts  []alert
 }
 
 func serviceGroup(svc service.Service) group {
@@ -110,7 +114,7 @@ func build(services []service.Service) ([]artifact.File, error) {
 		files = append(files, file)
 	}
 
-	infra, err := encode(infraFile, infraGroups...)
+	infra, err := encode(infraFile, append(slices.Clone(infraGroups), recordingGroups...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +126,16 @@ func encode(name string, groups ...group) (artifact.File, error) {
 	ruleGroups := rulefmt.RuleGroups{Groups: make([]rulefmt.RuleGroup, 0, len(groups))}
 
 	for _, g := range groups {
-		ruleGroup := rulefmt.RuleGroup{Name: g.name, Rules: make([]rulefmt.Rule, 0, len(g.alerts))}
+		ruleGroup := rulefmt.RuleGroup{Name: g.name, Rules: make([]rulefmt.Rule, 0, len(g.records)+len(g.alerts))}
+
+		for _, r := range g.records {
+			rule, err := r.rule()
+			if err != nil {
+				return artifact.File{}, errors.New("rules %s", name).WithCause(err)
+			}
+
+			ruleGroup.Rules = append(ruleGroup.Rules, rule)
+		}
 
 		for _, a := range g.alerts {
 			rule, err := a.rule()

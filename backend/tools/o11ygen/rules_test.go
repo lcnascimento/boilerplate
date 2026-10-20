@@ -27,6 +27,7 @@ type ruleFile struct {
 		Name  string `yaml:"name"`
 		Rules []struct {
 			Alert       string            `yaml:"alert"`
+			Record      string            `yaml:"record"`
 			Expr        string            `yaml:"expr"`
 			Labels      map[string]string `yaml:"labels"`
 			Annotations map[string]string `yaml:"annotations"`
@@ -68,7 +69,7 @@ func alertsByGroupAndService(rules ruleFile) map[string]map[string][]string {
 
 		for _, rule := range group.Rules {
 			svc := rule.Labels["service"]
-			out[group.Name][svc] = append(out[group.Name][svc], rule.Alert)
+			out[group.Name][svc] = append(out[group.Name][svc], rule.Alert+rule.Record)
 		}
 	}
 
@@ -92,14 +93,17 @@ func TestGenerate_InheritsTheAlertsOfEachProcessFromItsComponents(t *testing.T) 
 	assert.Equal(t, map[string]ruleFile{"infra.yaml": {}, "orders.yaml": {}}, mapKeysOnly(generatedRules(t, root)))
 	assert.Equal(t, map[string]map[string][]string{
 		"orders": {
-			"orders-api":      {"ServiceTelemetryAbsent", "DBPoolSaturated", "CriticalLogRecorded"},
-			"orders-consumer": {"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "CriticalLogRecorded"},
-			"orders-worker":   {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "CriticalLogRecorded"},
+			"orders-api": {"ServiceTelemetryAbsent", "DBPoolSaturated", "SeriesBudgetExceeded", "CriticalLogRecorded"},
+			"orders-consumer": {
+				"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded", "CriticalLogRecorded",
+			},
+			"orders-worker": {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded", "CriticalLogRecorded"},
 		},
 	}, alertsByGroupAndService(readRules(t, filepath.Join(root, rulesDir, "orders.yaml"))))
 	assert.Equal(t, map[string]map[string][]string{
-		"kafka":    {"kafka": {"KafkaBrokersDown"}},
-		"postgres": {"postgres": {"PostgresDown", "PostgresConnectionsNearMax"}},
+		"cardinality": {"": {"job:series:count"}},
+		"kafka":       {"kafka": {"KafkaBrokersDown"}},
+		"postgres":    {"postgres": {"PostgresDown", "PostgresConnectionsNearMax"}},
 	}, alertsByGroupAndService(readRules(t, filepath.Join(root, rulesDir, "infra.yaml"))))
 }
 
@@ -143,9 +147,66 @@ func TestGenerate_ScopesTheProcessAlertsToTheProcess(t *testing.T) {
 		"orders-worker ServiceTelemetryAbsent": `absent_over_time(target_info{job="boilerplate/orders-worker"}[5m])`,
 		"orders-worker OutboxAgeAbsent": `absent(orders_outbox_oldest_pending_age_seconds` +
 			`{job="boilerplate/orders-worker"})`,
-		"orders-consumer CriticalLogRecorded": `sum_over_time(service:log_records_critical:rate1m{service="orders-consumer"}[5m]) * 60 > 0`,
-		"orders-worker CriticalLogRecorded":   `sum_over_time(service:log_records_critical:rate1m{service="orders-worker"}[5m]) * 60 > 0`,
+		"orders-consumer SeriesBudgetExceeded": `job:series:count{job="boilerplate/orders-consumer"} > 2000`,
+		"orders-worker SeriesBudgetExceeded":   `job:series:count{job="boilerplate/orders-worker"} > 2000`,
+		"orders-consumer CriticalLogRecorded":  `sum_over_time(service:log_records_critical:rate1m{service="orders-consumer"}[5m]) * 60 > 0`,
+		"orders-worker CriticalLogRecorded":    `sum_over_time(service:log_records_critical:rate1m{service="orders-worker"}[5m]) * 60 > 0`,
 	}, exprs)
+}
+
+func TestGenerate_CountsTheSeriesOfEveryJob(t *testing.T) {
+	root := t.TempDir()
+
+	require.NoError(t, generate(root, nil))
+
+	var records []string
+
+	for _, group := range readRules(t, filepath.Join(root, rulesDir, "infra.yaml")).Groups {
+		for _, rule := range group.Rules {
+			if rule.Record != "" {
+				records = append(records, group.Name+" "+rule.Record+" = "+rule.Expr)
+			}
+		}
+	}
+
+	assert.Equal(t, []string{`cardinality job:series:count = count by (job) ({__name__=~".+"})`}, records)
+}
+
+func TestGenerate_OverridesTheSeriesBudgetOfAService(t *testing.T) {
+	root := t.TempDir()
+	declared := []service.Service{
+		{Name: "orders", Processes: []service.Process{service.Daemon("orders-api", service.API)}, SeriesBudget: 5000},
+		{Name: "billing", Processes: []service.Process{service.Daemon("billing-api", service.API)}},
+	}
+
+	require.NoError(t, generate(root, declared))
+
+	budgets := map[string]string{}
+
+	for name, rules := range generatedRules(t, root) {
+		for _, group := range rules.Groups {
+			for _, rule := range group.Rules {
+				if rule.Alert == "SeriesBudgetExceeded" {
+					budgets[name+" "+rule.Labels["service"]] = rule.Expr
+				}
+			}
+		}
+	}
+
+	assert.Equal(t, map[string]string{
+		"orders.yaml orders-api":   `job:series:count{job="boilerplate/orders-api"} > 5000`,
+		"billing.yaml billing-api": `job:series:count{job="boilerplate/billing-api"} > 2000`,
+	}, budgets)
+}
+
+func TestGenerate_RejectsANegativeSeriesBudget(t *testing.T) {
+	declared := []service.Service{
+		{Name: "orders", Processes: []service.Process{service.Daemon("orders-api", service.API)}, SeriesBudget: -1},
+	}
+
+	err := generate(t.TempDir(), declared)
+
+	require.ErrorContains(t, err, `service "orders" declares a negative series budget`)
 }
 
 func TestGenerate_WritesOnlyTheInfraRulesWithoutServices(t *testing.T) {
@@ -215,6 +276,10 @@ func TestGenerate_AlertsCarryTheirLabelsAnnotationsRunbookAndDashboard(t *testin
 	for name, rules := range generatedRules(t, root) {
 		for _, group := range rules.Groups {
 			for _, rule := range group.Rules {
+				if rule.Record != "" {
+					continue
+				}
+
 				checked++
 				origin := name + ": " + group.Name + "/" + rule.Alert
 
@@ -281,6 +346,10 @@ func TestGenerate_EveryAlertHasAHandWrittenRuleTest(t *testing.T) {
 	for name, rules := range files {
 		for _, group := range rules.Groups {
 			for _, rule := range group.Rules {
+				if rule.Record != "" {
+					continue
+				}
+
 				checked++
 
 				assert.True(t, tested[rule.Alert], "%s: alert %s appears in no alert_rule_test of %s", name, rule.Alert,

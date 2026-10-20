@@ -43,6 +43,17 @@ groups:
           description: 'audit-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard messaging e os logs de audit-consumer.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
           summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de audit-consumer'
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/audit-consumer"} > 2000
+        for: 15m
+        labels:
+          service: audit-consumer
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          description: 'audit-consumer mantém mais de 2000 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: audit-consumer com {{ $value | humanize }} séries, acima do teto de 2000
       - alert: CriticalLogRecorded
         expr: sum_over_time(service:log_records_critical:rate1m{service="audit-consumer"}[5m]) * 60 > 0
         labels:
@@ -50,6 +61,6 @@ groups:
           severity: critical
         annotations:
           dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: audit-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a eles.
+          description: audit-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de audit-consumer nos últimos 5 minutos'

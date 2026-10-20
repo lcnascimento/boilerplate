@@ -19,6 +19,8 @@ const (
 	logsDashboard      = "logs"
 
 	sustainedFor = 5 * time.Minute
+
+	seriesBudgetSustainedFor = 15 * time.Minute
 )
 
 type process struct {
@@ -122,6 +124,24 @@ var processAlerts = []inheritedAlert{
 	{
 		inheritedBy: func(p *process) bool { return p.LongRunning() },
 		alert: func(p *process) alert {
+			budget := strconv.Itoa(p.service.EffectiveSeriesBudget())
+
+			return alert{
+				name:        "SeriesBudgetExceeded",
+				expr:        fmt.Sprintf("%s%s > %s", catalog.JobSeriesCount, p.job(), budget),
+				forDuration: seriesBudgetSustainedFor,
+				severity:    warning,
+				summary:     p.Name() + " com {{ $value | humanize }} séries, acima do teto de " + budget,
+				description: p.Name() + " mantém mais de " + budget + " séries no Prometheus há 15 minutos: " +
+					"algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). " +
+					"Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.",
+				dashboard: overviewDashboard,
+			}
+		},
+	},
+	{
+		inheritedBy: func(p *process) bool { return p.LongRunning() },
+		alert: func(p *process) alert {
 			return alert{
 				name:     "CriticalLogRecorded",
 				expr:     recordsIn5m(catalog.ServiceLogRecordsCritical, p.Name(), nil) + " * 60 > 0",
@@ -159,6 +179,14 @@ func logAlert(declared *service.LogAlert) alert {
 		service:     declared.Process,
 	}
 }
+
+var recordingGroups = []group{{
+	name: "cardinality",
+	records: []recording{{
+		name: catalog.JobSeriesCount,
+		expr: `count by (job) ({__name__=~".+"})`,
+	}},
+}}
 
 func infra(name string, alerts ...alert) group {
 	for i := range alerts {
