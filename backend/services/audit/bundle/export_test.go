@@ -1,3 +1,6 @@
 package bundle
 
-var ConsumerOptions = consumerOptions
+var (
+	ConsumerOptions = consumerOptions
+	NewPool         = newPool
+)
