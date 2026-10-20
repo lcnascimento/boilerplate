@@ -13,7 +13,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Área | O que tem |
 | --- | --- |
 | Backend (`backend/`) | Go (versão no `go.work`) com [uber/fx](https://github.com/uber-go/fx) e [go-kit](https://github.com/lcnascimento/go-kit) (`errors`, `http`, `o11y`, `env`, `util`, `validator`), `golangci-lint`, `mockgen`, `govulncheck` e coleção [Bruno](https://www.usebruno.com/) |
-| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs`, `traces` e `messaging`, e os alertas de mensageria |
+| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs`, `traces` e `messaging`, e os alertas como regras do Prometheus, com runbook em `docs/runbooks/` |
 | Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Acesso com [pgx](https://github.com/jackc/pgx) (`pgxpool`, instrumentado com [otelpgx](https://github.com/exaring/otelpgx)) e queries tipadas pelo [sqlc](https://sqlc.dev/). Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
 | Mensageria local (`backend/`) | Kafka 4.3 (KRaft, nó único, sem auto-create de tópicos), Confluent Schema Registry e [Redpanda Console](https://github.com/redpanda-data/console) via Docker Compose |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
@@ -103,11 +103,13 @@ O `notes` grava cada Integration Event num outbox, na mesma transação da Note,
 
 Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
 
-Fora do modo mínimo, o Alloy lê do broker o lag de cada consumer group e os high-water marks de cada tópico (`prometheus.exporter.kafka`), sem instrumentar o Kafka, e só sobe depois do `kafka` saudável. O dashboard `messaging` do Grafana junta esses números às métricas `messaging.*` dos serviços, em seções Produce, Consume e DLQ, com o estado dos alertas no topo. Os alertas são Grafana-managed, provisionados em `backend/config/grafana/provisioning/alerting/messaging.yaml`, sem contact point: aparecem em Alerting no Grafana e no topo do dashboard. O alerta de DLQ dispara na hora em que qualquer mensagem nova chega a um tópico `*.dlq`.
+Fora do modo mínimo, o Alloy lê do broker o lag de cada consumer group e os high-water marks de cada tópico (`prometheus.exporter.kafka`), sem instrumentar o Kafka, e só sobe depois do `kafka` saudável. O dashboard `messaging` do Grafana junta esses números às métricas `messaging.*` dos serviços, em seções Produce, Consume e DLQ, com o estado dos alertas de mensageria no topo.
+
+Os alertas são regras do Prometheus geradas pelo `o11ygen` em `backend/config/prometheus/rules/`: um arquivo por serviço (um grupo por serviço) e o `infra.yaml` (grupos `kafka` e `postgres`). Cada processo herda os alertas dos componentes que declara: todo processo de longa duração herda `ServiceTelemetryAbsent`, um processo com `WithDBPool()` herda `DBPoolSaturated`, um `consumer` herda `ConsumerLagHigh` e `DLQMessageReceived` do consumer group declarado em `WithConsumerGroup(...)`, e um `worker` herda `OutboxAgeAbsent`. A infraestrutura tem `KafkaBrokersDown`, `PostgresDown` e `PostgresConnectionsNearMax`. Todo alerta leva os labels `service` (o `service.name` do processo, ou `kafka`/`postgres`) e `severity` (`critical`: olhar já; `warning`: olhar em horas), e as anotações `summary`, `description`, `runbook_url` e `dashboard_url`. O runbook de cada alerta fica em `docs/runbooks/<Alerta>.md`. Não há Alertmanager nem contact point: os alertas aparecem só leitura em Alerting no Grafana (datasource Prometheus com `manageAlerts`) e nos painéis de alertas dos dashboards.
 
 <!-- example:begin -->
 
-O exemplo traz mais dois alertas. O de lag dispara quando o group `audit` fica mais de 100 mensagens atrás por 5 minutos. O de outbox travado dispara quando a mensagem pendente mais antiga do outbox do `notes` passa de 120s por 5 minutos, ou quando nenhum forwarder reporta essa idade há mais de 2 minutos, também por 5 minutos, já que sem forwarder ninguém esvazia o outbox. As seções Outbox e Forward do `notes` ficam no dashboard `notes-outbox`, para onde aponta esse alerta.
+No exemplo, o `audit-consumer` herda o alerta de lag e o de DLQ do group `audit`, e o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. As seções Outbox e Forward do `notes` ficam no dashboard `notes-outbox`.
 
 <!-- example:end -->
 
@@ -149,8 +151,8 @@ make test             # go test -race com cobertura: unit + componente (exige o 
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
 make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
-make o11y.generate    # regenera os dashboards do Grafana a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
-make o11y.lint        # dashboard-linter --strict nos dashboards gerados (ferramentas instaladas pelo make setup)
+make o11y.generate    # regenera os dashboards e as regras do Prometheus a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
+make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras (ferramentas instaladas pelo make setup)
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
 make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
 make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
@@ -242,7 +244,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    ```
 
 4. Inclua o serviço no `backend/Tiltfile`: `include('./services/<name>/Tiltfile')`.
-5. Declare o serviço no gerador de observabilidade, em `backend/tools/o11ygen/services.go`: o nome e o `service.name` de cada processo, com `service.Daemon` e os componentes que ele roda (`service.API`, `service.Consumer`, `service.Worker`, `service.Browser`) ou `service.OneShot` para um processo que termina (como o `<name>-migrate`). Toda métrica que um artefato gerado consulta precisa estar no catálogo, em `backend/tools/o11ygen/internal/catalog/metrics.go`, com os labels permitidos; o `make test` falha com uma métrica ou um label fora dele. Depois rode `make o11y.generate tidy mocks sqlc lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
+5. Declare o serviço no gerador de observabilidade, em `backend/tools/o11ygen/services.go`: o nome e o `service.name` de cada processo, com `service.Daemon` e os componentes que ele roda (`service.API`, `service.Consumer`, `service.Worker`, `service.Browser`) ou `service.OneShot` para um processo que termina (como o `<name>-migrate`). Marque com `.WithDBPool()` o processo que abre um pool pgx e, num `consumer`, declare o consumer group com `.WithConsumerGroup("<group>")`: os alertas herdados dependem disso. Um `worker` é o forwarder do outbox e emite `<name>.outbox.oldest_pending.age`. Toda métrica que um artefato gerado consulta precisa estar no catálogo, em `backend/tools/o11ygen/internal/catalog/metrics.go`, com os labels permitidos; o `make test` falha com uma métrica ou um label fora dele. Depois rode `make o11y.generate tidy mocks sqlc lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
 6. (Opcional) Crie a coleção Bruno em `backend/config/bruno/collections/<Name>` e liste-a em `collections:` no `workspace.yml`.
 
 **OpenAPI**

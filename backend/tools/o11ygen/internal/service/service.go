@@ -21,8 +21,10 @@ type Service struct {
 }
 
 type Process struct {
-	name       string
-	components []Component
+	name          string
+	components    []Component
+	dbPool        bool
+	consumerGroup string
 }
 
 func Daemon(name string, component Component, more ...Component) Process {
@@ -38,6 +40,24 @@ func (p Process) Name() string { return p.name }
 func (p Process) Components() []Component { return slices.Clone(p.components) }
 
 func (p Process) LongRunning() bool { return len(p.components) > 0 }
+
+func (p Process) WithDBPool() Process {
+	p.dbPool = true
+
+	return p
+}
+
+func (p Process) DBPool() bool { return p.dbPool }
+
+func (p Process) WithConsumerGroup(group string) Process {
+	p.consumerGroup = group
+
+	return p
+}
+
+func (p Process) ConsumerGroup() string { return p.consumerGroup }
+
+func (p Process) Runs(component Component) bool { return slices.Contains(p.components, component) }
 
 func Validate(services []Service) error {
 	serviceNames := map[string]bool{}
@@ -85,6 +105,14 @@ func validateProcess(svc string, process Process, seen map[string]bool) error {
 		default:
 			return errors.New("process %q declares unknown component %q", process.name, component)
 		}
+	}
+
+	if process.Runs(Consumer) != (process.consumerGroup != "") {
+		return errors.New("process %q must declare a consumer group if, and only if, it runs a consumer", process.name)
+	}
+
+	if process.dbPool && !process.LongRunning() {
+		return errors.New("one-shot process %q cannot declare a database pool", process.name)
 	}
 
 	return nil

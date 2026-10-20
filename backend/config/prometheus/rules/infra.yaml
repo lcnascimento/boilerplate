@@ -1,0 +1,36 @@
+groups:
+  - name: kafka
+    rules:
+      - alert: KafkaBrokersDown
+        expr: kafka_brokers < 1 or absent_over_time(kafka_brokers[5m])
+        labels:
+          service: kafka
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-messaging
+          description: 'O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md
+          summary: Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos
+  - name: postgres
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0 or absent_over_time(pg_up[5m])
+        labels:
+          service: postgres
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          description: 'O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresDown.md
+          summary: Postgres fora do ar, ou sem métricas do exporter há 5 minutos
+      - alert: PostgresConnectionsNearMax
+        expr: sum(pg_stat_activity_count) / max(pg_settings_max_connections) > 0.8
+        for: 5m
+        labels:
+          service: postgres
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          description: Mais de 80% de max_connections do Postgres está em uso há 5 minutos; perto do teto, novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões em pg_stat_activity.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresConnectionsNearMax.md
+          summary: Postgres com {{ $value | humanizePercentage }} de max_connections em uso

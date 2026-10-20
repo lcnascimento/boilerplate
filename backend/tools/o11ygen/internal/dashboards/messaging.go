@@ -1,6 +1,8 @@
 package dashboards
 
 import (
+	"strings"
+
 	"github.com/grafana/grafana-foundation-sdk/go/cog"
 	"github.com/grafana/grafana-foundation-sdk/go/cog/variants"
 	"github.com/grafana/grafana-foundation-sdk/go/common"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/rules"
 )
 
 func messagingDashboard() *dashboard.DashboardBuilder {
@@ -93,7 +96,7 @@ func messagingPanel2() cog.Builder[dashboard.Panel] {
 			"sortOrder":                1,
 			"dashboardAlerts":          false,
 			"alertName":                "",
-			"alertInstanceLabelFilter": `{area="messaging"}`,
+			"alertInstanceLabelFilter": `{alertname=~"` + strings.Join(rules.AlertNames("messaging"), "|") + `"}`,
 			"stateFilter": map[string]bool{
 				"firing":     true,
 				"pending":    true,

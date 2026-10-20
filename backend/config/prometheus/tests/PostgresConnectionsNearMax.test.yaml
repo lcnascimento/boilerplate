@@ -1,0 +1,44 @@
+rule_files:
+  - ../rules/infra.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires when the connections stay above 80% of max_connections for five minutes
+    interval: 1m
+    input_series:
+      - series: pg_stat_activity_count{datname="notes", state="idle"}
+        values: 50x10
+      - series: pg_stat_activity_count{datname="audit", state="active"}
+        values: 40x10
+      - series: pg_settings_max_connections{job="integrations/postgres"}
+        values: 100x10
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: PostgresConnectionsNearMax
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: PostgresConnectionsNearMax
+        exp_alerts:
+          - exp_labels:
+              service: postgres
+              severity: warning
+            exp_annotations:
+              summary: "Postgres com 90% de max_connections em uso"
+              description: "Mais de 80% de max_connections do Postgres está em uso há 5 minutos; perto do teto, novas conexões são recusadas. Veja primeiro quais application_name têm mais conexões em pg_stat_activity."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresConnectionsNearMax.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-overview"
+
+  - name: stays quiet at 80% of max_connections or less
+    interval: 1m
+    input_series:
+      - series: pg_stat_activity_count{datname="notes", state="idle"}
+        values: 50x10
+      - series: pg_stat_activity_count{datname="audit", state="active"}
+        values: 30x10
+      - series: pg_settings_max_connections{job="integrations/postgres"}
+        values: 100x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PostgresConnectionsNearMax
+        exp_alerts: []

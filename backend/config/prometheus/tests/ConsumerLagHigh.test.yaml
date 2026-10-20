@@ -1,0 +1,41 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires when the consumer group stays more than 100 messages behind for five minutes
+    interval: 1m
+    input_series:
+      - series: kafka_consumergroup_uncommitted_offsets{consumergroup="fixture", topic="orders.order.v1", partition="0"}
+        values: 90x10
+      - series: kafka_consumergroup_uncommitted_offsets{consumergroup="fixture", topic="orders.order.v1", partition="1"}
+        values: 60x10
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ConsumerLagHigh
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: ConsumerLagHigh
+        exp_alerts:
+          - exp_labels:
+              consumergroup: fixture
+              service: fixture-consumer
+              severity: warning
+            exp_annotations:
+              summary: Consumer group fixture de fixture-consumer com 150 mensagens atrasadas
+              description: "O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento no dashboard messaging."
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
+              dashboard_url: http://localhost:3010/d/boilerplate-messaging
+
+  - name: stays quiet with its group at 100 messages or less, whatever other groups lag
+    interval: 1m
+    input_series:
+      - series: kafka_consumergroup_uncommitted_offsets{consumergroup="fixture", topic="orders.order.v1", partition="0"}
+        values: 100x10
+      - series: kafka_consumergroup_uncommitted_offsets{consumergroup="other", topic="orders.order.v1", partition="0"}
+        values: 500x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ConsumerLagHigh
+        exp_alerts: []

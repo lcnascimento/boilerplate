@@ -11,6 +11,7 @@ datasources:
       httpMethod: POST
       # The OTel SDK exports metrics every 60s; $__rate_interval needs that cadence to span two samples.
       timeInterval: 60s
+      manageAlerts: true
       exemplarTraceIdDestinations:
         - name: trace_id
           datasourceUid: tempo
