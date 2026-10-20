@@ -11,7 +11,7 @@ require (
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/env v1.2.2
 	github.com/lcnascimento/go-kit/errors v1.9.3
-	github.com/lcnascimento/go-kit/http v1.4.7
+	github.com/lcnascimento/go-kit/http v1.5.0
 	github.com/lcnascimento/go-kit/o11y v1.7.0
 	github.com/lcnascimento/go-kit/validator v1.11.0
 	github.com/peterldowns/pgtestdb v0.1.1
