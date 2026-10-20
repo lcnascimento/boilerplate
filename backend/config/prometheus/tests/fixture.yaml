@@ -22,6 +22,17 @@ groups:
           description: Mais de 90% das conexões do pool pgx de fixture-api estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de fixture-api com {{ $value | humanizePercentage }} das conexões em uso
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-api"} > 5
+        for: 15m
+        labels:
+          service: fixture-api
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          description: 'fixture-api mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-api com {{ $value | humanize }} séries, acima do teto de 5
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/fixture-consumer"}[5m])
         labels:
@@ -53,6 +64,17 @@ groups:
           description: 'fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard messaging e os logs de fixture-consumer.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
           summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de fixture-consumer'
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-consumer"} > 5
+        for: 15m
+        labels:
+          service: fixture-consumer
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          description: 'fixture-consumer mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-consumer com {{ $value | humanize }} séries, acima do teto de 5
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/fixture-worker"}[5m])
         labels:
@@ -74,3 +96,18 @@ groups:
           description: 'fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
           summary: fixture-worker não reporta a idade do outbox há 5 minutos
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-worker"} > 5
+        for: 15m
+        labels:
+          service: fixture-worker
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          description: 'fixture-worker mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-worker com {{ $value | humanize }} séries, acima do teto de 5
+  - name: cardinality
+    rules:
+      - record: job:series:count
+        expr: count by (job) ({__name__=~".+"})
