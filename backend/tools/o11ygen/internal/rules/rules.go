@@ -45,7 +45,7 @@ func FixtureKind() artifact.Kind {
 		Dir:  "config/prometheus/tests",
 		Glob: "fixture.yaml",
 		Build: func([]service.Service) ([]artifact.File, error) {
-			file, err := encode(fixture.Name, append([]group{serviceGroup(fixture)}, recordingGroups...)...)
+			file, err := encode(fixture.Name, append([]group{serviceGroup(&fixture)}, recordingGroups...)...)
 			if err != nil {
 				return nil, err
 			}
@@ -59,7 +59,7 @@ func FixtureKind() artifact.Kind {
 func AlertNames(dashboard string) []string {
 	var names []string
 
-	for _, group := range append([]group{serviceGroup(fixture)}, infraGroups...) {
+	for _, group := range append([]group{serviceGroup(&fixture)}, infraGroups...) {
 		for _, a := range group.alerts {
 			if a.dashboard == dashboard && !slices.Contains(names, a.name) {
 				names = append(names, a.name)
@@ -76,7 +76,7 @@ type group struct {
 	alerts  []alert
 }
 
-func serviceGroup(svc service.Service) group {
+func serviceGroup(svc *service.Service) group {
 	out := group{name: svc.Name}
 
 	for _, proc := range svc.Processes {
@@ -106,7 +106,7 @@ func build(services []service.Service) ([]artifact.File, error) {
 			return nil, errors.New("service name %q is reserved for the infrastructure rules", infraFile)
 		}
 
-		file, err := encode(svc.Name, serviceGroup(svc))
+		file, err := encode(svc.Name, serviceGroup(&svc))
 		if err != nil {
 			return nil, err
 		}

@@ -22,9 +22,10 @@ type Service struct {
 	Processes    []Process
 	SeriesBudget int
 	LogAlerts    []LogAlert
+	SLOs         []SLO
 }
 
-func (s Service) EffectiveSeriesBudget() int {
+func (s *Service) EffectiveSeriesBudget() int {
 	if s.SeriesBudget == 0 {
 		return DefaultSeriesBudget
 	}
@@ -120,6 +121,10 @@ func Validate(services []Service) error {
 		}
 
 		if err := validateLogAlerts(&svc); err != nil {
+			return err
+		}
+
+		if err := validateSLOs(&svc); err != nil {
 			return err
 		}
 	}

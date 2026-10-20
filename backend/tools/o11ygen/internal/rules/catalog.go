@@ -26,7 +26,7 @@ const (
 type process struct {
 	service.Process
 
-	service service.Service
+	service *service.Service
 }
 
 func (p *process) job() string {

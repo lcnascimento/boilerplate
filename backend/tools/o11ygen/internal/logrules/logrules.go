@@ -46,7 +46,7 @@ func build(services []service.Service) ([]artifact.File, error) {
 	files := make([]artifact.File, 0, len(services))
 
 	for _, svc := range services {
-		group, err := serviceGroup(svc)
+		group, err := serviceGroup(&svc)
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +89,7 @@ func recording(record, expr string, labels map[string]string) (recordingRule, er
 	return recordingRule{Record: record, Expr: parsed.String(), Labels: labels}, nil
 }
 
-func serviceGroup(svc service.Service) (ruleGroup, error) {
+func serviceGroup(svc *service.Service) (ruleGroup, error) {
 	processes := make([]string, 0, len(svc.Processes))
 	for _, p := range svc.Processes {
 		processes = append(processes, p.Name())

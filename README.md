@@ -111,6 +111,8 @@ Os logs também viram métricas: o `o11ygen` gera recording rules do ruler do Lo
 
 Não há Alertmanager nem contact point: os alertas aparecem só leitura em Alerting no Grafana (datasource Prometheus com `manageAlerts`) e nos painéis de alertas dos dashboards.
 
+Cada processo também herda os SLOs padrão dos componentes que declara, todos com janela de 30 dias: um `api` herda `api-availability` (99,9% das requisições sem 5xx) e `api-latency` (99% em até 250ms), um `consumer` herda `consumer-success` (99,9% das tentativas de processamento sem erro) e `consumer-latency` (99% em até 1s), e um `worker` herda `outbox-freshness` (99% dos minutos com a pendente mais antiga do outbox em até 30s). As rotas `/ping` e `/health` ficam fora dos SLOs de API, e um `4xx` não queima budget. O `o11ygen` escreve uma spec do [Sloth](https://sloth.dev/) por serviço em `backend/config/sloth/` e roda o `sloth generate` (instalado pelo `make setup`), que escreve as recording rules e os alertas de burn-rate multi-janela em `backend/config/prometheus/slo/`: `SLOBurnRate` com `severity: critical` (page) ou `warning` (ticket), o label `service` do processo e o `sloth_slo` do SLO, e o runbook `docs/runbooks/SLOBurnRate.md`. Um SLO extra, de uma rota por exemplo, entra em `SLOs` na declaração do serviço, com o processo que o emite e um `service.EventsSLI(erro, total)` ou `service.RawSLI(razão)` cujas queries usam `{{.window}}`.
+
 <!-- example:begin -->
 
 No exemplo, o `audit-consumer` herda o alerta de lag e o de DLQ do group `audit`, e o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. As seções Outbox e Forward do `notes` ficam no dashboard `notes-outbox`.
@@ -155,8 +157,8 @@ make test             # go test -race com cobertura: unit + componente (exige o 
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
 make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
-make o11y.generate    # regenera os dashboards, as regras do Prometheus e as do ruler do Loki a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
-make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki (ferramentas instaladas pelo make setup)
+make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
+make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki; sloth validate, promtool e pint nos SLOs (ferramentas instaladas pelo make setup)
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
 make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
 make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)

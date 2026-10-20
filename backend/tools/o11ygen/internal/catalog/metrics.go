@@ -28,6 +28,7 @@ const (
 	Scrape
 	RecordingRule
 	LokiRecordingRule
+	SlothRecording
 )
 
 type Metric struct {
@@ -79,6 +80,26 @@ const (
 	// example:end
 )
 
+// The series Sloth records for every SLO, read by the SLO panels of the dashboards.
+const (
+	SLOErrorRatioRate5m  = "slo:sli_error:ratio_rate5m"
+	SLOErrorRatioRate30m = "slo:sli_error:ratio_rate30m"
+	SLOErrorRatioRate1h  = "slo:sli_error:ratio_rate1h"
+	SLOErrorRatioRate2h  = "slo:sli_error:ratio_rate2h"
+	SLOErrorRatioRate6h  = "slo:sli_error:ratio_rate6h"
+	SLOErrorRatioRate1d  = "slo:sli_error:ratio_rate1d"
+	SLOErrorRatioRate3d  = "slo:sli_error:ratio_rate3d"
+	SLOErrorRatioRate30d = "slo:sli_error:ratio_rate30d"
+
+	SLOObjectiveRatio                  = "slo:objective:ratio"
+	SLOErrorBudgetRatio                = "slo:error_budget:ratio"
+	SLOTimePeriodDays                  = "slo:time_period:days"
+	SLOCurrentBurnRateRatio            = "slo:current_burn_rate:ratio"
+	SLOPeriodBurnRateRatio             = "slo:period_burn_rate:ratio"
+	SLOPeriodErrorBudgetRemainingRatio = "slo:period_error_budget_remaining:ratio"
+	SlothSLOInfo                       = "sloth_slo_info"
+)
+
 var (
 	httpServerLabels = []string{"http_request_method", "http_route", "http_response_status_code"}
 	httpClientLabels = []string{"network_peer_address", "http_request_method"}
@@ -90,6 +111,12 @@ var (
 	pgxpool            = []string{"db_system_name", "db_client_connection_pool_name"}
 	kafkaPartition     = []string{"topic", "partition"}
 	kafkaConsumerGroup = []string{"consumergroup", "topic", "partition"}
+)
+
+// Sloth records a series only for the services that declare an SLO, and the error ratio only while the SLI has events.
+var (
+	sloErrorRatio = Metric{Type: Gauge, Source: SlothRecording, Labels: []string{"sloth_window"}, Presence: PresenceOnEvent}
+	sloMeta       = Metric{Type: Gauge, Source: SlothRecording, Presence: PresenceOnEvent}
 )
 
 var metrics = map[string]Metric{
@@ -139,6 +166,26 @@ var metrics = map[string]Metric{
 		Type: Gauge, Source: LokiRecordingRule, Labels: []string{"service", "log_alert"}, Presence: PresenceOnEvent,
 	},
 
+	SLOErrorRatioRate5m:  sloErrorRatio,
+	SLOErrorRatioRate30m: sloErrorRatio,
+	SLOErrorRatioRate1h:  sloErrorRatio,
+	SLOErrorRatioRate2h:  sloErrorRatio,
+	SLOErrorRatioRate6h:  sloErrorRatio,
+	SLOErrorRatioRate1d:  sloErrorRatio,
+	SLOErrorRatioRate3d:  sloErrorRatio,
+	SLOErrorRatioRate30d: sloErrorRatio,
+
+	SLOObjectiveRatio:                  sloMeta,
+	SLOErrorBudgetRatio:                sloMeta,
+	SLOTimePeriodDays:                  sloMeta,
+	SLOCurrentBurnRateRatio:            sloMeta,
+	SLOPeriodBurnRateRatio:             sloMeta,
+	SLOPeriodErrorBudgetRemainingRatio: sloMeta,
+	SlothSLOInfo: {
+		Type: Gauge, Source: SlothRecording, Presence: PresenceOnEvent,
+		Labels: []string{"sloth_mode", "sloth_objective", "sloth_spec", "sloth_version"},
+	},
+
 	// example:begin
 	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP},
 	NotesOutboxPurgedMessages:   {Type: Counter, Source: OTLP},
@@ -151,6 +198,8 @@ var sourceLabels = map[Source][]string{
 	OTLPResource:  {"job", "instance"},
 	Scrape:        {"job", "instance"},
 	RecordingRule: {"job"},
+	// service is the process that emits the SLI.
+	SlothRecording: {"sloth_id", "sloth_service", "sloth_slo", "service"},
 }
 
 var (
