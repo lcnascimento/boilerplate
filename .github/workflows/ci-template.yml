@@ -113,7 +113,7 @@ jobs:
 
       - name: Zero services
         run: |
-          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "use./quality"
+          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools')"
           test ! -e Makefile
           test ! -e scripts
 

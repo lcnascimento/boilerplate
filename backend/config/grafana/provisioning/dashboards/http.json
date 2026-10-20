@@ -1,27 +1,42 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
+  "uid": "boilerplate-http",
+  "title": "HTTP APIs — Rate · Errors · Duration",
+  "tags": [
+    "http",
+    "red",
+    "boilerplate",
+    "sre"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": false,
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
     ]
   },
-  "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "links": [],
+  "refresh": "30s",
+  "schemaVersion": 42,
   "panels": [
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Visão Geral",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -29,20 +44,26 @@
         "y": 0
       },
       "id": 1,
-      "title": "Visão Geral",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "stat",
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Rate (req/s)",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps"
-        },
-        "overrides": []
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -50,58 +71,47 @@
         "x": 0,
         "y": 1
       },
-      "id": 2,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
         },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Rate (req/s)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          }
+          "unit": "reqps"
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "100 * (sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rate 5xx (%)",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -109,58 +119,64 @@
         "x": 6,
         "y": 1
       },
-      "id": 3,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
         },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "100 * (sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Error Rate 5xx (%)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "percent",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "yellow",
-                "value": 0.5
+                "value": 1,
+                "color": "yellow"
               },
               {
-                "color": "red",
-                "value": 1
+                "value": 5,
+                "color": "red"
               }
             ]
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "P50 Latência",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -168,35 +184,21 @@
         "x": 12,
         "y": 1
       },
-      "id": 4,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
         },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
-          "legendFormat": ""
-        }
-      ],
-      "title": "P50 Latência",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
       "fieldConfig": {
         "defaults": {
@@ -205,21 +207,41 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "yellow",
-                "value": 0.5
+                "value": 0.5,
+                "color": "yellow"
               },
               {
-                "color": "red",
-                "value": 1
+                "value": 1,
+                "color": "red"
               }
             ]
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "P99 Latência",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -227,33 +249,50 @@
         "x": 18,
         "y": 1
       },
-      "id": 5,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
         },
-        "textMode": "auto"
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
-          "legendFormat": ""
-        }
-      ],
-      "title": "P99 Latência",
-      "type": "stat"
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.5,
+                "color": "yellow"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Rate",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -261,40 +300,27 @@
         "y": 5
       },
       "id": 6,
-      "title": "Rate",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "timeseries",
+      "id": 7,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests por Serviço (req/s)",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 500
-              }
-            ]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
@@ -302,51 +328,66 @@
         "x": 0,
         "y": 6
       },
-      "id": 7,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
-          "legendFormat": "{{job}}"
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ],
-      "title": "Requests por Serviço (req/s)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2
-          },
+          "unit": "reqps",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
+                "value": null,
                 "color": "green"
               },
               {
-                "color": "yellow",
-                "value": 100
+                "value": 100,
+                "color": "yellow"
               },
               {
-                "color": "red",
-                "value": 500
+                "value": 500,
+                "color": "red"
               }
             ]
           },
-          "unit": "reqps"
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 8,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (http_route, http_request_method) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
+          "legendFormat": "{{http_request_method}} {{http_route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests por Rota (req/s)",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
@@ -354,23 +395,51 @@
         "x": 12,
         "y": 6
       },
-      "id": 8,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (http_route, http_request_method) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
-          "legendFormat": "{{http_request_method}} {{http_route}}"
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ],
-      "title": "Requests por Rota (req/s)",
-      "type": "timeseries"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 100,
+                "color": "yellow"
+              },
+              {
+                "value": 500,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Errors",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -378,41 +447,27 @@
         "y": 14
       },
       "id": 9,
-      "title": "Errors",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "timeseries",
+      "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "100 * (sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])) * 0) / sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rate por Serviço (%)",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 500
-              }
-            ]
-          },
-          "unit": "percent",
-          "min": 0
-        },
-        "overrides": []
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
@@ -420,51 +475,76 @@
         "x": 0,
         "y": 15
       },
-      "id": 10,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "100 * (sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])) * 0) / sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))",
-          "legendFormat": "{{job}}"
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ],
-      "title": "Error Rate por Serviço (%)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2
-          },
+          "unit": "percent",
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
+                "value": null,
                 "color": "green"
               },
               {
-                "color": "yellow",
-                "value": 100
+                "value": 100,
+                "color": "yellow"
               },
               {
-                "color": "red",
-                "value": 500
+                "value": 500,
+                "color": "red"
               }
             ]
           },
-          "unit": "reqps"
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"4..\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}} {{http_route}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}} {{http_route}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Respostas 4xx/5xx por Rota (req/s)",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
@@ -472,32 +552,51 @@
         "x": 12,
         "y": 15
       },
-      "id": 11,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"4..\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}} {{http_route}}"
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
         },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}} {{http_route}}"
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ],
-      "title": "Respostas 4xx/5xx por Rota (req/s)",
-      "type": "timeseries"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 100,
+                "color": "yellow"
+              },
+              {
+                "value": 500,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Duration",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -505,40 +604,45 @@
         "y": 23
       },
       "id": 12,
-      "title": "Duration",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "timeseries",
+      "id": 13,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
+          "legendFormat": "P90",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ],
+      "title": "Latência Global (P50 / P90 / P99)",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 500
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
@@ -546,69 +650,66 @@
         "x": 0,
         "y": 24
       },
-      "id": 13,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
-          "legendFormat": "P50"
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
         },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.90, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
-          "legendFormat": "P90"
-        },
-        {
-          "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
-          "legendFormat": "P99"
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ],
-      "title": "Latência Global (P50 / P90 / P99)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 2
-          },
+          "unit": "s",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
+                "value": null,
                 "color": "green"
               },
               {
-                "color": "yellow",
-                "value": 100
+                "value": 100,
+                "color": "yellow"
               },
               {
-                "color": "red",
-                "value": 500
+                "value": 500,
+                "color": "red"
               }
             ]
           },
-          "unit": "s"
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 14,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
+          "legendFormat": "{{http_route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "P99 por Rota",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
@@ -616,64 +717,106 @@
         "x": 12,
         "y": 24
       },
-      "id": 14,
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))",
-          "legendFormat": "{{http_route}}"
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ],
-      "title": "P99 por Rota",
-      "type": "timeseries"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 100,
+                "color": "yellow"
+              },
+              {
+                "value": 500,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      }
     }
-  ],
-  "refresh": "30s",
-  "schemaVersion": 42,
-  "tags": [
-    "http",
-    "red",
-    "boilerplate",
-    "sre"
   ],
   "templating": {
     "list": [
       {
+        "type": "datasource",
+        "name": "prometheus",
+        "label": "Prometheus",
+        "skipUrlSync": false,
+        "query": "prometheus",
+        "multi": false,
+        "allowCustomValue": true,
+        "includeAll": false,
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30
+      },
+      {
+        "type": "query",
         "name": "service",
         "label": "Serviço",
-        "type": "query",
+        "skipUrlSync": false,
+        "query": "label_values(http_server_request_total, job)",
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus"
+          "uid": "${prometheus}"
         },
-        "query": "label_values(http_server_request_total, job)",
-        "definition": "label_values(http_server_request_total, job)",
-        "refresh": 2,
-        "sort": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".+",
-        "regex": "",
         "current": {
           "selected": true,
           "text": "All",
           "value": "$__all"
         },
-        "options": []
+        "multi": true,
+        "allowCustomValue": true,
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".+",
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30,
+        "definition": "label_values(http_server_request_total, job)"
       }
     ]
   },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "HTTP APIs — Rate · Errors · Duration",
-  "uid": "boilerplate-http",
-  "weekStart": ""
+  "annotations": {
+    "list": [
+      {
+        "name": "Annotations \u0026 Alerts",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "type": "dashboard",
+        "builtIn": 1,
+        "placement": "inControlsMenu"
+      }
+    ]
+  }
 }

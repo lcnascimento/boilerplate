@@ -48,6 +48,14 @@ jobs:
           untracked=$(git ls-files --others --exclude-standard)
           if [ -n "$untracked" ]; then echo "make sqlc created untracked files:"; echo "$untracked"; exit 1; fi
 
+      - name: o11y.generate
+        run: |
+          git add -A
+          make o11y.generate
+          git diff --exit-code
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then echo "make o11y.generate created untracked files:"; echo "$untracked"; exit 1; fi
+
       - name: Lint
         run: make lint
 

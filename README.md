@@ -149,6 +149,7 @@ make test             # go test -race com cobertura: unit + componente (exige o 
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
 make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
+make o11y.generate    # regenera os dashboards do Grafana a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
 make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
 make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
@@ -240,7 +241,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    ```
 
 4. Inclua o serviço no `backend/Tiltfile`: `include('./services/<name>/Tiltfile')`.
-5. Rode `make tidy mocks sqlc lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
+5. Declare o serviço no gerador de observabilidade, em `backend/tools/o11ygen/services.go`: o nome e o `service.name` de cada processo, com `service.Daemon` e os componentes que ele roda (`service.API`, `service.Consumer`, `service.Worker`, `service.Browser`) ou `service.OneShot` para um processo que termina (como o `<name>-migrate`). Depois rode `make o11y.generate tidy mocks sqlc lint test` em `backend/`, com o `postgres` no ar. Um teste com `fx.ValidateApp` em `bundle/` quebra se o grafo do fx estiver incompleto.
 6. (Opcional) Crie a coleção Bruno em `backend/config/bruno/collections/<Name>` e liste-a em `collections:` no `workspace.yml`.
 
 **OpenAPI**

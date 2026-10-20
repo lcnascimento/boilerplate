@@ -1,27 +1,42 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
+  "uid": "boilerplate-messaging",
+  "title": "Mensageria — Produce · Consume · DLQ",
+  "tags": [
+    "messaging",
+    "kafka",
+    "boilerplate",
+    "sre"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": false,
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
     ]
   },
-  "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "links": [],
+  "refresh": "30s",
+  "schemaVersion": 42,
   "panels": [
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Alertas",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -29,42 +44,44 @@
         "y": 0
       },
       "id": 1,
-      "title": "Alertas",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "alertlist",
+      "id": 2,
+      "title": "Estado dos alertas de mensageria",
+      "transparent": false,
       "gridPos": {
         "h": 9,
         "w": 24,
         "x": 0,
         "y": 1
       },
-      "id": 2,
-      "type": "alertlist",
-      "title": "Estado dos alertas de mensageria",
+      "repeatDirection": "h",
       "options": {
-        "viewMode": "list",
-        "groupMode": "default",
-        "groupBy": [],
-        "maxItems": 20,
-        "sortOrder": 1,
-        "dashboardAlerts": false,
-        "alertName": "",
         "alertInstanceLabelFilter": "{area=\"messaging\"}",
+        "alertName": "",
+        "dashboardAlerts": false,
+        "groupBy": [],
+        "groupMode": "default",
+        "maxItems": 20,
+        "showInstances": false,
+        "sortOrder": 1,
         "stateFilter": {
+          "error": true,
           "firing": true,
-          "pending": true,
           "noData": true,
           "normal": true,
-          "error": true,
+          "pending": true,
           "recovering": true
         },
-        "showInstances": false
+        "viewMode": "list"
       }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Produce",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -72,16 +89,48 @@
         "y": 10
       },
       "id": 10,
-      "title": "Produce",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "timeseries",
+      "id": 13,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"$topic\"}[$__rate_interval]))",
+          "legendFormat": "{{topic}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Produção no tópico (msg/s)",
+      "description": "Avanço dos high-water marks no broker, via o exporter Kafka do Alloy.",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${prometheus}"
       },
-      "description": "Avanço dos high-water marks no broker, via o exporter Kafka do Alloy.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -94,41 +143,12 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 11
-      },
-      "id": 13,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"$topic\"}[$__rate_interval]))",
-          "legendFormat": "{{topic}}"
-        }
-      ],
-      "title": "Produção no tópico (msg/s)",
-      "type": "timeseries"
+      }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Consume",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -136,16 +156,48 @@
         "y": 19
       },
       "id": 14,
-      "title": "Consume",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "timeseries",
+      "id": 15,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"$group\", topic=~\"$topic\"})",
+          "legendFormat": "{{consumergroup}} {{topic}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Lag por consumer group",
+      "description": "Mensagens ainda não confirmadas pelo group. O alerta do group audit dispara acima de 100 por 5 min.",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${prometheus}"
       },
-      "description": "Mensagens ainda não confirmadas pelo group. O alerta do group audit dispara acima de 100 por 5 min.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -158,45 +210,56 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 16,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (messaging_consumer_group_name) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
+          "legendFormat": "ok {{messaging_consumer_group_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Mensagens consumidas (msg/s)",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
+        "x": 8,
         "y": 20
       },
-      "id": 15,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"$group\", topic=~\"$topic\"})",
-          "legendFormat": "{{consumergroup}} {{topic}}"
-        }
-      ],
-      "title": "Lag por consumer group",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -209,54 +272,56 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 17,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P50 {{messaging_consumer_group_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P99 {{messaging_consumer_group_name}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Duração do processamento",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
+        "x": 16,
         "y": 20
       },
-      "id": 16,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_consumer_group_name) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
-          "legendFormat": "ok {{messaging_consumer_group_name}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}"
-        }
-      ],
-      "title": "Mensagens consumidas (msg/s)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -269,54 +334,48 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 18,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_process_duration_seconds_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Retentativas (tentativas/s)",
+      "description": "Tentativas de processamento com erro; erros transitórios bloqueiam a partição até passar.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 20
+        "w": 12,
+        "x": 0,
+        "y": 28
       },
-      "id": 17,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P50 {{messaging_consumer_group_name}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P99 {{messaging_consumer_group_name}}"
-        }
-      ],
-      "title": "Duração do processamento",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Tentativas de processamento com erro; erros transitórios bloqueiam a partição até passar.",
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -329,45 +388,56 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 19,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_current_offset{consumergroup=~\"$group\", topic=~\"$topic\"})",
+          "legendFormat": "confirmado {{consumergroup}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\"$topic\"})",
+          "legendFormat": "high-water {{topic}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Offset confirmado vs. high-water mark",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 28
       },
-      "id": 18,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_process_duration_seconds_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}"
-        }
-      ],
-      "title": "Retentativas (tentativas/s)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -380,50 +450,12 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 28
-      },
-      "id": 19,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_current_offset{consumergroup=~\"$group\", topic=~\"$topic\"})",
-          "legendFormat": "confirmado {{consumergroup}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\"$topic\"})",
-          "legendFormat": "high-water {{topic}}"
-        }
-      ],
-      "title": "Offset confirmado vs. high-water mark",
-      "type": "timeseries"
+      }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "DLQ",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -431,37 +463,27 @@
         "y": 36
       },
       "id": 20,
-      "title": "DLQ",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "stat",
+      "id": 21,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Mensagens nas DLQs",
+      "description": "High-water mark das DLQs (retenção infinita): tudo que já caiu nelas.",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "High-water mark das DLQs (retenção infinita): tudo que já caiu nelas.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -469,37 +491,22 @@
         "x": 0,
         "y": 37
       },
-      "id": 21,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
         "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
-        }
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Mensagens nas DLQs",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "O alerta de DLQ dispara assim que este valor passa de 0.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -507,12 +514,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "red",
-                "value": 1
+                "value": 1,
+                "color": "red"
               }
             ]
           },
@@ -521,6 +528,27 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 22,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(increase(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Novas na DLQ (5 min)",
+      "description": "O alerta de DLQ dispara assim que este valor passa de 0.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -528,37 +556,84 @@
         "x": 6,
         "y": 37
       },
-      "id": 22,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
         "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
-        }
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
           },
-          "expr": "sum(increase(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Novas na DLQ (5 min)",
-      "type": "stat"
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
     },
     {
+      "type": "timeseries",
+      "id": 23,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (messaging_consumer_group_name, error_type) (increase(messaging_dlq_sent_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Enviadas à DLQ por causa",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${prometheus}"
       },
-      "description": "",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -567,53 +642,55 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "showPoints": "never",
-            "spanNulls": false,
             "stacking": {
               "mode": "normal",
               "group": "A"
-            }
+            },
+            "spanNulls": false
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 24,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"})",
+          "legendFormat": "{{topic}}",
+          "refId": "A"
+        }
+      ],
+      "title": "High-water mark das DLQs",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 41
       },
-      "id": 23,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_consumer_group_name, error_type) (increase(messaging_dlq_sent_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))",
-          "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}"
-        }
-      ],
-      "title": "Enviadas à DLQ por causa",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -626,111 +703,100 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 41
-      },
-      "id": 24,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"})",
-          "legendFormat": "{{topic}}"
-        }
-      ],
-      "title": "High-water mark das DLQs",
-      "type": "timeseries"
+      }
     }
-  ],
-  "refresh": "30s",
-  "schemaVersion": 42,
-  "tags": [
-    "messaging",
-    "kafka",
-    "boilerplate",
-    "sre"
   ],
   "templating": {
     "list": [
       {
+        "type": "datasource",
+        "name": "prometheus",
+        "label": "Prometheus",
+        "skipUrlSync": false,
+        "query": "prometheus",
+        "multi": false,
+        "allowCustomValue": true,
+        "includeAll": false,
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30
+      },
+      {
+        "type": "query",
         "name": "topic",
         "label": "Tópico",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
+        "skipUrlSync": false,
         "query": {
           "query": "label_values(kafka_topic_partition_current_offset, topic)",
           "refId": "topic-var"
         },
-        "definition": "label_values(kafka_topic_partition_current_offset, topic)",
-        "refresh": 2,
-        "sort": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".+",
-        "regex": "/^(?!.*\\.dlq$).*/",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
         "current": {
           "selected": true,
           "text": "All",
           "value": "$__all"
         },
-        "options": []
+        "multi": true,
+        "allowCustomValue": true,
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".+",
+        "regex": "/^(?!.*\\.dlq$).*/",
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30,
+        "definition": "label_values(kafka_topic_partition_current_offset, topic)"
       },
       {
+        "type": "query",
         "name": "group",
         "label": "Consumer group",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
+        "skipUrlSync": false,
         "query": {
           "query": "label_values(kafka_consumergroup_uncommitted_offsets, consumergroup)",
           "refId": "group-var"
         },
-        "definition": "label_values(kafka_consumergroup_uncommitted_offsets, consumergroup)",
-        "refresh": 2,
-        "sort": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".+",
-        "regex": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
         "current": {
           "selected": true,
           "text": "All",
           "value": "$__all"
         },
-        "options": []
+        "multi": true,
+        "allowCustomValue": true,
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".+",
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30,
+        "definition": "label_values(kafka_consumergroup_uncommitted_offsets, consumergroup)"
       }
     ]
   },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Mensageria — Produce · Consume · DLQ",
-  "uid": "boilerplate-messaging",
-  "weekStart": ""
+  "annotations": {
+    "list": [
+      {
+        "name": "Annotations \u0026 Alerts",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "type": "dashboard",
+        "builtIn": 1,
+        "placement": "inControlsMenu"
+      }
+    ]
+  }
 }
