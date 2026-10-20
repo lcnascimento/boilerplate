@@ -25,7 +25,7 @@ tests:
               summary: "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos"
               description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
-              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+              dashboard_url: "http://localhost:3010/d/boilerplate-kafka"
 
   - name: fires when the exporter stops sending metrics for five minutes
     interval: 1m
@@ -46,7 +46,7 @@ tests:
               summary: "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos"
               description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
-              dashboard_url: "http://localhost:3010/d/boilerplate-messaging"
+              dashboard_url: "http://localhost:3010/d/boilerplate-kafka"
 
   - name: stays quiet with a broker up
     interval: 1m

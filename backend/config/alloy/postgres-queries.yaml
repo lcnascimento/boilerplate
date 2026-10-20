@@ -1,0 +1,22 @@
+pg_client_connections:
+  query: |
+    SELECT datname, usename, application_name, state, count(*) AS count
+    FROM pg_stat_activity
+    WHERE backend_type = 'client backend'
+    GROUP BY datname, usename, application_name, state
+  metrics:
+    - datname:
+        usage: LABEL
+        description: Database the connection is on.
+    - usename:
+        usage: LABEL
+        description: Role the connection logged in as.
+    - application_name:
+        usage: LABEL
+        description: application_name the client set.
+    - state:
+        usage: LABEL
+        description: Connection state.
+    - count:
+        usage: GAUGE
+        description: Client connections.

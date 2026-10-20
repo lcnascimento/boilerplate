@@ -29,8 +29,8 @@ groups:
           service: audit-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-messaging
-          description: 'O consumer group audit está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se audit-consumer está no ar e a duração do processamento no dashboard messaging.'
+          dashboard_url: http://localhost:3010/d/boilerplate-kafka
+          description: 'O consumer group audit está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se audit-consumer está no ar e a duração do processamento no dashboard kafka.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
           summary: Consumer group audit de audit-consumer com {{ $value | humanize }} mensagens atrasadas
       - alert: DLQMessageReceived
@@ -39,8 +39,8 @@ groups:
           service: audit-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-messaging
-          description: 'audit-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard messaging e os logs de audit-consumer.'
+          dashboard_url: http://localhost:3010/d/boilerplate-kafka
+          description: 'audit-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard kafka e os logs de audit-consumer.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
           summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de audit-consumer'
       - alert: SeriesBudgetExceeded
@@ -50,7 +50,7 @@ groups:
           service: audit-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
           description: 'audit-consumer mantém mais de 2000 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: audit-consumer com {{ $value | humanize }} séries, acima do teto de 2000

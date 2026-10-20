@@ -22,11 +22,12 @@ func build(_ []service.Service) ([]artifact.File, error) {
 	}{
 		{"http", httpDashboard()},
 		{"logs", logsDashboard()},
-		{"messaging", messagingDashboard()},
+		{"kafka", kafkaDashboard()},
 		// example:begin
 		{"notes-outbox", notesOutboxDashboard()},
 		// example:end
 		{"overview", overviewDashboard()},
+		{"postgres", postgresDashboard()},
 		{"traces", tracesDashboard()},
 	}
 

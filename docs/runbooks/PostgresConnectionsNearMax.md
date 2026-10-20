@@ -12,7 +12,7 @@ Perto do teto, o Postgres recusa conexões novas com `too many clients already`.
 
 ## Diagnóstico
 
-1. Veja quem abre as conexões: `SELECT application_name, usename, datname, state, count(*) FROM pg_stat_activity GROUP BY 1, 2, 3, 4 ORDER BY 5 DESC;`. O `application_name` segue `<service.name>` de cada processo.
+1. Veja quem abre as conexões: no dashboard `postgres`, seção Conexões, o painel por `application_name` e estado, ou `SELECT application_name, usename, datname, state, count(*) FROM pg_stat_activity GROUP BY 1, 2, 3, 4 ORDER BY 5 DESC;`. O `application_name` segue `<service.name>` de cada processo.
 2. Muitas conexões `idle in transaction`: um processo esquece transações abertas. Procure-o pelo `application_name`.
 3. Some o `pool_max_conns` de todos os pools e réplicas: se passa do `max_connections`, o teto será atingido em carga.
 4. Procure conexões de fora dos serviços (testes, ferramentas) presas no banco.

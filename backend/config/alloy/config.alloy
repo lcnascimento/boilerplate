@@ -71,8 +71,10 @@ prometheus.scrape "kafka" {
 }
 
 prometheus.exporter.postgres "local_postgres" {
-  data_source_names  = ["postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable"]
-  enabled_collectors = ["database", "locks", "replication", "replication_slot", "stat_bgwriter", "stat_checkpointer", "stat_database", "stat_statements", "wal"]
+  data_source_names          = ["postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable"]
+  // No built-in collector counts connections by role and application_name.
+  custom_queries_config_path = "/etc/alloy/postgres-queries.yaml"
+  enabled_collectors         = ["database", "locks", "replication", "replication_slot", "stat_bgwriter", "stat_checkpointer", "stat_database", "stat_statements", "wal"]
 }
 
 prometheus.scrape "postgres" {
