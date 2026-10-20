@@ -29,8 +29,10 @@ import (
 // The backend directory: check-live reads the generated files the stack mounts, not a fresh generation.
 const backendRoot = "../.."
 
+// A process that just started reaches a recording rule after its first export (60s), the next evaluation (1m) and
+// the rule query offset (1m), and ci-e2e checks right after the services get ready.
 const (
-	liveTimeout  = 2 * time.Minute
+	liveTimeout  = 3 * time.Minute
 	livePoll     = 5 * time.Second
 	queryTimeout = 10 * time.Second
 )
