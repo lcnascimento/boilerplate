@@ -15,10 +15,21 @@ const (
 	Browser  Component = "browser"
 )
 
+const DefaultSeriesBudget = 2000
+
 type Service struct {
-	Name      string
-	Processes []Process
-	SLOs      []SLO
+	Name         string
+	Processes    []Process
+	SeriesBudget int
+	SLOs         []SLO
+}
+
+func (s Service) EffectiveSeriesBudget() int {
+	if s.SeriesBudget == 0 {
+		return DefaultSeriesBudget
+	}
+
+	return s.SeriesBudget
 }
 
 type Process struct {
@@ -74,6 +85,10 @@ func Validate(services []Service) error {
 		}
 
 		serviceNames[svc.Name] = true
+
+		if svc.SeriesBudget < 0 {
+			return errors.New("service %q declares a negative series budget", svc.Name)
+		}
 
 		if len(svc.Processes) == 0 {
 			return errors.New("service %q declares no process", svc.Name)
