@@ -90,12 +90,10 @@ const (
 	ServiceLogRecordsCritical = "service:log_records_critical:rate1m"
 	ServiceLogAlertRecords    = "service:log_alert_records:rate1m"
 
-	// example:begin
-
-	NotesOutboxOldestPendingAge = "notes_outbox_oldest_pending_age_seconds"
-	NotesOutboxPurgedMessages   = "notes_outbox_purged_messages_total"
-	NotesOutboxPurgeRuns        = "notes_outbox_purge_runs_total"
-	// example:end
+	GoGoroutineCount  = "go_goroutine_count"
+	GoMemoryUsed      = "go_memory_used_bytes"
+	GoMemoryAllocated = "go_memory_allocated_bytes_total"
+	GoMemoryGCGoal    = "go_memory_gc_goal_bytes"
 )
 
 // The series Sloth records for every SLO, read by the SLO panels of the dashboards.
@@ -236,10 +234,15 @@ var metrics = map[string]Metric{
 		Labels: []string{"sloth_mode", "sloth_objective", "sloth_spec", "sloth_version"},
 	},
 
+	GoGoroutineCount:  {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
+	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}, EmittedBy: everyProcess},
+	GoMemoryAllocated: {Type: Counter, Source: OTLP, EmittedBy: everyProcess},
+	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP, EmittedBy: everyProcess},
+
 	// example:begin
-	NotesOutboxOldestPendingAge: {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
-	NotesOutboxPurgedMessages:   {Type: Counter, Source: OTLP, EmittedBy: outboxOf("notes")},
-	NotesOutboxPurgeRuns:        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}, EmittedBy: outboxOf("notes")},
+	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
+	OutboxPurgedMessages("notes"):   {Type: Counter, Source: OTLP, EmittedBy: outboxOf("notes")},
+	OutboxPurgeRuns("notes"):        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}, EmittedBy: outboxOf("notes")},
 	// example:end
 }
 
@@ -258,5 +261,17 @@ var (
 )
 
 func OutboxOldestPendingAge(serviceName string) string {
-	return strings.ReplaceAll(serviceName, "-", "_") + "_outbox_oldest_pending_age_seconds"
+	return outboxMetric(serviceName, "oldest_pending_age_seconds")
+}
+
+func OutboxPurgedMessages(serviceName string) string {
+	return outboxMetric(serviceName, "purged_messages_total")
+}
+
+func OutboxPurgeRuns(serviceName string) string {
+	return outboxMetric(serviceName, "purge_runs_total")
+}
+
+func outboxMetric(serviceName, name string) string {
+	return strings.ReplaceAll(serviceName, "-", "_") + "_outbox_" + name
 }

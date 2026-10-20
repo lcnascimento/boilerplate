@@ -7,7 +7,7 @@ groups:
           service: fixture-api
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
           description: 'Nenhum target_info de fixture-api chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: fixture-api não envia telemetria há 5 minutos
@@ -18,7 +18,7 @@ groups:
           service: fixture-api
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
           description: Mais de 90% das conexões do pool pgx de fixture-api estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de fixture-api com {{ $value | humanizePercentage }} das conexões em uso
@@ -39,8 +39,8 @@ groups:
           service: fixture-api
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: fixture-api registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: fixture-api registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-api nos últimos 5 minutos'
       - alert: ServiceTelemetryAbsent
@@ -49,7 +49,7 @@ groups:
           service: fixture-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
           description: 'Nenhum target_info de fixture-consumer chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: fixture-consumer não envia telemetria há 5 minutos
@@ -60,8 +60,8 @@ groups:
           service: fixture-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-kafka
-          description: 'O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento no dashboard kafka.'
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento na seção consumer do dashboard do serviço.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
           summary: Consumer group fixture de fixture-consumer com {{ $value | humanize }} mensagens atrasadas
       - alert: DLQMessageReceived
@@ -70,8 +70,8 @@ groups:
           service: fixture-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-kafka
-          description: 'fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard kafka e os logs de fixture-consumer.'
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço e os logs de fixture-consumer.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
           summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de fixture-consumer'
       - alert: SeriesBudgetExceeded
@@ -91,8 +91,8 @@ groups:
           service: fixture-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: fixture-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: fixture-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-consumer nos últimos 5 minutos'
       - alert: ServiceTelemetryAbsent
@@ -101,7 +101,7 @@ groups:
           service: fixture-worker
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
           description: 'Nenhum target_info de fixture-worker chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: fixture-worker não envia telemetria há 5 minutos
@@ -112,7 +112,7 @@ groups:
           service: fixture-worker
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
           description: 'fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
           summary: fixture-worker não reporta a idade do outbox há 5 minutos
@@ -133,8 +133,8 @@ groups:
           service: fixture-worker
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: fixture-worker registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: fixture-worker registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-worker nos últimos 5 minutos'
   - name: cardinality

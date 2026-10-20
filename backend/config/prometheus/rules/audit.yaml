@@ -7,7 +7,7 @@ groups:
           service: audit-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
           description: 'Nenhum target_info de audit-consumer chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: audit-consumer não envia telemetria há 5 minutos
@@ -18,7 +18,7 @@ groups:
           service: audit-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-overview
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
           description: Mais de 90% das conexões do pool pgx de audit-consumer estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de audit-consumer com {{ $value | humanizePercentage }} das conexões em uso
@@ -29,8 +29,8 @@ groups:
           service: audit-consumer
           severity: warning
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-kafka
-          description: 'O consumer group audit está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se audit-consumer está no ar e a duração do processamento no dashboard kafka.'
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: 'O consumer group audit está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se audit-consumer está no ar e a duração do processamento na seção consumer do dashboard do serviço.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
           summary: Consumer group audit de audit-consumer com {{ $value | humanize }} mensagens atrasadas
       - alert: DLQMessageReceived
@@ -39,8 +39,8 @@ groups:
           service: audit-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-kafka
-          description: 'audit-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard kafka e os logs de audit-consumer.'
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: 'audit-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço e os logs de audit-consumer.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
           summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de audit-consumer'
       - alert: SeriesBudgetExceeded
@@ -60,7 +60,7 @@ groups:
           service: audit-consumer
           severity: critical
         annotations:
-          dashboard_url: http://localhost:3010/d/boilerplate-logs
-          description: audit-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          dashboard_url: http://localhost:3010/d/boilerplate-audit
+          description: audit-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de audit-consumer nos últimos 5 minutos'

@@ -13,7 +13,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Área | O que tem |
 | --- | --- |
 | Backend (`backend/`) | Go (versão no `go.work`) com [uber/fx](https://github.com/uber-go/fx) e [go-kit](https://github.com/lcnascimento/go-kit) (`errors`, `http`, `o11y`, `env`, `util`, `validator`), `golangci-lint`, `mockgen`, `govulncheck` e coleção [Bruno](https://www.usebruno.com/) |
-| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `http`, `logs`, `traces`, `kafka` e `postgres`, e os alertas como regras do Prometheus, com runbook em `docs/runbooks/` |
+| Observabilidade local (`backend/`) | Alloy, Prometheus, Loki, Tempo, Pyroscope e Grafana via Docker Compose, com os dashboards `overview` (home), `kafka` e `postgres`, um dashboard gerado por serviço, e os alertas como regras do Prometheus, com runbook em `docs/runbooks/` |
 | Banco local (`backend/`) | Postgres 18 via Docker Compose, compartilhado: um database e um role por serviço. Acesso com [pgx](https://github.com/jackc/pgx) (`pgxpool`, instrumentado com [otelpgx](https://github.com/exaring/otelpgx)) e queries tipadas pelo [sqlc](https://sqlc.dev/). Migrations com [goose](https://github.com/pressly/goose) (como biblioteca) e lint delas com [squawk](https://squawkhq.com/) |
 | Mensageria local (`backend/`) | Kafka 4.3 (KRaft, nó único, sem auto-create de tópicos), Confluent Schema Registry e [Redpanda Console](https://github.com/redpanda-data/console) via Docker Compose |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
@@ -87,7 +87,7 @@ TILT_STACK=minimal tilt up
 
 Ele sobe só o Postgres, o Kafka, o Schema Registry, os serviços Go (com os recursos de banco), o `web` e as dependências deles. Sem a variável, o `tilt up` sobe tudo; outro valor é erro. A observabilidade fica em `backend/docker-compose.observability.yml`, que o Tilt só carrega fora do modo mínimo, e o `backend/docker-compose.yml` guarda o que todo stack sobe, exceto o Redpanda Console, que fica no profile `console` do compose. Sem o Alloy no ar, os logs dos serviços que exportam por OTLP não aparecem em lugar nenhum.
 
-Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem no dashboard `logs` do Grafana, filtrados por `service_name`, e não no painel do Tilt.
+Os logs dos serviços Go vão por OTLP para o Loki (`OTEL_LOGS_EXPORTER=otlp` no `backend/.env`), então eles aparecem na seção Logs do dashboard de cada serviço no Grafana e no Logs Drilldown, filtrados por `service_name`, e não no painel do Tilt.
 
 O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de cada serviço para o `next dev`. Para rodar o `next dev` sem o Tilt, copie `frontend/apps/web/.env.example` para `frontend/apps/web/.env.local`. Sem essas variáveis, o servidor recusa subir.
 
@@ -113,9 +113,11 @@ Não há Alertmanager nem contact point: os alertas aparecem só leitura em Aler
 
 Cada processo também herda os SLOs padrão dos componentes que declara, todos com janela de 30 dias: um `api` herda `api-availability` (99,9% das requisições sem 5xx) e `api-latency` (99% em até 250ms), um `consumer` herda `consumer-success` (99,9% das tentativas de processamento sem erro) e `consumer-latency` (99% em até 1s), e um `worker` herda `outbox-freshness` (99% dos minutos com a pendente mais antiga do outbox em até 30s). As rotas `/ping` e `/health` ficam fora dos SLOs de API, e um `4xx` não queima budget. O `o11ygen` escreve uma spec do [Sloth](https://sloth.dev/) por serviço em `backend/config/sloth/` e roda o `sloth generate` (instalado pelo `make setup`), que escreve as recording rules e os alertas de burn-rate multi-janela em `backend/config/prometheus/slo/`: `SLOBurnRate` com `severity: critical` (page) ou `warning` (ticket), o label `service` do processo e o `sloth_slo` do SLO, e o runbook `docs/runbooks/SLOBurnRate.md`. Um SLO extra, de uma rota por exemplo, entra em `SLOs` na declaração do serviço, com o processo que o emite e um `service.EventsSLI(erro, total)` ou `service.RawSLI(razão)` cujas queries usam `{{.window}}`.
 
+Cada serviço declarado ganha um dashboard gerado, com UID `boilerplate-<serviço>` (o mesmo do `dashboard_url` dos alertas dos processos dele), sem variável `$service`. No topo ficam o SLI atual, o budget restante de 30 dias e o burn rate de cada SLO, lidos das recording rules do Sloth, e a lista dos alertas do serviço. Abaixo vem uma seção por componente declarado: `api` (taxa, % de 5xx, latência p50/p99 total e por rota, 4xx/5xx por rota), `consumer` (mensagens/s com sucesso e falha, duração, retentativas, lag do group, envios à DLQ por causa) e `worker` (idade da pendente mais antiga, envios/s, duração do envio, limpeza, réplicas reportando), com o limite do SLO desenhado nos painéis de latência e frescor e exemplars nos de latência. Por fim, Runtime (goroutines, memória, GC) e Banco (pool pgx e conexões no servidor por `application_name`), colapsadas, e Logs (volume por nível e logs de erro), todas filtradas pela variável `$process`. Os links do topo abrem os apps Drilldown de Traces, Logs e Profiles já filtrados pelos processos do serviço e pelo intervalo, e cada série do painel de latência por rota abre os traces lentos daquela rota.
+
 <!-- example:begin -->
 
-No exemplo, o `audit-consumer` herda o alerta de lag e o de DLQ do group `audit`, e o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. As seções Outbox e Forward do `notes` ficam no dashboard `notes-outbox`.
+No exemplo, o `audit-consumer` herda o alerta de lag e o de DLQ do group `audit`, e o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. A seção `worker` do dashboard `notes` mostra a idade da pendente mais antiga, os envios ao Kafka e a limpeza do outbox.
 
 <!-- example:end -->
 
@@ -307,7 +309,7 @@ make clean-example
 ```
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
-- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, o dashboard `notes-outbox` do Grafana, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
+- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 

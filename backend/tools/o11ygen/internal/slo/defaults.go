@@ -21,7 +21,7 @@ const (
 	twoNines   = 99
 )
 
-const probeRoutes = "/ping|/health"
+const ProbeRoutes = "/ping|/health"
 
 type inheritedSLO struct {
 	component service.Component
@@ -86,7 +86,7 @@ func job(p service.Process) string {
 }
 
 func apiSelector(p service.Process) string {
-	return job(p) + ",http_route!~" + strconv.Quote(probeRoutes)
+	return job(p) + ",http_route!~" + strconv.Quote(ProbeRoutes)
 }
 
 func rate(series string, matchers ...string) string {

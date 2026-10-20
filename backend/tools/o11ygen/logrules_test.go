@@ -189,7 +189,7 @@ func TestGenerate_RecordsAndAlertsOnTheLogAlertsAServiceDeclares(t *testing.T) {
 			"summary":       paymentDeclined.Summary,
 			"description":   paymentDeclined.Description,
 			"runbook_url":   "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PaymentDeclinedSpike.md",
-			"dashboard_url": "http://localhost:3010/d/boilerplate-logs",
+			"dashboard_url": "http://localhost:3010/d/boilerplate-orders",
 		},
 	}}, declaredAlerts)
 }

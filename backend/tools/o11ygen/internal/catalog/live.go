@@ -72,6 +72,10 @@ func LiveProbes(services []service.Service) ([]artifact.Query, error) {
 			return nil, errors.New("metric %s comes from a source check-live does not know how to probe", name)
 		}
 
+		if metric.EmittedBy == nil && (metric.Source == OTLP || metric.Source == OTLPResource) {
+			return nil, errors.New("metric %s comes from a process SDK: set EmittedBy to the processes that emit it", name)
+		}
+
 		probes = append(probes, metric.probes(name, services)...)
 	}
 

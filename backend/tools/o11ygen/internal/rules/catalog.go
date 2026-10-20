@@ -17,7 +17,6 @@ const (
 	overviewDashboard = "overview"
 	kafkaDashboard    = "kafka"
 	postgresDashboard = "postgres"
-	logsDashboard     = "logs"
 
 	sustainedFor = 5 * time.Minute
 
@@ -50,7 +49,7 @@ var processAlerts = []inheritedAlert{
 				summary:  p.Name() + " não envia telemetria há 5 minutos",
 				description: "Nenhum target_info de " + p.Name() + " chegou ao Prometheus nos últimos 5 minutos: " +
 					"o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.",
-				dashboard: overviewDashboard,
+				dashboard: p.service.Name,
 			}
 		},
 	},
@@ -67,7 +66,7 @@ var processAlerts = []inheritedAlert{
 				description: "Mais de 90% das conexões do pool pgx de " + p.Name() + " estão em uso há 5 minutos, " +
 					"então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, " +
 					"depois o volume de requisições do processo.",
-				dashboard: overviewDashboard,
+				dashboard: p.service.Name,
 			}
 		},
 	},
@@ -84,8 +83,8 @@ var processAlerts = []inheritedAlert{
 					" com {{ $value | humanize }} mensagens atrasadas",
 				description: "O consumer group " + p.ConsumerGroup() + " está mais de 100 mensagens atrás há 5 minutos: " +
 					"o consumo está mais lento que a produção, ou parado. Veja primeiro se " + p.Name() +
-					" está no ar e a duração do processamento no dashboard kafka.",
-				dashboard: kafkaDashboard,
+					" está no ar e a duração do processamento na seção consumer do dashboard do serviço.",
+				dashboard: p.service.Name,
 				listedOn:  []string{kafkaDashboard},
 			}
 		},
@@ -100,9 +99,9 @@ var processAlerts = []inheritedAlert{
 				severity: critical,
 				summary:  "{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de " + p.Name(),
 				description: p.Name() + " mandou mensagens à DLQ: elas falharam de forma permanente e não serão " +
-					"reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard kafka " +
+					"reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço " +
 					"e os logs de " + p.Name() + ".",
-				dashboard: kafkaDashboard,
+				dashboard: p.service.Name,
 				listedOn:  []string{kafkaDashboard},
 			}
 		},
@@ -120,7 +119,7 @@ var processAlerts = []inheritedAlert{
 				summary:     p.Name() + " não reporta a idade do outbox há 5 minutos",
 				description: p.Name() + " não reporta " + gauge + ": sem forwarder ninguém esvazia o outbox e os " +
 					"Integration Events param de sair. Veja primeiro se " + p.Name() + " está no ar e os logs dele.",
-				dashboard: overviewDashboard,
+				dashboard: p.service.Name,
 			}
 		},
 	},
@@ -151,9 +150,9 @@ var processAlerts = []inheritedAlert{
 				severity: critical,
 				summary:  "{{ $value | humanize }} log(s) Critical ou Fatal de " + p.Name() + " nos últimos 5 minutos",
 				description: p.Name() + " registrou um log com severidade Critical ou Fatal (severity_number >= 21), " +
-					"o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no " +
-					"dashboard logs e o trace ligado a cada um.",
-				dashboard: logsDashboard,
+					"o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na " +
+					"seção Logs do dashboard do serviço e o trace ligado a cada um.",
+				dashboard: p.service.Name,
 			}
 		},
 	},
@@ -170,7 +169,7 @@ func recordsIn5m(series, process string, extra map[string]string) string {
 	return fmt.Sprintf("sum_over_time(%s{%s}[5m])", series, matchers)
 }
 
-func logAlert(declared *service.LogAlert) alert {
+func logAlert(svc string, declared *service.LogAlert) alert {
 	return alert{
 		name: declared.Name,
 		expr: fmt.Sprintf("%s * 60 > %d", recordsIn5m(catalog.ServiceLogAlertRecords, declared.Process,
@@ -178,7 +177,7 @@ func logAlert(declared *service.LogAlert) alert {
 		severity:    severity(declared.Severity),
 		summary:     declared.Summary,
 		description: declared.Description,
-		dashboard:   logsDashboard,
+		dashboard:   svc,
 		service:     declared.Process,
 	}
 }
