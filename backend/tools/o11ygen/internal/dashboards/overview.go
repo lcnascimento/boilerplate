@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafana-foundation-sdk/go/prometheus"
 	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
@@ -47,7 +48,7 @@ func overviewPanel1() cog.Builder[dashboard.Panel] {
 		Id(1).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (job) (rate(http_server_request_total{http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Requisições por Serviço (req/s)").
@@ -77,7 +78,7 @@ func overviewPanel2() cog.Builder[dashboard.Panel] {
 		Id(2).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("100 * (sum by (job) (rate(http_server_request_total{http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or sum by (job) (rate(http_server_request_total{http_route!~\"/health|/ping\"}[$__rate_interval])) * 0) / sum by (job) (rate(http_server_request_total{http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("100 * (sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{http_route!~\"/health|/ping\"}[$__rate_interval])) * 0) / sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Taxa de Erro 5xx por Serviço (%)").
@@ -107,7 +108,7 @@ func overviewPanel3() cog.Builder[dashboard.Panel] {
 		Id(3).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.95, sum by (job, le) (rate(http_server_request_duration_seconds_bucket{http_route!~\"/health|/ping\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.95, sum by (job, le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Latência p95 por Serviço").

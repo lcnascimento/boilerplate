@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafana-foundation-sdk/go/stat"
 	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
@@ -27,7 +28,7 @@ func messagingDashboard() *dashboard.DashboardBuilder {
 		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(prometheusDS),
 			dashboard.NewQueryVariableBuilder("topic").
 				Label("Tópico").
-				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(kafka_topic_partition_current_offset, topic)", "refId": "topic-var"}}).
+				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(" + catalog.KafkaTopicPartitionCurrentOffset + ", topic)", "refId": "topic-var"}}).
 				Datasource(datasourceRef(prometheusDS)).
 				Current(dashboard.VariableOption{Selected: cog.ToPtr[bool](true), Text: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("All")}, Value: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("$__all")}}).
 				Multi(true).
@@ -36,10 +37,10 @@ func messagingDashboard() *dashboard.DashboardBuilder {
 				IncludeAll(true).
 				AllValue(".+").
 				Regex("/^(?!.*\\.dlq$).*/").
-				Definition("label_values(kafka_topic_partition_current_offset, topic)"),
+				Definition("label_values(" + catalog.KafkaTopicPartitionCurrentOffset + ", topic)"),
 			dashboard.NewQueryVariableBuilder("group").
 				Label("Consumer group").
-				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(kafka_consumergroup_uncommitted_offsets, consumergroup)", "refId": "group-var"}}).
+				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(" + catalog.KafkaConsumerGroupUncommittedOffsets + ", consumergroup)", "refId": "group-var"}}).
 				Datasource(datasourceRef(prometheusDS)).
 				Current(dashboard.VariableOption{Selected: cog.ToPtr[bool](true), Text: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("All")}, Value: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("$__all")}}).
 				Multi(true).
@@ -47,7 +48,7 @@ func messagingDashboard() *dashboard.DashboardBuilder {
 				Sort(1).
 				IncludeAll(true).
 				AllValue(".+").
-				Definition("label_values(kafka_consumergroup_uncommitted_offsets, consumergroup)")}).
+				Definition("label_values(" + catalog.KafkaConsumerGroupUncommittedOffsets + ", consumergroup)")}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
 			Datasource(common.DataSourceRef{Type: cog.ToPtr[string]("grafana"), Uid: cog.ToPtr[string]("-- Grafana --")}).
@@ -116,7 +117,7 @@ func messagingPanel13() cog.Builder[dashboard.Panel] {
 		Id(13).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"$topic\"}[$__rate_interval]))").
+			Expr("sum by (topic) (rate(" + catalog.KafkaTopicPartitionCurrentOffset + "{topic=~\"$topic\"}[$__rate_interval]))").
 			LegendFormat("{{topic}}").
 			RefId("A")}).
 		Title("Produção no tópico (msg/s)").
@@ -149,7 +150,7 @@ func messagingPanel15() cog.Builder[dashboard.Panel] {
 		Id(15).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"$group\", topic=~\"$topic\"})").
+			Expr("sum by (consumergroup, topic) (" + catalog.KafkaConsumerGroupUncommittedOffsets + "{consumergroup=~\"$group\", topic=~\"$topic\"})").
 			LegendFormat("{{consumergroup}} {{topic}}").
 			RefId("A")}).
 		Title("Lag por consumer group").
@@ -176,12 +177,12 @@ func messagingPanel16() cog.Builder[dashboard.Panel] {
 		Id(16).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (messaging_consumer_group_name) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))").
+			Expr("sum by (messaging_consumer_group_name) (rate(" + catalog.MessagingClientConsumedMessages + "{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))").
 			LegendFormat("ok {{messaging_consumer_group_name}}").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("sum by (messaging_consumer_group_name, error_type) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))").
+				Expr("sum by (messaging_consumer_group_name, error_type) (rate(" + catalog.MessagingClientConsumedMessages + "{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))").
 				LegendFormat("{{error_type}} {{messaging_consumer_group_name}}").
 				RefId("B")}).
 		Title("Mensagens consumidas (msg/s)").
@@ -207,12 +208,12 @@ func messagingPanel17() cog.Builder[dashboard.Panel] {
 		Id(17).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(" + catalog.MessagingProcessDuration + "_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
 			LegendFormat("P50 {{messaging_consumer_group_name}}").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
+				Expr("histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(" + catalog.MessagingProcessDuration + "_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
 				LegendFormat("P99 {{messaging_consumer_group_name}}").
 				RefId("B")}).
 		Title("Duração do processamento").
@@ -238,7 +239,7 @@ func messagingPanel18() cog.Builder[dashboard.Panel] {
 		Id(18).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (messaging_consumer_group_name, error_type) (rate(messaging_process_duration_seconds_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))").
+			Expr("sum by (messaging_consumer_group_name, error_type) (rate(" + catalog.MessagingProcessDuration + "_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))").
 			LegendFormat("{{error_type}} {{messaging_consumer_group_name}}").
 			RefId("A")}).
 		Title("Retentativas (tentativas/s)").
@@ -265,12 +266,12 @@ func messagingPanel19() cog.Builder[dashboard.Panel] {
 		Id(19).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (consumergroup, topic) (kafka_consumergroup_current_offset{consumergroup=~\"$group\", topic=~\"$topic\"})").
+			Expr("sum by (consumergroup, topic) (" + catalog.KafkaConsumerGroupCurrentOffset + "{consumergroup=~\"$group\", topic=~\"$topic\"})").
 			LegendFormat("confirmado {{consumergroup}}").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("sum by (topic) (kafka_topic_partition_current_offset{topic=~\"$topic\"})").
+				Expr("sum by (topic) (" + catalog.KafkaTopicPartitionCurrentOffset + "{topic=~\"$topic\"})").
 				LegendFormat("high-water {{topic}}").
 				RefId("B")}).
 		Title("Offset confirmado vs. high-water mark").
@@ -302,7 +303,7 @@ func messagingPanel21() cog.Builder[dashboard.Panel] {
 		Id(21).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}) or vector(0)").
+			Expr("sum(" + catalog.KafkaTopicPartitionCurrentOffset + "{topic=~\".+\\\\.dlq\"}) or vector(0)").
 			RefId("A")}).
 		Title("Mensagens nas DLQs").
 		Description("High-water mark das DLQs (retenção infinita): tudo que já caiu nelas.").
@@ -330,7 +331,7 @@ func messagingPanel22() cog.Builder[dashboard.Panel] {
 		Id(22).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum(increase(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)").
+			Expr("sum(increase(" + catalog.KafkaTopicPartitionCurrentOffset + "{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)").
 			RefId("A")}).
 		Title("Novas na DLQ (5 min)").
 		Description("O alerta de DLQ dispara assim que este valor passa de 0.").
@@ -358,7 +359,7 @@ func messagingPanel23() cog.Builder[dashboard.Panel] {
 		Id(23).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (messaging_consumer_group_name, error_type) (increase(messaging_dlq_sent_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))").
+			Expr("sum by (messaging_consumer_group_name, error_type) (increase(" + catalog.MessagingDLQSentMessages + "{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))").
 			LegendFormat("{{error_type}} {{messaging_consumer_group_name}}").
 			RefId("A")}).
 		Title("Enviadas à DLQ por causa").
@@ -387,7 +388,7 @@ func messagingPanel24() cog.Builder[dashboard.Panel] {
 		Id(24).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (topic) (kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"})").
+			Expr("sum by (topic) (" + catalog.KafkaTopicPartitionCurrentOffset + "{topic=~\".+\\\\.dlq\"})").
 			LegendFormat("{{topic}}").
 			RefId("A")}).
 		Title("High-water mark das DLQs").

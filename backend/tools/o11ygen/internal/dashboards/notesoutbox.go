@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafana-foundation-sdk/go/stat"
 	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
@@ -27,7 +28,7 @@ func notesOutboxDashboard() *dashboard.DashboardBuilder {
 		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(prometheusDS),
 			dashboard.NewQueryVariableBuilder("topic").
 				Label("Tópico").
-				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(kafka_topic_partition_current_offset, topic)", "refId": "topic-var"}}).
+				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(" + catalog.KafkaTopicPartitionCurrentOffset + ", topic)", "refId": "topic-var"}}).
 				Datasource(datasourceRef(prometheusDS)).
 				Current(dashboard.VariableOption{Selected: cog.ToPtr[bool](true), Text: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("All")}, Value: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("$__all")}}).
 				Multi(true).
@@ -36,7 +37,7 @@ func notesOutboxDashboard() *dashboard.DashboardBuilder {
 				IncludeAll(true).
 				AllValue(".+").
 				Regex("/^(?!.*\\.dlq$).*/").
-				Definition("label_values(kafka_topic_partition_current_offset, topic)")}).
+				Definition("label_values(" + catalog.KafkaTopicPartitionCurrentOffset + ", topic)")}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
 			Datasource(common.DataSourceRef{Type: cog.ToPtr[string]("grafana"), Uid: cog.ToPtr[string]("-- Grafana --")}).
@@ -67,7 +68,7 @@ func notesOutboxPanel4() cog.Builder[dashboard.Panel] {
 		Id(4).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("max(notes_outbox_oldest_pending_age_seconds)").
+			Expr("max(" + catalog.NotesOutboxOldestPendingAge + ")").
 			RefId("A")}).
 		Title("Pendente mais antiga").
 		Description("Idade da mensagem mais antiga do outbox ainda não levada ao Kafka; 0 sem pendentes. O alerta dispara acima de 120s por 5 min.").
@@ -96,7 +97,7 @@ func notesOutboxPanel5() cog.Builder[dashboard.Panel] {
 		Id(5).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum(increase(notes_outbox_purged_messages_total[24h])) or vector(0)").
+			Expr("sum(increase(" + catalog.NotesOutboxPurgedMessages + "[24h])) or vector(0)").
 			RefId("A")}).
 		Title("Encaminhadas apagadas (24h)").
 		Description("Mensagens já encaminhadas há mais de 7 dias que a limpeza apagou.").
@@ -118,7 +119,7 @@ func notesOutboxPanel6() cog.Builder[dashboard.Panel] {
 		Id(6).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum(increase(notes_outbox_purge_runs_total{outcome=\"failure\"}[24h])) or vector(0)").
+			Expr("sum(increase(" + catalog.NotesOutboxPurgeRuns + "{outcome=\"failure\"}[24h])) or vector(0)").
 			RefId("A")}).
 		Title("Limpezas com falha (24h)").
 		Datasource(datasourceRef(prometheusDS)).
@@ -145,7 +146,7 @@ func notesOutboxPanel7() cog.Builder[dashboard.Panel] {
 		Id(7).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("count(notes_outbox_oldest_pending_age_seconds) or vector(0)").
+			Expr("count(" + catalog.NotesOutboxOldestPendingAge + ") or vector(0)").
 			RefId("A")}).
 		Title("Réplicas do forwarder reportando").
 		Description("Réplicas que reportam o gauge; 0 significa que nenhum forwarder está esvaziando o outbox.").
@@ -173,7 +174,7 @@ func notesOutboxPanel8() cog.Builder[dashboard.Panel] {
 		Id(8).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("max by (job) (notes_outbox_oldest_pending_age_seconds)").
+			Expr("max by (job) (" + catalog.NotesOutboxOldestPendingAge + ")").
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Idade da pendente mais antiga").
@@ -199,12 +200,12 @@ func notesOutboxPanel9() cog.Builder[dashboard.Panel] {
 		Id(9).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (outcome) (increase(notes_outbox_purge_runs_total[$__rate_interval]))").
+			Expr("sum by (outcome) (increase(" + catalog.NotesOutboxPurgeRuns + "[$__rate_interval]))").
 			LegendFormat("execuções {{outcome}}").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("sum(increase(notes_outbox_purged_messages_total[$__rate_interval]))").
+				Expr("sum(increase(" + catalog.NotesOutboxPurgedMessages + "[$__rate_interval]))").
 				LegendFormat("mensagens apagadas").
 				RefId("B")}).
 		Title("Limpeza").
@@ -236,12 +237,12 @@ func notesOutboxPanel11() cog.Builder[dashboard.Panel] {
 		Id(11).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (messaging_destination_name) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))").
+			Expr("sum by (messaging_destination_name) (rate(" + catalog.MessagingClientSentMessages + "{messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))").
 			LegendFormat("ok {{messaging_destination_name}}").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("sum by (messaging_destination_name, error_type) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))").
+				Expr("sum by (messaging_destination_name, error_type) (rate(" + catalog.MessagingClientSentMessages + "{messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))").
 				LegendFormat("{{error_type}} {{messaging_destination_name}}").
 				RefId("B")}).
 		Title("Envios ao Kafka (msg/s)").
@@ -268,12 +269,12 @@ func notesOutboxPanel12() cog.Builder[dashboard.Panel] {
 		Id(12).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.5, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.5, sum by (le) (rate(" + catalog.MessagingClientOperationDuration + "_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
 			LegendFormat("P50").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("histogram_quantile(0.99, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
+				Expr("histogram_quantile(0.99, sum by (le) (rate(" + catalog.MessagingClientOperationDuration + "_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
 				LegendFormat("P99").
 				RefId("B")}).
 		Title("Duração do envio").

@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafana-foundation-sdk/go/stat"
 	"github.com/grafana/grafana-foundation-sdk/go/timeseries"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
@@ -27,7 +28,7 @@ func httpDashboard() *dashboard.DashboardBuilder {
 		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(prometheusDS),
 			dashboard.NewQueryVariableBuilder("service").
 				Label("Serviço").
-				Query(dashboard.StringOrMap{String: cog.ToPtr[string]("label_values(http_server_request_total, job)")}).
+				Query(dashboard.StringOrMap{String: cog.ToPtr[string]("label_values(" + catalog.HTTPServerRequestTotal + ", job)")}).
 				Datasource(datasourceRef(prometheusDS)).
 				Current(dashboard.VariableOption{Selected: cog.ToPtr[bool](true), Text: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("All")}, Value: dashboard.StringOrArrayOfString{String: cog.ToPtr[string]("$__all")}}).
 				Multi(true).
@@ -35,7 +36,7 @@ func httpDashboard() *dashboard.DashboardBuilder {
 				Sort(1).
 				IncludeAll(true).
 				AllValue(".+").
-				Definition("label_values(http_server_request_total, job)")}).
+				Definition("label_values(" + catalog.HTTPServerRequestTotal + ", job)")}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
 			Datasource(common.DataSourceRef{Type: cog.ToPtr[string]("grafana"), Uid: cog.ToPtr[string]("-- Grafana --")}).
@@ -70,7 +71,7 @@ func httpPanel2() cog.Builder[dashboard.Panel] {
 		Id(2).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("sum(rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			RefId("A")}).
 		Title("Rate (req/s)").
 		Datasource(datasourceRef(prometheusDS)).
@@ -91,7 +92,7 @@ func httpPanel3() cog.Builder[dashboard.Panel] {
 		Id(3).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("100 * (sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("100 * (sum(rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			RefId("A")}).
 		Title("Error Rate 5xx (%)").
 		Datasource(datasourceRef(prometheusDS)).
@@ -117,7 +118,7 @@ func httpPanel4() cog.Builder[dashboard.Panel] {
 		Id(4).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.50, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			RefId("A")}).
 		Title("P50 Latência").
 		Datasource(datasourceRef(prometheusDS)).
@@ -143,7 +144,7 @@ func httpPanel5() cog.Builder[dashboard.Panel] {
 		Id(5).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.99, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			RefId("A")}).
 		Title("P99 Latência").
 		Datasource(datasourceRef(prometheusDS)).
@@ -175,7 +176,7 @@ func httpPanel7() cog.Builder[dashboard.Panel] {
 		Id(7).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Requests por Serviço (req/s)").
@@ -203,7 +204,7 @@ func httpPanel8() cog.Builder[dashboard.Panel] {
 		Id(8).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (http_route, http_request_method) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("sum by (http_route, http_request_method) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			LegendFormat("{{http_request_method}} {{http_route}}").
 			RefId("A")}).
 		Title("Requests por Rota (req/s)").
@@ -237,7 +238,7 @@ func httpPanel10() cog.Builder[dashboard.Panel] {
 		Id(10).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("100 * (sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])) * 0) / sum by (job) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
+			Expr("100 * (sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval])) or sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])) * 0) / sum by (job) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval]))").
 			LegendFormat("{{job}}").
 			RefId("A")}).
 		Title("Error Rate por Serviço (%)").
@@ -266,12 +267,12 @@ func httpPanel11() cog.Builder[dashboard.Panel] {
 		Id(11).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"4..\"}[$__rate_interval]))").
+			Expr("sum by (http_route, http_response_status_code) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"4..\"}[$__rate_interval]))").
 			LegendFormat("{{http_response_status_code}} {{http_route}}").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval]))").
+				Expr("sum by (http_route, http_response_status_code) (rate(" + catalog.HTTPServerRequestTotal + "{job=~\"$service\", http_route!~\"/health|/ping\", http_response_status_code=~\"5..\"}[$__rate_interval]))").
 				LegendFormat("{{http_response_status_code}} {{http_route}}").
 				RefId("B")}).
 		Title("Respostas 4xx/5xx por Rota (req/s)").
@@ -305,17 +306,17 @@ func httpPanel13() cog.Builder[dashboard.Panel] {
 		Id(13).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.50, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			LegendFormat("P50").
 			RefId("A"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("histogram_quantile(0.90, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
+				Expr("histogram_quantile(0.90, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 				LegendFormat("P90").
 				RefId("B"),
 			prometheus.NewDataqueryBuilder().
 				Datasource(datasourceRef(prometheusDS)).
-				Expr("histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
+				Expr("histogram_quantile(0.99, sum by (le) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 				LegendFormat("P99").
 				RefId("C")}).
 		Title("Latência Global (P50 / P90 / P99)").
@@ -343,7 +344,7 @@ func httpPanel14() cog.Builder[dashboard.Panel] {
 		Id(14).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
+			Expr("histogram_quantile(0.99, sum by (le, http_route) (rate(" + catalog.HTTPServerRequestDuration + "_bucket{job=~\"$service\", http_route!~\"/health|/ping\"}[$__rate_interval])))").
 			LegendFormat("{{http_route}}").
 			RefId("A")}).
 		Title("P99 por Rota").
