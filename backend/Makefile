@@ -125,6 +125,10 @@ test.component:
 sqlc:
 	$(call in_modules,sqlc,if [ -f sqlc.yaml ]; then $(GOBIN)/sqlc generate && $(GOBIN)/sqlc vet; else echo "no sqlc.yaml"; fi)
 
+.PHONY: o11y.generate
+o11y.generate:
+	@go run ./tools/o11ygen -root .
+
 .PHONY: proto.lint
 proto.lint:
 	$(call in_buf_dirs,proto.lint,$(GOBIN)/buf lint)

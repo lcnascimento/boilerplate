@@ -7,7 +7,7 @@ example_paths=(
 	backend/services/notes
 	backend/services/audit
 	backend/config/bruno/collections/Notes
-	backend/config/grafana/provisioning/dashboards/notes-outbox.json
+	backend/tools/o11ygen/internal/dashboards/notesoutbox.go
 	openapi/notes.yaml
 	frontend/apps/web/app/\(dashboard\)/notes
 	frontend/apps/web/actions/notes.ts
@@ -67,6 +67,8 @@ git grep -lzE "$marker_re" -- ":!$self" | xargs -0 perl -0777 -i -ne '
 	$text =~ s/\n\n+\z/\n/;
 	print $text;
 '
+
+make -C backend o11y.generate
 
 drop_section() {
 	HEADING=$2 perl -0pi -e 's/^\Q$ENV{HEADING}\E\n.*?(?=^## |\z)//ms; s/\n+\z/\n/' "$1"

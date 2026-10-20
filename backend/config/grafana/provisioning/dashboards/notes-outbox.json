@@ -1,27 +1,42 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
+  "uid": "boilerplate-notes-outbox",
+  "title": "Notes — Outbox · Forward",
+  "tags": [
+    "messaging",
+    "notes",
+    "boilerplate",
+    "sre"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": false,
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
     ]
   },
-  "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "links": [],
+  "refresh": "30s",
+  "schemaVersion": 42,
   "panels": [
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Outbox",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -29,16 +44,50 @@
         "y": 0
       },
       "id": 3,
-      "title": "Outbox",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "stat",
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max(notes_outbox_oldest_pending_age_seconds)",
+          "refId": "A"
+        }
+      ],
+      "title": "Pendente mais antiga",
+      "description": "Idade da mensagem mais antiga do outbox ainda não levada ao Kafka; 0 sem pendentes. O alerta dispara acima de 120s por 5 min.",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${prometheus}"
       },
-      "description": "Idade da mensagem mais antiga do outbox ainda não levada ao Kafka; 0 sem pendentes. O alerta dispara acima de 120s por 5 min.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "background",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -46,16 +95,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "yellow",
-                "value": 60
+                "value": 60,
+                "color": "yellow"
               },
               {
-                "color": "red",
-                "value": 120
+                "value": 120,
+                "color": "red"
               }
             ]
           },
@@ -64,49 +113,27 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 1
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "background",
-        "orientation": "auto",
-        "textMode": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max(notes_outbox_oldest_pending_age_seconds)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Pendente mais antiga",
-      "type": "stat"
+      }
     },
     {
+      "type": "stat",
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(increase(notes_outbox_purged_messages_total[24h])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Encaminhadas apagadas (24h)",
+      "description": "Mensagens já encaminhadas há mais de 7 dias que a limpeza apagou.",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Mensagens já encaminhadas há mais de 7 dias que a limpeza apagou.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -114,58 +141,47 @@
         "x": 6,
         "y": 1
       },
-      "id": 5,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
         "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
-        }
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(notes_outbox_purged_messages_total[24h])) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Encaminhadas apagadas (24h)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
+          "unit": "short"
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(increase(notes_outbox_purge_runs_total{outcome=\"failure\"}[24h])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Limpezas com falha (24h)",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -173,37 +189,22 @@
         "x": 12,
         "y": 1
       },
-      "id": 6,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
         "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
-        }
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(notes_outbox_purge_runs_total{outcome=\"failure\"}[24h])) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Limpezas com falha (24h)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Réplicas que reportam o gauge; 0 significa que nenhum forwarder está esvaziando o outbox.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -211,12 +212,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "green",
-                "value": 1
+                "value": 1,
+                "color": "red"
               }
             ]
           },
@@ -225,6 +226,27 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "id": 7,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "count(notes_outbox_oldest_pending_age_seconds) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Réplicas do forwarder reportando",
+      "description": "Réplicas que reportam o gauge; 0 significa que nenhum forwarder está esvaziando o outbox.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 4,
@@ -232,37 +254,84 @@
         "x": 18,
         "y": 1
       },
-      "id": 7,
+      "repeatDirection": "h",
       "options": {
+        "graphMode": "area",
         "colorMode": "background",
-        "orientation": "auto",
+        "justifyMode": "auto",
         "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ]
-        }
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
           },
-          "expr": "count(notes_outbox_oldest_pending_age_seconds) or vector(0)",
-          "legendFormat": ""
-        }
-      ],
-      "title": "Réplicas do forwarder reportando",
-      "type": "stat"
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
     },
     {
+      "type": "timeseries",
+      "id": 8,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "max by (job) (notes_outbox_oldest_pending_age_seconds)",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Idade da pendente mais antiga",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${prometheus}"
       },
-      "description": "",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -275,45 +344,56 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 9,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (outcome) (increase(notes_outbox_purge_runs_total[$__rate_interval]))",
+          "legendFormat": "execuções {{outcome}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum(increase(notes_outbox_purged_messages_total[$__rate_interval]))",
+          "legendFormat": "mensagens apagadas",
+          "refId": "B"
+        }
+      ],
+      "title": "Limpeza",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 5
       },
-      "id": 8,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "max by (job) (notes_outbox_oldest_pending_age_seconds)",
-          "legendFormat": "{{job}}"
-        }
-      ],
-      "title": "Idade da pendente mais antiga",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -326,50 +406,12 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 5
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (outcome) (increase(notes_outbox_purge_runs_total[$__rate_interval]))",
-          "legendFormat": "execuções {{outcome}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(increase(notes_outbox_purged_messages_total[$__rate_interval]))",
-          "legendFormat": "mensagens apagadas"
-        }
-      ],
-      "title": "Limpeza",
-      "type": "timeseries"
+      }
     },
     {
+      "type": "row",
       "collapsed": false,
+      "title": "Forward",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -377,16 +419,57 @@
         "y": 13
       },
       "id": 10,
-      "title": "Forward",
-      "type": "row",
       "panels": []
     },
     {
+      "type": "timeseries",
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (messaging_destination_name) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
+          "legendFormat": "ok {{messaging_destination_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "sum by (messaging_destination_name, error_type) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}} {{messaging_destination_name}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Envios ao Kafka (msg/s)",
+      "description": "Cada tentativa do forwarder; erros entram em retry infinito, sem pular mensagens.",
+      "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${prometheus}"
       },
-      "description": "Cada tentativa do forwarder; erros entram em retry infinito, sem pular mensagens.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -399,54 +482,56 @@
           }
         },
         "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 12,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P99",
+          "refId": "B"
+        }
+      ],
+      "title": "Duração do envio",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus}"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 14
       },
-      "id": 11,
+      "repeatDirection": "h",
       "options": {
         "legend": {
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_destination_name) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
-          "legendFormat": "ok {{messaging_destination_name}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (messaging_destination_name, error_type) (rate(messaging_client_sent_messages_total{messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{error_type}} {{messaging_destination_name}}"
-        }
-      ],
-      "title": "Envios ao Kafka (msg/s)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -459,94 +544,71 @@
           }
         },
         "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
-      "id": 12,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P50"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P99"
-        }
-      ],
-      "title": "Duração do envio",
-      "type": "timeseries"
+      }
     }
-  ],
-  "refresh": "30s",
-  "schemaVersion": 42,
-  "tags": [
-    "messaging",
-    "notes",
-    "boilerplate",
-    "sre"
   ],
   "templating": {
     "list": [
       {
+        "type": "datasource",
+        "name": "prometheus",
+        "label": "Prometheus",
+        "skipUrlSync": false,
+        "query": "prometheus",
+        "multi": false,
+        "allowCustomValue": true,
+        "includeAll": false,
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30
+      },
+      {
+        "type": "query",
         "name": "topic",
         "label": "Tópico",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
-        },
+        "skipUrlSync": false,
         "query": {
           "query": "label_values(kafka_topic_partition_current_offset, topic)",
           "refId": "topic-var"
         },
-        "definition": "label_values(kafka_topic_partition_current_offset, topic)",
-        "refresh": 2,
-        "sort": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".+",
-        "regex": "/^(?!.*\\.dlq$).*/",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${prometheus}"
+        },
         "current": {
           "selected": true,
           "text": "All",
           "value": "$__all"
         },
-        "options": []
+        "multi": true,
+        "allowCustomValue": true,
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".+",
+        "regex": "/^(?!.*\\.dlq$).*/",
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30,
+        "definition": "label_values(kafka_topic_partition_current_offset, topic)"
       }
     ]
   },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Notes — Outbox · Forward",
-  "uid": "boilerplate-notes-outbox",
-  "weekStart": ""
+  "annotations": {
+    "list": [
+      {
+        "name": "Annotations \u0026 Alerts",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "type": "dashboard",
+        "builtIn": 1,
+        "placement": "inControlsMenu"
+      }
+    ]
+  }
 }
