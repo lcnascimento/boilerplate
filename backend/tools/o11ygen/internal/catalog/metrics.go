@@ -89,6 +89,9 @@ const (
 	GoMemoryUsed      = "go_memory_used_bytes"
 	GoMemoryAllocated = "go_memory_allocated_bytes_total"
 	GoMemoryGCGoal    = "go_memory_gc_goal_bytes"
+
+	ProcessCPUTime     = "process_cpu_time_seconds_total"
+	ProcessMemoryUsage = "process_memory_usage_bytes"
 )
 
 // The series Sloth records for every SLO, read by the SLO panels of the dashboards.
@@ -216,6 +219,9 @@ var metrics = map[string]Metric{
 	GoMemoryUsed:      {Type: Gauge, Source: OTLP, Labels: []string{"go_memory_type"}},
 	GoMemoryAllocated: {Type: Counter, Source: OTLP},
 	GoMemoryGCGoal:    {Type: Gauge, Source: OTLP},
+
+	ProcessCPUTime:     {Type: Counter, Source: OTLP, Labels: []string{"cpu_mode"}},
+	ProcessMemoryUsage: {Type: Gauge, Source: OTLP},
 
 	// example:begin
 	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP},
