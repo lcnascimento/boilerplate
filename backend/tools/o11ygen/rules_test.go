@@ -93,9 +93,11 @@ func TestGenerate_InheritsTheAlertsOfEachProcessFromItsComponents(t *testing.T) 
 	assert.Equal(t, map[string]ruleFile{"infra.yaml": {}, "orders.yaml": {}}, mapKeysOnly(generatedRules(t, root)))
 	assert.Equal(t, map[string]map[string][]string{
 		"orders": {
-			"orders-api":      {"ServiceTelemetryAbsent", "DBPoolSaturated", "SeriesBudgetExceeded"},
-			"orders-consumer": {"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded"},
-			"orders-worker":   {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded"},
+			"orders-api": {"ServiceTelemetryAbsent", "DBPoolSaturated", "SeriesBudgetExceeded", "CriticalLogRecorded"},
+			"orders-consumer": {
+				"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded", "CriticalLogRecorded",
+			},
+			"orders-worker": {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded", "CriticalLogRecorded"},
 		},
 	}, alertsByGroupAndService(readRules(t, filepath.Join(root, rulesDir, "orders.yaml"))))
 	assert.Equal(t, map[string]map[string][]string{
@@ -147,6 +149,8 @@ func TestGenerate_ScopesTheProcessAlertsToTheProcess(t *testing.T) {
 			`{job="boilerplate/orders-worker"})`,
 		"orders-consumer SeriesBudgetExceeded": `job:series:count{job="boilerplate/orders-consumer"} > 2000`,
 		"orders-worker SeriesBudgetExceeded":   `job:series:count{job="boilerplate/orders-worker"} > 2000`,
+		"orders-consumer CriticalLogRecorded":  `sum_over_time(service:log_records_critical:rate1m{service="orders-consumer"}[5m]) * 60 > 0`,
+		"orders-worker CriticalLogRecorded":    `sum_over_time(service:log_records_critical:rate1m{service="orders-worker"}[5m]) * 60 > 0`,
 	}, exprs)
 }
 

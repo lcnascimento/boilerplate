@@ -33,6 +33,16 @@ groups:
           description: 'fixture-api mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: fixture-api com {{ $value | humanize }} séries, acima do teto de 5
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-api"}[5m]) * 60 > 0
+        labels:
+          service: fixture-api
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-logs
+          description: fixture-api registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-api nos últimos 5 minutos'
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/fixture-consumer"}[5m])
         labels:
@@ -75,6 +85,16 @@ groups:
           description: 'fixture-consumer mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: fixture-consumer com {{ $value | humanize }} séries, acima do teto de 5
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-consumer"}[5m]) * 60 > 0
+        labels:
+          service: fixture-consumer
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-logs
+          description: fixture-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-consumer nos últimos 5 minutos'
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/fixture-worker"}[5m])
         labels:
@@ -107,6 +127,16 @@ groups:
           description: 'fixture-worker mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
           summary: fixture-worker com {{ $value | humanize }} séries, acima do teto de 5
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-worker"}[5m]) * 60 > 0
+        labels:
+          service: fixture-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-logs
+          description: fixture-worker registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs no dashboard logs e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-worker nos últimos 5 minutos'
   - name: cardinality
     rules:
       - record: job:series:count
