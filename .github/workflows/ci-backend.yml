@@ -54,6 +54,14 @@ jobs:
           untracked=$(git ls-files --others --exclude-standard)
           if [ -n "$untracked" ]; then echo "make sqlc created untracked files:"; echo "$untracked"; exit 1; fi
 
+      - name: mocks
+        run: |
+          git add -A
+          make mocks
+          git diff --exit-code
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then echo "make mocks created untracked files:"; echo "$untracked"; exit 1; fi
+
       - name: o11y.generate
         run: |
           git add -A

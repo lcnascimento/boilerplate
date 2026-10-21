@@ -146,7 +146,6 @@ var (
 	kafkaConsumerGroup = []string{"consumergroup", "topic", "partition"}
 )
 
-// Sloth records a series only for the services that declare an SLO, and the error ratio only while the SLI has events.
 var (
 	sloErrorRatio = Metric{Type: Gauge, Source: SlothRecording, Labels: []string{"sloth_window"}, Presence: PresenceOnEvent}
 	sloMeta       = Metric{Type: Gauge, Source: SlothRecording, Presence: PresenceOnEvent}

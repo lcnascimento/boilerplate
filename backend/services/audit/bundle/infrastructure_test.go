@@ -11,14 +11,15 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/audit/bundle"
 )
 
-const defaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-
 func TestComponentNewPool_ConnectionsCarryTheServiceName(t *testing.T) {
 	if testing.Short() {
 		t.Skip("component test: needs Postgres")
 	}
 
-	t.Setenv("DATABASE_URL", env.Get("POSTGRES_ADMIN_URL", env.WithDefaultValue(defaultAdminURL)))
+	adminURL := env.Get[string]("POSTGRES_ADMIN_URL")
+	require.NotEmpty(t, adminURL, "POSTGRES_ADMIN_URL is unset: run make test, which loads backend/.env")
+
+	t.Setenv("DATABASE_URL", adminURL)
 	t.Setenv("OTEL_SERVICE_NAME", "audit-consumer")
 
 	lifecycle := fxtest.NewLifecycle(t)

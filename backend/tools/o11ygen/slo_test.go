@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -59,8 +58,7 @@ type sloSpec struct {
 func readSLOSpec(t *testing.T, root, svc string) sloSpec {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, sloSpecsDir, svc+".yaml"))
-	require.NoError(t, err)
+	raw := readFile(t, filepath.Join(root, sloSpecsDir, svc+".yaml"))
 
 	var spec sloSpec
 	require.NoError(t, yaml.Unmarshal(raw, &spec))
@@ -158,8 +156,7 @@ type sloRule struct {
 func readOrdersSLORules(t *testing.T, root string) []sloRule {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, sloRulesDir, "orders.yaml"))
-	require.NoError(t, err)
+	raw := readFile(t, filepath.Join(root, sloRulesDir, "orders.yaml"))
 
 	var file struct {
 		Groups []struct {
@@ -391,8 +388,7 @@ func TestGenerate_WritesEverySLORuleLineUnfolded(t *testing.T) {
 	root := t.TempDir()
 	require.NoError(t, generate(root, []service.Service{ordersService}))
 
-	raw, err := os.ReadFile(filepath.Join(root, sloRulesDir, "orders.yaml"))
-	require.NoError(t, err)
+	raw := readFile(t, filepath.Join(root, sloRulesDir, "orders.yaml"))
 
 	lines := map[string]bool{}
 	for line := range strings.SplitSeq(string(raw), "\n") {

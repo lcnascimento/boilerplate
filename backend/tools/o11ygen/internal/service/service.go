@@ -16,6 +16,8 @@ const (
 	Browser  Component = "browser"
 )
 
+var components = []Component{API, Consumer, Worker, Browser}
+
 type Runtime int
 
 const (
@@ -30,7 +32,6 @@ type Service struct {
 	Runtime      Runtime
 	Processes    []Process
 	SeriesBudget int
-	LogAlerts    []LogAlert
 	SLOs         []SLO
 }
 
@@ -51,7 +52,6 @@ const (
 
 type LogAlert struct {
 	Name            string
-	Process         string
 	Pipeline        string
 	MaxRecordsPer5m int
 	Severity        Severity
@@ -60,10 +60,15 @@ type LogAlert struct {
 }
 
 type Process struct {
-	name          string
-	components    []Component
+	name       string
+	components []Component
+	options    *processOptions
+}
+
+type processOptions struct {
 	dbPool        bool
 	consumerGroup string
+	logAlerts     []LogAlert
 }
 
 func Daemon(name string, component Component, more ...Component) Process {
@@ -81,22 +86,41 @@ func (p Process) Components() []Component { return slices.Clone(p.components) }
 func (p Process) LongRunning() bool { return len(p.components) > 0 }
 
 func (p Process) WithDBPool() Process {
-	p.dbPool = true
-
-	return p
+	return p.with(func(o *processOptions) { o.dbPool = true })
 }
 
-func (p Process) DBPool() bool { return p.dbPool }
+func (p Process) DBPool() bool { return p.opts().dbPool }
 
 func (p Process) WithConsumerGroup(group string) Process {
-	p.consumerGroup = group
+	return p.with(func(o *processOptions) { o.consumerGroup = group })
+}
+
+func (p Process) ConsumerGroup() string { return p.opts().consumerGroup }
+
+func (p Process) WithLogAlert(alert *LogAlert) Process {
+	return p.with(func(o *processOptions) { o.logAlerts = append(o.logAlerts, *alert) })
+}
+
+func (p Process) LogAlerts() []LogAlert { return slices.Clone(p.opts().logAlerts) }
+
+func (p Process) Runs(component Component) bool { return slices.Contains(p.components, component) }
+
+func (p Process) opts() processOptions {
+	if p.options == nil {
+		return processOptions{}
+	}
+
+	return *p.options
+}
+
+func (p Process) with(change func(*processOptions)) Process {
+	options := p.opts()
+	options.logAlerts = slices.Clone(options.logAlerts)
+	change(&options)
+	p.options = &options
 
 	return p
 }
-
-func (p Process) ConsumerGroup() string { return p.consumerGroup }
-
-func (p Process) Runs(component Component) bool { return slices.Contains(p.components, component) }
 
 func Validate(services []Service) error {
 	serviceNames := map[string]bool{}
@@ -144,28 +168,26 @@ func Validate(services []Service) error {
 }
 
 func validateLogAlerts(svc *Service) error {
-	longRunning := map[string]bool{}
-	for _, process := range svc.Processes {
-		longRunning[process.name] = process.LongRunning()
-	}
-
 	names := map[string]bool{}
 
-	for i := range svc.LogAlerts {
-		alert := &svc.LogAlerts[i]
+	for _, process := range svc.Processes {
+		alerts := process.LogAlerts()
+		for i := range alerts {
+			alert := &alerts[i]
 
-		switch {
-		case alert.Name == "" || alert.Pipeline == "":
-			return errors.New("service %q has a log alert with no name or pipeline", svc.Name)
-		case names[alert.Name]:
-			return errors.New("service %q declares log alert %s twice", svc.Name, alert.Name)
-		case !longRunning[alert.Process]:
-			return errors.New("log alert %s names %q, not a long-running process of service %q", alert.Name, alert.Process, svc.Name)
-		case alert.MaxRecordsPer5m < 0:
-			return errors.New("log alert %s has a negative threshold", alert.Name)
+			switch {
+			case !process.LongRunning():
+				return errors.New("one-shot process %q cannot declare log alert %s", process.name, alert.Name)
+			case alert.Name == "" || alert.Pipeline == "":
+				return errors.New("service %q has a log alert with no name or pipeline", svc.Name)
+			case names[alert.Name]:
+				return errors.New("service %q declares log alert %s twice", svc.Name, alert.Name)
+			case alert.MaxRecordsPer5m < 0:
+				return errors.New("log alert %s has a negative threshold", alert.Name)
+			}
+
+			names[alert.Name] = true
 		}
-
-		names[alert.Name] = true
 	}
 
 	return nil
@@ -179,7 +201,7 @@ type runtimeTraits struct {
 }
 
 var runtimes = map[Runtime]runtimeTraits{
-	Go:   {name: "Go", components: []Component{API, Consumer, Worker, Browser}, dbPool: true, goKit: true},
+	Go:   {name: "Go", components: components, dbPool: true, goKit: true},
 	Node: {name: "Node", components: []Component{API, Browser}},
 }
 
@@ -201,7 +223,7 @@ func validateRuntime(runtime Runtime, process Process) error {
 	}
 
 	uninstrumented := func(c Component) bool { return !slices.Contains(traits.components, c) }
-	if (process.dbPool && !traits.dbPool) || slices.ContainsFunc(process.components, uninstrumented) {
+	if (process.DBPool() && !traits.dbPool) || slices.ContainsFunc(process.components, uninstrumented) {
 		return errors.New("process %q runs on %s, which only instruments %s", process.name, traits.name,
 			listed(traits.components))
 	}
@@ -221,18 +243,16 @@ func validateProcess(svc string, process Process, seen map[string]bool) error {
 	seen[process.name] = true
 
 	for _, component := range process.components {
-		switch component {
-		case API, Consumer, Worker, Browser:
-		default:
+		if !slices.Contains(components, component) {
 			return errors.New("process %q declares unknown component %q", process.name, component)
 		}
 	}
 
-	if process.Runs(Consumer) != (process.consumerGroup != "") {
+	if process.Runs(Consumer) != (process.ConsumerGroup() != "") {
 		return errors.New("process %q must declare a consumer group if, and only if, it runs a consumer", process.name)
 	}
 
-	if process.dbPool && !process.LongRunning() {
+	if process.DBPool() && !process.LongRunning() {
 		return errors.New("one-shot process %q cannot declare a database pool", process.name)
 	}
 

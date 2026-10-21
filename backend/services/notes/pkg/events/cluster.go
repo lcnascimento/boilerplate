@@ -7,8 +7,7 @@ import (
 	"github.com/IBM/sarama"
 )
 
-// pingTimeout keeps a Ping inside the 2s budget of a health check.
-const pingTimeout = time.Second
+const PingTimeout = time.Second
 
 type Cluster struct {
 	client sarama.Client
@@ -19,11 +18,11 @@ type Cluster struct {
 // leaderless partition elsewhere (__consumer_offsets while the broker starts) does not stop it.
 func DialCluster(brokers []string, topics ...string) (*Cluster, error) {
 	cfg := sarama.NewConfig()
-	cfg.Net.DialTimeout = pingTimeout
-	cfg.Net.ReadTimeout = pingTimeout
-	cfg.Net.WriteTimeout = pingTimeout
+	cfg.Net.DialTimeout = PingTimeout
+	cfg.Net.ReadTimeout = PingTimeout
+	cfg.Net.WriteTimeout = PingTimeout
 	cfg.Metadata.Retry.Max = 0
-	cfg.Metadata.Timeout = pingTimeout
+	cfg.Metadata.Timeout = PingTimeout
 
 	client, err := sarama.NewClient(brokers, cfg)
 	if err != nil {
@@ -33,11 +32,9 @@ func DialCluster(brokers []string, topics ...string) (*Cluster, error) {
 	return &Cluster{client: client, topics: topics}, nil
 }
 
-// Ping asks a broker for the cluster metadata: the clients behind publishers and subscribers reconnect in the
-// background without reporting a lost broker. A port that accepts but never answers stalls sarama for one read
-// timeout per request of the handshake, so the deadline is enforced here.
 func (c *Cluster) Ping(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	// A port that accepts but never answers stalls sarama for one read timeout per request of the handshake.
+	ctx, cancel := context.WithTimeout(ctx, PingTimeout)
 	defer cancel()
 
 	refreshed := make(chan error, 1)

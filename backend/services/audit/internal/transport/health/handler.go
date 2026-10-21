@@ -3,17 +3,18 @@ package health
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/http/httpserver/util"
 
+	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport"
 )
 
-const checkTimeout = 2 * time.Second
+const checkTimeout = 2 * events.PingTimeout
 
 var (
 	ErrDatabaseUnhealthy = errors.New("database did not answer the health ping")

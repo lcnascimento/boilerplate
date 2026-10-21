@@ -22,6 +22,15 @@ import (
 
 const dashboardsDir = "config/grafana/provisioning/dashboards"
 
+func readFile(t *testing.T, file string) []byte {
+	t.Helper()
+
+	content, err := fs.ReadFile(os.DirFS(filepath.Dir(file)), filepath.Base(file))
+	require.NoError(t, err)
+
+	return content
+}
+
 func readDashboard(t *testing.T, root, name string) map[string]any {
 	t.Helper()
 
@@ -83,8 +92,7 @@ func TestGenerate_WritesTheDashboardsTitledByTheirLowercaseName(t *testing.T) {
 func provisioned(t *testing.T) map[string]bool {
 	t.Helper()
 
-	raw, err := os.ReadFile("../../config/grafana/provisioning/datasources/datasources.yaml")
-	require.NoError(t, err)
+	raw := readFile(t, "../../config/grafana/provisioning/datasources/datasources.yaml")
 
 	var provisioning struct {
 		Datasources []struct {
@@ -171,8 +179,7 @@ func TestGenerate_QueriesStayInsideTheCatalog(t *testing.T) {
 		require.NoError(t, err)
 
 		for _, path := range paths {
-			content, err := os.ReadFile(path)
-			require.NoError(t, err)
+			content := readFile(t, path)
 
 			queries, err := kind.Queries(content)
 			require.NoError(t, err, describe(err))

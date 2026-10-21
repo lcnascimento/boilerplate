@@ -1,6 +1,6 @@
 # HealthCheckFailing
 
-Severidade: `critical`. Herdado por todo processo Go de longa duração declarado no `o11ygen` (`service.Daemon`).
+Severidade: `critical`. Herdado por todo processo Go de longa duração declarado no `o11ygen` (`service.Daemon`) cujo `/health` checa ao menos uma dependência.
 
 ## Sintoma
 
@@ -10,7 +10,7 @@ O sinal vem de quem faz o probe do `/health` (o `readiness_probe` do Tilt a cada
 
 ## Impacto
 
-O processo está no ar, mas uma dependência que ele checa no `/health` está fora: o banco (todos), o Kafka (forwarder e consumers), o forwarder ou o consumer dele parados. O orquestrador o tira do balanceamento: a API para de receber tráfego, o consumer não processa e o forwarder não esvazia o outbox.
+O processo está no ar, mas uma dependência que ele checa no `/health` está fora; a descrição do alerta lista as dele. O Postgres para quem declara `WithDBPool`, o consumer e o Kafka para quem roda `service.Consumer`, o forwarder e o Kafka para quem roda `service.Worker`. O orquestrador o tira do balanceamento: a API para de receber tráfego, o consumer não processa e o forwarder não esvazia o outbox.
 
 ## Diagnóstico
 

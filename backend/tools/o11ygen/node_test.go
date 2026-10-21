@@ -94,8 +94,7 @@ func TestGenerate_NodeServiceLabelsEveryRouteSeriesWithStatusMethodAndRoute(t *t
 }
 
 func TestTempoKeepsTheHTTPStatusOfEverySpanMetric(t *testing.T) {
-	raw, err := os.ReadFile("../../config/tempo/tempo.yaml")
-	require.NoError(t, err)
+	raw := readFile(t, "../../config/tempo/tempo.yaml")
 
 	var config struct {
 		MetricsGenerator struct {

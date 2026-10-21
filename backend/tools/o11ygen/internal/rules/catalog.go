@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
@@ -21,6 +22,9 @@ const (
 	sustainedFor = 5 * time.Minute
 
 	seriesBudgetSustainedFor = 15 * time.Minute
+
+	postgresDown     = "PostgresDown"
+	kafkaBrokersDown = "KafkaBrokersDown"
 )
 
 type process struct {
@@ -31,6 +35,44 @@ type process struct {
 
 func (p *process) job() string {
 	return `{job=` + strconv.Quote(config.Namespace+"/"+p.Name()) + `}`
+}
+
+type healthDependency struct {
+	name      string
+	downAlert string
+	checkedBy func(*process) bool
+}
+
+var healthDependencies = []healthDependency{
+	{name: "o Postgres", downAlert: postgresDown, checkedBy: func(p *process) bool { return p.DBPool() }},
+	{name: "o consumer", checkedBy: func(p *process) bool { return p.Runs(service.Consumer) }},
+	{name: "o forwarder", checkedBy: func(p *process) bool { return p.Runs(service.Worker) }},
+	{name: "o Kafka", downAlert: kafkaBrokersDown, checkedBy: func(p *process) bool {
+		return p.Runs(service.Consumer) || p.Runs(service.Worker)
+	}},
+}
+
+func (p *process) healthChecks() (names, downAlerts []string) {
+	for _, dependency := range healthDependencies {
+		if !dependency.checkedBy(p) {
+			continue
+		}
+
+		names = append(names, dependency.name)
+		if dependency.downAlert != "" {
+			downAlerts = append(downAlerts, dependency.downAlert)
+		}
+	}
+
+	return names, downAlerts
+}
+
+func enumerated(items []string) string {
+	if len(items) == 1 {
+		return items[0]
+	}
+
+	return strings.Join(items[:len(items)-1], ", ") + " e " + items[len(items)-1]
 }
 
 type inheritedAlert struct {
@@ -54,8 +96,13 @@ var processAlerts = []inheritedAlert{
 		},
 	},
 	{
-		inheritedBy: func(p *process) bool { return p.LongRunning() && p.service.Runtime.RunsGoKit() },
+		inheritedBy: func(p *process) bool {
+			checked, _ := p.healthChecks()
+
+			return p.LongRunning() && p.service.Runtime.RunsGoKit() && len(checked) > 0
+		},
 		alert: func(p *process) alert {
+			checked, downAlerts := p.healthChecks()
 			checks := func(status string) string {
 				return fmt.Sprintf(`sum by (job) (increase(%s{job=%s, http_route="/health", http_response_status_code=~%q}[2m])) > 0`,
 					catalog.HTTPServerRequestTotal, strconv.Quote(config.Namespace+"/"+p.Name()), status)
@@ -67,9 +114,9 @@ var processAlerts = []inheritedAlert{
 				severity: critical,
 				summary:  p.Name() + " responde 5xx em todo /health há 2 minutos",
 				description: "Todo /health de " + p.Name() + " respondeu 5xx nos últimos 2 minutos: uma dependência que ele " +
-					"checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. " +
+					"checa (" + enumerated(checked) + ") está fora, e quem faz o probe o considera fora do ar. " +
 					"Veja primeiro nos logs de " + p.Name() + " por que o health check falha e os alertas das dependências " +
-					"(PostgresDown, KafkaBrokersDown).",
+					"(" + strings.Join(downAlerts, ", ") + ").",
 				dashboard: p.service.Name,
 			}
 		},
@@ -179,8 +226,6 @@ var processAlerts = []inheritedAlert{
 	},
 }
 
-// recordsIn5m sums a Loki recorded rate1m over 5 minutes: the ruler writes one sample a minute, absent when no log
-// matched, so increase() would miss a single record.
 func recordsIn5m(series, process string, extra map[string]string) string {
 	matchers := `service=` + strconv.Quote(process)
 	for _, name := range slices.Sorted(maps.Keys(extra)) {
@@ -190,16 +235,16 @@ func recordsIn5m(series, process string, extra map[string]string) string {
 	return fmt.Sprintf("sum_over_time(%s{%s}[5m])", series, matchers)
 }
 
-func logAlert(svc string, declared *service.LogAlert) alert {
+func logAlert(p *process, declared *service.LogAlert) alert {
 	return alert{
 		name: declared.Name,
-		expr: fmt.Sprintf("%s * 60 > %d", recordsIn5m(catalog.ServiceLogAlertRecords, declared.Process,
+		expr: fmt.Sprintf("%s * 60 > %d", recordsIn5m(catalog.ServiceLogAlertRecords, p.Name(),
 			map[string]string{"log_alert": declared.Name}), declared.MaxRecordsPer5m),
 		severity:    severity(declared.Severity),
 		summary:     declared.Summary,
 		description: declared.Description,
-		dashboard:   svc,
-		service:     declared.Process,
+		dashboard:   p.service.Name,
+		service:     p.Name(),
 	}
 }
 
@@ -229,7 +274,7 @@ func exporterDown(job, verdict string) string {
 
 var infraGroups = []group{
 	infra("kafka", alert{
-		name:     "KafkaBrokersDown",
+		name:     kafkaBrokersDown,
 		expr:     exporterDown(catalog.KafkaExporterJob, catalog.KafkaBrokers+" < 1"),
 		severity: critical,
 		summary:  "Kafka fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos",
@@ -239,7 +284,7 @@ var infraGroups = []group{
 		dashboard: kafkaDashboard,
 	}),
 	infra("postgres", alert{
-		name:     "PostgresDown",
+		name:     postgresDown,
 		expr:     exporterDown(catalog.PostgresExporterJob, catalog.PgUp+" == 0"),
 		severity: critical,
 		summary:  "Postgres fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos",

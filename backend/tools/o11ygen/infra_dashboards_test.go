@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -91,8 +90,7 @@ func TestGenerate_KeepsTheInfraDashboardsAndTheHomeValidWithoutServices(t *testi
 	} {
 		assert.Equal(t, uid, readDashboard(t, root, name)["uid"], name)
 
-		content, err := os.ReadFile(filepath.Join(root, dashboardsDir, name))
-		require.NoError(t, err)
+		content := readFile(t, filepath.Join(root, dashboardsDir, name))
 
 		queries, err := kind.Queries(content)
 		require.NoError(t, err, describe(err))
@@ -187,8 +185,7 @@ func TestGenerate_OverviewIsTheGrafanaHome(t *testing.T) {
 
 	require.NoError(t, generate(root, nil))
 
-	compose, err := os.ReadFile(observabilityCompose)
-	require.NoError(t, err)
+	compose := readFile(t, observabilityCompose)
 
 	home := regexp.MustCompile(`GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/(\S+)`).
 		FindSubmatch(compose)

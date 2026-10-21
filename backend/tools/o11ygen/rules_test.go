@@ -38,8 +38,7 @@ type ruleFile struct {
 func readRules(t *testing.T, file string) ruleFile {
 	t.Helper()
 
-	raw, err := os.ReadFile(file)
-	require.NoError(t, err)
+	raw := readFile(t, file)
 
 	var rules ruleFile
 	require.NoError(t, yaml.Unmarshal(raw, &rules))
@@ -168,6 +167,48 @@ func TestGenerate_ScopesTheProcessAlertsToTheProcess(t *testing.T) {
 		"orders-consumer CriticalLogRecorded":  `sum_over_time(service:log_records_critical:rate1m{service="orders-consumer"}[5m]) * 60 > 0`,
 		"orders-worker CriticalLogRecorded":    `sum_over_time(service:log_records_critical:rate1m{service="orders-worker"}[5m]) * 60 > 0`,
 	}, exprs)
+}
+
+func TestGenerate_NamesTheDependenciesEachHealthCheckChecks(t *testing.T) {
+	root := t.TempDir()
+	declared := []service.Service{
+		{
+			Name: "orders",
+			Processes: []service.Process{
+				service.Daemon("orders-api", service.API).WithDBPool(),
+				service.Daemon("orders-consumer", service.Consumer).WithConsumerGroup("orders").WithDBPool(),
+				service.Daemon("orders-worker", service.Worker),
+			},
+		},
+		{Name: "billing", Processes: []service.Process{service.Daemon("billing-api", service.API)}},
+	}
+
+	require.NoError(t, generate(root, declared))
+
+	descriptions := map[string]string{}
+
+	for _, file := range []string{"orders.yaml", "billing.yaml"} {
+		for _, group := range readRules(t, filepath.Join(root, rulesDir, file)).Groups {
+			for _, rule := range group.Rules {
+				if rule.Alert == "HealthCheckFailing" {
+					descriptions[rule.Labels["service"]] = rule.Annotations["description"]
+				}
+			}
+		}
+	}
+
+	assert.Equal(t, map[string]string{
+		"orders-api": "Todo /health de orders-api respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa " +
+			"(o Postgres) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de orders-api " +
+			"por que o health check falha e os alertas das dependências (PostgresDown).",
+		"orders-consumer": "Todo /health de orders-consumer respondeu 5xx nos últimos 2 minutos: uma dependência que ele " +
+			"checa (o Postgres, o consumer e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro " +
+			"nos logs de orders-consumer por que o health check falha e os alertas das dependências " +
+			"(PostgresDown, KafkaBrokersDown).",
+		"orders-worker": "Todo /health de orders-worker respondeu 5xx nos últimos 2 minutos: uma dependência que ele " +
+			"checa (o forwarder e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs " +
+			"de orders-worker por que o health check falha e os alertas das dependências (KafkaBrokersDown).",
+	}, descriptions)
 }
 
 func TestGenerate_CountsTheSeriesOfEveryJob(t *testing.T) {
@@ -333,8 +374,7 @@ func testedAlerts(t *testing.T) map[string]bool {
 	tested := map[string]bool{}
 
 	for _, path := range paths {
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err)
+		raw := readFile(t, path)
 
 		var file ruleTestFile
 		require.NoError(t, yaml.Unmarshal(raw, &file), path)
