@@ -15,5 +15,5 @@ type Database interface {
 }
 
 type Consumer interface {
-	Running() bool
+	Ready(ctx context.Context) error
 }

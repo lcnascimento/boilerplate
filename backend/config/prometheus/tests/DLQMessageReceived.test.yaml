@@ -1,0 +1,46 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires as soon as a message lands on the DLQ of its consumer group
+    interval: 1m
+    input_series:
+      - series: kafka_topic_partition_current_offset{topic="orders.order.v1.fixture.dlq", partition="0"}
+        values: 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: DLQMessageReceived
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: DLQMessageReceived
+        exp_alerts:
+          - exp_labels:
+              topic: orders.order.v1.fixture.dlq
+              service: fixture-consumer
+              severity: critical
+            exp_annotations:
+              summary: "1 mensagem(ns) nova(s) na DLQ orders.order.v1.fixture.dlq de fixture-consumer"
+              description: "fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço e os logs de fixture-consumer."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
+      - eval_time: 14m
+        alertname: DLQMessageReceived
+        exp_alerts: []
+
+  - name: stays quiet when only other topics move
+    interval: 1m
+    input_series:
+      - series: kafka_topic_partition_current_offset{topic="orders.order.v1.fixture.dlq", partition="0"}
+        values: 3x10
+      - series: kafka_topic_partition_current_offset{topic="orders.order.v1", partition="0"}
+        values: 0+10x10
+      - series: kafka_topic_partition_current_offset{topic="orders.order.v1.other.dlq", partition="0"}
+        values: 0+1x10
+      - series: kafka_topic_partition_current_offset{topic="orders.order.v1.notfixture.dlq", partition="0"}
+        values: 0+1x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: DLQMessageReceived
+        exp_alerts: []

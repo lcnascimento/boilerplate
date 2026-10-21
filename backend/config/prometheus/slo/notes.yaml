@@ -1,0 +1,580 @@
+groups:
+  - name: sloth-slo-sli-recordings-notes-api-availability
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[5m])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 5m
+      - record: slo:sli_error:ratio_rate30m
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30m])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 30m
+      - record: slo:sli_error:ratio_rate1h
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[1h])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 1h
+      - record: slo:sli_error:ratio_rate2h
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[2h])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 2h
+      - record: slo:sli_error:ratio_rate6h
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[6h])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 6h
+      - record: slo:sli_error:ratio_rate1d
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[1d])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 1d
+      - record: slo:sli_error:ratio_rate3d
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[3d])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 3d
+      - record: slo:sli_error:ratio_rate30d
+        expr: |
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d])) or vector(0))
+          /
+          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_window: 30d
+  - name: sloth-slo-meta-recordings-notes-api-availability
+    rules:
+      - record: slo:objective:ratio
+        expr: vector(0.9990000000000001)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+      - record: slo:error_budget:ratio
+        expr: vector(1-0.9990000000000001)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+      - record: slo:time_period:days
+        expr: vector(30)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+      - record: slo:current_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate5m{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"}
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+      - record: slo:period_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate30d{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"}
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+      - record: slo:period_error_budget_remaining:ratio
+        expr: 1 - slo:period_burn_rate:ratio{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"}
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_service: notes
+          sloth_slo: api-availability
+      - record: sloth_slo_info
+        expr: vector(1)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-availability
+          sloth_mode: cli-gen-prom
+          sloth_objective: "99.9"
+          sloth_service: notes
+          sloth_slo: api-availability
+          sloth_spec: prometheus/v1
+          sloth_version: v0.16.0
+  - name: sloth-slo-alerts-notes-api-availability
+    rules:
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate5m{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (14.4 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1h{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (14.4 * 0.0009999999999999432)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate30m{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (6 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate6h{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (6 * 0.0009999999999999432)) without (sloth_window)
+          )
+        labels:
+          service: notes-api-frontend
+          severity: critical
+          sloth_severity: page
+          sloth_slo: api-availability
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Requisições HTTP de notes-api-frontend respondidas sem 5xx, fora as de health e readiness. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de notes-api-frontend.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO api-availability de notes-api-frontend queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO api-availability de notes-api-frontend queimando o error budget rápido demais
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate2h{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (3 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1d{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (3 * 0.0009999999999999432)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate6h{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (1 * 0.0009999999999999432)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate3d{sloth_id="notes-api-availability", sloth_service="notes", sloth_slo="api-availability"} > (1 * 0.0009999999999999432)) without (sloth_window)
+          )
+        labels:
+          service: notes-api-frontend
+          severity: warning
+          sloth_severity: ticket
+          sloth_slo: api-availability
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Requisições HTTP de notes-api-frontend respondidas sem 5xx, fora as de health e readiness. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de notes-api-frontend.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO api-availability de notes-api-frontend consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO api-availability de notes-api-frontend consumindo o error budget acima do ritmo sustentável
+  - name: sloth-slo-sli-recordings-notes-api-latency
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[5m])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 5m
+      - record: slo:sli_error:ratio_rate30m
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[30m])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 30m
+      - record: slo:sli_error:ratio_rate1h
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[1h])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 1h
+      - record: slo:sli_error:ratio_rate2h
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[2h])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 2h
+      - record: slo:sli_error:ratio_rate6h
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[6h])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 6h
+      - record: slo:sli_error:ratio_rate1d
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[1d])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 1d
+      - record: slo:sli_error:ratio_rate3d
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[3d])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 3d
+      - record: slo:sli_error:ratio_rate30d
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[30d])))
+          /
+          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_window: 30d
+  - name: sloth-slo-meta-recordings-notes-api-latency
+    rules:
+      - record: slo:objective:ratio
+        expr: vector(0.99)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+      - record: slo:error_budget:ratio
+        expr: vector(1-0.99)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+      - record: slo:time_period:days
+        expr: vector(30)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+      - record: slo:current_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate5m{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"}
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+      - record: slo:period_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate30d{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"}
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+      - record: slo:period_error_budget_remaining:ratio
+        expr: 1 - slo:period_burn_rate:ratio{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"}
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_service: notes
+          sloth_slo: api-latency
+      - record: sloth_slo_info
+        expr: vector(1)
+        labels:
+          service: notes-api-frontend
+          sloth_id: notes-api-latency
+          sloth_mode: cli-gen-prom
+          sloth_objective: "99"
+          sloth_service: notes
+          sloth_slo: api-latency
+          sloth_spec: prometheus/v1
+          sloth_version: v0.16.0
+  - name: sloth-slo-alerts-notes-api-latency
+    rules:
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate5m{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (14.4 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1h{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (14.4 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate30m{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (6 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate6h{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (6 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: notes-api-frontend
+          severity: critical
+          sloth_severity: page
+          sloth_slo: api-latency
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Requisições HTTP de notes-api-frontend respondidas em até 250ms, fora as de health e readiness. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de notes-api-frontend.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO api-latency de notes-api-frontend queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO api-latency de notes-api-frontend queimando o error budget rápido demais
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate2h{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (3 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1d{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (3 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate6h{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (1 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate3d{sloth_id="notes-api-latency", sloth_service="notes", sloth_slo="api-latency"} > (1 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: notes-api-frontend
+          severity: warning
+          sloth_severity: ticket
+          sloth_slo: api-latency
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Requisições HTTP de notes-api-frontend respondidas em até 250ms, fora as de health e readiness. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de notes-api-frontend.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO api-latency de notes-api-frontend consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO api-latency de notes-api-frontend consumindo o error budget acima do ritmo sustentável
+  - name: sloth-slo-sli-recordings-notes-outbox-freshness
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[5m:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 5m
+      - record: slo:sli_error:ratio_rate30m
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[30m:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 30m
+      - record: slo:sli_error:ratio_rate1h
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[1h:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 1h
+      - record: slo:sli_error:ratio_rate2h
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[2h:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 2h
+      - record: slo:sli_error:ratio_rate6h
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[6h:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 6h
+      - record: slo:sli_error:ratio_rate1d
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[1d:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 1d
+      - record: slo:sli_error:ratio_rate3d
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[3d:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 3d
+      - record: slo:sli_error:ratio_rate30d
+        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[30d:1m]))
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_window: 30d
+  - name: sloth-slo-meta-recordings-notes-outbox-freshness
+    rules:
+      - record: slo:objective:ratio
+        expr: vector(0.99)
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+      - record: slo:error_budget:ratio
+        expr: vector(1-0.99)
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+      - record: slo:time_period:days
+        expr: vector(30)
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+      - record: slo:current_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate5m{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"}
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+      - record: slo:period_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate30d{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"}
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+      - record: slo:period_error_budget_remaining:ratio
+        expr: 1 - slo:period_burn_rate:ratio{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"}
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+      - record: sloth_slo_info
+        expr: vector(1)
+        labels:
+          service: notes-worker-forwarder
+          sloth_id: notes-outbox-freshness
+          sloth_mode: cli-gen-prom
+          sloth_objective: "99"
+          sloth_service: notes
+          sloth_slo: outbox-freshness
+          sloth_spec: prometheus/v1
+          sloth_version: v0.16.0
+  - name: sloth-slo-alerts-notes-outbox-freshness
+    rules:
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate5m{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (14.4 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1h{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (14.4 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate30m{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (6 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate6h{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (6 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: notes-worker-forwarder
+          severity: critical
+          sloth_severity: page
+          sloth_slo: outbox-freshness
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Minutos em que a mensagem pendente mais antiga do outbox de notes tem até 30s, segundo notes-worker-forwarder. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de notes-worker-forwarder.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO outbox-freshness de notes-worker-forwarder queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO outbox-freshness de notes-worker-forwarder queimando o error budget rápido demais
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate2h{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (3 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1d{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (3 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate6h{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (1 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate3d{sloth_id="notes-outbox-freshness", sloth_service="notes", sloth_slo="outbox-freshness"} > (1 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: notes-worker-forwarder
+          severity: warning
+          sloth_severity: ticket
+          sloth_slo: outbox-freshness
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Minutos em que a mensagem pendente mais antiga do outbox de notes tem até 30s, segundo notes-worker-forwarder. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de notes-worker-forwarder.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO outbox-freshness de notes-worker-forwarder consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO outbox-freshness de notes-worker-forwarder consumindo o error budget acima do ritmo sustentável

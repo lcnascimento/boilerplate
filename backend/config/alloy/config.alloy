@@ -1,6 +1,11 @@
 discovery.docker "containers" {
   host             = "unix:///var/run/docker.sock"
   refresh_interval = "5s"
+
+  filter {
+    name   = "network"
+    values = ["boilerplate"]
+  }
 }
 
 discovery.relabel "containers" {
@@ -26,7 +31,62 @@ discovery.relabel "containers" {
 loki.source.docker "containers" {
   host       = "unix:///var/run/docker.sock"
   targets    = discovery.relabel.containers.output
-  forward_to = [loki.write.local_loki.receiver]
+  forward_to = [otelcol.receiver.loki.containers.receiver]
+}
+
+otelcol.receiver.loki "containers" {
+  output {
+    logs = [otelcol.processor.transform.containers.input]
+  }
+}
+
+otelcol.processor.transform "containers" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "log"
+    statements = [
+      `set(resource.attributes["service.name"], log.attributes["service"])`,
+      `set(resource.attributes["service.name"], log.attributes["container"]) where log.attributes["service"] == nil`,
+      `set(resource.attributes["container.name"], log.attributes["container"])`,
+      `set(resource.attributes["container.image.name"], log.attributes["image"])`,
+      `delete_matching_keys(log.attributes, "^(service|container|image|loki\\.attribute\\.labels)$")`,
+      `merge_maps(log.cache, ParseJSON(log.body), "upsert") where IsMatch(log.body, "^\\{")`,
+      `merge_maps(log.cache, ParseKeyValue(log.body), "upsert") where IsMatch(log.body, "^[A-Za-z_][A-Za-z0-9_.]*=")`,
+      `merge_maps(log.cache, ExtractPatterns(log.body, "^\\[[^\\]]+\\] (?P<level>[A-Z]+) (?P<msg>.*?)(?: \\((?P<logger>[^()]+)\\))?$"), "upsert") where IsMatch(log.body, "^\\[\\d{4}-\\d{2}-\\d{2} [^\\]]+\\] [A-Z]+ ")`,
+      `merge_maps(log.cache, ExtractPatterns(log.body, "^\\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\[(?P<pid>\\d+)\\] (?:(?P<level>DEBUG[1-5]|LOG|INFO|NOTICE|WARNING|ERROR|FATAL|PANIC):\\s+)?(?P<msg>.*)$"), "upsert") where IsMatch(log.body, "^\\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\[\\d+\\] ")`,
+      `set(log.cache["msg"], log.cache["message"]) where log.cache["msg"] == nil`,
+      `set(log.cache["level"], log.cache["lvl"]) where log.cache["level"] == nil`,
+      `set(log.cache["level"], ToUpperCase(log.cache["level"])) where log.cache["level"] != nil`,
+      `set(log.severity_text, "TRACE") where log.cache["level"] == "TRACE"`,
+      `set(log.severity_text, "DEBUG") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^DEBUG[1-5]?$")`,
+      `set(log.severity_text, "INFO") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(INFO|LOG|NOTICE)$")`,
+      `set(log.severity_text, "WARN") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^WARN(ING)?$")`,
+      `set(log.severity_text, "ERROR") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(ERROR|ERR|EROR)$")`,
+      `set(log.severity_text, "FATAL") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(FATAL|PANIC|CRIT|CRITICAL)$")`,
+      `set(log.severity_number, SEVERITY_NUMBER_TRACE) where log.severity_text == "TRACE"`,
+      `set(log.severity_number, SEVERITY_NUMBER_DEBUG) where log.severity_text == "DEBUG"`,
+      `set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_text == "INFO"`,
+      `set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_text == "WARN"`,
+      `set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_text == "ERROR"`,
+      `set(log.severity_number, SEVERITY_NUMBER_FATAL) where log.severity_text == "FATAL"`,
+      `delete_matching_keys(log.cache, "^(level|lvl|message|ts|t|time|timestamp)$")`,
+      `merge_maps(log.attributes, log.cache, "insert") where log.cache["msg"] != nil`,
+      `set(log.body, log.cache["msg"]) where log.cache["msg"] != nil`,
+      `delete_key(log.attributes, "msg")`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.batch.containers.input]
+  }
+}
+
+// otelcol.receiver.loki emits one request per line, which overflows the exporter queue on a burst.
+otelcol.processor.batch "containers" {
+  output {
+    logs = [otelcol.exporter.otlphttp.loki.input]
+  }
 }
 
 otelcol.receiver.otlp "default" {
@@ -38,7 +98,7 @@ otelcol.receiver.otlp "default" {
   }
 
   output {
-    metrics = [otelcol.exporter.prometheus.local_prom.input]
+    metrics = [otelcol.exporter.otlphttp.prometheus.input]
     traces  = [otelcol.processor.filter.drop_infra_noise.input]
     logs    = [otelcol.exporter.otlphttp.loki.input]
   }
@@ -55,12 +115,119 @@ otelcol.processor.filter "drop_infra_noise" {
   }
 
   output {
+    traces = [otelcol.processor.transform.peer_service.input]
+  }
+}
+
+// Tempo's service graph names a database after server.address (localhost for a process on the host) and a broker
+// only after peer.service.
+otelcol.processor.transform "peer_service" {
+  error_mode = "ignore"
+
+  trace_statements {
+    context    = "span"
+    statements = [
+      `set(span.attributes["peer.service"], "postgres") where span.attributes["db.system.name"] == "postgresql" and span.attributes["peer.service"] == nil`,
+      `set(span.attributes["peer.service"], "kafka") where span.attributes["messaging.system"] == "kafka" and span.attributes["messaging.operation.type"] != "create" and span.attributes["peer.service"] == nil`,
+    ]
+  }
+
+  output {
     traces = [otelcol.exporter.otlp.tempo.input]
   }
 }
 
-otelcol.exporter.prometheus "local_prom" {
-  forward_to = [prometheus.remote_write.local_prometheus.receiver]
+faro.receiver "web" {
+  server {
+    listen_address       = "0.0.0.0"
+    listen_port          = 12347
+    cors_allowed_origins = ["http://localhost:3000"]
+  }
+
+  sourcemaps {
+    download = false
+  }
+
+  output {
+    logs   = [otelcol.receiver.loki.faro.receiver]
+    traces = [otelcol.processor.filter.drop_infra_noise.input]
+  }
+}
+
+otelcol.receiver.loki "faro" {
+  output {
+    logs = [otelcol.processor.transform.faro.input]
+  }
+}
+
+// faro.receiver writes each signal as a logfmt line without labels: its fields become structured metadata, and the
+// Faro app becomes the OTLP service.
+otelcol.processor.transform "faro" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "log"
+    statements = [
+      `merge_maps(log.attributes, ParseKeyValue(log.body), "upsert")`,
+      `set(resource.attributes["service.name"], log.attributes["app_name"])`,
+      `set(resource.attributes["service.namespace"], log.attributes["app_namespace"])`,
+      `set(log.trace_id.string, log.attributes["traceID"]) where log.attributes["traceID"] != nil`,
+      `set(log.span_id.string, log.attributes["spanID"]) where log.attributes["spanID"] != nil`,
+      `delete_matching_keys(log.attributes, "^(timestamp|traceID|spanID)$")`,
+      `merge_maps(log.cache, ExtractPatterns(log.attributes["page_url"], "^[a-z]+://[^/]+(?P<page_path>[^?#]*)"), "upsert") where log.attributes["page_url"] != nil`,
+      `set(log.cache["level"], "INFO") where log.attributes["kind"] == "event" or log.attributes["kind"] == "measurement"`,
+      `set(log.body, log.attributes["message"]) where log.attributes["kind"] == "log" and log.attributes["message"] != nil`,
+      `set(log.cache["level"], ToUpperCase(log.attributes["level"])) where log.attributes["kind"] == "log" and log.attributes["level"] != nil`,
+      `set(log.cache["level"], "INFO") where log.cache["level"] == "LOG"`,
+      `set(log.body, Concat([log.attributes["type"], log.attributes["value"]], ": ")) where log.attributes["kind"] == "exception" and log.attributes["value"] != nil`,
+      `set(log.cache["level"], "ERROR") where log.attributes["kind"] == "exception"`,
+      `set(log.cache["vital"], "CLS") where log.attributes["type"] == "web-vitals" and log.attributes["value_cls"] != nil`,
+      `set(log.cache["value"], Format("%.3f", [Double(log.attributes["value_cls"])])) where log.cache["vital"] == "CLS"`,
+      `set(log.cache["vital"], "LCP") where log.attributes["type"] == "web-vitals" and log.attributes["value_lcp"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_lcp"]))])) where log.cache["vital"] == "LCP"`,
+      `set(log.cache["vital"], "INP") where log.attributes["type"] == "web-vitals" and log.attributes["value_inp"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_inp"]))])) where log.cache["vital"] == "INP"`,
+      `set(log.cache["vital"], "FCP") where log.attributes["type"] == "web-vitals" and log.attributes["value_fcp"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_fcp"]))])) where log.cache["vital"] == "FCP"`,
+      `set(log.cache["vital"], "TTFB") where log.attributes["type"] == "web-vitals" and log.attributes["value_ttfb"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_ttfb"]))])) where log.cache["vital"] == "TTFB"`,
+      `set(log.body, Concat(["web-vitals", log.cache["vital"], log.cache["value"], log.attributes["context_rating"], log.cache["page_path"]], " ")) where log.cache["value"] != nil`,
+      `set(log.cache["level"], "WARN") where log.cache["value"] != nil and log.attributes["context_rating"] == "poor"`,
+      `set(log.body, log.attributes["event_name"]) where log.attributes["kind"] == "event" and log.attributes["event_name"] != nil`,
+      `merge_maps(log.cache, ExtractPatterns(log.attributes["event_data_url.full"], "^[a-z]+://[^/]+(?P<fetch_path>[^?#]*)"), "upsert") where log.attributes["event_name"] == "faro.tracing.fetch" and log.attributes["event_data_url.full"] != nil`,
+      `set(log.body, Concat(["fetch", log.attributes["event_data_http.request.method"], log.cache["fetch_path"], log.attributes["event_data_http.response.status_code"], Format("%dms", [Int(Double(log.attributes["event_data_duration_ns"]) / 1000000.0)])], " ")) where log.cache["fetch_path"] != nil`,
+      `set(log.cache["level"], "ERROR") where log.cache["fetch_path"] != nil and Int(log.attributes["event_data_http.response.status_code"]) >= 500`,
+      `merge_maps(log.cache, ExtractPatterns(log.attributes["event_data_name"], "^[a-z]+://[^/]+(?P<entry_path>[^?#]*)"), "upsert") where IsMatch(log.attributes["event_name"], "^faro\\.performance\\.(navigation|resource)$") and log.attributes["event_data_name"] != nil`,
+      `set(log.body, Concat(["navigation", log.cache["entry_path"], Format("%dms", [Int(Double(log.attributes["event_data_duration"]))])], " ")) where log.attributes["event_name"] == "faro.performance.navigation" and log.cache["entry_path"] != nil`,
+      `set(log.body, Concat(["resource", log.attributes["event_data_initiatorType"], log.cache["entry_path"], Format("%dms", [Int(Double(log.attributes["event_data_duration"]))])], " ")) where log.attributes["event_name"] == "faro.performance.resource" and log.cache["entry_path"] != nil`,
+      `set(log.severity_text, log.cache["level"]) where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(TRACE|DEBUG|INFO|WARN|ERROR)$")`,
+      `set(log.severity_number, SEVERITY_NUMBER_TRACE) where log.severity_text == "TRACE"`,
+      `set(log.severity_number, SEVERITY_NUMBER_DEBUG) where log.severity_text == "DEBUG"`,
+      `set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_text == "INFO"`,
+      `set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_text == "WARN"`,
+      `set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_text == "ERROR"`,
+      `delete_key(log.attributes, "level") where log.severity_text != ""`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.filter.faro.input]
+  }
+}
+
+// faro.tracing.fetch already reports every fetch and XHR, with its trace.
+otelcol.processor.filter "faro" {
+  error_mode = "ignore"
+
+  logs {
+    log_record = [
+      `attributes["event_name"] == "faro.performance.resource" and (attributes["event_data_initiatorType"] == "fetch" or attributes["event_data_initiatorType"] == "xmlhttprequest")`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.exporter.otlphttp.loki.input]
+  }
 }
 
 prometheus.exporter.kafka "local_kafka" {
@@ -72,6 +239,30 @@ prometheus.scrape "kafka" {
   targets         = prometheus.exporter.kafka.local_kafka.targets
   scrape_interval = "15s"
   forward_to      = [prometheus.remote_write.local_prometheus.receiver]
+}
+
+prometheus.exporter.postgres "local_postgres" {
+  data_source_names          = ["postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable"]
+  // No built-in collector counts connections by role and application_name.
+  custom_queries_config_path = "/etc/alloy/postgres-queries.yaml"
+  enabled_collectors         = ["database", "locks", "replication", "replication_slot", "stat_bgwriter", "stat_checkpointer", "stat_database", "stat_statements", "wal"]
+}
+
+prometheus.scrape "postgres" {
+  targets         = prometheus.exporter.postgres.local_postgres.targets
+  scrape_interval = "15s"
+  forward_to      = [prometheus.relabel.drop_test_databases.receiver]
+}
+
+// The exporter's database denylist takes exact names, not the per-test testdb_* databases pgtestdb creates.
+prometheus.relabel "drop_test_databases" {
+  forward_to = [prometheus.remote_write.local_prometheus.receiver]
+
+  rule {
+    source_labels = ["datname"]
+    regex         = "testdb_.*"
+    action        = "drop"
+  }
 }
 
 prometheus.remote_write "local_prometheus" {
@@ -89,14 +280,14 @@ otelcol.exporter.otlp "tempo" {
   }
 }
 
-otelcol.exporter.otlphttp "loki" {
+otelcol.exporter.otlphttp "prometheus" {
   client {
-    endpoint = "http://loki:3100/otlp"
+    endpoint = "http://prometheus:9090/api/v1/otlp"
   }
 }
 
-loki.write "local_loki" {
-  endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+otelcol.exporter.otlphttp "loki" {
+  client {
+    endpoint = "http://loki:3100/otlp"
   }
 }

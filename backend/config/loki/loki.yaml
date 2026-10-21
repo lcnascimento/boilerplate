@@ -1,0 +1,44 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /etc/loki/rules
+  rule_path: /loki/ruler-scratch
+  evaluation_interval: 1m
+  enable_api: true
+  wal:
+    dir: /loki/ruler-wal
+  remote_write:
+    enabled: true
+    clients:
+      prometheus:
+        url: http://prometheus:9090/api/v1/write
+
+analytics:
+  reporting_enabled: false

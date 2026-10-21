@@ -11,6 +11,7 @@ import {
 import { Button } from "@boilerplate/ui/components/button";
 
 import { LOCALE_COOKIE_NAME } from "@/shared/cookies";
+import { useReportBoundaryError } from "@/shared/faro";
 
 import "./globals.css";
 
@@ -36,6 +37,8 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     () => defaultLocale
   );
   const { common, errors } = messages[locale];
+
+  useReportBoundaryError(error);
 
   return (
     <html lang={locale}>

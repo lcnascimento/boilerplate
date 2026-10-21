@@ -12,8 +12,15 @@ SQUAWK_VERSION := v2.68.0
 SQLC_VERSION := v1.31.1
 BUF_VERSION := v1.74.0
 PROTOC_GEN_GO_VERSION := v1.36.12
+SLOTH_VERSION := v0.16.0
+PROMTOOL_VERSION := v3.15.0
+DASHBOARD_LINTER_VERSION := v0.3.0
+PINT_VERSION := v0.89.3
+LOKITOOL_VERSION := v3.7.8
+ALLOY_IMAGE := $(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
+export PATH := $(GOBIN):$(PATH)
 
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
@@ -43,6 +50,16 @@ define in_buf_dirs
 	done
 endef
 
+define install_release
+	@bin="$(GOBIN)/$(1)"; \
+	if [ "$$({ $(2); } 2>/dev/null)" != "$(3)" ]; then \
+		os=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		case "$$(uname -m)" in x86_64|amd64) arch=amd64;; aarch64|arm64) arch=arm64;; *) echo "$(1): unsupported arch $$(uname -m)" >&2; exit 1;; esac; \
+		echo "==> Installing $(1) $(3) into $(GOBIN)"; \
+		$(4) && chmod +x "$$bin"; \
+	fi
+endef
+
 go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
@@ -66,7 +83,7 @@ setup: env
 	@go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 	@go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
 	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
-	@$(MAKE) -s squawk proto.tools
+	@$(MAKE) -s squawk proto.tools o11y.tools
 
 .PHONY: proto.tools
 proto.tools:
@@ -82,6 +99,23 @@ squawk:
 		curl -fsSL -o "$(GOBIN)/squawk" "https://github.com/sbdchd/squawk/releases/download/$(SQUAWK_VERSION)/squawk-$$os-$$arch" \
 			&& chmod +x "$(GOBIN)/squawk"; \
 	fi
+
+.PHONY: o11y.tools
+o11y.tools:
+	$(call install_release,dashboard-linter,go version -m "$$bin" | grep -o 'dashboard-linter.v[0-9.]*' | cut -c18-,$(DASHBOARD_LINTER_VERSION),\
+		curl -fsSL "https://github.com/grafana/dashboard-linter/releases/download/$(DASHBOARD_LINTER_VERSION)/dashboard-linter_$(DASHBOARD_LINTER_VERSION:v%=%)_$${os}_$$arch.tar.gz" \
+			| tar -xzO dashboard-linter > "$$bin")
+	$(call install_release,sloth,"$$bin" version,$(SLOTH_VERSION),\
+		curl -fsSL -o "$$bin" "https://github.com/slok/sloth/releases/download/$(SLOTH_VERSION)/sloth-$$os-$$arch")
+	$(call install_release,promtool,"$$bin" --version | head -1 | cut -d' ' -f3,$(PROMTOOL_VERSION:v%=%),\
+		curl -fsSL "https://github.com/prometheus/prometheus/releases/download/$(PROMTOOL_VERSION)/prometheus-$(PROMTOOL_VERSION:v%=%).$$os-$$arch.tar.gz" \
+			| tar -xzO "prometheus-$(PROMTOOL_VERSION:v%=%).$$os-$$arch/promtool" > "$$bin")
+	$(call install_release,pint,"$$bin" version | cut -d' ' -f1,$(PINT_VERSION:v%=%),\
+		curl -fsSL "https://github.com/cloudflare/pint/releases/download/$(PINT_VERSION)/pint-$(PINT_VERSION:v%=%)-$$os-$$arch.tar.gz" \
+			| tar -xzO "pint-$$os-$$arch" > "$$bin")
+	$(call install_release,lokitool,"$$bin" version | head -1 | cut -d' ' -f3,$(LOKITOOL_VERSION:v%=%),\
+		zip=$$(mktemp) && curl -fsSL -o "$$zip" "https://github.com/grafana/loki/releases/download/$(LOKITOOL_VERSION)/lokitool-$$os-$$arch.zip" \
+			&& unzip -p "$$zip" > "$$bin" && rm -f "$$zip")
 
 .PHONY: lint
 lint:
@@ -124,6 +158,59 @@ test.component:
 .PHONY: sqlc
 sqlc:
 	$(call in_modules,sqlc,if [ -f sqlc.yaml ]; then $(GOBIN)/sqlc generate && $(GOBIN)/sqlc vet; else echo "no sqlc.yaml"; fi)
+
+.PHONY: o11y.generate
+o11y.generate:
+	@cd tools && GOWORK=off go run ./o11ygen -root ..
+
+.PHONY: o11y.lint
+o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo o11y.lint.alloy
+
+.PHONY: o11y.lint.rules
+o11y.lint.rules:
+	@echo "==> promtool check rules"
+	@$(GOBIN)/promtool check rules config/prometheus/rules/*.yaml config/prometheus/tests/fixture.yaml
+	@echo "==> promtool test rules"
+	@$(GOBIN)/promtool test rules config/prometheus/tests/*.test.yaml
+	@echo "==> pint lint"
+	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture.yaml
+
+.PHONY: o11y.lint.slo
+o11y.lint.slo:
+	@if ! ls config/sloth/*.yaml >/dev/null 2>&1; then echo "no SLO specs"; exit 0; fi; \
+	echo "==> sloth validate" && $(GOBIN)/sloth validate --no-log --input config/sloth \
+	&& echo "==> promtool check rules (SLO)" && $(GOBIN)/promtool check rules config/prometheus/slo/*.yaml \
+	&& echo "==> pint lint (SLO)" \
+	&& $(GOBIN)/pint --no-color --log-level warn --offline --disabled rule/dependency lint config/prometheus/slo
+
+.PHONY: o11y.lint.dashboards
+o11y.lint.dashboards:
+	@for dashboard in config/grafana/provisioning/dashboards/*.json; do \
+		echo "==> dashboard-linter $$dashboard"; \
+		out=$$($(GOBIN)/dashboard-linter lint --strict "$$dashboard" 2>&1) || { echo "$$out" | grep -v '^Checks that'; exit 1; }; \
+	done
+
+.PHONY: o11y.lint.loki
+o11y.lint.loki:
+	@rules=$$(find config/loki/rules -name '*.yaml' | sort); \
+	if [ -z "$$rules" ]; then echo "==> lokitool: no Loki rules"; exit 0; fi; \
+	echo "==> lokitool rules lint"; \
+	out=$$($(GOBIN)/lokitool rules lint --dry-run $$rules 2>&1) || { echo "$$out"; exit 1; }; \
+	echo "==> lokitool rules check"; \
+	$(GOBIN)/lokitool rules check --strict $$rules
+
+.PHONY: o11y.lint.alloy
+o11y.lint.alloy:
+	@echo "==> alloy validate"
+	@docker run --rm -i --entrypoint sh $(ALLOY_IMAGE) -c 'cat > /tmp/config.alloy && alloy validate /tmp/config.alloy' < config/alloy/config.alloy
+
+.PHONY: o11y.check-live
+o11y.check-live:
+	@cd tools && \
+		O11Y_LIVE_PROMETHEUS_URL="$${O11Y_LIVE_PROMETHEUS_URL:-http://localhost:9090}" \
+		O11Y_LIVE_LOKI_URL="$${O11Y_LIVE_LOKI_URL:-http://localhost:3100}" \
+		O11Y_LIVE_GRAFANA_URL="$${O11Y_LIVE_GRAFANA_URL:-http://admin:admin@localhost:3010}" \
+		go test -count=1 -timeout 6m -v -run '^TestComponentStack_ServesGeneratedArtifacts$$' ./o11ygen
 
 .PHONY: proto.lint
 proto.lint:

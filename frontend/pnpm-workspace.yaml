@@ -12,6 +12,8 @@ allowBuilds:
   # next-intl deps that ship prebuilt binaries; their scripts only verify them.
   "@parcel/watcher": false
   "@swc/core": false
+  # The OTLP gRPC exporters' dependency; its script only warns about a dependent's version scheme.
+  protobufjs: false
 
 minimumReleaseAgeExclude:
   - prettier@3.9.10

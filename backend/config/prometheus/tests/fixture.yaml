@@ -1,0 +1,177 @@
+groups:
+  - name: fixture-api
+    rules:
+      - alert: ServiceTelemetryAbsent
+        expr: absent_over_time(target_info{job="boilerplate/fixture-api"}[5m])
+        labels:
+          service: fixture-api
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'Nenhum target_info de fixture-api chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
+          summary: fixture-api não envia telemetria há 5 minutos
+      - alert: HealthCheckFailing
+        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        labels:
+          service: fixture-api
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'Todo /health de fixture-api respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o Postgres) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-api por que o health check falha e os alertas das dependências (PostgresDown).'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
+          summary: fixture-api responde 5xx em todo /health há 2 minutos
+      - alert: DBPoolSaturated
+        expr: max(pgxpool_acquired_connections{job="boilerplate/fixture-api"} / pgxpool_max_connections{job="boilerplate/fixture-api"}) > 0.9
+        for: 5m
+        labels:
+          service: fixture-api
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: Mais de 90% das conexões do pool pgx de fixture-api estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
+          summary: Pool do Postgres de fixture-api com {{ $value | humanizePercentage }} das conexões em uso
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-api"} > 5
+        for: 15m
+        labels:
+          service: fixture-api
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
+          description: 'fixture-api mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-api com {{ $value | humanize }} séries, acima do teto de 5
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-api"}[5m]) * 60 > 0
+        labels:
+          service: fixture-api
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: fixture-api registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-api nos últimos 5 minutos'
+  - name: fixture-consumer
+    rules:
+      - alert: ServiceTelemetryAbsent
+        expr: absent_over_time(target_info{job="boilerplate/fixture-consumer"}[5m])
+        labels:
+          service: fixture-consumer
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'Nenhum target_info de fixture-consumer chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
+          summary: fixture-consumer não envia telemetria há 5 minutos
+      - alert: HealthCheckFailing
+        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        labels:
+          service: fixture-consumer
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'Todo /health de fixture-consumer respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o consumer e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-consumer por que o health check falha e os alertas das dependências (KafkaBrokersDown).'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
+          summary: fixture-consumer responde 5xx em todo /health há 2 minutos
+      - alert: ConsumerLagHigh
+        expr: sum by (consumergroup) (kafka_consumergroup_uncommitted_offsets{consumergroup="fixture"}) > 100
+        for: 5m
+        labels:
+          service: fixture-consumer
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'O consumer group fixture está mais de 100 mensagens atrás há 5 minutos: o consumo está mais lento que a produção, ou parado. Veja primeiro se fixture-consumer está no ar e a duração do processamento na seção consumer do dashboard do serviço.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ConsumerLagHigh.md
+          summary: Consumer group fixture de fixture-consumer com {{ $value | humanize }} mensagens atrasadas
+      - alert: DLQMessageReceived
+        expr: sum by (topic) (increase(kafka_topic_partition_current_offset{topic=~".+\\.fixture\\.dlq"}[5m])) > 0
+        labels:
+          service: fixture-consumer
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'fixture-consumer mandou mensagens à DLQ: elas falharam de forma permanente e não serão reprocessadas sozinhas. Veja primeiro o error_type no painel de envios à DLQ do dashboard do serviço e os logs de fixture-consumer.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DLQMessageReceived.md
+          summary: '{{ $value | humanize }} mensagem(ns) nova(s) na DLQ {{ $labels.topic }} de fixture-consumer'
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-consumer"} > 5
+        for: 15m
+        labels:
+          service: fixture-consumer
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
+          description: 'fixture-consumer mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-consumer com {{ $value | humanize }} séries, acima do teto de 5
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-consumer"}[5m]) * 60 > 0
+        labels:
+          service: fixture-consumer
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: fixture-consumer registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-consumer nos últimos 5 minutos'
+  - name: fixture-worker
+    rules:
+      - alert: ServiceTelemetryAbsent
+        expr: absent_over_time(target_info{job="boilerplate/fixture-worker"}[5m])
+        labels:
+          service: fixture-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'Nenhum target_info de fixture-worker chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
+          summary: fixture-worker não envia telemetria há 5 minutos
+      - alert: HealthCheckFailing
+        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        labels:
+          service: fixture-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'Todo /health de fixture-worker respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o forwarder e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-worker por que o health check falha e os alertas das dependências (KafkaBrokersDown).'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
+          summary: fixture-worker responde 5xx em todo /health há 2 minutos
+      - alert: OutboxAgeAbsent
+        expr: absent(fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"})
+        for: 5m
+        labels:
+          service: fixture-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
+          summary: fixture-worker não reporta a idade do outbox há 5 minutos
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-worker"} > 5
+        for: 15m
+        labels:
+          service: fixture-worker
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
+          description: 'fixture-worker mantém mais de 5 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-worker com {{ $value | humanize }} séries, acima do teto de 5
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-worker"}[5m]) * 60 > 0
+        labels:
+          service: fixture-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: fixture-worker registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-worker nos últimos 5 minutos'
+  - name: cardinality
+    rules:
+      - record: job:series:count
+        expr: count by (job) ({__name__=~".+"})

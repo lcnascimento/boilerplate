@@ -1,0 +1,548 @@
+package dashboards
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/url"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/grafana/grafana-foundation-sdk/go/cog"
+	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
+
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
+)
+
+const (
+	rate      = "[$__rate_interval]"
+	errorLogs = `detected_level=~"error|critical|fatal"`
+)
+
+func topSection(svc *service.Service, declaresSLOs bool) section {
+	alerts := serviceAlerts{
+		title:       "Alertas do serviço",
+		description: "Alertas de cada processo de " + svc.Name + ", inclusive os de burn rate dos SLOs.",
+		filter:      `{service=~` + strconv.Quote(strings.Join(processNames(longRunning(svc)), "|")) + `}`,
+	}
+
+	if !declaresSLOs {
+		return section{title: "Alertas", panels: []panel{alerts}}
+	}
+
+	return section{title: "SLOs e alertas", panels: []panel{
+		slos{selector: `{sloth_service=` + strconv.Quote(svc.Name) + `}`},
+		alerts,
+	}}
+}
+
+func quantile(q, histogram, selector, by string) string {
+	return "histogram_quantile(" + q + ", sum by (" + by + ") (rate(" + histogram + "_bucket{" + selector + "}" + rate + ")))"
+}
+
+var exemplarHistograms = map[string]bool{
+	catalog.HTTPServerRequestDuration:        true,
+	catalog.MessagingProcessDuration:         true,
+	catalog.MessagingClientOperationDuration: true,
+}
+
+type grouping struct {
+	by     string
+	legend string
+}
+
+func groupBy(labels ...string) grouping {
+	legends := make([]string, 0, len(labels))
+	for _, label := range labels {
+		legends = append(legends, "{{"+label+"}}")
+	}
+
+	return grouping{by: strings.Join(labels, ", "), legend: strings.Join(legends, " ")}
+}
+
+var httpRoute = groupBy("http_response_status_code", "http_request_method", "http_route")
+
+type percentile struct {
+	name     string
+	quantile string
+}
+
+var percentiles = []percentile{{"p50", "0.5"}, {"p90", "0.9"}, {"p99", "0.99"}}
+
+type latency struct {
+	title       string
+	qualifier   string
+	description string
+	histogram   string
+	selector    string
+	grouping    grouping
+	sloLine     *float64
+	links       []cog.Builder[dashboard.DashboardLink]
+}
+
+func (l *latency) panels() []panel {
+	by, legend := "le", ""
+	if l.grouping.by != "" {
+		by, legend = "le, "+l.grouping.by, " "+l.grouping.legend
+	}
+
+	out := make([]panel, 0, len(percentiles))
+	for _, p := range percentiles {
+		out = append(out, &graph{
+			title:       l.title + " " + p.name + l.qualifier,
+			description: "Percentil " + strings.TrimPrefix(p.name, "p") + " " + l.description,
+			unit:        "s",
+			width:       thirdWidth,
+			queries: []query{{
+				expr:     quantile(p.quantile, l.histogram, l.selector, by),
+				legend:   p.name + legend,
+				exemplar: exemplarHistograms[l.histogram],
+			}},
+			sloLine: l.sloLine,
+			links:   l.links,
+		})
+	}
+
+	return out
+}
+
+func seconds(value float64) *float64 { return &value }
+
+func goAPISection(_ *service.Service, processes []service.Process) section {
+	selector := job(processes) + `, http_route!~` + strconv.Quote(slo.ProbeRoutes)
+	requests := func(extra, by string) string {
+		matchers := selector
+		if extra != "" {
+			matchers += ", " + extra
+		}
+
+		return "sum" + by + " (rate(" + catalog.HTTPServerRequestTotal + "{" + matchers + "}" + rate + "))"
+	}
+
+	return section{title: string(service.API), panels: slices.Concat([]panel{
+		&single{
+			title:       "Taxa",
+			description: "Requisições por segundo, fora as de health e readiness.",
+			unit:        "reqps",
+			width:       thirdWidth,
+			queries:     []query{{expr: requests("", "")}},
+		},
+		&single{
+			title:       "5xx",
+			description: "Fração das requisições respondidas com 5xx, as que queimam o budget de api-availability.",
+			unit:        "percentunit",
+			width:       thirdWidth,
+			queries: []query{{
+				expr: "(" + requests(`http_response_status_code=~"5.."`, "") + " or vector(0)) / " + requests("", ""),
+			}},
+		},
+		&single{
+			title:       "p99",
+			description: "Percentil 99 da duração das requisições no intervalo.",
+			unit:        "s",
+			width:       thirdWidth,
+			queries:     []query{{expr: quantile("0.99", catalog.HTTPServerRequestDuration, selector, "le")}},
+			steps:       []step{{color: "green"}, at(slo.APILatencyThresholdSeconds, "red")},
+		},
+		&graph{
+			title:       "Taxa por rota",
+			description: "Requisições por segundo por status, método e rota.",
+			unit:        "reqps",
+			width:       halfWidth,
+			queries: []query{{
+				expr:   requests("", " by ("+httpRoute.by+")"),
+				legend: httpRoute.legend,
+			}},
+		},
+		&graph{
+			title:       "4xx/5xx por rota",
+			description: "Respostas de erro por segundo, por status, método e rota; só o 5xx queima budget.",
+			unit:        "reqps",
+			width:       halfWidth,
+			queries: []query{{
+				expr:   requests(`http_response_status_code=~"4..|5.."`, " by ("+httpRoute.by+")"),
+				legend: httpRoute.legend,
+			}},
+		},
+	}, (&latency{
+		title:       "Latência",
+		description: "da duração das requisições; a linha é o limite do SLO api-latency. Os pontos são exemplars: abrem o trace.",
+		histogram:   catalog.HTTPServerRequestDuration,
+		selector:    selector,
+		sloLine:     seconds(slo.APILatencyThresholdSeconds),
+	}).panels(), (&latency{
+		title:     "Latência",
+		qualifier: " por rota",
+		description: "da duração por status, método e rota; a linha é o limite do SLO api-latency. " +
+			"Clique numa série para ver os traces lentos dela.",
+		histogram: catalog.HTTPServerRequestDuration,
+		selector:  selector,
+		grouping:  httpRoute,
+		sloLine:   seconds(slo.APILatencyThresholdSeconds),
+		links:     []cog.Builder[dashboard.DashboardLink]{slowTracesLink(processes)},
+	}).panels())}
+}
+
+func consumerSection(_ *service.Service, processes []service.Process) section {
+	selector := job(processes)
+	groups := make([]string, 0, len(processes))
+
+	for _, p := range processes {
+		groups = append(groups, regexp.QuoteMeta(p.ConsumerGroup()))
+	}
+
+	consumerGroups := `{consumergroup=~` + strconv.Quote(strings.Join(groups, "|")) + `}`
+
+	return section{title: string(service.Consumer), panels: slices.Concat([]panel{
+		&graph{
+			title:       "Mensagens/s",
+			description: "Mensagens processadas por segundo: com sucesso por tópico, e com falha por error_type.",
+			unit:        "short",
+			width:       fullWidth,
+			queries: []query{
+				{
+					expr: "sum by (messaging_destination_name) (rate(" + catalog.MessagingClientConsumedMessages + "{" +
+						selector + `, error_type=""}` + rate + "))",
+					legend: "sucesso {{messaging_destination_name}}",
+				},
+				{
+					expr: "sum by (error_type) (rate(" + catalog.MessagingClientConsumedMessages + "{" + selector +
+						`, error_type!=""}` + rate + "))",
+					legend: "falha {{error_type}}",
+				},
+			},
+		},
+	}, (&latency{
+		title: "Duração do processamento",
+		description: "da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. " +
+			"Os pontos são exemplars: abrem o trace.",
+		histogram: catalog.MessagingProcessDuration,
+		selector:  selector,
+		sloLine:   seconds(slo.ConsumerLatencyThresholdSeconds),
+	}).panels(), []panel{
+		&graph{
+			title:       "Retentativas",
+			description: "Tentativas de processamento que falharam por segundo, por error_type; cada uma é retentada.",
+			unit:        "short",
+			width:       thirdWidth,
+			queries: []query{{
+				expr: "sum by (error_type) (rate(" + catalog.MessagingProcessDuration + "_count{" + selector +
+					`, error_type!=""}` + rate + "))",
+				legend: "{{error_type}}",
+			}},
+		},
+		&graph{
+			title:       "Lag do group",
+			description: "Mensagens ainda não confirmadas pelo consumer group, por tópico; o alerta passa de 100.",
+			unit:        "short",
+			width:       thirdWidth,
+			queries: []query{{
+				expr:   "sum by (consumergroup, topic) (" + catalog.KafkaConsumerGroupUncommittedOffsets + consumerGroups + ")",
+				legend: "{{consumergroup}} {{topic}}",
+			}},
+		},
+		&graph{
+			title:       "Envios à DLQ por causa",
+			description: "Mensagens mandadas à DLQ no intervalo, por error_type: falharam de forma permanente.",
+			unit:        "short",
+			width:       thirdWidth,
+			queries: []query{{
+				expr: "sum by (error_type) (increase(" + catalog.MessagingDLQSentMessages + "{" + selector + "}" +
+					rate + "))",
+				legend: "{{error_type}}",
+			}},
+		},
+	})}
+}
+
+func workerSection(svc *service.Service, processes []service.Process) section {
+	selector := job(processes)
+	age := catalog.OutboxOldestPendingAge(svc.Name) + "{" + selector + "}"
+
+	return section{title: string(service.Worker), panels: slices.Concat([]panel{
+		&single{
+			title:       "Pendente mais antiga",
+			description: "Idade da mensagem mais antiga do outbox ainda não levada ao Kafka; 0 sem pendentes.",
+			unit:        "s",
+			width:       halfWidth,
+			queries:     []query{{expr: "max(" + age + ")"}},
+			steps:       []step{{color: "green"}, at(slo.OutboxFreshnessThresholdSeconds, "red")},
+		},
+		&single{
+			title:       "Réplicas reportando",
+			description: "Réplicas do worker que reportam a idade do outbox; 0 significa que ninguém esvazia o outbox.",
+			unit:        "short",
+			width:       halfWidth,
+			queries:     []query{{expr: "count(" + age + ") or vector(0)"}},
+			steps:       []step{{color: "red"}, at(1, "green")},
+		},
+		&graph{
+			title: "Idade da pendente mais antiga",
+			description: "Idade da mensagem pendente mais antiga do outbox, por processo; a linha é o limite do SLO " +
+				"outbox-freshness.",
+			unit:    "s",
+			width:   halfWidth,
+			queries: []query{{expr: "max by (job) (" + age + ")", legend: "{{job}}"}},
+			sloLine: seconds(slo.OutboxFreshnessThresholdSeconds),
+		},
+		&graph{
+			title:       "Envios/s",
+			description: "Mensagens levadas ao Kafka por segundo: com sucesso por tópico, e com falha por error_type.",
+			unit:        "short",
+			width:       halfWidth,
+			queries: []query{
+				{
+					expr: "sum by (messaging_destination_name) (rate(" + catalog.MessagingClientSentMessages + "{" +
+						selector + `, error_type=""}` + rate + "))",
+					legend: "sucesso {{messaging_destination_name}}",
+				},
+				{
+					expr: "sum by (error_type) (rate(" + catalog.MessagingClientSentMessages + "{" + selector +
+						`, error_type!=""}` + rate + "))",
+					legend: "falha {{error_type}}",
+				},
+			},
+		},
+	}, (&latency{
+		title:       "Duração do envio",
+		description: "da duração do envio ao Kafka. Os pontos são exemplars: abrem o trace.",
+		histogram:   catalog.MessagingClientOperationDuration,
+		selector:    selector,
+	}).panels(), []panel{
+		&graph{
+			title:       "Limpeza",
+			description: "Execuções da limpeza do outbox por resultado, e mensagens já encaminhadas que ela apagou.",
+			unit:        "short",
+			width:       fullWidth,
+			queries: []query{
+				{
+					expr:   "sum by (outcome) (increase(" + catalog.OutboxPurgeRuns(svc.Name) + "{" + selector + "}" + rate + "))",
+					legend: "execuções {{outcome}}",
+				},
+				{
+					expr:   "sum(increase(" + catalog.OutboxPurgedMessages(svc.Name) + "{" + selector + "}" + rate + "))",
+					legend: "apagadas",
+				},
+			},
+		},
+	})}
+}
+
+func goRuntimeSection() section {
+	byJob := func(expr string) string { return "sum by (job) (" + expr + ")" }
+
+	return section{title: "Runtime", collapsed: true, panels: []panel{
+		&graph{
+			title:       "CPU",
+			description: "CPU usada por processo em user e system; 100% é um núcleo inteiro.",
+			unit:        "percentunit",
+			width:       halfWidth,
+			queries: []query{{
+				expr:   "sum by (job, cpu_mode) (rate(" + catalog.ProcessCPUTime + "{" + selectedJob + "}" + rate + "))",
+				legend: "{{job}} {{cpu_mode}}",
+			}},
+		},
+		&graph{
+			title:       "RSS",
+			description: "Memória residente (RSS) por processo, como o kernel a vê: inclui o que o runtime Go não conta.",
+			unit:        "bytes",
+			width:       halfWidth,
+			queries:     []query{{expr: byJob(catalog.ProcessMemoryUsage + "{" + selectedJob + "}"), legend: "{{job}}"}},
+		},
+		&graph{
+			title:       "Goroutines",
+			description: "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
+			unit:        "short",
+			width:       thirdWidth,
+			queries:     []query{{expr: byJob(catalog.GoGoroutineCount + "{" + selectedJob + "}"), legend: "{{job}}"}},
+		},
+		&graph{
+			title:       "Memória Go",
+			description: "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
+			unit:        "bytes",
+			width:       thirdWidth,
+			queries: []query{{
+				expr:   "sum by (job, go_memory_type) (" + catalog.GoMemoryUsed + "{" + selectedJob + "})",
+				legend: "{{job}} {{go_memory_type}}",
+			}},
+		},
+		&graph{
+			title:       "GC",
+			description: "Bytes alocados no heap por segundo, e o tamanho de heap que dispara o próximo GC.",
+			unit:        "bytes",
+			width:       thirdWidth,
+			queries: []query{
+				{
+					expr:   byJob("rate(" + catalog.GoMemoryAllocated + "{" + selectedJob + "}" + rate + ")"),
+					legend: "alocação/s {{job}}",
+				},
+				{expr: byJob(catalog.GoMemoryGCGoal + "{" + selectedJob + "}"), legend: "meta do GC {{job}}"},
+			},
+		},
+	}}
+}
+
+func databaseSection() section {
+	applications := `{application_name=~"$` + processVariable + `"}`
+
+	return section{title: "Banco", collapsed: true, panels: []panel{
+		&graph{
+			title:       "Pool",
+			description: "Conexões do pool pgx em uso e o máximo do pool, por processo; o alerta passa de 90%.",
+			unit:        "short",
+			width:       halfWidth,
+			queries: []query{
+				{
+					expr:   "sum by (job) (" + catalog.PgxpoolAcquiredConnections + "{" + selectedJob + "})",
+					legend: "em uso {{job}}",
+				},
+				{
+					expr:   "sum by (job) (" + catalog.PgxpoolMaxConnections + "{" + selectedJob + "})",
+					legend: "máximo {{job}}",
+				},
+			},
+		},
+		&graph{
+			title:       "Conexões no servidor",
+			description: "Conexões que o Postgres vê de cada processo (application_name), por estado.",
+			unit:        "short",
+			width:       halfWidth,
+			queries: []query{{
+				expr:   "sum by (application_name, state) (" + catalog.PgClientConnections + applications + ")",
+				legend: "{{application_name}} {{state}}",
+			}},
+		},
+	}}
+}
+
+func logsSection() section {
+	stream := `{service_namespace=` + strconv.Quote(config.Namespace) + `, service_name=~"$` + processVariable + `"}`
+
+	return section{title: "Logs", panels: []panel{
+		&graph{
+			title:       "Volume por nível",
+			description: "Linhas de log por nível de cada processo selecionado.",
+			unit:        "short",
+			width:       fullWidth,
+			logQL:       true,
+			queries: []query{{
+				expr:   "sum by (detected_level) (count_over_time(" + stream + " [$__auto]))",
+				legend: "{{detected_level}}",
+			}},
+		},
+		logLines{
+			title:       "Logs de erro",
+			description: "Logs com nível error, critical ou fatal de cada processo selecionado; cada um abre o trace.",
+			expr:        stream + " | " + errorLogs,
+		},
+	}}
+}
+
+// The Drilldown apps read their filters from scenes' URL format, key|operator|value, where a | inside the value is
+// written __gfp__. Logs Drilldown escapes a regex value, so it gets one link per process.
+func drilldownLinks(svc *service.Service) []cog.Builder[dashboard.DashboardLink] {
+	link := func(title, tooltip, path string) cog.Builder[dashboard.DashboardLink] {
+		return dashboard.NewDashboardLinkBuilder(title).
+			Type(dashboard.DashboardLinkTypeLink).
+			Icon("external link").
+			Tooltip(tooltip).
+			Url(path).
+			KeepTime(true)
+	}
+
+	var names []string
+
+	for _, p := range svc.Processes {
+		if p.LongRunning() {
+			names = append(names, p.Name())
+		}
+	}
+
+	filter := func(label, operator, value string) string {
+		return url.QueryEscape(label+"|"+operator+"|") + url.QueryEscape(value)
+	}
+
+	out := make([]cog.Builder[dashboard.DashboardLink], 0, 1+2*len(names))
+	out = append(out, link("Traces", "Traces de "+svc.Name+" no Traces Drilldown",
+		"/a/grafana-exploretraces-app/explore?var-ds="+tempoDS.uid+""+
+			"&var-filters="+filter("resource.service.name", "=~", strings.Join(names, "__gfp__"))+
+			"&var-groupBy=resource.service.name"))
+
+	for _, name := range names {
+		out = append(out, link("Logs "+name, "Logs de "+name+" no Logs Drilldown",
+			"/a/grafana-lokiexplore-app/explore/service_name/"+url.PathEscape(name)+"/logs?var-ds="+lokiDS.uid+""+
+				"&var-filters="+filter("service_name", "=", name)))
+	}
+
+	if !runtimeDashboards[svc.Runtime].profiles {
+		return out
+	}
+
+	for _, name := range names {
+		out = append(out, link("Profiles "+name, "Profile de CPU de "+name+" no Profiles Drilldown",
+			"/a/grafana-pyroscope-app/explore?explorationType=flame-graph&var-serviceName="+url.QueryEscape(name)+
+				"&var-profileMetricId="+url.QueryEscape(cpuProfile)))
+	}
+
+	return out
+}
+
+const cpuProfile = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
+
+var placeholder = regexp.MustCompile(`\$\{[^}]+\}`)
+
+// queryEscape percent-encodes a URL query value but keeps Grafana's ${...} placeholders, which it interpolates first.
+func queryEscape(value string) string {
+	var out strings.Builder
+
+	last := 0
+	for _, loc := range placeholder.FindAllStringIndex(value, -1) {
+		out.WriteString(url.QueryEscape(value[last:loc[0]]))
+		out.WriteString(value[loc[0]:loc[1]])
+		last = loc[1]
+	}
+
+	out.WriteString(url.QueryEscape(value[last:]))
+
+	return out.String()
+}
+
+func slowTracesLink(processes []service.Process) cog.Builder[dashboard.DashboardLink] {
+	names := make([]string, 0, len(processes))
+	for _, p := range processes {
+		names = append(names, p.Name())
+	}
+
+	slow := time.Duration(slo.APILatencyThresholdSeconds * float64(time.Second))
+	traceQL := `{resource.service.name=~` + strconv.Quote(strings.Join(names, "|")) +
+		` && kind=server && span.http.route="${__field.labels.http_route}"` +
+		` && span.http.request.method="${__field.labels.http_request_method}"` +
+		` && span.http.response.status_code=${__field.labels.http_response_status_code}` +
+		` && duration > ` + slow.String() + `}`
+
+	panes := map[string]any{"slow": map[string]any{
+		"datasource": tempoDS.uid,
+		"queries": []map[string]any{{
+			"refId":      "A",
+			"datasource": map[string]string{"type": tempoDS.kind, "uid": tempoDS.uid},
+			"queryType":  "traceql",
+			"query":      traceQL,
+		}},
+		"range": map[string]string{"from": "${__from}", "to": "${__to}"},
+	}}
+
+	var encoded bytes.Buffer
+
+	encoder := json.NewEncoder(&encoded)
+	encoder.SetEscapeHTML(false)
+	_ = encoder.Encode(panes)
+
+	return dashboard.NewDashboardLinkBuilder("Traces lentos desta rota").
+		Url("/explore?schemaVersion=1&panes=" + queryEscape(strings.TrimSpace(encoded.String()))).
+		TargetBlank(true)
+}

@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   agentRules: false,
   reactCompiler: true,
   typedRoutes: true,
+  experimental: {
+    clientTraceMetadata: ["traceparent"],
+  },
   transpilePackages: [
     "@boilerplate/api",
     "@boilerplate/i18n",

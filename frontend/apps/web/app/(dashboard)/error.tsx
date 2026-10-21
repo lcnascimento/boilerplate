@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { Button } from "@boilerplate/ui/components/button";
 import { EmptyState } from "@boilerplate/ui/primitives/empty-state";
 
+import { useReportBoundaryError } from "@/shared/faro";
+
 interface DashboardErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
@@ -14,6 +16,8 @@ interface DashboardErrorProps {
 export default function DashboardError({ error, reset }: DashboardErrorProps) {
   const t = useTranslations("errors");
   const tCommon = useTranslations("common");
+
+  useReportBoundaryError(error);
 
   return (
     <EmptyState

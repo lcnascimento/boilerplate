@@ -2,6 +2,8 @@ go 1.27.2
 
 use ./quality
 
+use ./tools
+
 // example:begin
 use (
 	./services/audit

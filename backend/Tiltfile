@@ -12,6 +12,13 @@ docker_compose(compose_files, wait=True, profiles=[] if minimal else ['console']
 
 dc_resource('postgres', labels=['Database'])
 
+local_resource(
+    'postgres-extensions',
+    labels=['Database'],
+    cmd='docker compose run --rm --no-deps postgres-extensions',
+    resource_deps=['postgres'],
+)
+
 dc_resource('kafka', labels=['Messaging'])
 
 dc_resource(

@@ -1,0 +1,93 @@
+rule_files:
+  - ../rules/infra.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires when the exporter sees no broker
+    interval: 1m
+    input_series:
+      - series: up{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x3
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1 1 0 0
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: KafkaBrokersDown
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: KafkaBrokersDown
+        exp_alerts:
+          - exp_labels:
+              job: integrations/kafka
+              instance: kafka:19092
+              service: kafka
+              severity: critical
+            exp_annotations:
+              summary: "Kafka fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos"
+              description: "O exporter do Alloy não alcança nenhum broker do Kafka (a coleta falha ou vê zero brokers), ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-kafka"
+
+  # With topics to describe, the exporter outlives the scrape timeout on an unreachable broker: up drops to 0 and
+  # kafka_brokers stops, instead of reading 0.
+  - name: fires as soon as the exporter scrape fails
+    interval: 1m
+    input_series:
+      - series: up{job="integrations/kafka", instance="kafka:19092"}
+        values: 1 1 0 0
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1 1
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: KafkaBrokersDown
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: KafkaBrokersDown
+        exp_alerts:
+          - exp_labels:
+              job: integrations/kafka
+              instance: kafka:19092
+              service: kafka
+              severity: critical
+            exp_annotations:
+              summary: "Kafka fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos"
+              description: "O exporter do Alloy não alcança nenhum broker do Kafka (a coleta falha ou vê zero brokers), ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-kafka"
+
+  - name: fires when the exporter stops sending metrics for five minutes
+    interval: 1m
+    input_series:
+      - series: up{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x3
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x3
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: KafkaBrokersDown
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: KafkaBrokersDown
+        exp_alerts:
+          - exp_labels:
+              job: integrations/kafka
+              service: kafka
+              severity: critical
+            exp_annotations:
+              summary: "Kafka fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos"
+              description: "O exporter do Alloy não alcança nenhum broker do Kafka (a coleta falha ou vê zero brokers), ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-kafka"
+
+  - name: stays quiet with a broker up
+    interval: 1m
+    input_series:
+      - series: up{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x10
+      - series: kafka_brokers{job="integrations/kafka", instance="kafka:19092"}
+        values: 1x10
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: KafkaBrokersDown
+        exp_alerts: []

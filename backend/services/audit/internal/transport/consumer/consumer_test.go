@@ -72,12 +72,12 @@ func TestOnAny_PassesTheServiceErrorThrough(t *testing.T) {
 	}
 }
 
-func TestRunning_IsFalseBeforeStart(t *testing.T) {
+func TestReady_FailsBeforeStart(t *testing.T) {
 	t.Parallel()
 
 	service := mocks.NewMockAuditService(gomock.NewController(t))
 
-	require.False(t, consumer.New(service, []string{"localhost:9092"}).Running())
+	require.ErrorIs(t, consumer.New(service, []string{"localhost:9092"}).Ready(t.Context()), consumer.ErrNotConsuming)
 }
 
 func noteCreatedEvent() *events.Event {

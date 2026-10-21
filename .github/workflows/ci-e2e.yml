@@ -34,7 +34,6 @@ concurrency:
 
 env:
   TILT_VERSION: 0.37.8
-  TILT_STACK: minimal
 
 defaults:
   run:
@@ -92,20 +91,6 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/tilt" version
 
-      - name: Env files
-        working-directory: .
-        run: |
-          make -C backend env
-          for env_file in backend/services/*/.env; do
-            [ -f "$env_file" ] || continue
-            printf '%s\n' \
-              OTEL_LOG_HANDLER=zap \
-              OTEL_TRACES_EXPORTER=none \
-              OTEL_METRICS_EXPORTER=none \
-              OTEL_LOGS_EXPORTER=none \
-              OTEL_PROFILES_EXPORTER=none >> "$env_file"
-          done
-
       - name: Start the stack
         working-directory: .
         run: |
@@ -116,10 +101,17 @@ jobs:
           done
           # Tilt registers the resources only once the Tiltfile has loaded.
           tilt wait --for=condition=Ready 'uiresource/(Tiltfile)' --timeout=2m
-          tilt wait --for=condition=Ready --all uiresource --timeout=5m
+          # A resource with auto_init=False (trigger modes 2 and 3), like the Playwright UI, never gets ready on its own.
+          mapfile -t resources < <(tilt get uiresource -o json |
+            jq -r '.items[] | select(.status.triggerMode // 0 | IN(2, 3) | not) | "uiresource/" + .metadata.name')
+          tilt wait --for=condition=Ready "${resources[@]}" --timeout=5m
 
       - name: e2e
         run: pnpm test:e2e
+
+      - name: o11y check-live
+        working-directory: backend
+        run: make o11y.check-live
 
       - name: Tilt logs
         if: failure()

@@ -74,3 +74,25 @@ func TestHealthPort_Invalid(t *testing.T) {
 		})
 	}
 }
+
+func TestServiceName_Set(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "audit-consumer")
+
+	name, err := config.ServiceName()
+
+	require.NoError(t, err)
+	require.Equal(t, "audit-consumer", name)
+}
+
+func TestServiceName_MissingSaysHowToSetIt(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "")
+
+	_, err := config.ServiceName()
+
+	require.ErrorIs(t, err, config.ErrServiceNameMissing)
+	require.Equal(t,
+		"OTEL_SERVICE_NAME is not set: start the process with its make run.* target, "+
+			"which sets it to the process's service.name",
+		err.Error(),
+	)
+}

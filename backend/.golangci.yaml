@@ -105,6 +105,9 @@ linters:
           disabled: true
     gomoddirectives:
       replace-local: true
+      # The LogQL parser (grafana/loki) only builds against Loki's memberlist fork.
+      replace-allow-list:
+        - github.com/hashicorp/memberlist
   exclusions:
     rules:
       - path: _test\.go
@@ -118,6 +121,17 @@ linters:
       - path: telemetry.go
         linters:
           - gochecknoinits
+      # Dashboard code is layout data: grid positions, ids, thresholds, PromQL/LogQL strings and panels that repeat one shape.
+      - path: o11ygen/internal/dashboards/
+        linters:
+          - dupl
+          - lll
+          - mnd
+      # BOI-85 keeps dashboards on the v1 model, which the Foundation SDK marks deprecated in favor of dashboardv2.
+      - path: o11ygen/internal/dashboards/
+        linters:
+          - staticcheck
+        text: "SA1019: .*grafana-foundation-sdk/go/dashboard\\..* is deprecated"
 
 formatters:
   enable:

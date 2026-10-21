@@ -99,3 +99,25 @@ func TestSchemaRegistryURL_MissingSaysWhichKeyToAdd(t *testing.T) {
 		err.Error(),
 	)
 }
+
+func TestServiceName_Set(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "notes-worker-forwarder")
+
+	name, err := config.ServiceName()
+
+	require.NoError(t, err)
+	require.Equal(t, "notes-worker-forwarder", name)
+}
+
+func TestServiceName_MissingSaysHowToSetIt(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "")
+
+	_, err := config.ServiceName()
+
+	require.ErrorIs(t, err, config.ErrServiceNameMissing)
+	require.Equal(t,
+		"OTEL_SERVICE_NAME is not set: start the process with its make run.* target, "+
+			"which sets it to the process's service.name",
+		err.Error(),
+	)
+}

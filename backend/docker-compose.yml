@@ -2,6 +2,7 @@ services:
   postgres:
     container_name: postgres
     image: postgres:18-alpine
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -15,6 +16,20 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
+    networks:
+      - boilerplate
+
+  postgres-extensions:
+    container_name: postgres-extensions
+    image: postgres:18-alpine
+    # Tilt starts every compose service with `up --wait`, which fails once a one-shot exits, so it runs this one with `docker compose run`.
+    profiles: [setup]
+    environment:
+      PGPASSWORD: postgres
+    command: ["psql", "-h", "postgres", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - boilerplate
 

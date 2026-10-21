@@ -11,6 +11,10 @@ datasources:
       httpMethod: POST
       # The OTel SDK exports metrics every 60s; $__rate_interval needs that cadence to span two samples.
       timeInterval: 60s
+      manageAlerts: true
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
 
   - name: Loki
     type: loki
@@ -33,14 +37,42 @@ datasources:
     jsonData:
       tracesToLogsV2:
         datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
         customQuery: true
-        query: '{service_name=~".+"} | trace_id="$${__span.traceId}"'
+        query: '{service_name="$${__span.tags["service.name"]}"} | trace_id="$${__span.traceId}"'
       tracesToMetrics:
         datasourceUid: prometheus
+        spanStartTimeShift: -30m
+        spanEndTimeShift: 30m
+        tags:
+          - key: service.name
+            value: service
+        queries:
+          - name: Taxa
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags, span_name="$${__span.name}"}[5m]))'
+          - name: Taxa de erro
+            query: '(sum(rate(traces_spanmetrics_calls_total{$$__tags, span_name="$${__span.name}", status_code="STATUS_CODE_ERROR"}[5m])) or vector(0)) / sum(rate(traces_spanmetrics_calls_total{$$__tags, span_name="$${__span.name}"}[5m]))'
+          - name: Latência p95
+            query: 'histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{$$__tags, span_name="$${__span.name}"}[5m])))'
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        tags:
+          - key: service.name
+            value: service_name
+        profileTypeId: process_cpu:cpu:nanoseconds:cpu:nanoseconds
       serviceMap:
         datasourceUid: prometheus
       nodeGraph:
         enabled: true
+    correlations:
+      - label: Logs de todos os serviços do trace
+        description: Logs de todos os serviços que participaram deste trace
+        type: external
+        config:
+          field: traceID
+          target:
+            url: '/explore?schemaVersion=1&panes={"logs":{"datasource":"loki","queries":[{"refId":"A","datasource":{"type":"loki","uid":"loki"},"expr":"{service_name!=\"\"} | trace_id=\"$${traceID}\""}],"range":{"from":"$${__from}","to":"$${__to}"}}}'
 
   - name: Pyroscope
     type: grafana-pyroscope-datasource
