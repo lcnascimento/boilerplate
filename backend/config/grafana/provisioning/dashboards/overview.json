@@ -1,6 +1,6 @@
 {
   "uid": "boilerplate-overview",
-  "title": "Overview",
+  "title": "overview",
   "tags": [
     "boilerplate",
     "overview"
@@ -81,7 +81,7 @@
         }
       ],
       "title": "SLOs",
-      "description": "Todo SLO de todo serviço: objetivo, SLI e budget restante na janela de 30 dias, e o burn rate atual (1 = queima o budget exatamente em 30 dias). O nome do serviço abre o dashboard dele.",
+      "description": "Objetivo, SLI e budget restante de cada SLO na janela de 30 dias, e o burn rate atual (1 = queima o budget exatamente em 30 dias). O nome do serviço abre o dashboard dele.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",

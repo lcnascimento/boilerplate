@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
@@ -53,14 +54,55 @@ func TestGenerate_NodeServiceReadsItsAPIFromTheServerSpanMetrics(t *testing.T) {
 	failed := `, status_code="STATUS_CODE_ERROR"`
 
 	assert.Equal(t, map[string][]string{
-		"Taxa":                      {calls("", "")},
-		"Erros":                     {"(" + calls(failed, "") + " or vector(0)) / " + calls("", "")},
-		"p99":                       {quantile("0.99", "le")},
-		"Taxa por rota":             {calls("", " by (span_name)")},
-		"Erros por rota":            {calls(failed, " by (span_name)")},
-		"Latência p50/p99":          {quantile("0.5", "le"), quantile("0.99", "le")},
-		"Latência p50/p99 por rota": {quantile("0.5", "le, span_name"), quantile("0.99", "le, span_name")},
+		"Taxa":             {calls("", "")},
+		"Erros":            {"(" + calls(failed, "") + " or vector(0)) / " + calls("", "")},
+		"p99":              {quantile("0.99", "le")},
+		"Taxa por rota":    {calls("", " by (http_status_code, span_name)")},
+		"Erros por rota":   {calls(failed, " by (http_status_code, span_name)")},
+		"Latência p50/p99": {quantile("0.5", "le"), quantile("0.99", "le")},
+		"Latência p50/p99 por rota": {
+			quantile("0.5", "le, http_status_code, span_name"), quantile("0.99", "le, http_status_code, span_name"),
+		},
 	}, exprsByTitle(storefront.section(t, "api").panels))
+}
+
+func TestGenerate_NodeServiceLabelsEveryRouteSeriesWithStatusMethodAndRoute(t *testing.T) {
+	_, storefront := generateStorefront(t)
+
+	legends := map[string][]string{}
+
+	for _, panel := range storefront.section(t, "api").panels {
+		for _, target := range panel.Targets {
+			if target.Legend != "" {
+				legends[panel.Title] = append(legends[panel.Title], target.Legend)
+			}
+		}
+	}
+
+	assert.Equal(t, map[string][]string{
+		"Taxa por rota":             {"{{http_status_code}} {{span_name}}"},
+		"Erros por rota":            {"{{http_status_code}} {{span_name}}"},
+		"Latência p50/p99":          {"p50", "p99"},
+		"Latência p50/p99 por rota": {"p50 {{http_status_code}} {{span_name}}", "p99 {{http_status_code}} {{span_name}}"},
+	}, legends)
+}
+
+func TestTempoKeepsTheHTTPStatusOfEverySpanMetric(t *testing.T) {
+	raw, err := os.ReadFile("../../config/tempo/tempo.yaml")
+	require.NoError(t, err)
+
+	var config struct {
+		MetricsGenerator struct {
+			Processor struct {
+				SpanMetrics struct {
+					Dimensions []string `yaml:"dimensions"`
+				} `yaml:"span_metrics"`
+			} `yaml:"processor"`
+		} `yaml:"metrics_generator"`
+	}
+	require.NoError(t, yaml.Unmarshal(raw, &config))
+
+	assert.Contains(t, config.MetricsGenerator.Processor.SpanMetrics.Dimensions, "http.status_code")
 }
 
 func TestGenerate_NodeServiceShowsTheNodeRuntime(t *testing.T) {

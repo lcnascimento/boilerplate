@@ -210,6 +210,45 @@ func TestGenerate_RunsSlothIntoPageAndTicketBurnRateAlertsPerSLO(t *testing.T) {
 	assert.FileExists(t, filepath.Join(runbooksDir, "SLOBurnRate.md"))
 }
 
+func TestGenerate_TellsAPageFromATicketInTheBurnRateAlertText(t *testing.T) {
+	root := t.TempDir()
+
+	require.NoError(t, generate(root, []service.Service{ordersService}))
+
+	text := map[string]map[string]string{}
+
+	for _, rule := range readOrdersSLORules(t, root) {
+		if rule.Alert != "" && rule.Labels["sloth_slo"] == "consumer-success" {
+			text[rule.Labels["sloth_severity"]] = map[string]string{
+				"title":       rule.Annotations["title"],
+				"summary":     rule.Annotations["summary"],
+				"description": rule.Annotations["description"],
+			}
+		}
+	}
+
+	const sli = "Tentativas de processamento de mensagens de orders-consumer que terminam sem erro."
+
+	assert.Equal(t, map[string]map[string]string{
+		"page": {
+			"title": "SLO consumer-success de orders-consumer queimando o error budget rápido demais",
+			"summary": "SLO consumer-success de orders-consumer queimando o error budget rápido demais: " +
+				"{{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)",
+			"description": sli + " Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias " +
+				"acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, " +
+				"depois os logs de erro de orders-consumer.",
+		},
+		"ticket": {
+			"title": "SLO consumer-success de orders-consumer consumindo o error budget acima do ritmo sustentável",
+			"summary": "SLO consumer-success de orders-consumer consumindo o error budget acima do ritmo sustentável: " +
+				"{{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)",
+			"description": sli + " Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias " +
+				"se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do " +
+				"serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de orders-consumer.",
+		},
+	}, text)
+}
+
 func TestGenerate_EvaluatesTheSLIOverTheWhole30DayWindowWithoutOptimizing(t *testing.T) {
 	root := t.TempDir()
 

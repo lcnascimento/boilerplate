@@ -1,6 +1,7 @@
 {
   "uid": "boilerplate-kafka",
-  "title": "Kafka — Tópicos · Consumer groups · DLQ",
+  "title": "kafka",
+  "description": "Tópicos, consumer groups e DLQs do Kafka.",
   "tags": [
     "messaging",
     "kafka",

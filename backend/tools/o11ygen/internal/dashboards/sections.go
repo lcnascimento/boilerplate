@@ -21,10 +21,6 @@ import (
 const (
 	rate      = "[$__rate_interval]"
 	errorLogs = `detected_level=~"error|critical|fatal"`
-
-	burnRateTicket = 1
-	burnRatePage   = 6
-	budgetLow      = 0.25
 )
 
 func topSection(svc *service.Service, declaresSLOs bool) section {
@@ -38,35 +34,8 @@ func topSection(svc *service.Service, declaresSLOs bool) section {
 		return section{title: "Alertas", panels: []panel{alerts}}
 	}
 
-	sloth := `{sloth_service=` + strconv.Quote(svc.Name) + `}`
-	bySLO := func(series string) string { return "max by (sloth_slo) (" + series + sloth + ")" }
-
 	return section{title: "SLOs e alertas", panels: []panel{
-		&single{
-			title:       "SLI atual",
-			description: "Fração de eventos bons de cada SLO nos últimos 5 minutos, segundo as recording rules do Sloth.",
-			unit:        "percentunit",
-			width:       thirdWidth,
-			queries:     []query{{expr: "1 - " + bySLO(catalog.SLOErrorRatioRate5m), legend: "{{sloth_slo}}"}},
-		},
-		&single{
-			title: "Budget restante (30d)",
-			description: "Fração do error budget de 30 dias que cada SLO ainda tem; abaixo de zero, o SLO já foi " +
-				"descumprido na janela.",
-			unit:    "percentunit",
-			width:   thirdWidth,
-			queries: []query{{expr: bySLO(catalog.SLOPeriodErrorBudgetRemainingRatio), legend: "{{sloth_slo}}"}},
-			steps:   []step{{color: "red"}, at(0, "yellow"), at(budgetLow, "green")},
-		},
-		&single{
-			title: "Burn rate",
-			description: "Velocidade com que cada SLO queima o budget nos últimos 5 minutos: 1 gasta o budget " +
-				"exatamente em 30 dias.",
-			unit:    "short",
-			width:   thirdWidth,
-			queries: []query{{expr: bySLO(catalog.SLOCurrentBurnRateRatio), legend: "{{sloth_slo}}"}},
-			steps:   []step{{color: "green"}, at(burnRateTicket, "yellow"), at(burnRatePage, "red")},
-		},
+		slos{selector: `{sloth_service=` + strconv.Quote(svc.Name) + `}`},
 		alerts,
 	}}
 }
@@ -81,10 +50,26 @@ var exemplarHistograms = map[string]bool{
 	catalog.MessagingClientOperationDuration: true,
 }
 
-func quantiles(histogram, selector, label string) []query {
+type grouping struct {
+	by     string
+	legend string
+}
+
+func groupBy(labels ...string) grouping {
+	legends := make([]string, 0, len(labels))
+	for _, label := range labels {
+		legends = append(legends, "{{"+label+"}}")
+	}
+
+	return grouping{by: strings.Join(labels, ", "), legend: strings.Join(legends, " ")}
+}
+
+var httpRoute = groupBy("http_response_status_code", "http_request_method", "http_route")
+
+func quantiles(histogram, selector string, g grouping) []query {
 	by, legend := "le", ""
-	if label != "" {
-		by, legend = "le, "+label, " {{"+label+"}}"
+	if g.by != "" {
+		by, legend = "le, "+g.by, " "+g.legend
 	}
 
 	exemplar := exemplarHistograms[histogram]
@@ -135,22 +120,22 @@ func goAPISection(_ *service.Service, processes []service.Process) section {
 		},
 		&graph{
 			title:       "Taxa por rota",
-			description: "Requisições por segundo por rota e método.",
+			description: "Requisições por segundo por status, método e rota.",
 			unit:        "reqps",
 			width:       halfWidth,
 			queries: []query{{
-				expr:   requests("", " by (http_route, http_request_method)"),
-				legend: "{{http_request_method}} {{http_route}}",
+				expr:   requests("", " by ("+httpRoute.by+")"),
+				legend: httpRoute.legend,
 			}},
 		},
 		&graph{
 			title:       "4xx/5xx por rota",
-			description: "Respostas de erro por segundo, por rota e status; só o 5xx queima budget.",
+			description: "Respostas de erro por segundo, por status, método e rota; só o 5xx queima budget.",
 			unit:        "reqps",
 			width:       halfWidth,
 			queries: []query{{
-				expr:   requests(`http_response_status_code=~"4..|5.."`, " by (http_route, http_response_status_code)"),
-				legend: "{{http_response_status_code}} {{http_route}}",
+				expr:   requests(`http_response_status_code=~"4..|5.."`, " by ("+httpRoute.by+")"),
+				legend: httpRoute.legend,
 			}},
 		},
 		&graph{
@@ -159,16 +144,16 @@ func goAPISection(_ *service.Service, processes []service.Process) section {
 				"Os pontos são exemplars: abrem o trace.",
 			unit:    "s",
 			width:   halfWidth,
-			queries: quantiles(catalog.HTTPServerRequestDuration, selector, ""),
+			queries: quantiles(catalog.HTTPServerRequestDuration, selector, grouping{}),
 			sloLine: seconds(slo.APILatencyThresholdSeconds),
 		},
 		&graph{
 			title: "Latência p50/p99 por rota",
-			description: "Percentis 50 e 99 da duração por rota; a linha é o limite do SLO api-latency. Clique numa " +
-				"série para ver os traces lentos da rota.",
+			description: "Percentis 50 e 99 da duração por status, método e rota; a linha é o limite do SLO api-latency. " +
+				"Clique numa série para ver os traces lentos dela.",
 			unit:    "s",
 			width:   halfWidth,
-			queries: quantiles(catalog.HTTPServerRequestDuration, selector, "http_route"),
+			queries: quantiles(catalog.HTTPServerRequestDuration, selector, httpRoute),
 			sloLine: seconds(slo.APILatencyThresholdSeconds),
 			links:   []cog.Builder[dashboard.DashboardLink]{slowTracesLink(processes)},
 		},
@@ -210,7 +195,7 @@ func consumerSection(_ *service.Service, processes []service.Process) section {
 				"SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
 			unit:    "s",
 			width:   halfWidth,
-			queries: quantiles(catalog.MessagingProcessDuration, selector, ""),
+			queries: quantiles(catalog.MessagingProcessDuration, selector, grouping{}),
 			sloLine: seconds(slo.ConsumerLatencyThresholdSeconds),
 		},
 		&graph{
@@ -301,7 +286,7 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 			description: "Percentis 50 e 99 da duração do envio ao Kafka. Os pontos são exemplars: abrem o trace.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.MessagingClientOperationDuration, selector, ""),
+			queries:     quantiles(catalog.MessagingClientOperationDuration, selector, grouping{}),
 		},
 		&graph{
 			title:       "Limpeza",
@@ -509,7 +494,10 @@ func slowTracesLink(processes []service.Process) cog.Builder[dashboard.Dashboard
 
 	slow := time.Duration(slo.APILatencyThresholdSeconds * float64(time.Second))
 	traceQL := `{resource.service.name=~` + strconv.Quote(strings.Join(names, "|")) +
-		` && kind=server && span.http.route="${__field.labels.http_route}" && duration > ` + slow.String() + `}`
+		` && kind=server && span.http.route="${__field.labels.http_route}"` +
+		` && span.http.request.method="${__field.labels.http_request_method}"` +
+		` && span.http.response.status_code=${__field.labels.http_response_status_code}` +
+		` && duration > ` + slow.String() + `}`
 
 	tempo := "${" + tempoDS.variable() + "}"
 	panes := map[string]any{"slow": map[string]any{

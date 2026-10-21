@@ -51,7 +51,7 @@ func collectDatasourceUIDs(node any, uids map[string]bool) {
 	}
 }
 
-func TestGenerate_WritesTheDashboards(t *testing.T) {
+func TestGenerate_WritesTheDashboardsTitledByTheirLowercaseName(t *testing.T) {
 	root := t.TempDir()
 
 	require.NoError(t, generate(root, services))
@@ -59,22 +59,23 @@ func TestGenerate_WritesTheDashboards(t *testing.T) {
 	entries, err := os.ReadDir(filepath.Join(root, dashboardsDir))
 	require.NoError(t, err)
 
-	uids := map[string]string{}
+	boards := map[string]string{}
 
 	for _, entry := range entries {
-		uids[entry.Name()], _ = readDashboard(t, root, entry.Name())["uid"].(string)
+		board := readDashboard(t, root, entry.Name())
+		boards[entry.Name()] = board["title"].(string) + " " + board["uid"].(string)
 	}
 
 	assert.Equal(t, map[string]string{
-		"kafka.json":    "boilerplate-kafka",
-		"overview.json": "boilerplate-overview",
-		"postgres.json": "boilerplate-postgres",
-		"web.json":      "boilerplate-web",
+		"kafka.json":    "kafka boilerplate-kafka",
+		"overview.json": "overview boilerplate-overview",
+		"postgres.json": "postgres boilerplate-postgres",
+		"web.json":      "web boilerplate-web",
 		// example:begin
-		"audit.json": "boilerplate-audit",
-		"notes.json": "boilerplate-notes",
+		"audit.json": "audit boilerplate-audit",
+		"notes.json": "notes boilerplate-notes",
 		// example:end
-	}, uids)
+	}, boards)
 }
 
 func TestGenerate_ReferencesDatasourcesThroughVariables(t *testing.T) {

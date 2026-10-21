@@ -305,12 +305,12 @@ var sourceLabels = map[Source][]string{
 	Scrape:           {"job", "instance"},
 	RecordingRule:    {"job"},
 	SlothRecording:   {"sloth_id", "sloth_service", "sloth_slo", "service"},
-	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "source"},
+	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "http_status_code", "source"},
 }
 
 var (
 	targetLabels = []string{"__name__", "job", "instance"}
-	logLabels    = []string{"service_name", "service_namespace", "container", "detected_level", "severity_number"}
+	logLabels    = []string{"service_name", "service_namespace", "container_name", "detected_level", "severity_number"}
 )
 
 func OutboxOldestPendingAge(serviceName string) string {

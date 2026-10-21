@@ -21,6 +21,8 @@ func spanMetricsAPISection(_ *service.Service, processes []service.Process) sect
 		return "sum" + by + " (rate(" + catalog.TracesSpanMetricsCalls + "{" + matchers + "}" + rate + "))"
 	}
 
+	route := groupBy("http_status_code", "span_name")
+
 	return section{title: string(service.API), panels: []panel{
 		&single{
 			title:       "Taxa",
@@ -45,31 +47,31 @@ func spanMetricsAPISection(_ *service.Service, processes []service.Process) sect
 		},
 		&graph{
 			title:       "Taxa por rota",
-			description: "Requisições por segundo por método e rota (o nome do span).",
+			description: "Requisições por segundo por status, método e rota (o nome do span).",
 			unit:        "reqps",
 			width:       halfWidth,
-			queries:     []query{{expr: calls("", " by (span_name)"), legend: "{{span_name}}"}},
+			queries:     []query{{expr: calls("", " by ("+route.by+")"), legend: route.legend}},
 		},
 		&graph{
 			title:       "Erros por rota",
-			description: "Requisições com erro por segundo, por método e rota.",
+			description: "Requisições com erro por segundo, por status, método e rota.",
 			unit:        "reqps",
 			width:       halfWidth,
-			queries:     []query{{expr: calls(failed, " by (span_name)"), legend: "{{span_name}}"}},
+			queries:     []query{{expr: calls(failed, " by ("+route.by+")"), legend: route.legend}},
 		},
 		&graph{
 			title:       "Latência p50/p99",
 			description: "Percentis 50 e 99 da duração das requisições.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, ""),
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, grouping{}),
 		},
 		&graph{
 			title:       "Latência p50/p99 por rota",
-			description: "Percentis 50 e 99 da duração por método e rota.",
+			description: "Percentis 50 e 99 da duração por status, método e rota.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, "span_name"),
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, route),
 		},
 	}}
 }

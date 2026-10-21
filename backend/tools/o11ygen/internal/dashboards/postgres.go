@@ -23,8 +23,8 @@ const (
 )
 
 func postgresDashboard() *dashboard.DashboardBuilder {
-	return dashboard.NewDashboardBuilder("Postgres — Conexões · Locks · Queries · Cardinalidade").
-		Uid(config.Namespace+"-postgres").
+	return newDashboard("postgres").
+		Description("Conexões, locks, queries e cardinalidade de métricas, a partir do Postgres e do Prometheus.").
 		Tags([]string{"postgres", config.Namespace, "sre"}).
 		Readonly().
 		Tooltip(1).

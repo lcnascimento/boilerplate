@@ -11,7 +11,12 @@ O processo do label `service` está consumindo o error budget de 30 dias do SLO 
 | `critical` (page) | 5m e 1h, ou 30m e 6h | 14,4x ou 6x | 2% em 1h, ou 5% em 6h |
 | `warning` (ticket) | 2h e 1d, ou 6h e 3d | 3x ou 1x | 10% em 1d, ou 10% em 3d |
 
-Um burn rate de 1x gasta o budget inteiro exatamente nos 30 dias. A janela curta faz o alerta parar logo que o problema acaba; a longa evita disparar por um pico isolado.
+Um burn rate de 1x gasta o budget inteiro exatamente nos 30 dias. A janela curta faz o alerta parar logo que o problema acaba; a longa evita disparar por um pico isolado. O valor no `summary` é a proporção de eventos ruins na janela curta do par que disparou (5m ou 30m no page; 2h ou 6h no ticket).
+
+As duas severidades pedem respostas diferentes:
+
+- **Page (`critical`)**: queima aguda. A 14,4x ou 6x, o budget de 30 dias acaba em 2 a 5 dias. É um incidente em andamento: aja agora, começando pela Mitigação se a causa for óbvia (deploy recente, dependência fora do ar).
+- **Ticket (`warning`)**: consumo sustentado acima do ritmo sustentável (3x ou 1x). Ninguém precisa ser acordado, mas, mantido o ritmo, o budget acaba antes do fim da janela de 30 dias. Investigue sem urgência, em horário comercial, e trate a causa antes que vire um page.
 
 ## Impacto
 

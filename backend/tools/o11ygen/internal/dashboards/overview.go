@@ -12,11 +12,16 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
-const bySLO = "max by (sloth_service, sloth_slo, service) "
+const (
+	bySLO = "max by (sloth_service, sloth_slo, service) "
+
+	burnRateTicket = 1
+	burnRatePage   = 6
+	budgetLow      = 0.25
+)
 
 func overviewDashboard() *dashboard.DashboardBuilder {
-	return dashboard.NewDashboardBuilder("Overview").
-		Uid(config.Namespace+"-overview").
+	return newDashboard("overview").
 		Tags([]string{config.Namespace, "overview"}).
 		Readonly().
 		Tooltip(1).
@@ -34,7 +39,7 @@ func overviewDashboard() *dashboard.DashboardBuilder {
 			dashboardLink("Kafka", "kafka"),
 			dashboardLink("Postgres", "postgres"),
 		}).
-		WithPanel(sloTable()).
+		WithPanel(sloTable("").Id(1).GridPos(dashboard.GridPos{H: 10, W: 24, X: 0, Y: 0})).
 		WithPanel(alertList(2, "Alertas ativos",
 			"Todos os alertas que estão disparando, pendentes ou com erro de avaliação, de todos os serviços e da infraestrutura.",
 			everyAlert, false).
@@ -50,22 +55,21 @@ func dashboardLink(title, name string) *dashboard.DashboardLinkBuilder {
 		KeepTime(true)
 }
 
-func sloTable() cog.Builder[dashboard.Panel] {
+func sloTable(selector string) *table.PanelBuilder {
 	percent := []dashboard.DynamicConfigValue{{Id: "unit", Value: "percentunit"}, {Id: "decimals", Value: 3}}
+	of := func(series string) string { return bySLO + "(" + series + selector + ")" }
 
 	return table.NewPanelBuilder().
-		Id(1).
 		Title("SLOs").
-		Description("Todo SLO de todo serviço: objetivo, SLI e budget restante na janela de 30 dias, e o burn rate atual "+
+		Description("Objetivo, SLI e budget restante de cada SLO na janela de 30 dias, e o burn rate atual "+
 			"(1 = queima o budget exatamente em 30 dias). O nome do serviço abre o dashboard dele.").
 		Datasource(datasourceRef(prometheusDS)).
 		Targets(promTargets(
-			promInstantTable("A", bySLO+"("+catalog.SLOObjectiveRatio+")"),
-			promInstantTable("B", "1 - "+bySLO+"("+catalog.SLOErrorRatioRate30d+")"),
-			promInstantTable("C", bySLO+"("+catalog.SLOPeriodErrorBudgetRemainingRatio+")"),
-			promInstantTable("D", bySLO+"("+catalog.SLOCurrentBurnRateRatio+")"),
+			promInstantTable("A", of(catalog.SLOObjectiveRatio)),
+			promInstantTable("B", "1 - "+of(catalog.SLOErrorRatioRate30d)),
+			promInstantTable("C", of(catalog.SLOPeriodErrorBudgetRemainingRatio)),
+			promInstantTable("D", of(catalog.SLOCurrentBurnRateRatio)),
 		)).
-		GridPos(dashboard.GridPos{H: 10, W: 24, X: 0, Y: 0}).
 		Unit("percentunit").
 		Transformations([]dashboard.DataTransformerConfig{
 			{Id: "merge", Options: map[string]any{}},
@@ -91,7 +95,7 @@ func sloTable() cog.Builder[dashboard.Panel] {
 		OverrideByName("Budget restante (30d)", []dashboard.DynamicConfigValue{
 			{Id: "custom.cellOptions", Value: map[string]any{"type": "color-background"}},
 			{Id: "thresholds", Value: map[string]any{"mode": "absolute", "steps": []map[string]any{
-				{"color": "red", "value": nil}, {"color": "yellow", "value": 0}, {"color": "green", "value": 0.25},
+				{"color": "red", "value": nil}, {"color": "yellow", "value": 0}, {"color": "green", "value": budgetLow},
 			}}},
 		}).
 		OverrideByName("Burn rate", []dashboard.DynamicConfigValue{
@@ -99,7 +103,7 @@ func sloTable() cog.Builder[dashboard.Panel] {
 			{Id: "decimals", Value: 2},
 			{Id: "custom.cellOptions", Value: map[string]any{"type": "color-text"}},
 			{Id: "thresholds", Value: map[string]any{"mode": "absolute", "steps": []map[string]any{
-				{"color": "green", "value": nil}, {"color": "yellow", "value": 1}, {"color": "red", "value": 6},
+				{"color": "green", "value": nil}, {"color": "yellow", "value": burnRateTicket}, {"color": "red", "value": burnRatePage},
 			}}},
 		})
 }

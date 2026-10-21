@@ -15,8 +15,8 @@ import (
 )
 
 func kafkaDashboard() *dashboard.DashboardBuilder {
-	return dashboard.NewDashboardBuilder("Kafka — Tópicos · Consumer groups · DLQ").
-		Uid(config.Namespace+"-kafka").
+	return newDashboard("kafka").
+		Description("Tópicos, consumer groups e DLQs do Kafka.").
 		Tags([]string{"messaging",
 			"kafka",
 			config.Namespace,

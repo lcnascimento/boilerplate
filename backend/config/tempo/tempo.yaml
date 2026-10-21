@@ -32,6 +32,9 @@ metrics_generator:
       - url: http://prometheus:9090/api/v1/write
         send_exemplars: true
   processor:
+    span_metrics:
+      # Next.js server spans carry the HTTP status in the legacy semconv attribute.
+      dimensions: [http.status_code]
     local_blocks:
       # Tempo's default feeds only server spans to TraceQL metrics.
       filter_server_spans: false

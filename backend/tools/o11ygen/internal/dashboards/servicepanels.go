@@ -194,6 +194,14 @@ func (s *single) build(id uint32) cog.Builder[dashboard.Panel] {
 	return out
 }
 
+type slos struct {
+	selector string
+}
+
+func (s slos) build(id uint32) cog.Builder[dashboard.Panel] {
+	return sloTable(s.selector).Id(id).GridPos(dashboard.GridPos{W: fullWidth, H: listHeight})
+}
+
 type serviceAlerts struct {
 	title       string
 	description string
