@@ -1,6 +1,11 @@
 discovery.docker "containers" {
   host             = "unix:///var/run/docker.sock"
   refresh_interval = "5s"
+
+  filter {
+    name   = "network"
+    values = ["boilerplate"]
+  }
 }
 
 discovery.relabel "containers" {
@@ -26,7 +31,68 @@ discovery.relabel "containers" {
 loki.source.docker "containers" {
   host       = "unix:///var/run/docker.sock"
   targets    = discovery.relabel.containers.output
-  forward_to = [loki.write.local_loki.receiver]
+  forward_to = [otelcol.receiver.loki.containers.receiver]
+}
+
+otelcol.receiver.loki "containers" {
+  output {
+    logs = [otelcol.processor.transform.containers.input]
+  }
+}
+
+// Container logs reach Loki in the shape of the services' OTLP logs: the message as the line, the level as the
+// severity, and the other fields as structured metadata. A line in an unknown format keeps its text.
+otelcol.processor.transform "containers" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "log"
+    statements = [
+      `set(resource.attributes["service.name"], log.attributes["service"])`,
+      `set(resource.attributes["service.name"], log.attributes["container"]) where log.attributes["service"] == nil`,
+      `set(resource.attributes["container.name"], log.attributes["container"])`,
+      `set(resource.attributes["container.image.name"], log.attributes["image"])`,
+      `delete_matching_keys(log.attributes, "^(service|container|image|loki\\.attribute\\.labels)$")`,
+      // JSON (kafka-console).
+      `merge_maps(log.cache, ParseJSON(log.body), "upsert") where IsMatch(log.body, "^\\{")`,
+      // logfmt (alloy, grafana, loki, prometheus, pyroscope, tempo).
+      `merge_maps(log.cache, ParseKeyValue(log.body), "upsert") where IsMatch(log.body, "^[A-Za-z_][A-Za-z0-9_.]*=")`,
+      // log4j (kafka, schema-registry): [timestamp] LEVEL message (logger)
+      `merge_maps(log.cache, ExtractPatterns(log.body, "^\\[[^\\]]+\\] (?P<level>[A-Z]+) (?P<msg>.*?)(?: \\((?P<logger>[^()]+)\\))?$"), "upsert") where IsMatch(log.body, "^\\[\\d{4}-\\d{2}-\\d{2} [^\\]]+\\] [A-Z]+ ")`,
+      // postgres: timestamp [pid] LEVEL:  message; DETAIL, HINT and STATEMENT lines keep their prefix in the message.
+      `merge_maps(log.cache, ExtractPatterns(log.body, "^\\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\[(?P<pid>\\d+)\\] (?:(?P<level>DEBUG[1-5]|LOG|INFO|NOTICE|WARNING|ERROR|FATAL|PANIC):\\s+)?(?P<msg>.*)$"), "upsert") where IsMatch(log.body, "^\\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\[\\d+\\] ")`,
+      `set(log.cache["msg"], log.cache["message"]) where log.cache["msg"] == nil`,
+      `set(log.cache["level"], log.cache["lvl"]) where log.cache["level"] == nil`,
+      `set(log.cache["level"], ToUpperCase(log.cache["level"])) where log.cache["level"] != nil`,
+      `set(log.severity_text, "TRACE") where log.cache["level"] == "TRACE"`,
+      `set(log.severity_text, "DEBUG") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^DEBUG[1-5]?$")`,
+      `set(log.severity_text, "INFO") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(INFO|LOG|NOTICE)$")`,
+      `set(log.severity_text, "WARN") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^WARN(ING)?$")`,
+      `set(log.severity_text, "ERROR") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(ERROR|ERR|EROR)$")`,
+      `set(log.severity_text, "FATAL") where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(FATAL|PANIC|CRIT|CRITICAL)$")`,
+      `set(log.severity_number, SEVERITY_NUMBER_TRACE) where log.severity_text == "TRACE"`,
+      `set(log.severity_number, SEVERITY_NUMBER_DEBUG) where log.severity_text == "DEBUG"`,
+      `set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_text == "INFO"`,
+      `set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_text == "WARN"`,
+      `set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_text == "ERROR"`,
+      `set(log.severity_number, SEVERITY_NUMBER_FATAL) where log.severity_text == "FATAL"`,
+      `delete_matching_keys(log.cache, "^(level|lvl|message|ts|t|time|timestamp)$")`,
+      `merge_maps(log.attributes, log.cache, "insert") where log.cache["msg"] != nil`,
+      `set(log.body, log.cache["msg"]) where log.cache["msg"] != nil`,
+      `delete_key(log.attributes, "msg")`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.batch.containers.input]
+  }
+}
+
+// otelcol.receiver.loki emits one request per line, which overflows the exporter queue on a burst.
+otelcol.processor.batch "containers" {
+  output {
+    logs = [otelcol.exporter.otlphttp.loki.input]
+  }
 }
 
 otelcol.receiver.otlp "default" {
@@ -160,11 +226,5 @@ otelcol.exporter.otlphttp "prometheus" {
 otelcol.exporter.otlphttp "loki" {
   client {
     endpoint = "http://loki:3100/otlp"
-  }
-}
-
-loki.write "local_loki" {
-  endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
   }
 }
