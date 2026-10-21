@@ -2,9 +2,11 @@ go 1.27.3
 
 use ./quality
 
-use ./tools
+use ./services/iam
 
 use ./services/iam/pkg
+
+use ./tools
 
 // example:begin
 use (

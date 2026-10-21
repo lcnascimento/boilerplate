@@ -111,9 +111,9 @@ jobs:
           ! git grep -ni boilerplate || exit 1
           ! git ls-files -co --exclude-standard | grep -i boilerplate || exit 1
 
-      - name: Only the core modules
+      - name: Only the core services
         run: |
-          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools\nuse./services/iam/pkg')"
+          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./services/iam\nuse./services/iam/pkg\nuse./tools')"
           test ! -e Makefile
           test ! -e scripts
 
