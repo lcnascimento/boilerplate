@@ -1,8 +1,11 @@
 "use client";
 
-import { ChevronsUpDown, Languages, Palette } from "lucide-react";
+import { ChevronsUpDown, Languages, LogOut, Palette } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useTransition } from "react";
+import { toast } from "sonner";
 
 import {
   Avatar,
@@ -29,6 +32,8 @@ import {
 } from "@boilerplate/ui/components/sidebar";
 import { getInitials } from "@boilerplate/utils";
 
+import { authClient } from "@/shared/auth/client";
+import { SIGN_IN_HREF } from "@/shared/auth/routes";
 import { routesIn } from "@/shared/navigation";
 
 import { LocaleRadioItems, ThemeRadioItems } from "./menu-radio-items";
@@ -64,7 +69,22 @@ export function NavUser({ user }: NavUserProps) {
   const t = useTranslations();
   const tNav = useTranslations("nav");
   const tProfile = useTranslations("profile");
+  const tAuth = useTranslations("auth");
   const { isMobile } = useSidebar();
+  const router = useRouter();
+  const [isSigningOut, startSignOut] = useTransition();
+
+  function handleSignOut() {
+    startSignOut(async () => {
+      const { error } = await authClient.signOut();
+      if (error) {
+        toast.error(tAuth("signOutFailed"));
+        return;
+      }
+      router.replace(SIGN_IN_HREF);
+      router.refresh();
+    });
+  }
 
   return (
     <SidebarMenu>
@@ -124,6 +144,12 @@ export function NavUser({ user }: NavUserProps) {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem disabled={isSigningOut} onSelect={handleSignOut}>
+              <LogOut aria-hidden />
+              {tAuth("signOut")}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

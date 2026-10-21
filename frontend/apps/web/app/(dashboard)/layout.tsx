@@ -1,7 +1,9 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
+import { getIam } from "@/shared/auth/auth";
+import { SIGN_IN_HREF } from "@/shared/auth/routes";
 import { parseSidebarOpen, SIDEBAR_COOKIE_NAME } from "@/shared/cookies";
-import { getLocalUser } from "@/shared/local-user";
 
 import { DashboardShell } from "./_components";
 
@@ -15,14 +17,22 @@ interface DashboardLayoutProps {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  const [cookieStore, user] = await Promise.all([cookies(), getLocalUser()]);
+  const [cookieStore, session] = await Promise.all([
+    cookies(),
+    headers().then((requestHeaders) =>
+      getIam().auth.api.getSession({ headers: requestHeaders })
+    ),
+  ]);
+  if (session === null) redirect(SIGN_IN_HREF);
+
+  const { id, name, email, image } = session.user;
 
   return (
     <DashboardShell
       defaultOpen={parseSidebarOpen(
         cookieStore.get(SIDEBAR_COOKIE_NAME)?.value
       )}
-      user={user}
+      user={{ id, name, email, avatarUrl: image ?? undefined }}
     >
       {children}
     </DashboardShell>
