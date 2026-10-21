@@ -20,7 +20,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
 | Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit) e commitlint (Conventional Commits no commit-msg) |
-| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e`, `ci-openapi` e `ci-proto`, cada um disparado pelos caminhos da sua área |
+| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e`, `ci-openapi` e `ci-proto`, cada um disparado pelos caminhos da sua área, e `ci-suppressions`, em todo PR |
 
 ```text
 backend/
@@ -160,7 +160,8 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
 ```sh
-make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
+make lint             # golangci-lint (make lint.fix corrige o que der), squawk nas migrations e make lint.suppressions
+make lint.suppressions # falha com supressão de lint (nolint, shellcheck disable, eslint-disable, @ts-ignore, exclusões do .golangci.yaml) fora do .lint-suppressions da raiz
 make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
 make test.component   # só os de componente (-run Component; timeout de 3m)
@@ -226,7 +227,7 @@ Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do T
 docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details openapi/*.yaml
 ```
 
-O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
+O pre-commit (lefthook) roda `make lint.suppressions` em todo commit, `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. Uma supressão nova só passa com a linha que o `make lint.suppressions` imprime adicionada ao `.lint-suppressions`, para ser revisada no PR; o `nolintlint` ainda exige que todo `//nolint` nomeie o linter e diga o porquê. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
 
 ### Explorando a API e depurando
 

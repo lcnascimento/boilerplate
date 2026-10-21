@@ -21,16 +21,17 @@ Use Conventional Commits: `<type>(<optional scope>): <imperative summary>`, with
 
 CI is defined in `.github/workflows/` and is the deterministic gate: a pull request merges only when it passes. Read a failing run with `gh run view --log-failed`.
 
-Five workflows check the repository as it is, each on the paths it covers (plus its own workflow file):
+Six workflows check the repository as it is, each on the paths it covers (plus its own workflow file):
 
-| Workflow          | Job          | Runs on                                                                    |
-| ----------------- | ------------ | -------------------------------------------------------------------------- |
-| `ci-backend.yml`  | `ci-backend` | pull requests touching `backend/**`                                        |
-| `ci-e2e.yml`      | `e2e`        | pull requests and pushes to `main` touching backend, frontend or Tiltfiles |
-| `ci-frontend.yml` | `frontend`   | pull requests and pushes to `main` touching `frontend/**`                  |
-| `ci-proto.yml`    | `buf`        | pull requests and pushes to `main` touching proto or generated code        |
-| `ci-openapi.yml`  | `vacuum`     | pull requests touching `openapi/**`                                        |
+| Workflow              | Job            | Runs on                                                                    |
+| --------------------- | -------------- | -------------------------------------------------------------------------- |
+| `ci-backend.yml`      | `ci-backend`   | pull requests touching `backend/**`                                        |
+| `ci-e2e.yml`          | `e2e`          | pull requests and pushes to `main` touching backend, frontend or Tiltfiles |
+| `ci-frontend.yml`     | `frontend`     | pull requests and pushes to `main` touching `frontend/**`                  |
+| `ci-proto.yml`        | `buf`          | pull requests and pushes to `main` touching proto or generated code        |
+| `ci-openapi.yml`      | `vacuum`       | pull requests touching `openapi/**`                                        |
+| `ci-suppressions.yml` | `suppressions` | every pull request and push to `main`                                      |
 
-`ci-template.yml` runs on every push to any branch, with no path filter. It checks the template instead: it runs `make init` (scenario `A`) and `make clean-example` plus `make init` (scenario `B`), then calls the five workflows above on each result.
+`ci-template.yml` runs on every push to any branch, with no path filter. It checks the template instead: it runs `make init` (scenario `A`) and `make clean-example` plus `make init` (scenario `B`), then calls the six workflows above on each result.
 
-On a branch other than `main`, the five workflows check the repository as it is only on a pull request, so a pushed branch gets its full CI only once a PR is open, draft or not.
+On a branch other than `main`, the six workflows check the repository as it is only on a pull request, so a pushed branch gets its full CI only once a PR is open, draft or not.
