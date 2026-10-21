@@ -4,6 +4,7 @@ import {
   NotebookPen,
   // example:end
   SlidersHorizontal,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,7 +16,11 @@ export const NOTES_HREF = "/notes" satisfies Route;
 // example:end
 
 type NavLabelKey = {
-  [N in keyof AppMessages]: `${N}.${Extract<keyof AppMessages[N], string>}`;
+  [N in keyof AppMessages]: {
+    [K in keyof AppMessages[N]]: AppMessages[N][K] extends string
+      ? `${N}.${Extract<K, string>}`
+      : never;
+  }[keyof AppMessages[N]];
 }[keyof AppMessages];
 
 interface NavRoute {
@@ -35,6 +40,12 @@ export const navRoutes = [
     area: "sidebar",
   },
   // example:end
+  {
+    href: "/settings/members",
+    labelKey: "members.title",
+    icon: Users,
+    area: "sidebar",
+  },
   {
     href: "/profile/preferences",
     labelKey: "nav.preferences",
