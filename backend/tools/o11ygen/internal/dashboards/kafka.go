@@ -28,7 +28,7 @@ func kafkaDashboard() *dashboard.DashboardBuilder {
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(prometheusDS),
+		Variables([]cog.Builder[dashboard.VariableModel]{
 			dashboard.NewQueryVariableBuilder("topic").
 				Label("Tópico").
 				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(" + catalog.KafkaTopicPartitionCurrentOffset + ", topic)", "refId": "topic-var"}}).

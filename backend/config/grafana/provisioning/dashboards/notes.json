@@ -52,7 +52,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (sloth_service, sloth_slo, service) (slo:objective:ratio{sloth_service=\"notes\"})",
           "format": "table",
@@ -63,7 +63,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d{sloth_service=\"notes\"})",
           "format": "table",
@@ -74,7 +74,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio{sloth_service=\"notes\"})",
           "format": "table",
@@ -85,7 +85,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio{sloth_service=\"notes\"})",
           "format": "table",
@@ -99,7 +99,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 10,
@@ -341,7 +341,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval]))",
           "legendFormat": "",
@@ -353,7 +353,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -391,7 +391,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "(sum (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\", http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval]))",
           "legendFormat": "",
@@ -403,7 +403,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -441,7 +441,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
           "legendFormat": "",
@@ -453,7 +453,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -507,7 +507,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (http_response_status_code, http_request_method, http_route) (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval]))",
           "legendFormat": "{{http_response_status_code}} {{http_request_method}} {{http_route}}",
@@ -519,7 +519,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -561,7 +561,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (http_response_status_code, http_request_method, http_route) (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\", http_response_status_code=~\"4..|5..\"}[$__rate_interval]))",
           "legendFormat": "{{http_response_status_code}} {{http_request_method}} {{http_route}}",
@@ -573,7 +573,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -615,7 +615,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
@@ -628,7 +628,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -687,7 +687,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.9, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
@@ -700,7 +700,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -759,7 +759,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
@@ -772,7 +772,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -831,7 +831,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le, http_response_status_code, http_request_method, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
@@ -844,7 +844,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -887,7 +887,7 @@
               "type": "",
               "icon": "",
               "tooltip": "",
-              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22${tempo_datasource}%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22${tempo_datasource}%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
+              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
               "tags": [],
               "asDropdown": false,
               "placement": "inControlsMenu",
@@ -918,7 +918,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.9, sum by (le, http_response_status_code, http_request_method, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
@@ -931,7 +931,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -974,7 +974,7 @@
               "type": "",
               "icon": "",
               "tooltip": "",
-              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22${tempo_datasource}%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22${tempo_datasource}%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
+              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
               "tags": [],
               "asDropdown": false,
               "placement": "inControlsMenu",
@@ -1005,7 +1005,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.99, sum by (le, http_response_status_code, http_request_method, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
@@ -1018,7 +1018,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1061,7 +1061,7 @@
               "type": "",
               "icon": "",
               "tooltip": "",
-              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22${tempo_datasource}%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22${tempo_datasource}%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
+              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
               "tags": [],
               "asDropdown": false,
               "placement": "inControlsMenu",
@@ -1105,7 +1105,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max(notes_outbox_oldest_pending_age_seconds{job=~\"boilerplate/(notes-worker-forwarder)\"})",
           "legendFormat": "",
@@ -1117,7 +1117,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -1171,7 +1171,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "count(notes_outbox_oldest_pending_age_seconds{job=~\"boilerplate/(notes-worker-forwarder)\"}) or vector(0)",
           "legendFormat": "",
@@ -1183,7 +1183,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -1237,7 +1237,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (job) (notes_outbox_oldest_pending_age_seconds{job=~\"boilerplate/(notes-worker-forwarder)\"})",
           "legendFormat": "{{job}}",
@@ -1249,7 +1249,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1308,7 +1308,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_destination_name) (rate(messaging_client_sent_messages_total{job=~\"boilerplate/(notes-worker-forwarder)\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "sucesso {{messaging_destination_name}}",
@@ -1317,7 +1317,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (error_type) (rate(messaging_client_sent_messages_total{job=~\"boilerplate/(notes-worker-forwarder)\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "falha {{error_type}}",
@@ -1329,7 +1329,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1371,7 +1371,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{job=~\"boilerplate/(notes-worker-forwarder)\"}[$__rate_interval])))",
@@ -1384,7 +1384,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1426,7 +1426,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.9, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{job=~\"boilerplate/(notes-worker-forwarder)\"}[$__rate_interval])))",
@@ -1439,7 +1439,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1481,7 +1481,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_client_operation_duration_seconds_bucket{job=~\"boilerplate/(notes-worker-forwarder)\"}[$__rate_interval])))",
@@ -1494,7 +1494,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1536,7 +1536,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (outcome) (increase(notes_outbox_purge_runs_total{job=~\"boilerplate/(notes-worker-forwarder)\"}[$__rate_interval]))",
           "legendFormat": "execuções {{outcome}}",
@@ -1545,7 +1545,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum(increase(notes_outbox_purged_messages_total{job=~\"boilerplate/(notes-worker-forwarder)\"}[$__rate_interval]))",
           "legendFormat": "apagadas",
@@ -1557,7 +1557,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1611,7 +1611,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "{{job}} {{cpu_mode}}",
@@ -1623,7 +1623,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1665,7 +1665,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (process_memory_usage_bytes{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}}",
@@ -1677,7 +1677,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1719,7 +1719,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}}",
@@ -1731,7 +1731,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1773,7 +1773,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}} {{go_memory_type}}",
@@ -1785,7 +1785,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1827,7 +1827,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "alocação/s {{job}}",
@@ -1836,7 +1836,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (go_memory_gc_goal_bytes{job=~\"boilerplate/$process\"})",
               "legendFormat": "meta do GC {{job}}",
@@ -1848,7 +1848,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1904,7 +1904,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (pgxpool_acquired_connections{job=~\"boilerplate/$process\"})",
               "legendFormat": "em uso {{job}}",
@@ -1913,7 +1913,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (pgxpool_max_connections{job=~\"boilerplate/$process\"})",
               "legendFormat": "máximo {{job}}",
@@ -1925,7 +1925,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1967,7 +1967,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (application_name, state) (pg_client_connections_count{application_name=~\"$process\"})",
               "legendFormat": "{{application_name}} {{state}}",
@@ -1979,7 +1979,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -2039,7 +2039,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -2048,7 +2048,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
@@ -2092,7 +2092,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -2101,7 +2101,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 10,
@@ -2125,45 +2125,6 @@
   ],
   "templating": {
     "list": [
-      {
-        "type": "datasource",
-        "name": "tempo_datasource",
-        "label": "Tempo data source",
-        "skipUrlSync": false,
-        "query": "tempo",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
-        "type": "datasource",
-        "name": "prometheus_datasource",
-        "label": "Prometheus data source",
-        "skipUrlSync": false,
-        "query": "prometheus",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
-        "type": "datasource",
-        "name": "loki_datasource",
-        "label": "Loki data source",
-        "skipUrlSync": false,
-        "query": "loki",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
       {
         "type": "custom",
         "name": "process",
@@ -2211,7 +2172,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Traces de notes no Traces Drilldown",
-      "url": "/a/grafana-exploretraces-app/explore?var-ds=${tempo_datasource}\u0026var-filters=resource.service.name%7C%3D~%7Cnotes-api-frontend__gfp__notes-worker-forwarder\u0026var-groupBy=resource.service.name",
+      "url": "/a/grafana-exploretraces-app/explore?var-ds=tempo\u0026var-filters=resource.service.name%7C%3D~%7Cnotes-api-frontend__gfp__notes-worker-forwarder\u0026var-groupBy=resource.service.name",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",
@@ -2224,7 +2185,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Logs de notes-api-frontend no Logs Drilldown",
-      "url": "/a/grafana-lokiexplore-app/explore/service_name/notes-api-frontend/logs?var-ds=${loki_datasource}\u0026var-filters=service_name%7C%3D%7Cnotes-api-frontend",
+      "url": "/a/grafana-lokiexplore-app/explore/service_name/notes-api-frontend/logs?var-ds=loki\u0026var-filters=service_name%7C%3D%7Cnotes-api-frontend",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",
@@ -2237,7 +2198,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Logs de notes-worker-forwarder no Logs Drilldown",
-      "url": "/a/grafana-lokiexplore-app/explore/service_name/notes-worker-forwarder/logs?var-ds=${loki_datasource}\u0026var-filters=service_name%7C%3D%7Cnotes-worker-forwarder",
+      "url": "/a/grafana-lokiexplore-app/explore/service_name/notes-worker-forwarder/logs?var-ds=loki\u0026var-filters=service_name%7C%3D%7Cnotes-worker-forwarder",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",

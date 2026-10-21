@@ -98,7 +98,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum (rate(traces_spanmetrics_calls_total{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval]))",
           "legendFormat": "",
@@ -110,7 +110,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -148,7 +148,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "(sum (rate(traces_spanmetrics_calls_total{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) or vector(0)) / sum (rate(traces_spanmetrics_calls_total{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval]))",
           "legendFormat": "",
@@ -160,7 +160,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -198,7 +198,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "",
@@ -210,7 +210,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 5,
@@ -248,7 +248,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (http_status_code, span_name) (rate(traces_spanmetrics_calls_total{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval]))",
           "legendFormat": "{{http_status_code}} {{span_name}}",
@@ -260,7 +260,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -302,7 +302,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (http_status_code, span_name) (rate(traces_spanmetrics_calls_total{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval]))",
           "legendFormat": "{{http_status_code}} {{span_name}}",
@@ -314,7 +314,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -356,7 +356,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.5, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "p50",
@@ -368,7 +368,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -410,7 +410,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.9, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "p90",
@@ -422,7 +422,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -464,7 +464,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "p99",
@@ -476,7 +476,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -518,7 +518,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.5, sum by (le, http_status_code, span_name) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "p50 {{http_status_code}} {{span_name}}",
@@ -530,7 +530,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -572,7 +572,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.9, sum by (le, http_status_code, span_name) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "p90 {{http_status_code}} {{span_name}}",
@@ -584,7 +584,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -626,7 +626,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum by (le, http_status_code, span_name) (rate(traces_spanmetrics_latency_bucket{service=~\"web\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval])))",
           "legendFormat": "p99 {{http_status_code}} {{span_name}}",
@@ -638,7 +638,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -697,7 +697,7 @@
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -706,7 +706,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 5,
@@ -768,7 +768,7 @@
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -777,7 +777,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 5,
@@ -839,7 +839,7 @@
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -848,7 +848,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 5,
@@ -910,7 +910,7 @@
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -919,7 +919,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 5,
@@ -981,7 +981,7 @@
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -990,7 +990,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 5,
@@ -1052,7 +1052,7 @@
           "queryType": "instant",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1061,7 +1061,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 5,
@@ -1102,7 +1102,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         },
         {
@@ -1111,7 +1111,7 @@
           "refId": "B",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         },
         {
@@ -1120,7 +1120,7 @@
           "refId": "C",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         },
         {
@@ -1129,7 +1129,7 @@
           "refId": "D",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1138,7 +1138,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
@@ -1183,7 +1183,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1192,7 +1192,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
@@ -1237,7 +1237,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1246,7 +1246,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
@@ -1291,7 +1291,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1300,7 +1300,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
@@ -1354,7 +1354,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "max by (job) (nodejs_eventloop_delay_p99_seconds{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}}",
@@ -1366,7 +1366,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1408,7 +1408,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "max by (job) (nodejs_eventloop_utilization_ratio{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}}",
@@ -1420,7 +1420,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1462,7 +1462,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (v8js_memory_heap_used_bytes{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}}",
@@ -1474,7 +1474,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1516,7 +1516,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job, v8js_gc_type) (rate(v8js_gc_duration_seconds_sum{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "{{job}} {{v8js_gc_type}}",
@@ -1528,7 +1528,7 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
@@ -1588,7 +1588,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1597,7 +1597,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
@@ -1641,7 +1641,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1650,7 +1650,7 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 10,
@@ -1674,45 +1674,6 @@
   ],
   "templating": {
     "list": [
-      {
-        "type": "datasource",
-        "name": "tempo_datasource",
-        "label": "Tempo data source",
-        "skipUrlSync": false,
-        "query": "tempo",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
-        "type": "datasource",
-        "name": "prometheus_datasource",
-        "label": "Prometheus data source",
-        "skipUrlSync": false,
-        "query": "prometheus",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
-        "type": "datasource",
-        "name": "loki_datasource",
-        "label": "Loki data source",
-        "skipUrlSync": false,
-        "query": "loki",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
       {
         "type": "custom",
         "name": "process",
@@ -1760,7 +1721,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Traces de web no Traces Drilldown",
-      "url": "/a/grafana-exploretraces-app/explore?var-ds=${tempo_datasource}\u0026var-filters=resource.service.name%7C%3D~%7Cweb\u0026var-groupBy=resource.service.name",
+      "url": "/a/grafana-exploretraces-app/explore?var-ds=tempo\u0026var-filters=resource.service.name%7C%3D~%7Cweb\u0026var-groupBy=resource.service.name",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",
@@ -1773,7 +1734,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Logs de web no Logs Drilldown",
-      "url": "/a/grafana-lokiexplore-app/explore/service_name/web/logs?var-ds=${loki_datasource}\u0026var-filters=service_name%7C%3D%7Cweb",
+      "url": "/a/grafana-lokiexplore-app/explore/service_name/web/logs?var-ds=loki\u0026var-filters=service_name%7C%3D%7Cweb",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",

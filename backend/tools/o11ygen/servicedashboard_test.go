@@ -223,7 +223,6 @@ func TestGenerate_ServiceDashboardFiltersProcessesWithoutAServiceVariable(t *tes
 	}
 
 	assert.Equal(t, []string{
-		"datasource tempo_datasource", "datasource prometheus_datasource", "datasource loki_datasource",
 		"custom process",
 	}, variables)
 }
@@ -382,7 +381,7 @@ func TestGenerate_ServiceDashboardLinksToTheDrilldownAppsOfItsProcesses(t *testi
 	}
 
 	logs := func(process string) string {
-		return "/a/grafana-lokiexplore-app/explore/service_name/" + process + "/logs?var-ds=${loki_datasource}" +
+		return "/a/grafana-lokiexplore-app/explore/service_name/" + process + "/logs?var-ds=loki" +
 			"&var-filters=service_name%7C%3D%7C" + process
 	}
 	profiles := func(process string) string {
@@ -391,7 +390,7 @@ func TestGenerate_ServiceDashboardLinksToTheDrilldownAppsOfItsProcesses(t *testi
 	}
 
 	assert.Equal(t, map[string]string{
-		"Traces": "/a/grafana-exploretraces-app/explore?var-ds=${tempo_datasource}" +
+		"Traces": "/a/grafana-exploretraces-app/explore?var-ds=tempo" +
 			"&var-filters=resource.service.name%7C%3D~%7Corders-api__gfp__orders-consumer__gfp__orders-worker" +
 			"&var-groupBy=resource.service.name",
 		"Logs orders-api":          logs("orders-api"),
@@ -432,7 +431,7 @@ func TestGenerate_ServiceDashboardLinksARouteToItsSlowTraces(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(explore.Query().Get("panes")), &panes))
 	require.Len(t, panes["slow"].Queries, 1)
 
-	assert.Equal(t, "${tempo_datasource}", panes["slow"].Datasource)
+	assert.Equal(t, "tempo", panes["slow"].Datasource)
 	assert.Equal(t, "traceql", panes["slow"].Queries[0].QueryType)
 	assert.Equal(t, `{resource.service.name=~"orders-api" && kind=server && span.http.route="${__field.labels.http_route}" `+
 		`&& span.http.request.method="${__field.labels.http_request_method}" `+

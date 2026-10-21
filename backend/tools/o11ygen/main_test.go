@@ -6,11 +6,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/lcnascimento/go-kit/errors"
 
@@ -32,21 +34,21 @@ func readDashboard(t *testing.T, root, name string) map[string]any {
 	return board
 }
 
-func collectDatasourceUIDs(node any, uids map[string]bool) {
+func collectDatasources(node any, refs map[string]bool) {
 	switch v := node.(type) {
 	case map[string]any:
 		if ds, ok := v["datasource"].(map[string]any); ok {
-			if uid, ok := ds["uid"].(string); ok {
-				uids[uid] = true
-			}
+			kind, _ := ds["type"].(string)
+			uid, _ := ds["uid"].(string)
+			refs[kind+"/"+uid] = true
 		}
 
 		for _, child := range v {
-			collectDatasourceUIDs(child, uids)
+			collectDatasources(child, refs)
 		}
 	case []any:
 		for _, child := range v {
-			collectDatasourceUIDs(child, uids)
+			collectDatasources(child, refs)
 		}
 	}
 }
@@ -78,32 +80,57 @@ func TestGenerate_WritesTheDashboardsTitledByTheirLowercaseName(t *testing.T) {
 	}, boards)
 }
 
-func TestGenerate_ReferencesDatasourcesThroughVariables(t *testing.T) {
+func provisioned(t *testing.T) map[string]bool {
+	t.Helper()
+
+	raw, err := os.ReadFile("../../config/grafana/provisioning/datasources/datasources.yaml")
+	require.NoError(t, err)
+
+	var provisioning struct {
+		Datasources []struct {
+			Type string `yaml:"type"`
+			UID  string `yaml:"uid"`
+		} `yaml:"datasources"`
+	}
+	require.NoError(t, yaml.Unmarshal(raw, &provisioning))
+
+	out := map[string]bool{"grafana/-- Grafana --": true}
+	for _, ds := range provisioning.Datasources {
+		out[ds.Type+"/"+ds.UID] = true
+	}
+
+	return out
+}
+
+func TestGenerate_ReferencesTheProvisionedDatasourcesByUIDWithoutDatasourceVariables(t *testing.T) {
 	root := t.TempDir()
+	require.NoError(t, generate(root, []service.Service{ordersService, storefrontService}))
 
-	require.NoError(t, generate(root, []service.Service{ordersService}))
+	files, err := filepath.Glob(filepath.Join(root, dashboardsDir, "*.json"))
+	require.NoError(t, err)
 
-	board := readDashboard(t, root, "orders.json")
+	allowed := provisioned(t)
+	used := map[string]bool{}
 
-	uids := map[string]bool{}
-	collectDatasourceUIDs(board, uids)
+	for _, file := range files {
+		board := readDashboard(t, root, filepath.Base(file))
 
-	assert.Equal(t, map[string]bool{
-		"-- Grafana --": true, "${prometheus_datasource}": true, "${loki_datasource}": true,
-	}, uids)
+		refs := map[string]bool{}
+		collectDatasources(board, refs)
 
-	var variables []string
+		for ref := range refs {
+			assert.True(t, allowed[ref], "%s references %q, which is not provisioned", filepath.Base(file), ref)
+			used[ref] = true
+		}
 
-	for _, v := range board["templating"].(map[string]any)["list"].([]any) {
-		variable := v.(map[string]any)
-		if variable["type"] == "datasource" {
-			variables = append(variables, variable["name"].(string)+"="+variable["query"].(string))
+		for _, v := range readBoard(t, root, filepath.Base(file)).Templating.List {
+			assert.NotEqual(t, "datasource", v.Type, filepath.Base(file)+" "+v.Name)
 		}
 	}
 
-	assert.Equal(t, []string{
-		"tempo_datasource=tempo", "prometheus_datasource=prometheus", "loki_datasource=loki",
-	}, variables)
+	assert.Equal(t, map[string]bool{
+		"grafana/-- Grafana --": true, "prometheus/prometheus": true, "loki/loki": true, "tempo/tempo": true,
+	}, used)
 }
 
 func TestGenerate_RemovesStaleDashboardsAndKeepsTheProvider(t *testing.T) {
@@ -175,4 +202,54 @@ func describe(err error) string {
 	}
 
 	return strings.Join(append([]string{err.Error()}, errors.Reasons(err)...), ": ")
+}
+
+func collectPromQL(node any, out *[]string) {
+	switch v := node.(type) {
+	case map[string]any:
+		if expr, ok := v["expr"].(string); ok {
+			if ds, ok := v["datasource"].(map[string]any); ok && ds["type"] == "prometheus" {
+				*out = append(*out, expr)
+			}
+		}
+
+		for _, child := range v {
+			collectPromQL(child, out)
+		}
+	case []any:
+		for _, child := range v {
+			collectPromQL(child, out)
+		}
+	}
+}
+
+var (
+	rateCall  = regexp.MustCompile(`\bi?rate\(`)
+	rateRange = regexp.MustCompile(`\bi?rate\([a-zA-Z_:][\w:]*(?:\{(?:[^"}]|"(?:[^"\\]|\\.)*")*\})?\[([^\]]+)\]`)
+)
+
+// Stands in for dashboard-linter's target-rate-interval-rule, which only runs on a dashboard with a Prometheus
+// datasource variable.
+func TestGenerate_RatesEveryDashboardQueryOverTheRateInterval(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, generate(root, []service.Service{ordersService, storefrontService}))
+
+	files, err := filepath.Glob(filepath.Join(root, dashboardsDir, "*.json"))
+	require.NoError(t, err)
+
+	var exprs []string
+	for _, file := range files {
+		collectPromQL(readDashboard(t, root, filepath.Base(file)), &exprs)
+	}
+
+	require.NotEmpty(t, exprs)
+
+	for _, expr := range exprs {
+		ranges := rateRange.FindAllStringSubmatch(expr, -1)
+		assert.Len(t, ranges, len(rateCall.FindAllString(expr, -1)), "a rate() without a plain range selector: %s", expr)
+
+		for _, r := range ranges {
+			assert.Equal(t, "$__rate_interval", r[1], expr)
+		}
+	}
 }

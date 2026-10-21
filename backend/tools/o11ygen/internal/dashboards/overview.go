@@ -28,7 +28,6 @@ func overviewDashboard() *dashboard.DashboardBuilder {
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(tempoDS), datasourceVariable(prometheusDS)}).
 		Annotations(grafanaAnnotations()).
 		Links([]cog.Builder[dashboard.DashboardLink]{
 			dashboard.NewDashboardLinkBuilder("Dashboards").

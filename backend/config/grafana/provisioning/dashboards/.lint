@@ -3,3 +3,7 @@ exclusions:
   template-instance-rule:
   target-job-rule:
   target-instance-rule:
+  template-datasource-rule:
+    reason: Grafana provisions exactly one datasource per signal under a fixed UID, so dashboards reference it directly instead of offering a picker; o11ygen tests check every reference against datasources.yaml.
+  panel-datasource-rule:
+    reason: Same as template-datasource-rule.

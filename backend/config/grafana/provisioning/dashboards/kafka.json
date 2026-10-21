@@ -87,7 +87,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max(kafka_brokers)",
           "legendFormat": "",
@@ -99,7 +99,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 9,
@@ -166,7 +166,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{topic}}",
@@ -178,7 +178,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -233,7 +233,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"$group\", topic=~\"$topic\"})",
           "legendFormat": "{{consumergroup}} {{topic}}",
@@ -245,7 +245,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -287,7 +287,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "ok {{messaging_consumer_group_name}}",
@@ -296,7 +296,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -308,7 +308,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -350,7 +350,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P50 {{messaging_consumer_group_name}}",
@@ -362,7 +362,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -404,7 +404,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.9, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P90 {{messaging_consumer_group_name}}",
@@ -416,7 +416,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -458,7 +458,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P99 {{messaging_consumer_group_name}}",
@@ -470,7 +470,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -512,7 +512,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_process_duration_seconds_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -524,7 +524,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -566,7 +566,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (consumergroup, topic) (kafka_consumergroup_current_offset{consumergroup=~\"$group\", topic=~\"$topic\"})",
           "legendFormat": "confirmado {{consumergroup}}",
@@ -575,7 +575,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\"$topic\"})",
           "legendFormat": "high-water {{topic}}",
@@ -587,7 +587,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -642,7 +642,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}) or vector(0)",
           "refId": "A"
@@ -653,7 +653,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
@@ -707,7 +707,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum(increase(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)",
           "refId": "A"
@@ -718,7 +718,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
@@ -772,7 +772,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (increase(messaging_dlq_sent_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -784,7 +784,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -830,7 +830,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"})",
           "legendFormat": "{{topic}}",
@@ -842,7 +842,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -881,19 +881,6 @@
   "templating": {
     "list": [
       {
-        "type": "datasource",
-        "name": "prometheus_datasource",
-        "label": "Prometheus data source",
-        "skipUrlSync": false,
-        "query": "prometheus",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
         "type": "query",
         "name": "topic",
         "label": "Tópico",
@@ -904,7 +891,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "prometheus"
         },
         "current": {
           "selected": true,
@@ -934,7 +921,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "prometheus"
         },
         "current": {
           "selected": true,

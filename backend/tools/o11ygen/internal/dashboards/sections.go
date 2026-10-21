@@ -469,13 +469,13 @@ func drilldownLinks(svc *service.Service) []cog.Builder[dashboard.DashboardLink]
 
 	out := make([]cog.Builder[dashboard.DashboardLink], 0, 1+2*len(names))
 	out = append(out, link("Traces", "Traces de "+svc.Name+" no Traces Drilldown",
-		"/a/grafana-exploretraces-app/explore?var-ds=${"+tempoDS.variable()+"}"+
+		"/a/grafana-exploretraces-app/explore?var-ds="+tempoDS.uid+""+
 			"&var-filters="+filter("resource.service.name", "=~", strings.Join(names, "__gfp__"))+
 			"&var-groupBy=resource.service.name"))
 
 	for _, name := range names {
 		out = append(out, link("Logs "+name, "Logs de "+name+" no Logs Drilldown",
-			"/a/grafana-lokiexplore-app/explore/service_name/"+url.PathEscape(name)+"/logs?var-ds=${"+lokiDS.variable()+"}"+
+			"/a/grafana-lokiexplore-app/explore/service_name/"+url.PathEscape(name)+"/logs?var-ds="+lokiDS.uid+""+
 				"&var-filters="+filter("service_name", "=", name)))
 	}
 
@@ -525,12 +525,11 @@ func slowTracesLink(processes []service.Process) cog.Builder[dashboard.Dashboard
 		` && span.http.response.status_code=${__field.labels.http_response_status_code}` +
 		` && duration > ` + slow.String() + `}`
 
-	tempo := "${" + tempoDS.variable() + "}"
 	panes := map[string]any{"slow": map[string]any{
-		"datasource": tempo,
+		"datasource": tempoDS.uid,
 		"queries": []map[string]any{{
 			"refId":      "A",
-			"datasource": map[string]string{"type": string(tempoDS), "uid": tempo},
+			"datasource": map[string]string{"type": tempoDS.kind, "uid": tempoDS.uid},
 			"queryType":  "traceql",
 			"query":      traceQL,
 		}},

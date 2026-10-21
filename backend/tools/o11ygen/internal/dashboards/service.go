@@ -68,10 +68,7 @@ func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.Dashbo
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{
-			datasourceVariable(tempoDS), datasourceVariable(prometheusDS), datasourceVariable(lokiDS),
-			processVariableOf(svc),
-		}).
+		Variables([]cog.Builder[dashboard.VariableModel]{processVariableOf(svc)}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
 			Datasource(common.DataSourceRef{Type: cog.ToPtr("grafana"), Uid: cog.ToPtr("-- Grafana --")}).

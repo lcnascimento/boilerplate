@@ -32,7 +32,6 @@ func postgresDashboard() *dashboard.DashboardBuilder {
 		Refresh("30s").
 		Time("now-1h", "now").
 		Variables([]cog.Builder[dashboard.VariableModel]{
-			datasourceVariable(prometheusDS),
 			labelVariable("database", "Database", catalog.PgDatabaseSizeBytes, "datname", ".+").
 				Regex("/^(?!template[01]$).*/"),
 			labelVariable("job", "Job (cardinalidade)", catalog.JobSeriesCount, "job", ".*"),

@@ -44,10 +44,10 @@ type jsonDashboard struct {
 
 var (
 	languages = map[string]artifact.Language{
-		string(prometheusDS): artifact.PromQL,
-		string(lokiDS):       artifact.LogQL,
+		prometheusDS.kind: artifact.PromQL,
+		lokiDS.kind:       artifact.LogQL,
 	}
-	withoutCatalogLanguage = map[string]bool{string(tempoDS): true, "grafana": true}
+	withoutCatalogLanguage = map[string]bool{tempoDS.kind: true, "grafana": true}
 
 	labelValues = regexp.MustCompile(`^label_values\((?:(.+),\s*)?(\w+)\)$`)
 )
