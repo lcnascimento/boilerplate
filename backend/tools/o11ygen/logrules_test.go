@@ -134,7 +134,6 @@ func TestGenerate_AlertsOnACriticalLogOfEveryLongRunningProcess(t *testing.T) {
 
 var paymentDeclined = service.LogAlert{
 	Name:            "PaymentDeclinedSpike",
-	Process:         "orders-api",
 	Pipeline:        `|= "payment declined" | detected_level="warn"`,
 	MaxRecordsPer5m: 10,
 	Severity:        service.Warning,
@@ -143,14 +142,18 @@ var paymentDeclined = service.LogAlert{
 }
 
 func ordersWith(alerts ...service.LogAlert) []service.Service {
+	api := service.Daemon("orders-api", service.API)
+	for _, alert := range alerts {
+		api = api.WithLogAlert(&alert)
+	}
+
 	return []service.Service{{
 		Name: "orders",
 		Processes: []service.Process{
-			service.Daemon("orders-api", service.API),
+			api,
 			service.Daemon("orders-worker", service.Worker),
 			service.OneShot("orders-migrate"),
 		},
-		LogAlerts: alerts,
 	}}
 }
 
@@ -205,42 +208,44 @@ func TestGenerate_RejectsAnInvalidLogAlert(t *testing.T) {
 	}
 
 	cases := map[string]struct {
-		alerts []service.LogAlert
-		err    string
+		declared []service.Service
+		err      string
 	}{
 		"on a one-shot process": {
-			alerts: []service.LogAlert{with(func(a *service.LogAlert) { a.Process = "orders-migrate" })},
-			err:    `log alert PaymentDeclinedSpike names "orders-migrate", not a long-running process of service "orders"`,
-		},
-		"on a process of another service": {
-			alerts: []service.LogAlert{with(func(a *service.LogAlert) { a.Process = "billing-api" })},
-			err:    `log alert PaymentDeclinedSpike names "billing-api", not a long-running process of service "orders"`,
+			declared: []service.Service{{
+				Name: "orders",
+				Processes: []service.Process{
+					service.Daemon("orders-api", service.API),
+					service.OneShot("orders-migrate").WithLogAlert(&paymentDeclined),
+				},
+			}},
+			err: `one-shot process "orders-migrate" cannot declare log alert PaymentDeclinedSpike`,
 		},
 		"declared twice": {
-			alerts: []service.LogAlert{paymentDeclined, paymentDeclined},
-			err:    `service "orders" declares log alert PaymentDeclinedSpike twice`,
+			declared: ordersWith(paymentDeclined, paymentDeclined),
+			err:      `service "orders" declares log alert PaymentDeclinedSpike twice`,
 		},
 		"without a pipeline": {
-			alerts: []service.LogAlert{with(func(a *service.LogAlert) { a.Pipeline = "" })},
-			err:    `service "orders" has a log alert with no name or pipeline`,
+			declared: ordersWith(with(func(a *service.LogAlert) { a.Pipeline = "" })),
+			err:      `service "orders" has a log alert with no name or pipeline`,
 		},
 		"with a negative threshold": {
-			alerts: []service.LogAlert{with(func(a *service.LogAlert) { a.MaxRecordsPer5m = -1 })},
-			err:    `log alert PaymentDeclinedSpike has a negative threshold`,
+			declared: ordersWith(with(func(a *service.LogAlert) { a.MaxRecordsPer5m = -1 })),
+			err:      `log alert PaymentDeclinedSpike has a negative threshold`,
 		},
 		"with a pipeline that is not LogQL": {
-			alerts: []service.LogAlert{with(func(a *service.LogAlert) { a.Pipeline = `|= payment` })},
-			err:    `log alert PaymentDeclinedSpike of orders-api`,
+			declared: ordersWith(with(func(a *service.LogAlert) { a.Pipeline = `|= payment` })),
+			err:      `log alert PaymentDeclinedSpike of orders-api`,
 		},
 		"with an unknown severity": {
-			alerts: []service.LogAlert{with(func(a *service.LogAlert) { a.Severity = "page" })},
-			err:    `alert PaymentDeclinedSpike has severity "page", not critical or warning`,
+			declared: ordersWith(with(func(a *service.LogAlert) { a.Severity = "page" })),
+			err:      `alert PaymentDeclinedSpike has severity "page", not critical or warning`,
 		},
 	}
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := generate(t.TempDir(), ordersWith(tc.alerts...))
+			err := generate(t.TempDir(), tc.declared)
 
 			require.Error(t, err)
 			assert.Contains(t, describe(err), tc.err)

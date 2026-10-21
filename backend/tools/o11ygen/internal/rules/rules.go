@@ -92,10 +92,8 @@ func processGroups(svc *service.Service) []group {
 			}
 		}
 
-		for i := range svc.LogAlerts {
-			if svc.LogAlerts[i].Process == p.Name() {
-				g.alerts = append(g.alerts, logAlert(svc.Name, &svc.LogAlerts[i]))
-			}
+		for _, declared := range p.LogAlerts() {
+			g.alerts = append(g.alerts, logAlert(&p, &declared))
 		}
 
 		if len(g.alerts) > 0 {

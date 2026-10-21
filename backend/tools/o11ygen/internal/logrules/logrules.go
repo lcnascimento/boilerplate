@@ -112,17 +112,17 @@ func serviceGroup(svc *service.Service) (ruleGroup, error) {
 
 	rules := []recordingRule{records, critical}
 
-	for i := range svc.LogAlerts {
-		alert := &svc.LogAlerts[i]
+	for _, process := range svc.Processes {
+		for _, alert := range process.LogAlerts() {
+			rule, err := recording(catalog.ServiceLogAlertRecords,
+				"sum by (service) (rate("+streams(process.Name())+" "+alert.Pipeline+" | label_format service=service_name [1m]))",
+				map[string]string{"log_alert": alert.Name})
+			if err != nil {
+				return ruleGroup{}, errors.New("log alert %s of %s", alert.Name, process.Name()).WithCause(err)
+			}
 
-		rule, err := recording(catalog.ServiceLogAlertRecords,
-			"sum by (service) (rate("+streams(alert.Process)+" "+alert.Pipeline+" | label_format service=service_name [1m]))",
-			map[string]string{"log_alert": alert.Name})
-		if err != nil {
-			return ruleGroup{}, errors.New("log alert %s of %s", alert.Name, alert.Process).WithCause(err)
+			rules = append(rules, rule)
 		}
-
-		rules = append(rules, rule)
 	}
 
 	return ruleGroup{Name: svc.Name, Rules: rules}, nil

@@ -190,16 +190,16 @@ func recordsIn5m(series, process string, extra map[string]string) string {
 	return fmt.Sprintf("sum_over_time(%s{%s}[5m])", series, matchers)
 }
 
-func logAlert(svc string, declared *service.LogAlert) alert {
+func logAlert(p *process, declared *service.LogAlert) alert {
 	return alert{
 		name: declared.Name,
-		expr: fmt.Sprintf("%s * 60 > %d", recordsIn5m(catalog.ServiceLogAlertRecords, declared.Process,
+		expr: fmt.Sprintf("%s * 60 > %d", recordsIn5m(catalog.ServiceLogAlertRecords, p.Name(),
 			map[string]string{"log_alert": declared.Name}), declared.MaxRecordsPer5m),
 		severity:    severity(declared.Severity),
 		summary:     declared.Summary,
 		description: declared.Description,
-		dashboard:   svc,
-		service:     declared.Process,
+		dashboard:   p.service.Name,
+		service:     p.Name(),
 	}
 }
 
