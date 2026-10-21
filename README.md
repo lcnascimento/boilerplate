@@ -157,9 +157,18 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 
 ### Lint e testes
 
+**Tudo** (na raiz; cobre o que o CI cobre, menos o e2e e a conferência do código gerado):
+
+```sh
+make format   # golangci-lint fmt no backend e prettier no frontend
+make lint     # backend: lint, o11y.lint, proto.lint e proto.breaking; frontend: lint, typecheck e build; vacuum no OpenAPI
+make test     # sobe o Postgres do backend/docker-compose.yml e roda o make test do backend e o do frontend
+```
+
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
 ```sh
+make format           # golangci-lint fmt (gci e gofmt)
 make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
 make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
@@ -220,7 +229,7 @@ O que conferir vem do catálogo e dos arquivos gerados, então uma métrica, um 
 
 Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, contra o mesmo stack.
 
-**OpenAPI** (na raiz):
+**OpenAPI** (na raiz; o `make lint` já roda):
 
 ```sh
 docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details openapi/*.yaml

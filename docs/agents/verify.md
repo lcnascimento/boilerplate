@@ -2,19 +2,12 @@
 
 ## Static
 
-- `make -C frontend format` (commit what it changes)
-- `make -C backend lint`
-- `make -C backend o11y.lint`
-- `make -C backend proto.lint`
-- `make -C frontend lint`
-- `make -C frontend typecheck`
-- `docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details --no-banner --no-style --no-update-check openapi/*.yaml`
+- `make format` (commit what it changes)
+- `make lint`
 
 ## Tests
 
-- `docker compose -f backend/docker-compose.yml up -d --wait postgres`
-- `make -C backend test`
-- `make -C frontend test`
+- `make test`
 
 ## Runtime
 

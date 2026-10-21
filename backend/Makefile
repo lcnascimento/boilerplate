@@ -127,6 +127,10 @@ lint:
 lint.fix:
 	$(call in_modules,lint.fix,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint run --fix --timeout 10m ./...; fi)
 
+.PHONY: format
+format:
+	$(call in_modules,format,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint fmt ./...; fi)
+
 .PHONY: lint.cache.clean
 lint.cache.clean:
 	@$(GOBIN)/golangci-lint cache clean
