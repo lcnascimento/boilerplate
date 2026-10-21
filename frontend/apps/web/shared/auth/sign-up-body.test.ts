@@ -31,7 +31,10 @@ describe("signUpOrganizationName", () => {
     });
   });
 
-  it("owes no Organization for a User created outside any endpoint, like the seed's", () => {
-    expect(signUpOrganizationName(null)).toBeNull();
-  });
+  it.each([null, undefined])(
+    "owes no Organization for a User created outside any endpoint (%s), like the seed's",
+    (endpoint) => {
+      expect(signUpOrganizationName(endpoint)).toBeNull();
+    }
+  );
 });
