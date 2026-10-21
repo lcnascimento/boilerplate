@@ -78,6 +78,8 @@ if not minimal:
         links=[link('http://localhost:3010', 'UI')],
     )
 
+include('./services/iam/Tiltfile')
+
 # example:begin
 include('./services/notes/Tiltfile')
 include('./services/audit/Tiltfile')

@@ -10,6 +10,10 @@ var services = []service.Service{
 		Runtime:   service.Node,
 		Processes: []service.Process{service.Daemon("web", service.API, service.Browser)},
 	},
+	{
+		Name:      "iam",
+		Processes: []service.Process{service.OneShot("iam-migrate")},
+	},
 	// example:begin
 	{
 		Name: "notes",
