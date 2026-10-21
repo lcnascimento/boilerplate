@@ -66,6 +66,9 @@ func (c *Consumer) OnAny(ctx context.Context, event *events.Event) error {
 		KafkaTopic:      event.Topic,
 		KafkaPartition:  event.Partition,
 		KafkaOffset:     event.Offset,
+
+		ActorID:             event.ActorID,
+		ActorOrganizationID: event.ActorOrganizationID,
 	})
 }
 

@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package boilerplate.notes.v1;
+
+
+message NoteDeleted {
+  string id = 1;
+}
