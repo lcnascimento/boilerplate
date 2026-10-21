@@ -71,16 +71,9 @@ func (p *process) healthChecks() (names, downAlerts []string) {
 }
 
 func (p *process) unauthenticatedRatio() string {
-	series, selector, unauthenticated := catalog.HTTPServerRequestTotal,
-		"job="+strconv.Quote(config.Namespace+"/"+p.Name())+", http_route!~"+strconv.Quote(slo.ProbeRoutes),
-		`http_response_status_code="401"`
-	if p.service.Runtime == service.Node {
-		series, selector, unauthenticated = catalog.TracesSpanMetricsCalls,
-			"service="+strconv.Quote(p.Name())+`, span_kind="SPAN_KIND_SERVER"`, `http_status_code="401"`
-	}
+	q := slo.Unauthenticated(p.service.Runtime, []service.Process{p.Process})
 
-	return fmt.Sprintf("sum(rate(%s{%s, %s}[5m])) / sum(rate(%s{%s}[5m]))",
-		series, selector, unauthenticated, series, selector)
+	return fmt.Sprintf("sum(rate(%s{%s, %s}[5m])) / sum(rate(%s{%s}[5m]))", q.Series, q.Selector, q.Matcher, q.Series, q.Selector)
 }
 
 func enumerated(items []string) string {

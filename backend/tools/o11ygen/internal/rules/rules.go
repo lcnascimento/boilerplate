@@ -34,7 +34,6 @@ var fixture = service.Service{
 	},
 }
 
-// nodeFixture has a file of its own, so its alerts stay out of the tests written against fixture.
 var nodeFixture = service.Service{
 	Name:      "fixture-node",
 	Runtime:   service.Node,

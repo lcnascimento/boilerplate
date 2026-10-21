@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lcnascimento/go-kit/errors"
+
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
@@ -44,7 +46,7 @@ func TestGenerate_ActorAuthAddsTheAuthenticationRowAfterTheComponentsOfAGoServic
 
 	assert.Equal(t, []string{"SLOs e alertas", "api", "worker", authSection, "Runtime", "Banco", "Logs"}, rowTitles(&payments))
 
-	requests := `http_server_request_total{job=~"boilerplate/(payments-api)", http_route!~"/ping|/health"`
+	requests := `http_server_request_total{job="boilerplate/payments-api", http_route!~"/ping|/health"`
 	assert.Equal(t, map[string][]string{
 		"401 por motivo": {
 			`sum by (reason) (rate(iam_actor_authentication_failures_total{job=~"boilerplate/(payments-api)"}[$__rate_interval])) => {{reason}}`,
@@ -67,7 +69,7 @@ func TestGenerate_ActorAuthShowsTheLoginFailuresAndThe401RateOfANodeService(t *t
 
 	assert.Equal(t, []string{"Alertas", "api", "browser", authSection, "Runtime", "Logs"}, rowTitles(&shop))
 
-	calls := `traces_spanmetrics_calls_total{service=~"shop", span_kind="SPAN_KIND_SERVER"`
+	calls := `traces_spanmetrics_calls_total{service="shop", span_kind="SPAN_KIND_SERVER"`
 	assert.Equal(t, map[string][]string{
 		"Falhas de login por motivo": {
 			`sum by (reason) (rate(iam_login_failures_total{job=~"boilerplate/(shop)"}[$__rate_interval])) => {{reason}}`,
@@ -120,6 +122,7 @@ func TestGenerate_RejectsActorAuthOnAProcessWithoutAnAPI(t *testing.T) {
 	} {
 		err := generate(t.TempDir(), []service.Service{{Name: "payments", Processes: []service.Process{process}}})
 
-		require.ErrorContains(t, err, `process "`+process.Name()+`" declares actor auth but serves no api`)
+		require.ErrorIs(t, err, service.ErrActorAuthWithoutAPI)
+		require.Equal(t, process.Name(), errors.Attributes(err)["process"])
 	}
 }

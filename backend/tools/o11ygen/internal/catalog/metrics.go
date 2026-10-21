@@ -278,7 +278,6 @@ var metrics = map[string]Metric{
 	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
 	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
 
-	// The processes seed every label set at zero on start, so these exist before the first failure.
 	IAMActorAuthenticationFailures: {
 		Type: Counter, Source: OTLP, Labels: []string{"reason"}, EmittedBy: on(service.Go, actorAuth),
 	},

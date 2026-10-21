@@ -23,17 +23,19 @@ func load() (matrix, error) {
 	return m, nil
 }
 
+var betterAuthDefaultsByRole = map[roles.Role]string{
+	roles.Owner:  "ownerAc",
+	roles.Admin:  "adminAc",
+	roles.Viewer: "",
+}
+
 func betterAuthDefaults(r roles.Role) (string, error) {
-	switch r {
-	case roles.Owner:
-		return "ownerAc", nil
-	case roles.Admin:
-		return "adminAc", nil
-	case roles.Viewer:
-		return "", nil
+	defaults, ok := betterAuthDefaultsByRole[r]
+	if !ok {
+		return "", ErrUnmappedRole.WithAttribute("role", r.String())
 	}
 
-	return "", ErrUnmappedRole.WithCause(errors.New("%s", r))
+	return defaults, nil
 }
 
 func convert(permissions []roles.Permission) []permission {

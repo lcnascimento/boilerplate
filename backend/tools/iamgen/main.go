@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/lcnascimento/go-kit/errors"
@@ -26,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	if err := generate(*out); err != nil {
-		fmt.Fprintln(os.Stderr, "iamgen:", strings.Join(append([]string{err.Error()}, errors.Reasons(err)...), ": "))
+		fmt.Fprintln(os.Stderr, "iamgen:", errorReport(err))
 		os.Exit(1)
 	}
 }
@@ -50,4 +52,15 @@ func generate(out string) error {
 	}
 
 	return nil
+}
+
+func errorReport(err error) string {
+	parts := append([]string{err.Error()}, errors.Reasons(err)...)
+
+	attributes := errors.Attributes(err)
+	for _, key := range slices.Sorted(maps.Keys(attributes)) {
+		parts = append(parts, key+"="+attributes[key])
+	}
+
+	return strings.Join(parts, ": ")
 }

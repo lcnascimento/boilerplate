@@ -16,6 +16,8 @@ const (
 	Browser  Component = "browser"
 )
 
+var ErrActorAuthWithoutAPI = errors.New("process declares actor auth but serves no api")
+
 var components = []Component{API, Consumer, Worker, Browser}
 
 type Runtime int
@@ -92,8 +94,6 @@ func (p Process) WithDBPool() Process {
 
 func (p Process) DBPool() bool { return p.opts().dbPool }
 
-// WithActorAuth declares that the process authenticates its requests: Go with the iam actor middleware, Node with
-// Better Auth.
 func (p Process) WithActorAuth() Process {
 	return p.with(func(o *processOptions) { o.actorAuth = true })
 }
@@ -262,7 +262,7 @@ func validateProcess(svc string, process Process, seen map[string]bool) error {
 	}
 
 	if process.ActorAuth() && !process.Runs(API) {
-		return errors.New("process %q declares actor auth but serves no api", process.name)
+		return ErrActorAuthWithoutAPI.WithAttribute("process", process.name)
 	}
 
 	if process.DBPool() && !process.LongRunning() {

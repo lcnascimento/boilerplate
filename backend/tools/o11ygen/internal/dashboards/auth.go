@@ -1,9 +1,6 @@
 package dashboards
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
@@ -27,12 +24,13 @@ func authSection(svc *service.Service) (section, bool) {
 	return runtimeDashboards[svc.Runtime].auth(authenticated), true
 }
 
-func ratio(series, selector, matcher string) string {
+func unauthenticatedRatio(runtime service.Runtime, processes []service.Process) string {
+	q := slo.Unauthenticated(runtime, processes)
 	sum := func(matchers string) string {
-		return "sum (rate(" + series + "{" + matchers + "}" + rate + "))"
+		return "sum (rate(" + q.Series + "{" + matchers + "}" + rate + "))"
 	}
 
-	return "(" + sum(selector+", "+matcher) + " or vector(0)) / " + sum(selector)
+	return "(" + sum(q.Selector+", "+q.Matcher) + " or vector(0)) / " + sum(q.Selector)
 }
 
 func countedBy(series string, processes []service.Process, labels ...string) query {
@@ -45,8 +43,6 @@ func countedBy(series string, processes []service.Process, labels ...string) que
 }
 
 func goAuthSection(processes []service.Process) section {
-	requests := job(processes) + `, http_route!~` + strconv.Quote(slo.ProbeRoutes)
-
 	return section{title: authSectionTitle, panels: []panel{
 		&graph{
 			title:       "401 por motivo",
@@ -61,7 +57,7 @@ func goAuthSection(processes []service.Process) section {
 			unit:        "percentunit",
 			width:       thirdWidth,
 			queries: []query{{
-				expr: ratio(catalog.HTTPServerRequestTotal, requests, `http_response_status_code="401"`),
+				expr: unauthenticatedRatio(service.Go, processes),
 			}},
 		},
 		&graph{
@@ -75,8 +71,6 @@ func goAuthSection(processes []service.Process) section {
 }
 
 func nodeAuthSection(processes []service.Process) section {
-	server := `service=~` + strconv.Quote(strings.Join(processNames(processes), "|")) + `, span_kind="SPAN_KIND_SERVER"`
-
 	return section{title: authSectionTitle, panels: []panel{
 		&graph{
 			title:       "Falhas de login por motivo",
@@ -91,7 +85,7 @@ func nodeAuthSection(processes []service.Process) section {
 			unit:        "percentunit",
 			width:       halfWidth,
 			queries: []query{{
-				expr: ratio(catalog.TracesSpanMetricsCalls, server, `http_status_code="401"`),
+				expr: unauthenticatedRatio(service.Node, processes),
 			}},
 		},
 	}}
