@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
+import "./e2e/server-only";
 import { storageStateOf } from "./e2e/auth-state";
 import { WEB_URL } from "./e2e/stack";
 import { ACME_OWNER } from "./scripts/iam-seed/users";
