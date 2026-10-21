@@ -277,7 +277,7 @@ func TestHandler_AnswersEachRoleOnEachRouteAsTheMatrixSays(t *testing.T) {
 // storedNote is a repository holding one note, so every route that reaches it succeeds.
 type storedNote struct{ note *domain.Note }
 
-func (storedNote) Create(context.Context, *domain.Note) error { return nil }
+func (storedNote) Create(context.Context, *actor.Actor, *domain.Note) error { return nil }
 
 func (r storedNote) Get(context.Context, iamdomain.OrganizationID, domain.NoteID) (*domain.Note, error) {
 	return r.note, nil
@@ -287,7 +287,7 @@ func (r storedNote) List(context.Context, iamdomain.OrganizationID) ([]*domain.N
 	return []*domain.Note{r.note}, nil
 }
 
-func (storedNote) Delete(context.Context, iamdomain.OrganizationID, domain.NoteID) error { return nil }
+func (storedNote) Delete(context.Context, *actor.Actor, domain.NoteID) error { return nil }
 
 func withActor(a *actor.Actor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

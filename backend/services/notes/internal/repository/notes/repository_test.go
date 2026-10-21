@@ -12,6 +12,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -21,6 +23,9 @@ import (
 var (
 	acme   = iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
 	globex = iamdomain.MustParseOrganizationID("org_4d7a1c3e-5b6f-4a8b-9c0d-1e2f3a4b5c6d")
+
+	acmeOwner   = actortest.Owner(acme)
+	globexOwner = actortest.Owner(globex)
 )
 
 func TestComponentRepository_StartsEmpty(t *testing.T) {
@@ -41,7 +46,7 @@ func TestComponentRepository_CreateThenGet(t *testing.T) {
 	repo := newRepository(t)
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, note))
 
 	got, err := repo.Get(t.Context(), note.OrganizationID, note.ID)
 
@@ -69,7 +74,7 @@ func TestComponentRepository_ListReturnsNewestFirst(t *testing.T) {
 	middle := newNote("middle", base.Add(time.Hour))
 
 	for _, note := range []*domain.Note{oldest, newest, middle} {
-		require.NoError(t, repo.Create(t.Context(), note))
+		require.NoError(t, repo.Create(t.Context(), acmeOwner, note))
 	}
 
 	got, err := repo.List(t.Context(), acme)
@@ -86,8 +91,8 @@ func TestComponentRepository_ListBreaksTimestampTiesByID(t *testing.T) {
 	first := newNote("first", at)
 	second := newNote("second", at)
 
-	require.NoError(t, repo.Create(t.Context(), first))
-	require.NoError(t, repo.Create(t.Context(), second))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, first))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, second))
 
 	got, err := repo.List(t.Context(), acme)
 
@@ -100,9 +105,9 @@ func TestComponentRepository_DeleteRemovesNote(t *testing.T) {
 
 	repo := newRepository(t)
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, note))
 
-	require.NoError(t, repo.Delete(t.Context(), note.OrganizationID, note.ID))
+	require.NoError(t, repo.Delete(t.Context(), acmeOwner, note.ID))
 
 	_, err := repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
@@ -113,7 +118,7 @@ func TestComponentRepository_DeleteUnknownIDReturnsNotFound(t *testing.T) {
 
 	repo := newRepository(t)
 
-	err := repo.Delete(t.Context(), acme, domain.NewNoteID())
+	err := repo.Delete(t.Context(), acmeOwner, domain.NewNoteID())
 
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
@@ -123,8 +128,8 @@ func TestComponentRepository_ListReturnsOnlyTheOrganizationsNotes(t *testing.T) 
 
 	repo := newRepository(t)
 	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
-	require.NoError(t, repo.Create(t.Context(), newNote("da Acme", at)))
-	require.NoError(t, repo.Create(t.Context(), newGlobexNote(at)))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), globexOwner, newGlobexNote(at)))
 
 	acmeNotes, err := repo.List(t.Context(), acme)
 	require.NoError(t, err)
@@ -141,7 +146,7 @@ func TestComponentRepository_GetFromAnotherOrganizationReturnsNotFound(t *testin
 
 	repo := newRepository(t)
 	note := newGlobexNote(time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), globexOwner, note))
 
 	_, err := repo.Get(t.Context(), acme, note.ID)
 
@@ -153,9 +158,9 @@ func TestComponentRepository_DeleteFromAnotherOrganizationKeepsTheNote(t *testin
 
 	repo := newRepository(t)
 	note := newGlobexNote(time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), globexOwner, note))
 
-	err := repo.Delete(t.Context(), acme, note.ID)
+	err := repo.Delete(t.Context(), acmeOwner, note.ID)
 
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 
@@ -169,8 +174,8 @@ func TestComponentRepository_RowLevelSecurityHidesOtherOrganizationsWithoutWhere
 
 	repo, pool := newRepositoryWithPool(t)
 	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
-	require.NoError(t, repo.Create(t.Context(), newNote("da Acme", at)))
-	require.NoError(t, repo.Create(t.Context(), newGlobexNote(at)))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), globexOwner, newGlobexNote(at)))
 
 	tx, err := pool.Begin(t.Context())
 	require.NoError(t, err)
@@ -193,8 +198,8 @@ func TestComponentRepository_TransactionWithoutOrganizationSeesNoNotes(t *testin
 
 	repo, pool := newRepositoryWithPool(t)
 	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
-	require.NoError(t, repo.Create(t.Context(), newNote("da Acme", at)))
-	require.NoError(t, repo.Create(t.Context(), newGlobexNote(at)))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), globexOwner, newGlobexNote(at)))
 
 	tx, err := pool.Begin(t.Context())
 	require.NoError(t, err)

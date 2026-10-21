@@ -15,4 +15,7 @@ type Entry struct {
 	KafkaTopic      string            `json:"kafka_topic"`
 	KafkaPartition  int32             `json:"kafka_partition"`
 	KafkaOffset     int64             `json:"kafka_offset"`
+
+	ActorID             string `json:"actor_id"`
+	ActorOrganizationID string `json:"actor_organization_id"`
 }

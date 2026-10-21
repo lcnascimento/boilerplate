@@ -59,7 +59,7 @@ func (a *Application) Create(ctx context.Context, caller *actor.Actor, req *mode
 		return nil, a.onError(ctx, err)
 	}
 
-	if err := a.notes.Create(ctx, note); err != nil {
+	if err := a.notes.Create(ctx, caller, note); err != nil {
 		return nil, a.onError(ctx, ErrCreateNote.WithCause(err))
 	}
 
@@ -108,7 +108,7 @@ func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain
 		return a.onError(ctx, err)
 	}
 
-	if err := a.notes.Delete(ctx, caller.OrganizationID, id); err != nil {
+	if err := a.notes.Delete(ctx, caller, id); err != nil {
 		return a.onError(ctx, ErrDeleteNote.WithCause(err))
 	}
 
