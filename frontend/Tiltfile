@@ -9,6 +9,8 @@ local_resource(
 
 MINIMAL_STACK = os.getenv('TILT_STACK', '') == 'minimal'
 
+local('make -s env')
+
 iam_env = {
     'IAM_DATABASE_URL': 'postgres://iam:iam@localhost:5432/iam?sslmode=disable',
     # Dev only: production must use its own secret.
@@ -62,7 +64,7 @@ PLAYWRIGHT_UI_PORT = 9330
 if not MINIMAL_STACK:
     local_resource(
         'web-e2e-ui',
-        serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
+        serve_cmd='pnpm --filter @boilerplate/web test:e2e --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
         resource_deps=[
             'web',
             # example:begin

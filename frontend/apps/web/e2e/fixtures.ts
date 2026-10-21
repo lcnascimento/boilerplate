@@ -5,6 +5,10 @@ import { test as base, expect, type APIRequestContext } from "@playwright/test";
 // example:begin
 import { noteListSchema } from "@boilerplate/api/notes/schemas";
 
+import { ACME_OWNER } from "../scripts/iam-seed/users";
+import { mintActorToken } from "../shared/auth/actor-token";
+import { getIam } from "../shared/auth/auth";
+
 import { NOTES_URL } from "./stack";
 // example:end
 
@@ -18,14 +22,32 @@ interface CleanupArgs {
 type Cleanup = (args: CleanupArgs) => Promise<void>;
 
 // example:begin
+async function acmeOwnerToken(): Promise<string> {
+  const context = await getIam().auth.$context;
+  const owner = await context.internalAdapter.findUserByEmail(ACME_OWNER.email);
+  const acme = await context.adapter.findOne<{ id: string }>({
+    model: "organization",
+    where: [{ field: "slug", value: "acme" }],
+  });
+  if (owner === null || acme === null) {
+    throw new Error(
+      "the iam seed has no Acme owner: run the iam-seed resource"
+    );
+  }
+  return mintActorToken({ userId: owner.user.id, organizationId: acme.id });
+}
+
 async function deleteMarkedNotes({ request, markers }: CleanupArgs) {
-  const list = await request.get(`${NOTES_URL}/notes/v1/notes`);
+  const headers = { Authorization: `Bearer ${await acmeOwnerToken()}` };
+  const list = await request.get(`${NOTES_URL}/notes/v1/notes`, { headers });
   expect(list.status()).toBe(200);
   const notes = noteListSchema.parse(await list.json());
 
   for (const { id, title } of notes) {
     if (!markers.some((marker) => title.includes(marker))) continue;
-    const deleted = await request.delete(`${NOTES_URL}/notes/v1/notes/${id}`);
+    const deleted = await request.delete(`${NOTES_URL}/notes/v1/notes/${id}`, {
+      headers,
+    });
     expect(deleted.status()).toBe(204);
   }
 }
