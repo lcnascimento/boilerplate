@@ -53,6 +53,10 @@ func TestCheck_AcceptsQueriesInsideTheCatalog(t *testing.T) {
 			Expr: `sum by (outcome) (increase(orders_outbox_purge_runs_total{job="boilerplate/orders-worker"}[5m])) ` +
 				`+ on () group_left max(billing_outbox_oldest_pending_age_seconds)`,
 		},
+		"container logs by the container name": {
+			Language: artifact.LogQL,
+			Expr:     `sum by (container_name) (count_over_time({service_name="kafka"} | detected_level="warn" [$__auto]))`,
+		},
 		"labels a label_format introduces": {
 			Language: artifact.LogQL,
 			Expr:     `sum by (service) (count_over_time({service_name=~".+"} | label_format service=service_name [1m]))`,
@@ -110,6 +114,10 @@ func TestCheck_RejectsQueriesOutsideTheCatalog(t *testing.T) {
 		"grouping by a log label outside the catalog": {
 			query: artifact.Query{Language: artifact.LogQL, Expr: `sum by (pod) (count_over_time({service_name=~".+"}[1m]))`},
 			err:   `label "pod" is not a log label in the catalog`,
+		},
+		"the container label Alloy no longer writes": {
+			query: artifact.Query{Language: artifact.LogQL, Expr: `{container="kafka"}`},
+			err:   `label "container" is not a log label in the catalog`,
 		},
 		"parser that extracts unbounded labels": {
 			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="notes-api-frontend"} | json`},

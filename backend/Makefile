@@ -17,6 +17,7 @@ PROMTOOL_VERSION := v3.15.0
 DASHBOARD_LINTER_VERSION := v0.3.0
 PINT_VERSION := v0.89.3
 LOKITOOL_VERSION := v3.7.8
+ALLOY_IMAGE := $(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 export PATH := $(GOBIN):$(PATH)
@@ -163,7 +164,7 @@ o11y.generate:
 	@cd tools && GOWORK=off go run ./o11ygen -root ..
 
 .PHONY: o11y.lint
-o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo
+o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo o11y.lint.alloy
 
 .PHONY: o11y.lint.rules
 o11y.lint.rules:
@@ -197,6 +198,11 @@ o11y.lint.loki:
 	out=$$($(GOBIN)/lokitool rules lint --dry-run $$rules 2>&1) || { echo "$$out"; exit 1; }; \
 	echo "==> lokitool rules check"; \
 	$(GOBIN)/lokitool rules check --strict $$rules
+
+.PHONY: o11y.lint.alloy
+o11y.lint.alloy:
+	@echo "==> alloy validate"
+	@docker run --rm -i --entrypoint sh $(ALLOY_IMAGE) -c 'cat > /tmp/config.alloy && alloy validate /tmp/config.alloy' < config/alloy/config.alloy
 
 .PHONY: o11y.check-live
 o11y.check-live:

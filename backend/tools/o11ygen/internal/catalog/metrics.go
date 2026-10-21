@@ -302,7 +302,7 @@ var sourceLabels = map[Source][]string{
 
 var (
 	targetLabels = []string{"__name__", "job", "instance"}
-	logLabels    = []string{"service_name", "service_namespace", "container", "detected_level", "severity_number"}
+	logLabels    = []string{"service_name", "service_namespace", "container_name", "detected_level", "severity_number"}
 )
 
 func OutboxOldestPendingAge(serviceName string) string {
