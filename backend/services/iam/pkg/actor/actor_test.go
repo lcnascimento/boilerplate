@@ -54,6 +54,18 @@ func TestActor_CannotUseAPermissionNoRoleGrants(t *testing.T) {
 	require.False(t, owner.Can(roles.Permission{}))
 }
 
+func TestActor_AuthorizeAnswersADeniedPermissionAsUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	owner := actor.Actor{Role: roles.Owner}
+
+	err := owner.Authorize(t.Context(), roles.Permission{})
+
+	require.ErrorIs(t, err, errors.ErrRequestUnauthorized)
+	require.Equal(t, errors.KindUnauthorized, errors.Kind(err))
+	require.Equal(t, errors.CodeType("ERR_UNAUTHORIZED"), errors.Code(err))
+}
+
 func TestFromContext_FailsAsAnInternalErrorWithoutAnActor(t *testing.T) {
 	t.Parallel()
 

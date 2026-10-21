@@ -12,6 +12,8 @@ import (
 	"github.com/lcnascimento/go-kit/o11y/baggage"
 	"github.com/lcnascimento/go-kit/o11y/log"
 	"github.com/lcnascimento/go-kit/o11y/metric"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 )
 
 const (
@@ -19,6 +21,8 @@ const (
 	MemberKeyOrganizationID = "organization.id"
 
 	attrFailureReason = "iam.authentication.failure_reason"
+	attrPermission    = "iam.authorization.permission"
+	attrRole          = "iam.authorization.role"
 )
 
 var (
@@ -28,6 +32,8 @@ var (
 
 	authenticationFailures = metric.MustIntCounter(meter,
 		"iam.actor.authentication.failures", "Number of requests the actor middleware rejected, by reason")
+	authorizationDenials = metric.MustIntCounter(meter,
+		"iam.actor.authorization.denials", "Number of actions denied because the actor's role lacks the permission, by permission and role")
 )
 
 func onAuthenticated(ctx context.Context, a *Actor) context.Context {
@@ -41,6 +47,17 @@ func onRejected(ctx context.Context, r reason) {
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrFailureReason, string(r)))
 	authenticationFailures.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("reason", string(r))))
 	logger.Warn(ctx, "request rejected: unauthenticated", log.String(attrFailureReason, string(r)))
+}
+
+func onDenied(ctx context.Context, a *Actor, p roles.Permission) {
+	permission, role := p.String(), a.Role.String()
+
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrPermission, permission), attribute.String(attrRole, role))
+	authorizationDenials.Add(ctx, 1, otelmetric.WithAttributes(
+		attribute.String("permission", permission),
+		attribute.String("role", role),
+	))
+	logger.Warn(ctx, "action denied: unauthorized", log.String(attrPermission, permission), log.String(attrRole, role))
 }
 
 func onJWKSRefreshFailed(ctx context.Context, err error) {
