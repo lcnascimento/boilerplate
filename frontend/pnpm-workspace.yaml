@@ -18,3 +18,11 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - prettier@3.9.10
   - lucide-react@1.55.0
+  - "@better-auth/core@1.7.12"
+  - "@better-auth/drizzle-adapter@1.7.12"
+  - "@better-auth/kysely-adapter@1.7.12"
+  - "@better-auth/memory-adapter@1.7.12"
+  - "@better-auth/mongo-adapter@1.7.12"
+  - "@better-auth/prisma-adapter@1.7.12"
+  - "@better-auth/telemetry@1.7.12"
+  - better-auth@1.7.12
