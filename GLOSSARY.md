@@ -4,10 +4,48 @@ Boilerplate de um sistema de anotações, usado como referência para a arquitet
 
 ## Language
 
+### Access
+
+**User**:
+Uma pessoa que se autentica no sistema por email e senha.
+_Avoid_: Usuário, conta, account
+
+**Organization**:
+O tenant: o espaço ao qual as Notes pertencem e no qual Users atuam como Members.
+_Avoid_: Workspace, tenant, time
+
+**Member**:
+O vínculo de um User com uma Organization, com exatamente uma Role.
+_Avoid_: Membership, participante
+
+**Role**:
+O papel de um Member na sua Organization, que define o que ele pode fazer: Owner, Admin ou Viewer.
+_Avoid_: Perfil, permissão, grupo
+
+**Permission**:
+Uma ação sobre um tipo de recurso que uma Role concede ou não (ex.: apagar Note).
+_Avoid_: Capability, privilégio, ability
+
+**Owner**:
+Role com todos os poderes na Organization, inclusive apagar Notes.
+_Avoid_: Dono, superadmin
+
+**Admin**:
+Role que lê e cria Notes e gere Members, mas não apaga Notes nem promove a Owner.
+_Avoid_: Editor, moderador
+
+**Viewer**:
+Role que só lê Notes.
+_Avoid_: Leitor, read-only, member
+
+**Actor**:
+O User agindo numa Organization, com a Role que tem nela, numa dada requisição.
+_Avoid_: Principal, caller, current user
+
 ### Notes
 
 **Note**:
-Uma anotação com título e corpo, identificada por um id canônico e datada pela sua criação.
+Uma anotação com título e corpo, pertencente a uma Organization, identificada por um id canônico e datada pela sua criação.
 _Avoid_: Memo, post
 
 ### Events
