@@ -384,8 +384,11 @@ components:
             default:
               value:
                 code: ERR_UNAUTHORIZED
-                message: unauthorized request
+                message: failed to delete note
                 retryable: false
+                details:
+                  reasons:
+                    - unauthorized request
     InvalidInput:
       description: >
         Corpo malformado ou entrada inválida, como título ausente, título ou

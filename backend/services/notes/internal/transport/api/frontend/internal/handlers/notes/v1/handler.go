@@ -28,10 +28,8 @@ func (h *Notes) Create(rw http.ResponseWriter, r *http.Request) {
 		_ = r.Body.Close()
 	}()
 
-	a, err := actor.FromContext(r.Context())
-	if err != nil {
-		util.WriteError(r.Context(), rw, err)
-
+	caller, ok := callerOf(rw, r)
+	if !ok {
 		return
 	}
 
@@ -42,7 +40,7 @@ func (h *Notes) Create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.service.Create(r.Context(), a, &req)
+	note, err := h.service.Create(r.Context(), caller, &req)
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
 
@@ -53,14 +51,12 @@ func (h *Notes) Create(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Notes) List(rw http.ResponseWriter, r *http.Request) {
-	a, err := actor.FromContext(r.Context())
-	if err != nil {
-		util.WriteError(r.Context(), rw, err)
-
+	caller, ok := callerOf(rw, r)
+	if !ok {
 		return
 	}
 
-	notes, err := h.service.List(r.Context(), a)
+	notes, err := h.service.List(r.Context(), caller)
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
 
@@ -75,10 +71,8 @@ func (h *Notes) List(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Notes) Get(rw http.ResponseWriter, r *http.Request) {
-	a, err := actor.FromContext(r.Context())
-	if err != nil {
-		util.WriteError(r.Context(), rw, err)
-
+	caller, ok := callerOf(rw, r)
+	if !ok {
 		return
 	}
 
@@ -89,7 +83,7 @@ func (h *Notes) Get(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.service.Get(r.Context(), a, id)
+	note, err := h.service.Get(r.Context(), caller, id)
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
 
@@ -100,10 +94,8 @@ func (h *Notes) Get(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Notes) Delete(rw http.ResponseWriter, r *http.Request) {
-	a, err := actor.FromContext(r.Context())
-	if err != nil {
-		util.WriteError(r.Context(), rw, err)
-
+	caller, ok := callerOf(rw, r)
+	if !ok {
 		return
 	}
 
@@ -114,11 +106,22 @@ func (h *Notes) Delete(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), a, id); err != nil {
+	if err := h.service.Delete(r.Context(), caller, id); err != nil {
 		util.WriteError(r.Context(), rw, err)
 
 		return
 	}
 
 	rw.WriteHeader(http.StatusNoContent)
+}
+
+func callerOf(rw http.ResponseWriter, r *http.Request) (*actor.Actor, bool) {
+	caller, err := actor.FromContext(r.Context())
+	if err != nil {
+		util.WriteError(r.Context(), rw, err)
+
+		return nil, false
+	}
+
+	return caller, true
 }

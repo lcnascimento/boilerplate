@@ -41,7 +41,7 @@ func (a *Application) Create(ctx context.Context, caller *actor.Actor, req *mode
 	defer span.End()
 
 	if err := caller.Authorize(ctx, roles.NoteCreate); err != nil {
-		return nil, a.onError(ctx, err)
+		return nil, a.onError(ctx, ErrCreateNote.WithCause(err))
 	}
 
 	if req == nil {
@@ -73,7 +73,7 @@ func (a *Application) List(ctx context.Context, caller *actor.Actor) ([]*domain.
 	defer span.End()
 
 	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
-		return []*domain.Note{}, a.onError(ctx, err)
+		return []*domain.Note{}, a.onError(ctx, ErrListNotes.WithCause(err))
 	}
 
 	notes, err := a.notes.List(ctx, caller.OrganizationID)
@@ -89,7 +89,7 @@ func (a *Application) Get(ctx context.Context, caller *actor.Actor, id domain.No
 	defer span.End()
 
 	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
-		return nil, a.onError(ctx, err)
+		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
 	}
 
 	note, err := a.notes.Get(ctx, caller.OrganizationID, id)
@@ -105,7 +105,7 @@ func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain
 	defer span.End()
 
 	if err := caller.Authorize(ctx, roles.NoteDelete); err != nil {
-		return a.onError(ctx, err)
+		return a.onError(ctx, ErrDeleteNote.WithCause(err))
 	}
 
 	if err := a.notes.Delete(ctx, caller, id); err != nil {

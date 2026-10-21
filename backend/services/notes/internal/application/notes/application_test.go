@@ -254,6 +254,7 @@ func (s *ApplicationSuite) TestDeniesWhatTheRoleLacksBeforeTheRepositoryEvenForA
 
 	cases := map[string]struct {
 		call       func() error
+		operation  error
 		permission string
 		role       string
 	}{
@@ -263,16 +264,19 @@ func (s *ApplicationSuite) TestDeniesWhatTheRoleLacksBeforeTheRepositoryEvenForA
 
 				return err
 			},
+			operation:  notes.ErrCreateNote,
 			permission: "note:create",
 			role:       "viewer",
 		},
 		"viewer deletes": {
 			call:       func() error { return s.app.Delete(s.T().Context(), viewer, missing) },
+			operation:  notes.ErrDeleteNote,
 			permission: "note:delete",
 			role:       "viewer",
 		},
 		"admin deletes": {
 			call:       func() error { return s.app.Delete(s.T().Context(), admin, missing) },
+			operation:  notes.ErrDeleteNote,
 			permission: "note:delete",
 			role:       "admin",
 		},
@@ -284,6 +288,7 @@ func (s *ApplicationSuite) TestDeniesWhatTheRoleLacksBeforeTheRepositoryEvenForA
 
 			err := tc.call()
 
+			s.Require().ErrorIs(err, tc.operation)
 			s.Require().ErrorIs(err, errors.ErrRequestUnauthorized)
 			s.Require().Equal(errors.KindUnauthorized, errors.Kind(err))
 			s.Require().Equal(before+1, denials(s.T(), tc.permission, tc.role))

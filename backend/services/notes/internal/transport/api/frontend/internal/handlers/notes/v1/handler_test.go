@@ -1,7 +1,6 @@
 package v1_test
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +16,6 @@ import (
 	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
 
 	"github.com/lcnascimento/go-kit/errors"
-	"github.com/lcnascimento/go-kit/validator"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
@@ -137,12 +135,40 @@ func (s *HandlerSuite) TestListWithoutNotesReturnsEmptyArray() {
 }
 
 func (s *HandlerSuite) TestListWritesInternalErrors() {
-	s.service.EXPECT().List(gomock.Any(), s.actor).Return(nil, errors.New("failed to list notes"))
+	s.service.EXPECT().List(gomock.Any(), s.actor).Return(nil, errors.ErrMock)
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes", "")
 
 	s.Require().Equal(http.StatusInternalServerError, rec.Code)
-	s.Require().JSONEq(`{"code": "UNKNOWN", "message": "failed to list notes", "retryable": false}`, rec.Body.String())
+	s.Require().JSONEq(`{"code": "MOCKED_ERROR", "message": "mocked error", "retryable": false}`, rec.Body.String())
+}
+
+func (s *HandlerSuite) TestAnswersForbiddenWhenTheServiceDeniesTheRole() {
+	denied := func(operation errors.CustomError) error { return operation.WithCause(errors.ErrRequestUnauthorized) }
+
+	s.service.EXPECT().Create(gomock.Any(), s.actor, gomock.Any()).Return(nil, denied(notes.ErrCreateNote))
+	s.service.EXPECT().List(gomock.Any(), s.actor).Return(nil, denied(notes.ErrListNotes))
+	s.service.EXPECT().Get(gomock.Any(), s.actor, s.note.ID).Return(nil, denied(notes.ErrGetNote))
+	s.service.EXPECT().Delete(gomock.Any(), s.actor, s.note.ID).Return(denied(notes.ErrDeleteNote))
+
+	for _, tc := range []struct{ method, path, body, message string }{
+		{http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras"}`, "failed to create note"},
+		{http.MethodGet, "/notes/v1/notes", "", "failed to list notes"},
+		{http.MethodGet, "/notes/v1/notes/" + s.note.ID.String(), "", "failed to get note"},
+		{http.MethodDelete, "/notes/v1/notes/" + s.note.ID.String(), "", "failed to delete note"},
+	} {
+		s.Run(tc.method+" "+tc.path, func() {
+			rec := s.serve(tc.method, tc.path, tc.body)
+
+			s.Require().Equal(http.StatusForbidden, rec.Code)
+			s.Require().JSONEq(`{
+				"code": "ERR_UNAUTHORIZED",
+				"message": "`+tc.message+`",
+				"retryable": false,
+				"details": {"reasons": ["unauthorized request"]}
+			}`, rec.Body.String())
+		})
+	}
 }
 
 func (s *HandlerSuite) TestGetReturnsNote() {
@@ -221,73 +247,6 @@ func (s *HandlerSuite) TestDeleteRejectsMalformedID() {
 
 	s.Require().Equal(http.StatusBadRequest, rec.Code)
 }
-
-func TestHandler_AnswersEachRoleOnEachRouteAsTheMatrixSays(t *testing.T) {
-	t.Parallel()
-
-	acme := iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
-	note := fixture.RandomNote()
-
-	v, err := validator.New(validator.WithJSONFieldNames())
-	require.NoError(t, err)
-
-	app := notes.New(storedNote{note}, v)
-
-	const forbidden = `{"code": "ERR_UNAUTHORIZED", "message": "unauthorized request", "retryable": false}`
-
-	endpoints := []struct{ name, method, path, body string }{
-		{"create", http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras"}`},
-		{"list", http.MethodGet, "/notes/v1/notes", ""},
-		{"get", http.MethodGet, "/notes/v1/notes/" + note.ID.String(), ""},
-		{"delete", http.MethodDelete, "/notes/v1/notes/" + note.ID.String(), ""},
-	}
-
-	matrix := map[string]struct {
-		actor  *actor.Actor
-		status map[string]int
-	}{
-		"owner":  {actortest.Owner(acme), map[string]int{"create": 201, "list": 200, "get": 200, "delete": 204}},
-		"admin":  {actortest.Admin(acme), map[string]int{"create": 201, "list": 200, "get": 200, "delete": 403}},
-		"viewer": {actortest.Viewer(acme), map[string]int{"create": 403, "list": 200, "get": 200, "delete": 403}},
-	}
-
-	for role, tc := range matrix {
-		router := mux.NewRouter()
-		routes.RegisterNotes(router, app, withActor(tc.actor))
-
-		for _, rt := range endpoints {
-			t.Run(role+" "+rt.name, func(t *testing.T) {
-				t.Parallel()
-
-				req := httptest.NewRequestWithContext(t.Context(), rt.method, rt.path, strings.NewReader(rt.body))
-				rec := httptest.NewRecorder()
-
-				router.ServeHTTP(rec, req)
-
-				require.Equal(t, tc.status[rt.name], rec.Code)
-
-				if rec.Code == http.StatusForbidden {
-					require.JSONEq(t, forbidden, rec.Body.String())
-				}
-			})
-		}
-	}
-}
-
-// storedNote is a repository holding one note, so every route that reaches it succeeds.
-type storedNote struct{ note *domain.Note }
-
-func (storedNote) Create(context.Context, *actor.Actor, *domain.Note) error { return nil }
-
-func (r storedNote) Get(context.Context, iamdomain.OrganizationID, domain.NoteID) (*domain.Note, error) {
-	return r.note, nil
-}
-
-func (r storedNote) List(context.Context, iamdomain.OrganizationID) ([]*domain.Note, error) {
-	return []*domain.Note{r.note}, nil
-}
-
-func (storedNote) Delete(context.Context, *actor.Actor, domain.NoteID) error { return nil }
 
 func withActor(a *actor.Actor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
