@@ -3,6 +3,7 @@ package domain_test
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
@@ -66,4 +67,20 @@ func TestOrganizationID_ParseRejectsMalformedIDs(t *testing.T) {
 			require.ErrorIs(t, err, domain.ErrInvalidOrganizationID)
 		})
 	}
+}
+
+func TestOrganizationID_FromUUIDAddsTheOrgPrefix(t *testing.T) {
+	t.Parallel()
+
+	id := domain.OrganizationIDFromUUID(uuid.MustParse("3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"))
+
+	require.Equal(t, "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", id.String())
+}
+
+func TestOrganizationID_MustParsePanicsOnMalformedID(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		domain.MustParseOrganizationID("org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d").String())
+	require.Panics(t, func() { domain.MustParseOrganizationID("user_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d") })
 }

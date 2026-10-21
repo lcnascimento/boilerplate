@@ -1,6 +1,10 @@
 package domain
 
-import "github.com/lcnascimento/go-kit/util"
+import (
+	"github.com/google/uuid"
+
+	"github.com/lcnascimento/go-kit/util"
+)
 
 const (
 	userIDPrefix         string = "user"
@@ -31,4 +35,17 @@ func ParseOrganizationID(s string) (OrganizationID, error) {
 	}
 
 	return OrganizationID{id}, nil
+}
+
+func MustParseOrganizationID(s string) OrganizationID {
+	id, err := ParseOrganizationID(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return id
+}
+
+func OrganizationIDFromUUID(u uuid.UUID) OrganizationID {
+	return OrganizationID{util.CanonicalIDFromUUID(organizationIDPrefix, u)}
 }
