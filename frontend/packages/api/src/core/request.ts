@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { unavailableError, unexpectedError } from "./errors";
+import { logger } from "./logger";
 
 import type { Result } from "./result";
 
@@ -52,10 +53,29 @@ export async function request<T>({
     });
     status = response.status;
     text = await response.text();
-  } catch {
+  } catch (err) {
+    logger.error(
+      { err, method, url, code: unavailableError.code },
+      "API request failed"
+    );
     return { kind: "error", error: unavailableError };
   }
 
+  const result = toResult(status, text, schema);
+  if (result.kind === "error" && result.error.status >= 500) {
+    logger.error(
+      { method, url, status, code: result.error.code },
+      "API request failed"
+    );
+  }
+  return result;
+}
+
+function toResult<T>(
+  status: number,
+  text: string,
+  schema: z.ZodType<T>
+): Result<T> {
   const parsedBody = parseBody(text);
   if (parsedBody.kind === "invalid") {
     return { kind: "error", error: unexpectedError };
