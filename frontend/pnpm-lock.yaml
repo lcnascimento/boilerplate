@@ -330,9 +330,6 @@ importers:
 
   packages/api:
     dependencies:
-      pino:
-        specifier: 10.4.0
-        version: 10.4.0
       server-only:
         specifier: 0.0.1
         version: 0.0.1

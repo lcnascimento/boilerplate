@@ -7,7 +7,6 @@ export default defineProject({
     name: "api",
     environment: "node",
     include: ["src/**/*.test.ts"],
-    setupFiles: ["./src/vitest.setup.ts"],
     server: { deps: { inline: ["server-only"] } },
   },
 });
