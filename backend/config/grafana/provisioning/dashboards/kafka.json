@@ -249,7 +249,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 20
       },
@@ -312,8 +312,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 20
       },
       "repeatDirection": "h",
@@ -345,7 +345,7 @@
     },
     {
       "type": "timeseries",
-      "id": 17,
+      "id": 25,
       "targets": [
         {
           "datasource": {
@@ -355,7 +355,106 @@
           "expr": "histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P50 {{messaging_consumer_group_name}}",
           "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p50",
+      "description": "Percentil 50 da duração de uma tentativa de processamento, por consumer group.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
         },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 26,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "expr": "histogram_quantile(0.9, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P90 {{messaging_consumer_group_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p90",
+      "description": "Percentil 90 da duração de uma tentativa de processamento, por consumer group.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 27,
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
@@ -363,11 +462,11 @@
           },
           "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P99 {{messaging_consumer_group_name}}",
-          "refId": "B"
+          "refId": "A"
         }
       ],
-      "title": "Duração do processamento",
-      "description": "Percentis 50 e 99 da duração de uma tentativa de processamento, por consumer group.",
+      "title": "Duração do processamento p99",
+      "description": "Percentil 99 da duração de uma tentativa de processamento, por consumer group.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
@@ -377,7 +476,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 28
       },
       "repeatDirection": "h",
       "options": {
@@ -431,7 +530,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "repeatDirection": "h",
       "options": {
@@ -494,7 +593,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 36
       },
       "repeatDirection": "h",
       "options": {
@@ -531,7 +630,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "id": 20,
       "panels": []
@@ -560,7 +659,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 37
+        "y": 45
       },
       "repeatDirection": "h",
       "options": {
@@ -625,7 +724,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 37
+        "y": 45
       },
       "repeatDirection": "h",
       "options": {
@@ -691,7 +790,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 49
       },
       "repeatDirection": "h",
       "options": {
@@ -749,7 +848,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 49
       },
       "repeatDirection": "h",
       "options": {

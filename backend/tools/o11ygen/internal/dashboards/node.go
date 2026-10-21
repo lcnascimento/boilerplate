@@ -1,6 +1,7 @@
 package dashboards
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -23,7 +24,7 @@ func spanMetricsAPISection(_ *service.Service, processes []service.Process) sect
 
 	route := groupBy("http_status_code", "span_name")
 
-	return section{title: string(service.API), panels: []panel{
+	return section{title: string(service.API), panels: slices.Concat([]panel{
 		&single{
 			title:       "Taxa",
 			description: "Requisições por segundo que o servidor atendeu.",
@@ -59,21 +60,19 @@ func spanMetricsAPISection(_ *service.Service, processes []service.Process) sect
 			width:       halfWidth,
 			queries:     []query{{expr: calls(failed, " by ("+route.by+")"), legend: route.legend}},
 		},
-		&graph{
-			title:       "Latência p50/p99",
-			description: "Percentis 50 e 99 da duração das requisições.",
-			unit:        "s",
-			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, grouping{}),
-		},
-		&graph{
-			title:       "Latência p50/p99 por rota",
-			description: "Percentis 50 e 99 da duração por status, método e rota.",
-			unit:        "s",
-			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, route),
-		},
-	}}
+	}, (&latency{
+		title:       "Latência",
+		description: "da duração das requisições.",
+		histogram:   catalog.TracesSpanMetricsLatency,
+		selector:    selector,
+	}).panels(), (&latency{
+		title:       "Latência",
+		qualifier:   " por rota",
+		description: "da duração por status, método e rota.",
+		histogram:   catalog.TracesSpanMetricsLatency,
+		selector:    selector,
+		grouping:    route,
+	}).panels())}
 }
 
 func nodeRuntimeSection() section {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -66,18 +67,48 @@ func groupBy(labels ...string) grouping {
 
 var httpRoute = groupBy("http_response_status_code", "http_request_method", "http_route")
 
-func quantiles(histogram, selector string, g grouping) []query {
+type percentile struct {
+	name     string
+	quantile string
+}
+
+var percentiles = []percentile{{"p50", "0.5"}, {"p90", "0.9"}, {"p99", "0.99"}}
+
+type latency struct {
+	title       string
+	qualifier   string
+	description string
+	histogram   string
+	selector    string
+	grouping    grouping
+	sloLine     *float64
+	links       []cog.Builder[dashboard.DashboardLink]
+}
+
+func (l *latency) panels() []panel {
 	by, legend := "le", ""
-	if g.by != "" {
-		by, legend = "le, "+g.by, " "+g.legend
+	if l.grouping.by != "" {
+		by, legend = "le, "+l.grouping.by, " "+l.grouping.legend
 	}
 
-	exemplar := exemplarHistograms[histogram]
-
-	return []query{
-		{expr: quantile("0.5", histogram, selector, by), legend: "p50" + legend, exemplar: exemplar},
-		{expr: quantile("0.99", histogram, selector, by), legend: "p99" + legend, exemplar: exemplar},
+	out := make([]panel, 0, len(percentiles))
+	for _, p := range percentiles {
+		out = append(out, &graph{
+			title:       l.title + " " + p.name + l.qualifier,
+			description: "Percentil " + strings.TrimPrefix(p.name, "p") + " " + l.description,
+			unit:        "s",
+			width:       thirdWidth,
+			queries: []query{{
+				expr:     quantile(p.quantile, l.histogram, l.selector, by),
+				legend:   p.name + legend,
+				exemplar: exemplarHistograms[l.histogram],
+			}},
+			sloLine: l.sloLine,
+			links:   l.links,
+		})
 	}
+
+	return out
 }
 
 func seconds(value float64) *float64 { return &value }
@@ -93,7 +124,7 @@ func goAPISection(_ *service.Service, processes []service.Process) section {
 		return "sum" + by + " (rate(" + catalog.HTTPServerRequestTotal + "{" + matchers + "}" + rate + "))"
 	}
 
-	return section{title: string(service.API), panels: []panel{
+	return section{title: string(service.API), panels: slices.Concat([]panel{
 		&single{
 			title:       "Taxa",
 			description: "Requisições por segundo, fora as de health e readiness.",
@@ -138,26 +169,23 @@ func goAPISection(_ *service.Service, processes []service.Process) section {
 				legend: httpRoute.legend,
 			}},
 		},
-		&graph{
-			title: "Latência p50/p99",
-			description: "Percentis 50 e 99 da duração das requisições; a linha é o limite do SLO api-latency. " +
-				"Os pontos são exemplars: abrem o trace.",
-			unit:    "s",
-			width:   halfWidth,
-			queries: quantiles(catalog.HTTPServerRequestDuration, selector, grouping{}),
-			sloLine: seconds(slo.APILatencyThresholdSeconds),
-		},
-		&graph{
-			title: "Latência p50/p99 por rota",
-			description: "Percentis 50 e 99 da duração por status, método e rota; a linha é o limite do SLO api-latency. " +
-				"Clique numa série para ver os traces lentos dela.",
-			unit:    "s",
-			width:   halfWidth,
-			queries: quantiles(catalog.HTTPServerRequestDuration, selector, httpRoute),
-			sloLine: seconds(slo.APILatencyThresholdSeconds),
-			links:   []cog.Builder[dashboard.DashboardLink]{slowTracesLink(processes)},
-		},
-	}}
+	}, (&latency{
+		title:       "Latência",
+		description: "da duração das requisições; a linha é o limite do SLO api-latency. Os pontos são exemplars: abrem o trace.",
+		histogram:   catalog.HTTPServerRequestDuration,
+		selector:    selector,
+		sloLine:     seconds(slo.APILatencyThresholdSeconds),
+	}).panels(), (&latency{
+		title:     "Latência",
+		qualifier: " por rota",
+		description: "da duração por status, método e rota; a linha é o limite do SLO api-latency. " +
+			"Clique numa série para ver os traces lentos dela.",
+		histogram: catalog.HTTPServerRequestDuration,
+		selector:  selector,
+		grouping:  httpRoute,
+		sloLine:   seconds(slo.APILatencyThresholdSeconds),
+		links:     []cog.Builder[dashboard.DashboardLink]{slowTracesLink(processes)},
+	}).panels())}
 }
 
 func consumerSection(_ *service.Service, processes []service.Process) section {
@@ -170,12 +198,12 @@ func consumerSection(_ *service.Service, processes []service.Process) section {
 
 	consumerGroups := `{consumergroup=~` + strconv.Quote(strings.Join(groups, "|")) + `}`
 
-	return section{title: string(service.Consumer), panels: []panel{
+	return section{title: string(service.Consumer), panels: slices.Concat([]panel{
 		&graph{
 			title:       "Mensagens/s",
 			description: "Mensagens processadas por segundo: com sucesso por tópico, e com falha por error_type.",
 			unit:        "short",
-			width:       halfWidth,
+			width:       fullWidth,
 			queries: []query{
 				{
 					expr: "sum by (messaging_destination_name) (rate(" + catalog.MessagingClientConsumedMessages + "{" +
@@ -189,15 +217,14 @@ func consumerSection(_ *service.Service, processes []service.Process) section {
 				},
 			},
 		},
-		&graph{
-			title: "Duração do processamento p50/p99",
-			description: "Percentis 50 e 99 da duração de uma tentativa de processamento; a linha é o limite do " +
-				"SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
-			unit:    "s",
-			width:   halfWidth,
-			queries: quantiles(catalog.MessagingProcessDuration, selector, grouping{}),
-			sloLine: seconds(slo.ConsumerLatencyThresholdSeconds),
-		},
+	}, (&latency{
+		title: "Duração do processamento",
+		description: "da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. " +
+			"Os pontos são exemplars: abrem o trace.",
+		histogram: catalog.MessagingProcessDuration,
+		selector:  selector,
+		sloLine:   seconds(slo.ConsumerLatencyThresholdSeconds),
+	}).panels(), []panel{
 		&graph{
 			title:       "Retentativas",
 			description: "Tentativas de processamento que falharam por segundo, por error_type; cada uma é retentada.",
@@ -230,14 +257,14 @@ func consumerSection(_ *service.Service, processes []service.Process) section {
 				legend: "{{error_type}}",
 			}},
 		},
-	}}
+	})}
 }
 
 func workerSection(svc *service.Service, processes []service.Process) section {
 	selector := job(processes)
 	age := catalog.OutboxOldestPendingAge(svc.Name) + "{" + selector + "}"
 
-	return section{title: string(service.Worker), panels: []panel{
+	return section{title: string(service.Worker), panels: slices.Concat([]panel{
 		&single{
 			title:       "Pendente mais antiga",
 			description: "Idade da mensagem mais antiga do outbox ainda não levada ao Kafka; 0 sem pendentes.",
@@ -281,18 +308,17 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 				},
 			},
 		},
-		&graph{
-			title:       "Duração do envio p50/p99",
-			description: "Percentis 50 e 99 da duração do envio ao Kafka. Os pontos são exemplars: abrem o trace.",
-			unit:        "s",
-			width:       halfWidth,
-			queries:     quantiles(catalog.MessagingClientOperationDuration, selector, grouping{}),
-		},
+	}, (&latency{
+		title:       "Duração do envio",
+		description: "da duração do envio ao Kafka. Os pontos são exemplars: abrem o trace.",
+		histogram:   catalog.MessagingClientOperationDuration,
+		selector:    selector,
+	}).panels(), []panel{
 		&graph{
 			title:       "Limpeza",
 			description: "Execuções da limpeza do outbox por resultado, e mensagens já encaminhadas que ela apagou.",
 			unit:        "short",
-			width:       halfWidth,
+			width:       fullWidth,
 			queries: []query{
 				{
 					expr:   "sum by (outcome) (increase(" + catalog.OutboxPurgeRuns(svc.Name) + "{" + selector + "}" + rate + "))",
@@ -304,7 +330,7 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 				},
 			},
 		},
-	}}
+	})}
 }
 
 func goRuntimeSection() section {

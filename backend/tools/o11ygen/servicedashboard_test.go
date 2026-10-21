@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -319,22 +320,25 @@ func TestGenerate_DashboardsAskForExemplarsOnlyOnTheGoLatencyHistograms(t *testi
 	}
 
 	api := `{job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"}[$__rate_interval])))`
-	assert.Equal(t, map[string][]string{"orders.json": {
-		`Latência p50/p99: histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket` + api,
-		`Latência p50/p99: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket` + api,
-		`Latência p50/p99 por rota: histogram_quantile(0.5, sum by (le, http_response_status_code, http_request_method, http_route) (rate(` +
-			`http_server_request_duration_seconds_bucket` + api,
-		`Latência p50/p99 por rota: histogram_quantile(0.99, sum by (le, http_response_status_code, http_request_method, http_route) (rate(` +
-			`http_server_request_duration_seconds_bucket` + api,
-		`Duração do processamento p50/p99: histogram_quantile(0.5, sum by (le) (rate(` +
-			`messaging_process_duration_seconds_bucket{job=~"boilerplate/(orders-consumer)"}[$__rate_interval])))`,
-		`Duração do processamento p50/p99: histogram_quantile(0.99, sum by (le) (rate(` +
-			`messaging_process_duration_seconds_bucket{job=~"boilerplate/(orders-consumer)"}[$__rate_interval])))`,
-		`Duração do envio p50/p99: histogram_quantile(0.5, sum by (le) (rate(` +
-			`messaging_client_operation_duration_seconds_bucket{job=~"boilerplate/(orders-worker)"}[$__rate_interval])))`,
-		`Duração do envio p50/p99: histogram_quantile(0.99, sum by (le) (rate(` +
-			`messaging_client_operation_duration_seconds_bucket{job=~"boilerplate/(orders-worker)"}[$__rate_interval])))`,
-	}}, exemplars)
+	byRoute := "le, http_response_status_code, http_request_method, http_route"
+	consumer := `{job=~"boilerplate/(orders-consumer)"}[$__rate_interval])))`
+	worker := `{job=~"boilerplate/(orders-worker)"}[$__rate_interval])))`
+
+	want := make([]string, 0, 12)
+
+	for _, family := range []struct{ title, by, histogram, scope string }{
+		{"Latência %s", "le", "http_server_request_duration_seconds", api},
+		{"Latência %s por rota", byRoute, "http_server_request_duration_seconds", api},
+		{"Duração do processamento %s", "le", "messaging_process_duration_seconds", consumer},
+		{"Duração do envio %s", "le", "messaging_client_operation_duration_seconds", worker},
+	} {
+		for _, p := range []struct{ name, q string }{{"p50", "0.5"}, {"p90", "0.9"}, {"p99", "0.99"}} {
+			want = append(want, fmt.Sprintf(family.title, p.name)+": histogram_quantile("+p.q+", sum by ("+family.by+
+				") (rate("+family.histogram+"_bucket"+family.scope)
+		}
+	}
+
+	assert.Equal(t, map[string][]string{"orders.json": want}, exemplars)
 }
 
 func TestGenerate_ServiceDashboardDrawsTheSLOThresholdOnLatencyAndFreshness(t *testing.T) {
@@ -354,10 +358,16 @@ func TestGenerate_ServiceDashboardDrawsTheSLOThresholdOnLatencyAndFreshness(t *t
 	}
 
 	assert.Equal(t, map[string]float64{
-		"Latência p50/p99":                 0.25,
-		"Latência p50/p99 por rota":        0.25,
-		"Duração do processamento p50/p99": 1,
-		"Idade da pendente mais antiga":    30,
+		"Latência p50":                  0.25,
+		"Latência p90":                  0.25,
+		"Latência p99":                  0.25,
+		"Latência p50 por rota":         0.25,
+		"Latência p90 por rota":         0.25,
+		"Latência p99 por rota":         0.25,
+		"Duração do processamento p50":  1,
+		"Duração do processamento p90":  1,
+		"Duração do processamento p99":  1,
+		"Idade da pendente mais antiga": 30,
 	}, lines)
 }
 
@@ -402,7 +412,9 @@ func TestGenerate_ServiceDashboardLinksARouteToItsSlowTraces(t *testing.T) {
 		links = append(links, panel.FieldConfig.Defaults.Links...)
 	}
 
-	require.Len(t, links, 1)
+	require.Len(t, links, 3)
+	assert.Equal(t, links[0], links[1])
+	assert.Equal(t, links[0], links[2])
 	assert.Equal(t, "Traces lentos desta rota", links[0].Title)
 
 	explore, err := url.Parse(links[0].URL)
@@ -466,8 +478,11 @@ func TestGenerate_ServiceDashboardGroupsEveryRoutePanelByStatusMethodAndRoute(t 
 			"sum by (" + byRoute + ") (rate(http_server_request_total{" + selector +
 				`, http_response_status_code=~"4..|5.."}[$__rate_interval])) => ` + legend,
 		},
-		"Latência p50/p99 por rota": {quantile("0.5") + " => p50 " + legend, quantile("0.99") + " => p99 " + legend},
-	}, legendsByTitle(orders.section(t, "api").panels, "Taxa por rota", "4xx/5xx por rota", "Latência p50/p99 por rota"))
+		"Latência p50 por rota": {quantile("0.5") + " => p50 " + legend},
+		"Latência p90 por rota": {quantile("0.9") + " => p90 " + legend},
+		"Latência p99 por rota": {quantile("0.99") + " => p99 " + legend},
+	}, legendsByTitle(orders.section(t, "api").panels, "Taxa por rota", "4xx/5xx por rota",
+		"Latência p50 por rota", "Latência p90 por rota", "Latência p99 por rota"))
 }
 
 func TestGenerate_RejectsAServiceNamedAfterAnInfrastructureDashboard(t *testing.T) {
