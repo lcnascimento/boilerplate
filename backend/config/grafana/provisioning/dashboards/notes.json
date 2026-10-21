@@ -647,13 +647,23 @@
             "uid": "${prometheus_datasource}"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
-          "legendFormat": "{{http_route}}",
+          "expr": "histogram_quantile(0.5, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
+          "legendFormat": "p50 {{http_route}}",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
+          "legendFormat": "p99 {{http_route}}",
+          "refId": "B"
         }
       ],
-      "title": "Latência p99 por rota",
-      "description": "Percentil 99 da duração por rota; a linha é o limite do SLO api-latency. Clique numa série para ver os traces lentos da rota.",
+      "title": "Latência p50/p99 por rota",
+      "description": "Percentis 50 e 99 da duração por rota; a linha é o limite do SLO api-latency. Clique numa série para ver os traces lentos da rota.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",

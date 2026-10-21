@@ -59,21 +59,17 @@ func spanMetricsAPISection(processes []service.Process) section {
 		},
 		&graph{
 			title:       "Latência p50/p99",
-			description: "Percentis 50 e 99 da duração das requisições. Os pontos são exemplars: abrem o trace.",
+			description: "Percentis 50 e 99 da duração das requisições.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector),
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, ""),
 		},
 		&graph{
-			title:       "Latência p99 por rota",
-			description: "Percentil 99 da duração por método e rota.",
+			title:       "Latência p50/p99 por rota",
+			description: "Percentis 50 e 99 da duração por método e rota.",
 			unit:        "s",
 			width:       halfWidth,
-			queries: []query{{
-				expr:     quantile("0.99", catalog.TracesSpanMetricsLatency, selector, "le, span_name"),
-				legend:   "{{span_name}}",
-				exemplar: true,
-			}},
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, "span_name"),
 		},
 	}}
 }

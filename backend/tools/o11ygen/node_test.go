@@ -53,13 +53,13 @@ func TestGenerate_NodeServiceReadsItsAPIFromTheServerSpanMetrics(t *testing.T) {
 	failed := `, status_code="STATUS_CODE_ERROR"`
 
 	assert.Equal(t, map[string][]string{
-		"Taxa":                  {calls("", "")},
-		"Erros":                 {"(" + calls(failed, "") + " or vector(0)) / " + calls("", "")},
-		"p99":                   {quantile("0.99", "le")},
-		"Taxa por rota":         {calls("", " by (span_name)")},
-		"Erros por rota":        {calls(failed, " by (span_name)")},
-		"Latência p50/p99":      {quantile("0.5", "le"), quantile("0.99", "le")},
-		"Latência p99 por rota": {quantile("0.99", "le, span_name")},
+		"Taxa":                      {calls("", "")},
+		"Erros":                     {"(" + calls(failed, "") + " or vector(0)) / " + calls("", "")},
+		"p99":                       {quantile("0.99", "le")},
+		"Taxa por rota":             {calls("", " by (span_name)")},
+		"Erros por rota":            {calls(failed, " by (span_name)")},
+		"Latência p50/p99":          {quantile("0.5", "le"), quantile("0.99", "le")},
+		"Latência p50/p99 por rota": {quantile("0.5", "le, span_name"), quantile("0.99", "le, span_name")},
 	}, exprsByTitle(storefront.section(t, "api").panels))
 }
 
