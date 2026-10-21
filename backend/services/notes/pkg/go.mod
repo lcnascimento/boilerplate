@@ -1,6 +1,6 @@
 module github.com/lcnascimento/boilerplate/backend/services/notes/pkg
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/IBM/sarama v1.61.1
