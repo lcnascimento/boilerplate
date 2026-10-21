@@ -14,5 +14,14 @@
       },
       "autoUpdate": true
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git grep *)",
+      "mcp__linear__get_issue",
+      "mcp__linear__list_comments",
+      "mcp__linear__list_issue_labels",
+      "mcp__linear__list_issues"
+    ]
   }
 }
