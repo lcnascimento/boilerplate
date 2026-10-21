@@ -10,6 +10,7 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "frontend/apps/web/shared/auth/roles.gen.ts"
       - ".github/workflows/ci-backend.yml"
 
 concurrency:
