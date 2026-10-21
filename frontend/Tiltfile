@@ -9,6 +9,8 @@ local_resource(
 
 MINIMAL_STACK = os.getenv('TILT_STACK', '') == 'minimal'
 
+web_deps = ['frontend-deps']
+
 web_env = {
     'OTEL_SERVICE_NAME': 'web',
     'OTEL_RESOURCE_ATTRIBUTES': 'service.version=v0.1.0,service.namespace=boilerplate,deployment.environment=local',
@@ -21,12 +23,14 @@ web_env = {
 
 if not MINIMAL_STACK:
     web_env['NEXT_PUBLIC_FARO_URL'] = 'http://localhost:12347/collect'
+    # The OTLP exporter gives up after ~10s, so a log written before Alloy listens is lost.
+    web_deps.append('alloy')
 
 local_resource(
     'web',
     serve_cmd='pnpm --filter @boilerplate/web dev',
     serve_env=web_env,
-    resource_deps=['frontend-deps'],
+    resource_deps=web_deps,
     # TCP, not HTTP: an HTTP probe logs the whole page on every success.
     readiness_probe=probe(
         period_secs=5,

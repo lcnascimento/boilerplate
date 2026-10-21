@@ -4,8 +4,18 @@ import {
   type ServerResponse,
 } from "node:http";
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { z } from "zod";
+
+import { logger } from "./logger";
 
 import { request } from "./index";
 
@@ -54,6 +64,13 @@ const routes: Record<string, Route> = {
   "DELETE /widgets/1": (_req, _body, res) => {
     res.writeHead(204);
     res.end();
+  },
+  "GET /widgets/down": (_req, _body, res) => {
+    json(
+      res,
+      503,
+      '{"code":"ERR_DB_DOWN","message":"database unavailable","retryable":true}'
+    );
   },
   "GET /widgets/crash": (_req, _body, res) => {
     res.writeHead(500, { "Content-Type": "text/plain" });
@@ -228,4 +245,63 @@ describe("request", () => {
       },
     });
   });
+});
+
+describe("request logging", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("logs a network failure with its cause", async () => {
+    const error = vi.spyOn(logger, "error");
+    const closed = createServer();
+    await new Promise<void>((resolve) =>
+      closed.listen(0, "127.0.0.1", resolve)
+    );
+    const address = closed.address();
+    await new Promise((resolve) => closed.close(resolve));
+    if (address === null || typeof address === "string") {
+      throw new Error("closed server had no TCP port");
+    }
+    const url = `http://127.0.0.1:${String(address.port)}/widgets/1`;
+
+    await request({ url, schema: widgetSchema });
+
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      {
+        err: new TypeError("fetch failed"),
+        method: "GET",
+        url,
+        code: "UNAVAILABLE",
+      },
+      "API request failed"
+    );
+  });
+
+  it.each([
+    ["/widgets/down", 503, "ERR_DB_DOWN"],
+    ["/widgets/crash", 500, "UNEXPECTED"],
+    ["/widgets/not-json", 200, "UNEXPECTED"],
+    ["/widgets/wrong-shape", 200, "UNEXPECTED"],
+  ])("logs %s as a failure", async (path, status, code) => {
+    const error = vi.spyOn(logger, "error");
+
+    await request({ url: `${baseUrl}${path}`, schema: widgetSchema });
+
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      { method: "GET", url: `${baseUrl}${path}`, status, code },
+      "API request failed"
+    );
+  });
+
+  it.each([["/widgets/1"], ["/widgets/missing"], ["/widgets/invalid"]])(
+    "does not log %s, which the caller handles",
+    async (path) => {
+      const error = vi.spyOn(logger, "error");
+
+      await request({ url: `${baseUrl}${path}`, schema: widgetSchema });
+
+      expect(error).not.toHaveBeenCalled();
+    }
+  );
 });
