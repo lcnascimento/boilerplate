@@ -38,8 +38,7 @@ type ruleFile struct {
 func readRules(t *testing.T, file string) ruleFile {
 	t.Helper()
 
-	raw, err := os.ReadFile(file)
-	require.NoError(t, err)
+	raw := readFile(t, file)
 
 	var rules ruleFile
 	require.NoError(t, yaml.Unmarshal(raw, &rules))
@@ -375,8 +374,7 @@ func testedAlerts(t *testing.T) map[string]bool {
 	tested := map[string]bool{}
 
 	for _, path := range paths {
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err)
+		raw := readFile(t, path)
 
 		var file ruleTestFile
 		require.NoError(t, yaml.Unmarshal(raw, &file), path)

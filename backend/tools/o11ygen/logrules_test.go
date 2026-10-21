@@ -30,8 +30,7 @@ type lokiRuleFile struct {
 func readLokiRules(t *testing.T, root, name string) map[string]map[string]string {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, lokiRulesDir, name))
-	require.NoError(t, err)
+	raw := readFile(t, filepath.Join(root, lokiRulesDir, name))
 
 	var file lokiRuleFile
 	require.NoError(t, yaml.Unmarshal(raw, &file))

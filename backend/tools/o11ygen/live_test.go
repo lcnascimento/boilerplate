@@ -234,8 +234,7 @@ func readGenerated(t *testing.T) generatedArtifacts {
 		require.NoError(t, err)
 
 		for _, file := range paths {
-			content, err := os.ReadFile(file)
-			require.NoError(t, err)
+			content := readFile(t, file)
 
 			switch kind.LoadedBy {
 			case artifact.Prometheus:
@@ -301,8 +300,7 @@ func provisionedDatasources(t *testing.T) []string {
 	uids := make([]string, 0, len(paths))
 
 	for _, file := range paths {
-		content, err := os.ReadFile(file)
-		require.NoError(t, err)
+		content := readFile(t, file)
 
 		var provisioning struct {
 			Datasources []grafanaObject `yaml:"datasources"`

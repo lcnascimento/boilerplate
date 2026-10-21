@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -74,8 +73,7 @@ type section struct {
 func readBoard(t *testing.T, root, name string) board {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, dashboardsDir, name))
-	require.NoError(t, err)
+	raw := readFile(t, filepath.Join(root, dashboardsDir, name))
 
 	var out board
 	require.NoError(t, json.Unmarshal(raw, &out))
