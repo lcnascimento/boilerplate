@@ -1,6 +1,8 @@
 package dashboards
 
 import (
+	"strings"
+
 	"github.com/grafana/grafana-foundation-sdk/go/cog"
 	"github.com/grafana/grafana-foundation-sdk/go/cog/variants"
 	"github.com/grafana/grafana-foundation-sdk/go/common"
@@ -15,7 +17,7 @@ import (
 )
 
 func kafkaDashboard() *dashboard.DashboardBuilder {
-	return newDashboard("kafka").
+	out := newDashboard("kafka").
 		Description("Tópicos, consumer groups e DLQs do Kafka.").
 		Tags([]string{"messaging",
 			"kafka",
@@ -26,7 +28,7 @@ func kafkaDashboard() *dashboard.DashboardBuilder {
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{datasourceVariable(prometheusDS),
+		Variables([]cog.Builder[dashboard.VariableModel]{
 			dashboard.NewQueryVariableBuilder("topic").
 				Label("Tópico").
 				Query(dashboard.StringOrMap{Map: map[string]any{"query": "label_values(" + catalog.KafkaTopicPartitionCurrentOffset + ", topic)", "refId": "topic-var"}}).
@@ -64,8 +66,15 @@ func kafkaDashboard() *dashboard.DashboardBuilder {
 		WithPanel(kafkaPanel13()).
 		WithRow(kafkaRow14()).
 		WithPanel(kafkaPanel15()).
-		WithPanel(kafkaPanel16()).
-		WithPanel(kafkaPanel17()).
+		WithPanel(kafkaPanel16())
+
+	id, x := uint32(25), uint32(0)
+	for _, p := range percentiles {
+		out.WithPanel(kafkaProcessDurationPanel(id, x, p))
+		id, x = id+1, x+thirdWidth
+	}
+
+	return out.
 		WithPanel(kafkaPanel18()).
 		WithPanel(kafkaPanel19()).
 		WithRow(kafkaRow20()).
@@ -145,7 +154,7 @@ func kafkaPanel15() cog.Builder[dashboard.Panel] {
 		Title("Lag por consumer group").
 		Description("Mensagens ainda não confirmadas pelo group. O alerta ConsumerLagHigh dispara acima de 100 por 5 min.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 8, X: 0, Y: 20}).
+		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 20}).
 		Unit("short").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").
@@ -177,7 +186,7 @@ func kafkaPanel16() cog.Builder[dashboard.Panel] {
 		Title("Mensagens consumidas (msg/s)").
 		Description("Mensagens que os consumers terminaram de tratar por segundo: sucesso e falha por error_type.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 8, X: 8, Y: 20}).
+		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 20}).
 		Unit("ops").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").
@@ -193,23 +202,18 @@ func kafkaPanel16() cog.Builder[dashboard.Panel] {
 		SpanNulls(common.BoolOrFloat64{Bool: cog.ToPtr[bool](false)})
 }
 
-func kafkaPanel17() cog.Builder[dashboard.Panel] {
+func kafkaProcessDurationPanel(id, x uint32, p percentile) cog.Builder[dashboard.Panel] {
 	return timeseries.NewPanelBuilder().
-		Id(17).
+		Id(id).
 		Targets([]cog.Builder[variants.Dataquery]{prometheus.NewDataqueryBuilder().
 			Datasource(datasourceRef(prometheusDS)).
-			Expr("histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(" + catalog.MessagingProcessDuration + "_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
-			LegendFormat("P50 {{messaging_consumer_group_name}}").
-			RefId("A"),
-			prometheus.NewDataqueryBuilder().
-				Datasource(datasourceRef(prometheusDS)).
-				Expr("histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(" + catalog.MessagingProcessDuration + "_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
-				LegendFormat("P99 {{messaging_consumer_group_name}}").
-				RefId("B")}).
-		Title("Duração do processamento").
-		Description("Percentis 50 e 99 da duração de uma tentativa de processamento, por consumer group.").
+			Expr("histogram_quantile(" + p.quantile + ", sum by (le, messaging_consumer_group_name) (rate(" + catalog.MessagingProcessDuration + "_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))").
+			LegendFormat(strings.ToUpper(p.name) + " {{messaging_consumer_group_name}}").
+			RefId("A")}).
+		Title("Duração do processamento " + p.name).
+		Description("Percentil " + strings.TrimPrefix(p.name, "p") + " da duração de uma tentativa de processamento, por consumer group.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 8, X: 16, Y: 20}).
+		GridPos(dashboard.GridPos{H: 8, W: 8, X: x, Y: 28}).
 		Unit("s").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").
@@ -236,7 +240,7 @@ func kafkaPanel18() cog.Builder[dashboard.Panel] {
 		Title("Retentativas (tentativas/s)").
 		Description("Tentativas de processamento com erro; erros transitórios bloqueiam a partição até passar.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 28}).
+		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 36}).
 		Unit("ops").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").
@@ -268,7 +272,7 @@ func kafkaPanel19() cog.Builder[dashboard.Panel] {
 		Title("Offset confirmado vs. high-water mark").
 		Description("Offset confirmado de cada consumer group comparado ao último offset de cada tópico.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 28}).
+		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 36}).
 		Unit("short").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").
@@ -286,7 +290,7 @@ func kafkaPanel19() cog.Builder[dashboard.Panel] {
 
 func kafkaRow20() *dashboard.RowBuilder {
 	return dashboard.NewRowBuilder("DLQ").
-		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: 36}).
+		GridPos(dashboard.GridPos{H: 1, W: 24, X: 0, Y: 44}).
 		Id(20)
 }
 
@@ -300,7 +304,7 @@ func kafkaPanel21() cog.Builder[dashboard.Panel] {
 		Title("Mensagens nas DLQs").
 		Description("High-water mark das DLQs (retenção infinita): tudo que já caiu nelas.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 4, W: 6, X: 0, Y: 37}).
+		GridPos(dashboard.GridPos{H: 4, W: 6, X: 0, Y: 45}).
 		Unit("short").
 		Thresholds(dashboard.NewThresholdsConfigBuilder().
 			Mode("absolute").
@@ -328,7 +332,7 @@ func kafkaPanel22() cog.Builder[dashboard.Panel] {
 		Title("Novas na DLQ (5 min)").
 		Description("O alerta de DLQ dispara assim que este valor passa de 0.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 4, W: 6, X: 6, Y: 37}).
+		GridPos(dashboard.GridPos{H: 4, W: 6, X: 6, Y: 45}).
 		Unit("short").
 		Thresholds(dashboard.NewThresholdsConfigBuilder().
 			Mode("absolute").
@@ -357,7 +361,7 @@ func kafkaPanel23() cog.Builder[dashboard.Panel] {
 		Title("Enviadas à DLQ por causa").
 		Description("Mensagens enviadas à DLQ por consumer group e error_type.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 41}).
+		GridPos(dashboard.GridPos{H: 8, W: 12, X: 0, Y: 49}).
 		Unit("short").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").
@@ -387,7 +391,7 @@ func kafkaPanel24() cog.Builder[dashboard.Panel] {
 		Title("High-water mark das DLQs").
 		Description("Último offset de cada tópico de DLQ; um degrau é uma mensagem nova na DLQ.").
 		Datasource(datasourceRef(prometheusDS)).
-		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 41}).
+		GridPos(dashboard.GridPos{H: 8, W: 12, X: 12, Y: 49}).
 		Unit("short").
 		Legend(common.NewVizLegendOptionsBuilder().
 			DisplayMode("list").

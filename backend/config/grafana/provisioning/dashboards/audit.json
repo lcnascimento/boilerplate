@@ -52,7 +52,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (sloth_service, sloth_slo, service) (slo:objective:ratio{sloth_service=\"audit\"})",
           "format": "table",
@@ -63,7 +63,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d{sloth_service=\"audit\"})",
           "format": "table",
@@ -74,7 +74,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio{sloth_service=\"audit\"})",
           "format": "table",
@@ -85,7 +85,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio{sloth_service=\"audit\"})",
           "format": "table",
@@ -99,7 +99,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 10,
@@ -341,7 +341,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_destination_name) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(audit-consumer)\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "sucesso {{messaging_destination_name}}",
@@ -350,7 +350,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (error_type) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(audit-consumer)\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "falha {{error_type}}",
@@ -362,11 +362,11 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 22
       },
@@ -404,36 +404,26 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
-          "legendFormat": "p99",
-          "refId": "B"
         }
       ],
-      "title": "Duração do processamento p50/p99",
-      "description": "Percentis 50 e 99 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
+      "title": "Duração do processamento p50",
+      "description": "Percentil 50 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
+        "w": 8,
+        "x": 0,
+        "y": 30
       },
       "repeatDirection": "h",
       "options": {
@@ -486,73 +476,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
-          "expr": "sum by (error_type) (rate(messaging_process_duration_seconds_count{job=~\"boilerplate/(audit-consumer)\", error_type!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{error_type}}",
+          "exemplar": true,
+          "expr": "histogram_quantile(0.9, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
+          "legendFormat": "p90",
           "refId": "A"
         }
       ],
-      "title": "Retentativas",
-      "description": "Tentativas de processamento que falharam por segundo, por error_type; cada uma é retentada.",
+      "title": "Duração do processamento p90",
+      "description": "Percentil 90 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 30
-      },
-      "repeatDirection": "h",
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "timeseries",
-      "id": 8,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"audit\"})",
-          "legendFormat": "{{consumergroup}} {{topic}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Lag do group",
-      "description": "Mensagens ainda não confirmadas pelo consumer group, por tópico; o alerta passa de 100.",
-      "transparent": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -575,6 +512,149 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "axisSoftMax": 1,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 8,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p99",
+      "description": "Percentil 99 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 30
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "axisSoftMax": 1,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 9,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (error_type) (rate(messaging_process_duration_seconds_count{job=~\"boilerplate/(audit-consumer)\", error_type!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Retentativas",
+      "description": "Tentativas de processamento que falharam por segundo, por error_type; cada uma é retentada.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 38
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
           "unit": "short",
           "custom": {
             "drawStyle": "line",
@@ -589,12 +669,66 @@
     },
     {
       "type": "timeseries",
-      "id": 9,
+      "id": 10,
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
+          },
+          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"audit\"})",
+          "legendFormat": "{{consumergroup}} {{topic}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Lag do group",
+      "description": "Mensagens ainda não confirmadas pelo consumer group, por tópico; o alerta passa de 100.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 38
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
           },
           "expr": "sum by (error_type) (increase(messaging_dlq_sent_messages_total{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}}",
@@ -606,13 +740,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 30
+        "y": 38
       },
       "repeatDirection": "h",
       "options": {
@@ -649,18 +783,18 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 46
       },
-      "id": 10,
+      "id": 12,
       "panels": [
         {
           "type": "timeseries",
-          "id": 11,
+          "id": 13,
           "targets": [
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "{{job}} {{cpu_mode}}",
@@ -672,13 +806,13 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 39
+            "y": 47
           },
           "repeatDirection": "h",
           "options": {
@@ -709,12 +843,12 @@
         },
         {
           "type": "timeseries",
-          "id": 12,
+          "id": 14,
           "targets": [
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (process_memory_usage_bytes{job=~\"boilerplate/$process\"})",
               "legendFormat": "{{job}}",
@@ -726,120 +860,12 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 39
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 13,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${prometheus_datasource}"
-              },
-              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Goroutines",
-          "description": "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 0,
-            "y": 47
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "short",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 14,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${prometheus_datasource}"
-              },
-              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}} {{go_memory_type}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Memória Go",
-          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 8,
             "y": 47
           },
           "repeatDirection": "h",
@@ -876,7 +902,115 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Goroutines",
+          "description": "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 55
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 16,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}} {{go_memory_type}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memória Go",
+          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 55
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 17,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "alocação/s {{job}}",
@@ -885,7 +1019,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (go_memory_gc_goal_bytes{job=~\"boilerplate/$process\"})",
               "legendFormat": "meta do GC {{job}}",
@@ -897,13 +1031,13 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 47
+            "y": 55
           },
           "repeatDirection": "h",
           "options": {
@@ -942,18 +1076,18 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 63
       },
-      "id": 16,
+      "id": 18,
       "panels": [
         {
           "type": "timeseries",
-          "id": 17,
+          "id": 19,
           "targets": [
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (pgxpool_acquired_connections{job=~\"boilerplate/$process\"})",
               "legendFormat": "em uso {{job}}",
@@ -962,7 +1096,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (job) (pgxpool_max_connections{job=~\"boilerplate/$process\"})",
               "legendFormat": "máximo {{job}}",
@@ -974,13 +1108,13 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 56
+            "y": 64
           },
           "repeatDirection": "h",
           "options": {
@@ -1011,12 +1145,12 @@
         },
         {
           "type": "timeseries",
-          "id": 18,
+          "id": 20,
           "targets": [
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "${prometheus_datasource}"
+                "uid": "prometheus"
               },
               "expr": "sum by (application_name, state) (pg_client_connections_count{application_name=~\"$process\"})",
               "legendFormat": "{{application_name}} {{state}}",
@@ -1028,13 +1162,13 @@
           "transparent": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 56
+            "y": 64
           },
           "repeatDirection": "h",
           "options": {
@@ -1073,14 +1207,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 72
       },
-      "id": 19,
+      "id": 21,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 20,
+      "id": 22,
       "targets": [
         {
           "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
@@ -1088,7 +1222,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1097,13 +1231,13 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "repeatDirection": "h",
       "options": {
@@ -1134,14 +1268,14 @@
     },
     {
       "type": "logs",
-      "id": 21,
+      "id": 23,
       "targets": [
         {
           "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${loki_datasource}"
+            "uid": "loki"
           }
         }
       ],
@@ -1150,13 +1284,13 @@
       "transparent": false,
       "datasource": {
         "type": "loki",
-        "uid": "${loki_datasource}"
+        "uid": "loki"
       },
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 81
       },
       "repeatDirection": "h",
       "options": {
@@ -1174,45 +1308,6 @@
   ],
   "templating": {
     "list": [
-      {
-        "type": "datasource",
-        "name": "tempo_datasource",
-        "label": "Tempo data source",
-        "skipUrlSync": false,
-        "query": "tempo",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
-        "type": "datasource",
-        "name": "prometheus_datasource",
-        "label": "Prometheus data source",
-        "skipUrlSync": false,
-        "query": "prometheus",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
-        "type": "datasource",
-        "name": "loki_datasource",
-        "label": "Loki data source",
-        "skipUrlSync": false,
-        "query": "loki",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
       {
         "type": "custom",
         "name": "process",
@@ -1260,7 +1355,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Traces de audit no Traces Drilldown",
-      "url": "/a/grafana-exploretraces-app/explore?var-ds=${tempo_datasource}\u0026var-filters=resource.service.name%7C%3D~%7Caudit-consumer\u0026var-groupBy=resource.service.name",
+      "url": "/a/grafana-exploretraces-app/explore?var-ds=tempo\u0026var-filters=resource.service.name%7C%3D~%7Caudit-consumer\u0026var-groupBy=resource.service.name",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",
@@ -1273,7 +1368,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Logs de audit-consumer no Logs Drilldown",
-      "url": "/a/grafana-lokiexplore-app/explore/service_name/audit-consumer/logs?var-ds=${loki_datasource}\u0026var-filters=service_name%7C%3D%7Caudit-consumer",
+      "url": "/a/grafana-lokiexplore-app/explore/service_name/audit-consumer/logs?var-ds=loki\u0026var-filters=service_name%7C%3D%7Caudit-consumer",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",

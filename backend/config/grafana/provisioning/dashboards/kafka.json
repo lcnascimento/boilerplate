@@ -87,7 +87,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max(kafka_brokers)",
           "legendFormat": "",
@@ -99,7 +99,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 9,
@@ -166,7 +166,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{topic}}",
@@ -178,7 +178,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -233,7 +233,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"$group\", topic=~\"$topic\"})",
           "legendFormat": "{{consumergroup}} {{topic}}",
@@ -245,11 +245,11 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 20
       },
@@ -287,7 +287,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "ok {{messaging_consumer_group_name}}",
@@ -296,7 +296,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_client_consumed_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -308,12 +308,12 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 20
       },
       "repeatDirection": "h",
@@ -345,39 +345,138 @@
     },
     {
       "type": "timeseries",
-      "id": 17,
+      "id": 25,
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "histogram_quantile(0.5, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
           "legendFormat": "P50 {{messaging_consumer_group_name}}",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
-          "legendFormat": "P99 {{messaging_consumer_group_name}}",
-          "refId": "B"
         }
       ],
-      "title": "Duração do processamento",
-      "description": "Percentis 50 e 99 da duração de uma tentativa de processamento, por consumer group.",
+      "title": "Duração do processamento p50",
+      "description": "Percentil 50 da duração de uma tentativa de processamento, por consumer group.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 26,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.9, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P90 {{messaging_consumer_group_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p90",
+      "description": "Percentil 90 da duração de uma tentativa de processamento, por consumer group.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 27,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, messaging_consumer_group_name) (rate(messaging_process_duration_seconds_bucket{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval])))",
+          "legendFormat": "P99 {{messaging_consumer_group_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p99",
+      "description": "Percentil 99 da duração de uma tentativa de processamento, por consumer group.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 28
       },
       "repeatDirection": "h",
       "options": {
@@ -413,7 +512,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (rate(messaging_process_duration_seconds_count{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -425,13 +524,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "repeatDirection": "h",
       "options": {
@@ -467,7 +566,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (consumergroup, topic) (kafka_consumergroup_current_offset{consumergroup=~\"$group\", topic=~\"$topic\"})",
           "legendFormat": "confirmado {{consumergroup}}",
@@ -476,7 +575,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\"$topic\"})",
           "legendFormat": "high-water {{topic}}",
@@ -488,13 +587,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 36
       },
       "repeatDirection": "h",
       "options": {
@@ -531,7 +630,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "id": 20,
       "panels": []
@@ -543,7 +642,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}) or vector(0)",
           "refId": "A"
@@ -554,13 +653,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 37
+        "y": 45
       },
       "repeatDirection": "h",
       "options": {
@@ -608,7 +707,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum(increase(kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"}[5m])) or vector(0)",
           "refId": "A"
@@ -619,13 +718,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 37
+        "y": 45
       },
       "repeatDirection": "h",
       "options": {
@@ -673,7 +772,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (messaging_consumer_group_name, error_type) (increase(messaging_dlq_sent_messages_total{messaging_consumer_group_name=~\"$group\", messaging_destination_name=~\"$topic\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}} {{messaging_consumer_group_name}}",
@@ -685,13 +784,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 49
       },
       "repeatDirection": "h",
       "options": {
@@ -731,7 +830,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (topic) (kafka_topic_partition_current_offset{topic=~\".+\\\\.dlq\"})",
           "legendFormat": "{{topic}}",
@@ -743,13 +842,13 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 49
       },
       "repeatDirection": "h",
       "options": {
@@ -782,19 +881,6 @@
   "templating": {
     "list": [
       {
-        "type": "datasource",
-        "name": "prometheus_datasource",
-        "label": "Prometheus data source",
-        "skipUrlSync": false,
-        "query": "prometheus",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
         "type": "query",
         "name": "topic",
         "label": "Tópico",
@@ -805,7 +891,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "prometheus"
         },
         "current": {
           "selected": true,
@@ -835,7 +921,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "prometheus"
         },
         "current": {
           "selected": true,

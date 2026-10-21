@@ -13,27 +13,26 @@ import (
 func TestQueries_ExtractsEveryPrometheusAndLokiQuery(t *testing.T) {
 	board := `{
 		"templating": {"list": [
-			{"type": "datasource", "name": "prometheus_datasource", "query": "prometheus"},
-			{"type": "query", "name": "service", "datasource": {"type": "prometheus", "uid": "${prometheus_datasource}"},
+			{"type": "query", "name": "service", "datasource": {"type": "prometheus", "uid": "prometheus"},
 			 "query": "label_values(http_server_request_total, job)"},
-			{"type": "query", "name": "topic", "datasource": {"type": "prometheus", "uid": "${prometheus_datasource}"},
+			{"type": "query", "name": "topic", "datasource": {"type": "prometheus", "uid": "prometheus"},
 			 "query": {"query": "label_values(kafka_topic_partition_current_offset, topic)", "refId": "topic-var"}},
-			{"type": "query", "name": "container", "datasource": {"type": "loki", "uid": "${loki_datasource}"},
+			{"type": "query", "name": "container", "datasource": {"type": "loki", "uid": "loki"},
 			 "query": "label_values(container)"}
 		]},
 		"annotations": {"list": [
 			{"datasource": {"type": "grafana", "uid": "-- Grafana --"}, "name": "Annotations & Alerts"}
 		]},
 		"panels": [
-			{"id": 1, "title": "Rate", "datasource": {"type": "prometheus", "uid": "${prometheus_datasource}"},
+			{"id": 1, "title": "Rate", "datasource": {"type": "prometheus", "uid": "prometheus"},
 			 "targets": [{"refId": "A", "expr": "sum(rate(http_server_request_total[$__rate_interval]))"}]},
 			{"id": 2, "title": "Row", "type": "row", "panels": [
-				{"id": 3, "title": "Errors", "datasource": {"type": "loki", "uid": "${loki_datasource}"},
+				{"id": 3, "title": "Errors", "datasource": {"type": "loki", "uid": "loki"},
 				 "targets": [{"refId": "A", "expr": "{service_name=~\".+\"}"}]}
 			]},
-			{"id": 4, "title": "Mixed", "datasource": {"type": "prometheus", "uid": "${prometheus_datasource}"},
-			 "targets": [{"refId": "A", "datasource": {"type": "loki", "uid": "${loki_datasource}"}, "expr": "{container=\"kafka\"}"}]},
-			{"id": 5, "title": "Traces", "datasource": {"type": "tempo", "uid": "${tempo_datasource}"},
+			{"id": 4, "title": "Mixed", "datasource": {"type": "prometheus", "uid": "prometheus"},
+			 "targets": [{"refId": "A", "datasource": {"type": "loki", "uid": "loki"}, "expr": "{container=\"kafka\"}"}]},
+			{"id": 5, "title": "Traces", "datasource": {"type": "tempo", "uid": "tempo"},
 			 "targets": [{"refId": "A", "query": "{}"}]}
 		]
 	}`

@@ -86,7 +86,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max(pg_up)",
           "legendFormat": "",
@@ -98,7 +98,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -152,7 +152,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum(pg_stat_activity_count) / max(pg_settings_max_connections)",
           "legendFormat": "",
@@ -164,7 +164,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -222,7 +222,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum (rate(pg_stat_database_blks_hit{datname=~\"$database\"}[$__rate_interval])) / (sum (rate(pg_stat_database_blks_hit{datname=~\"$database\"}[$__rate_interval])) + sum (rate(pg_stat_database_blks_read{datname=~\"$database\"}[$__rate_interval])))",
           "legendFormat": "",
@@ -234,7 +234,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -305,7 +305,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname, usename) (pg_client_connections_count{datname=~\"$database\"})",
           "legendFormat": "{{usename}}@{{datname}}",
@@ -317,7 +317,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -358,7 +358,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (application_name, state) (pg_client_connections_count{datname=~\"$database\"})",
           "legendFormat": "{{application_name}} {{state}}",
@@ -370,7 +370,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -411,7 +411,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "max by (datname, state) (pg_stat_activity_max_tx_duration{datname=~\"$database\", state=~\"active|idle in transaction.*\"})",
           "legendFormat": "{{datname}} {{state}}",
@@ -423,7 +423,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -477,7 +477,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname, mode) (pg_locks_count{datname=~\"$database\"})",
           "legendFormat": "{{datname}} {{mode}}",
@@ -489,7 +489,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -530,7 +530,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname) (rate(pg_stat_database_xact_commit{datname=~\"$database\"}[$__rate_interval]))",
           "legendFormat": "commit {{datname}}",
@@ -539,7 +539,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname) (rate(pg_stat_database_xact_rollback{datname=~\"$database\"}[$__rate_interval]))",
           "legendFormat": "rollback {{datname}}",
@@ -551,7 +551,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -592,7 +592,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname) (increase(pg_stat_database_deadlocks{datname=~\"$database\"}[$__rate_interval]))",
           "legendFormat": "{{datname}}",
@@ -604,7 +604,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -658,7 +658,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname) (pg_database_size_bytes{datname=~\"$database\"})",
           "legendFormat": "{{datname}}",
@@ -670,7 +670,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -711,7 +711,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname) (rate(pg_stat_database_blks_hit{datname=~\"$database\"}[$__rate_interval])) / (sum by (datname) (rate(pg_stat_database_blks_hit{datname=~\"$database\"}[$__rate_interval])) + sum by (datname) (rate(pg_stat_database_blks_read{datname=~\"$database\"}[$__rate_interval])))",
           "legendFormat": "{{datname}}",
@@ -723,7 +723,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -779,7 +779,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "topk(10, sum by (datname, user, queryid) (increase(pg_stat_statements_seconds_total{datname=~\"$database\"}[$__range])))",
           "format": "table",
@@ -790,7 +790,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname, user, queryid) (increase(pg_stat_statements_calls_total{datname=~\"$database\"}[$__range])) and on (datname, user, queryid) topk(10, sum by (datname, user, queryid) (increase(pg_stat_statements_seconds_total{datname=~\"$database\"}[$__range])))",
           "format": "table",
@@ -801,7 +801,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (datname, user, queryid) (increase(pg_stat_statements_rows_total{datname=~\"$database\"}[$__range])) and on (datname, user, queryid) topk(10, sum by (datname, user, queryid) (increase(pg_stat_statements_seconds_total{datname=~\"$database\"}[$__range])))",
           "format": "table",
@@ -815,7 +815,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 10,
@@ -911,7 +911,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "topk(10, sum by (datname, user, queryid) (rate(pg_stat_statements_seconds_total{datname=~\"$database\"}[$__rate_interval])))",
           "legendFormat": "{{user}}@{{datname}} {{queryid}}",
@@ -923,7 +923,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -964,7 +964,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "topk(10, sum by (datname, user, queryid) (rate(pg_stat_statements_seconds_total{datname=~\"$database\"}[$__rate_interval])) / sum by (datname, user, queryid) (rate(pg_stat_statements_calls_total{datname=~\"$database\"}[$__rate_interval])))",
           "legendFormat": "{{user}}@{{datname}} {{queryid}}",
@@ -976,7 +976,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1030,7 +1030,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "topk(20, count by (__name__) ({__name__=~\".+\", job=~\"$job\"}))",
           "instant": true,
@@ -1044,7 +1044,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 12,
@@ -1098,7 +1098,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${prometheus_datasource}"
+            "uid": "prometheus"
           },
           "expr": "sum by (job) (job:series:count{job=~\"$job\"})",
           "legendFormat": "{{job}}",
@@ -1110,7 +1110,7 @@
       "transparent": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 12,
@@ -1164,19 +1164,6 @@
   "templating": {
     "list": [
       {
-        "type": "datasource",
-        "name": "prometheus_datasource",
-        "label": "Prometheus data source",
-        "skipUrlSync": false,
-        "query": "prometheus",
-        "multi": false,
-        "allowCustomValue": true,
-        "includeAll": false,
-        "auto": false,
-        "auto_min": "10s",
-        "auto_count": 30
-      },
-      {
         "type": "query",
         "name": "database",
         "label": "Database",
@@ -1187,7 +1174,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "prometheus"
         },
         "current": {
           "selected": true,
@@ -1217,7 +1204,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "prometheus"
         },
         "current": {
           "selected": true,
