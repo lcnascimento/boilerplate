@@ -1,0 +1,45 @@
+groups:
+  - name: fixture-web
+    rules:
+      - alert: ServiceTelemetryAbsent
+        expr: absent_over_time(target_info{job="boilerplate/fixture-web"}[5m])
+        labels:
+          service: fixture-web
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture-node
+          description: 'Nenhum target_info de fixture-web chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
+          summary: fixture-web não envia telemetria há 5 minutos
+      - alert: AuthenticationFailuresHigh
+        expr: sum(rate(traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_SERVER", http_status_code="401"}[5m])) / sum(rate(traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_SERVER"}[5m])) > 0.1
+        for: 5m
+        labels:
+          service: fixture-web
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture-node
+          description: 'Mais de 10% das requisições de fixture-web respondem 401 há 5 minutos: credenciais ou tokens recusados em massa. Veja primeiro os motivos na linha Autenticação e autorização do dashboard do serviço.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/AuthenticationFailuresHigh.md
+          summary: fixture-web responde 401 a {{ $value | humanizePercentage }} das requisições
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/fixture-web"} > 2000
+        for: 15m
+        labels:
+          service: fixture-web
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
+          description: 'fixture-web mantém mais de 2000 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: fixture-web com {{ $value | humanize }} séries, acima do teto de 2000
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="fixture-web"}[5m]) * 60 > 0
+        labels:
+          service: fixture-web
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture-node
+          description: fixture-web registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de fixture-web nos últimos 5 minutos'

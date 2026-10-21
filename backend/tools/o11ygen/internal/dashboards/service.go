@@ -23,10 +23,11 @@ type section struct {
 var runtimeDashboards = map[service.Runtime]struct {
 	api      func(svc *service.Service, processes []service.Process) section
 	runtime  func() section
+	auth     func(processes []service.Process) section
 	profiles bool
 }{
-	service.Go:   {api: goAPISection, runtime: goRuntimeSection, profiles: true},
-	service.Node: {api: spanMetricsAPISection, runtime: nodeRuntimeSection},
+	service.Go:   {api: goAPISection, runtime: goRuntimeSection, auth: goAuthSection, profiles: true},
+	service.Node: {api: spanMetricsAPISection, runtime: nodeRuntimeSection, auth: nodeAuthSection},
 }
 
 func apiSection(svc *service.Service, processes []service.Process) section {
@@ -50,6 +51,10 @@ func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.Dashbo
 		if running := processesRunning(svc, c.component); len(running) > 0 {
 			sections = append(sections, c.section(svc, running))
 		}
+	}
+
+	if auth, ok := authSection(svc); ok {
+		sections = append(sections, auth)
 	}
 
 	sections = append(sections, runtimeDashboards[svc.Runtime].runtime())

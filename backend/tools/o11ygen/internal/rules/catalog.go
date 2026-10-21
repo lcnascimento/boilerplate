@@ -12,6 +12,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
 )
 
 const (
@@ -22,6 +23,8 @@ const (
 	sustainedFor = 5 * time.Minute
 
 	seriesBudgetSustainedFor = 15 * time.Minute
+
+	unauthenticatedRatio = "0.1"
 
 	postgresDown     = "PostgresDown"
 	kafkaBrokersDown = "KafkaBrokersDown"
@@ -65,6 +68,19 @@ func (p *process) healthChecks() (names, downAlerts []string) {
 	}
 
 	return names, downAlerts
+}
+
+func (p *process) unauthenticatedRatio() string {
+	series, selector, unauthenticated := catalog.HTTPServerRequestTotal,
+		"job="+strconv.Quote(config.Namespace+"/"+p.Name())+", http_route!~"+strconv.Quote(slo.ProbeRoutes),
+		`http_response_status_code="401"`
+	if p.service.Runtime == service.Node {
+		series, selector, unauthenticated = catalog.TracesSpanMetricsCalls,
+			"service="+strconv.Quote(p.Name())+`, span_kind="SPAN_KIND_SERVER"`, `http_status_code="401"`
+	}
+
+	return fmt.Sprintf("sum(rate(%s{%s, %s}[5m])) / sum(rate(%s{%s}[5m]))",
+		series, selector, unauthenticated, series, selector)
 }
 
 func enumerated(items []string) string {
@@ -134,6 +150,22 @@ var processAlerts = []inheritedAlert{
 				description: "Mais de 90% das conexões do pool pgx de " + p.Name() + " estão em uso há 5 minutos, " +
 					"então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, " +
 					"depois o volume de requisições do processo.",
+				dashboard: p.service.Name,
+			}
+		},
+	},
+	{
+		inheritedBy: func(p *process) bool { return p.ActorAuth() },
+		alert: func(p *process) alert {
+			return alert{
+				name:        "AuthenticationFailuresHigh",
+				expr:        p.unauthenticatedRatio() + " > " + unauthenticatedRatio,
+				forDuration: sustainedFor,
+				severity:    warning,
+				summary:     p.Name() + " responde 401 a {{ $value | humanizePercentage }} das requisições",
+				description: "Mais de 10% das requisições de " + p.Name() + " respondem 401 há 5 minutos: " +
+					"credenciais ou tokens recusados em massa. Veja primeiro os motivos na linha Autenticação e " +
+					"autorização do dashboard do serviço.",
 				dashboard: p.service.Name,
 			}
 		},
