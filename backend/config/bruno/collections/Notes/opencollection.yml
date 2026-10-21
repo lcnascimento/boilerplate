@@ -3,6 +3,10 @@ opencollection: 1.0.0
 info:
   name: Notes
 bundled: false
+request:
+  auth:
+    type: bearer
+    token: "{{process.env.IAM_TOKEN}}"
 extensions:
   bruno:
     ignore:
