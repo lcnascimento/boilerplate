@@ -42,6 +42,13 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
+  it("names the Members settings page", () => {
+    expect(breadcrumbTrail("/settings/members")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      { href: "/settings/members", labelKey: "members.title", current: true },
+    ]);
+  });
+
   // example:begin
   it("links a feature route from its detail pages", () => {
     expect(breadcrumbTrail("/notes/note_1")).toEqual([
