@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { resolveActiveOrganization } from "@/shared/auth/active-organization";
+import { parseActorIds } from "@/shared/auth/actor-ids";
 import { annotateActorSpan } from "@/shared/auth/actor-span";
 import { getIam } from "@/shared/auth/auth";
 import {
@@ -20,6 +21,7 @@ import {
   type MembersResult,
 } from "@/shared/auth/members";
 import { SIGN_IN_HREF } from "@/shared/auth/routes";
+import { getRequestSession } from "@/shared/auth/session";
 import { logger } from "@/shared/logging";
 
 // Next exposes every Server Action as a public endpoint, so arguments arrive as `unknown`.
@@ -31,23 +33,24 @@ interface Actor {
 }
 
 async function requireActor(requestHeaders: Headers): Promise<Actor | null> {
-  const { auth } = getIam();
-  const session = await auth.api.getSession({ headers: requestHeaders });
+  const session = await getRequestSession();
   if (session === null) redirect(SIGN_IN_HREF);
   if ((await resolveActiveOrganization(session.session)) === null) return null;
 
-  const member = await auth.api
-    .getActiveMember({ headers: requestHeaders })
+  const member = await getIam()
+    .auth.api.getActiveMember({ headers: requestHeaders })
     .catch((error: unknown) => {
       if (error instanceof APIError) return null;
       throw error;
     });
   if (member === null) return null;
 
-  annotateActorSpan({
-    userId: session.user.id,
-    organizationId: member.organizationId,
-  });
+  annotateActorSpan(
+    parseActorIds({
+      userId: session.user.id,
+      organizationId: member.organizationId,
+    })
+  );
   return {
     memberId: member.id,
     organizationId: member.organizationId,

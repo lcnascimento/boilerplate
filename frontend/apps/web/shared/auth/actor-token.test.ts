@@ -1,6 +1,7 @@
 import { createLocalJWKSet, decodeProtectedHeader, jwtVerify } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { parseActorIds, type ActorIds } from "./actor-ids";
 import { mintActorToken } from "./actor-token";
 import { getIam } from "./auth";
 
@@ -9,13 +10,11 @@ vi.mock("server-only", () => ({}));
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-// Runs against the iam database of the Tilt stack, seeded by iam-seed: ci-e2e sets IAM_DATABASE_URL for it.
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
   "mintActorToken",
   () => {
-    let acmeId = "";
-    let acmeOwnerId = "";
-    let globexOwnerId = "";
+    let acmeOwner: ActorIds;
+    let globexOwnerInAcme: ActorIds;
 
     beforeAll(async () => {
       const context = await getIam().auth.$context;
@@ -30,9 +29,14 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       });
       if (acme === null) throw new Error("seed organization acme is missing");
 
-      acmeId = acme.id;
-      acmeOwnerId = await userId("owner@acme.test");
-      globexOwnerId = await userId("owner@globex.test");
+      acmeOwner = parseActorIds({
+        userId: await userId("owner@acme.test"),
+        organizationId: acme.id,
+      });
+      globexOwnerInAcme = parseActorIds({
+        userId: await userId("owner@globex.test"),
+        organizationId: acme.id,
+      });
     });
 
     afterAll(async () => {
@@ -49,33 +53,24 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     }
 
     it("signs the member's prefixed ids and Role, verifiable by the JWKS, for 5 minutes", async () => {
-      const token = await mintActorToken({
-        userId: acmeOwnerId,
-        organizationId: acmeId,
-      });
+      const token = await mintActorToken(acmeOwner);
 
       const { payload, protectedHeader } = await verify(token);
 
       expect(protectedHeader.alg).toBe("EdDSA");
       expect(protectedHeader.kid).toMatch(UUID);
       expect(payload).toMatchObject({
-        sub: `user_${acmeOwnerId}`,
-        org: `org_${acmeId}`,
+        sub: `user_${acmeOwner.userId}`,
+        org: `org_${acmeOwner.organizationId}`,
         role: "owner",
         iss: process.env.BETTER_AUTH_URL,
         aud: "boilerplate-api",
       });
-      expect(acmeOwnerId).toMatch(UUID);
-      expect(acmeId).toMatch(UUID);
       expect((payload.exp ?? 0) - (payload.iat ?? 0)).toBe(300);
     });
 
     it("signs for the given TTL", async () => {
-      const token = await mintActorToken({
-        userId: acmeOwnerId,
-        organizationId: acmeId,
-        ttlSeconds: 3600,
-      });
+      const token = await mintActorToken({ ...acmeOwner, ttlSeconds: 3600 });
 
       const { payload } = await verify(token);
 
@@ -84,9 +79,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses a User who is not a Member of the Organization", async () => {
-      await expect(
-        mintActorToken({ userId: globexOwnerId, organizationId: acmeId })
-      ).rejects.toMatchObject({
+      await expect(mintActorToken(globexOwnerInAcme)).rejects.toMatchObject({
         name: "ActorTokenError",
         reason: "not_a_member",
       });
@@ -98,9 +91,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
         const { adapter } = await getIam().auth.$context;
         vi.spyOn(adapter, "findOne").mockResolvedValueOnce({ role });
 
-        await expect(
-          mintActorToken({ userId: acmeOwnerId, organizationId: acmeId })
-        ).rejects.toMatchObject({
+        await expect(mintActorToken(acmeOwner)).rejects.toMatchObject({
           name: "ActorTokenError",
           reason: "unknown_role",
         });

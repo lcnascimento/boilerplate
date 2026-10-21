@@ -51,6 +51,10 @@ export const roles = {
     note: ["read"],
   }),
 } as const;
+
+export const roleNames = ["owner", "admin", "viewer"] as const;
+
+export type Role = (typeof roleNames)[number];
 `, string(render(m)))
 }
 
@@ -89,5 +93,9 @@ export const roles = {
   }),
   viewer: ac.newRole({}),
 } as const;
+
+export const roleNames = ["owner", "admin", "viewer"] as const;
+
+export type Role = (typeof roleNames)[number];
 `, string(render(m)))
 }

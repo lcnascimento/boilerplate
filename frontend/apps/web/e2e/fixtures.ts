@@ -9,6 +9,7 @@ import {
   seedOrganizations,
   type SeedOrganization,
 } from "../scripts/iam-seed/users";
+import { parseActorIds } from "../shared/auth/actor-ids";
 import { mintActorToken } from "../shared/auth/actor-token";
 import { getIam } from "../shared/auth/auth";
 
@@ -37,10 +38,9 @@ async function ownerToken({ slug, owner }: SeedOrganization): Promise<string> {
       `the iam seed has no ${slug} owner: run the iam-seed resource`
     );
   }
-  return mintActorToken({
-    userId: user.user.id,
-    organizationId: organization.id,
-  });
+  return mintActorToken(
+    parseActorIds({ userId: user.user.id, organizationId: organization.id })
+  );
 }
 
 async function deleteMarkedNotes({ request, markers }: CleanupArgs) {

@@ -1,16 +1,10 @@
 import { z } from "zod";
 
-import { roles } from "./roles.gen";
+import { roleNames, roles, type Role } from "./roles.gen";
 
-export const memberRoles = [
-  "owner",
-  "admin",
-  "viewer",
-] as const satisfies (keyof typeof roles)[];
+export const memberRoleSchema = z.enum(roleNames);
 
-export const memberRoleSchema = z.enum(memberRoles);
-
-export type MemberRole = z.infer<typeof memberRoleSchema>;
+export type MemberRole = Role;
 
 export const addMemberInputSchema = z.object({
   email: z.email(),
@@ -82,7 +76,7 @@ export function memberPolicy(
   return {
     canAdd: can(actor.role, "create"),
     assignableRoles: can(actor.role, "update")
-      ? memberRoles.filter((role) => canAssign(actor.role, role))
+      ? roleNames.filter((role) => canAssign(actor.role, role))
       : [],
     leave: members.some(
       (member) => member.id === actor.id && isLastOwner(member)

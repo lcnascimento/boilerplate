@@ -56,7 +56,17 @@ func render(m matrix) []byte {
 		b.WriteString("  }),\n")
 	}
 
-	b.WriteString("} as const;\n")
+	b.WriteString("} as const;\n\nexport const roleNames = [")
+
+	for i, r := range m.roles {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+
+		fmt.Fprintf(&b, "%q", r.name)
+	}
+
+	b.WriteString("] as const;\n\nexport type Role = (typeof roleNames)[number];\n")
 
 	return []byte(b.String())
 }

@@ -1,12 +1,9 @@
 import { trace } from "@opentelemetry/api";
 
-interface ActorIds {
-  userId: string;
-  organizationId: string;
-}
+import { prefixedActorIds, type ActorIds } from "./actor-ids";
 
-// The ids only: email and name never reach telemetry.
-export function annotateActorSpan({ userId, organizationId }: ActorIds): void {
+export function annotateActorSpan(ids: ActorIds): void {
+  const { userId, organizationId } = prefixedActorIds(ids);
   trace.getActiveSpan()?.setAttributes({
     "user.id": userId,
     "organization.id": organizationId,
