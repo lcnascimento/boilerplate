@@ -11,4 +11,5 @@ message NoteCreated {
   string title = 2;
   string body = 3;
   google.protobuf.Timestamp created_at = 4;
+  string organization_id = 5;
 }

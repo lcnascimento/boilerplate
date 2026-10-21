@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	actor "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	domain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
 	domain0 "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	gomock "go.uber.org/mock/gomock"
@@ -44,31 +45,31 @@ func (m *MockNotesRepository) EXPECT() *MockNotesRepositoryMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockNotesRepository) Create(ctx context.Context, note *domain0.Note) error {
+func (m *MockNotesRepository) Create(ctx context.Context, caller *actor.Actor, note *domain0.Note) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, note)
+	ret := m.ctrl.Call(m, "Create", ctx, caller, note)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockNotesRepositoryMockRecorder) Create(ctx, note any) *gomock.Call {
+func (mr *MockNotesRepositoryMockRecorder) Create(ctx, caller, note any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNotesRepository)(nil).Create), ctx, note)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNotesRepository)(nil).Create), ctx, caller, note)
 }
 
 // Delete mocks base method.
-func (m *MockNotesRepository) Delete(ctx context.Context, orgID domain.OrganizationID, id domain0.NoteID) error {
+func (m *MockNotesRepository) Delete(ctx context.Context, caller *actor.Actor, id domain0.NoteID) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, orgID, id)
+	ret := m.ctrl.Call(m, "Delete", ctx, caller, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockNotesRepositoryMockRecorder) Delete(ctx, orgID, id any) *gomock.Call {
+func (mr *MockNotesRepositoryMockRecorder) Delete(ctx, caller, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesRepository)(nil).Delete), ctx, orgID, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesRepository)(nil).Delete), ctx, caller, id)
 }
 
 // Get mocks base method.

@@ -12,6 +12,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes/internal/db"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
@@ -36,7 +38,7 @@ func New(pool *pgxpool.Pool, schemaIDs events.SchemaIDs, opts ...Option) *Reposi
 	return r
 }
 
-func (r *Repository) Create(ctx context.Context, note *domain.Note) error {
+func (r *Repository) Create(ctx context.Context, caller *actor.Actor, note *domain.Note) error {
 	return r.inTx(ctx, note.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
 		err := queries.CreateNote(ctx, db.CreateNoteParams{
 			ID:             note.ID.UUID(),
@@ -49,11 +51,12 @@ func (r *Repository) Create(ctx context.Context, note *domain.Note) error {
 			return ErrQuery.WithCause(err)
 		}
 
-		return r.emit(ctx, tx, note.ID, note.CreatedAt, &events.NoteCreated{
-			Id:        note.ID.String(),
-			Title:     note.Title,
-			Body:      note.Body,
-			CreatedAt: timestamppb.New(note.CreatedAt),
+		return r.emit(ctx, tx, caller, note.ID, note.CreatedAt, &events.NoteCreated{
+			Id:             note.ID.String(),
+			OrganizationId: note.OrganizationID.String(),
+			Title:          note.Title,
+			Body:           note.Body,
+			CreatedAt:      timestamppb.New(note.CreatedAt),
 		})
 	})
 }
@@ -99,9 +102,9 @@ func (r *Repository) List(ctx context.Context, orgID iamdomain.OrganizationID) (
 	return out, err
 }
 
-func (r *Repository) Delete(ctx context.Context, orgID iamdomain.OrganizationID, id domain.NoteID) error {
-	return r.inTx(ctx, orgID, func(tx pgx.Tx, queries *db.Queries) error {
-		deleted, err := queries.DeleteNote(ctx, db.DeleteNoteParams{OrganizationID: orgID.UUID(), ID: id.UUID()})
+func (r *Repository) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
+	return r.inTx(ctx, caller.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
+		deleted, err := queries.DeleteNote(ctx, db.DeleteNoteParams{OrganizationID: caller.OrganizationID.UUID(), ID: id.UUID()})
 		if err != nil {
 			return ErrQuery.WithCause(err)
 		}
@@ -110,7 +113,10 @@ func (r *Repository) Delete(ctx context.Context, orgID iamdomain.OrganizationID,
 			return domain.ErrNoteNotFound
 		}
 
-		return r.emit(ctx, tx, id, r.now(), &events.NoteDeleted{Id: id.String()})
+		return r.emit(ctx, tx, caller, id, r.now(), &events.NoteDeleted{
+			Id:             id.String(),
+			OrganizationId: caller.OrganizationID.String(),
+		})
 	})
 }
 
