@@ -36,6 +36,29 @@ var (
 		"iam.actor.authorization.denials", "Number of actions denied because the actor's role lacks the permission, by permission and role")
 )
 
+// onMiddlewareCreated adds zero to every label set the counters can take, so their series exist before the first failure.
+func onMiddlewareCreated(ctx context.Context) {
+	for _, r := range reasons {
+		authenticationFailures.Add(ctx, 0, rejection(r))
+	}
+
+	for _, role := range roles.All() {
+		for _, p := range roles.Permissions() {
+			if !role.Grants(p) {
+				authorizationDenials.Add(ctx, 0, denial(p, role))
+			}
+		}
+	}
+}
+
+func rejection(r reason) otelmetric.AddOption {
+	return otelmetric.WithAttributes(attribute.String("reason", string(r)))
+}
+
+func denial(p roles.Permission, role roles.Role) otelmetric.AddOption {
+	return otelmetric.WithAttributes(attribute.String("permission", p.String()), attribute.String("role", role.String()))
+}
+
 func onAuthenticated(ctx context.Context, a *Actor) context.Context {
 	return baggage.ContextWithMembers(ctx,
 		baggage.NewMember(MemberKeyUserID, a.UserID.String()),
@@ -45,7 +68,7 @@ func onAuthenticated(ctx context.Context, a *Actor) context.Context {
 
 func onRejected(ctx context.Context, r reason) {
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrFailureReason, string(r)))
-	authenticationFailures.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("reason", string(r))))
+	authenticationFailures.Add(ctx, 1, rejection(r))
 	logger.Warn(ctx, "request rejected: unauthenticated", log.String(attrFailureReason, string(r)))
 }
 
@@ -53,10 +76,7 @@ func onDenied(ctx context.Context, a *Actor, p roles.Permission) {
 	permission, role := p.String(), a.Role.String()
 
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrPermission, permission), attribute.String(attrRole, role))
-	authorizationDenials.Add(ctx, 1, otelmetric.WithAttributes(
-		attribute.String("permission", permission),
-		attribute.String("role", role),
-	))
+	authorizationDenials.Add(ctx, 1, denial(p, a.Role))
 	logger.Warn(ctx, "action denied: unauthorized", log.String(attrPermission, permission), log.String(attrRole, role))
 }
 
