@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createNotesClient, noteIdSchema } from "./index";
 
 let posts = 0;
+const authorizations: (string | undefined)[] = [];
 
 type Route = (req: IncomingMessage, body: string, res: ServerResponse) => void;
 
@@ -94,6 +95,7 @@ const server = createServer((req, res) => {
   let body = "";
   req.on("data", (chunk: Buffer) => (body += chunk.toString()));
   req.on("end", () => {
+    authorizations.push(req.headers.authorization);
     const route = routes[`${req.method ?? ""} ${req.url ?? ""}`];
     if (route) route(req, body, res);
     else json(res, 599, "{}");
@@ -117,9 +119,32 @@ afterAll(async () => {
 
 const noteId = (value: string) => noteIdSchema.parse(value);
 
+const getToken = () => Promise.resolve("actor-token");
+
 describe("notes client", () => {
+  it("sends a fresh token from getToken as a Bearer Authorization header on every call", async () => {
+    let minted = 0;
+    const client = createNotesClient({
+      baseUrl,
+      getToken: () => Promise.resolve(`token-${String((minted += 1))}`),
+    });
+    authorizations.length = 0;
+
+    await client.list();
+    await client.get(noteId(ID));
+    await client.create({ title: "Compras" });
+    await client.delete(noteId(ID));
+
+    expect(authorizations).toEqual([
+      "Bearer token-1",
+      "Bearer token-2",
+      "Bearer token-3",
+      "Bearer token-4",
+    ]);
+  });
+
   it("lists notes in camelCase with created_at as a Date, ignoring unknown fields", async () => {
-    const result = await createNotesClient({ baseUrl }).list();
+    const result = await createNotesClient({ baseUrl, getToken }).list();
 
     expect(result).toEqual({
       kind: "ok",
@@ -141,7 +166,9 @@ describe("notes client", () => {
   });
 
   it("gets one note", async () => {
-    const result = await createNotesClient({ baseUrl }).get(noteId(ID));
+    const result = await createNotesClient({ baseUrl, getToken }).get(
+      noteId(ID)
+    );
 
     expect(result).toEqual({
       kind: "ok",
@@ -155,7 +182,9 @@ describe("notes client", () => {
   });
 
   it("turns a note outside the schema into UNEXPECTED", async () => {
-    const result = await createNotesClient({ baseUrl }).get(noteId(OTHER_ID));
+    const result = await createNotesClient({ baseUrl, getToken }).get(
+      noteId(OTHER_ID)
+    );
 
     expect(result).toEqual({
       kind: "error",
@@ -169,7 +198,9 @@ describe("notes client", () => {
   });
 
   it("returns the service's 404 for an unknown note", async () => {
-    const result = await createNotesClient({ baseUrl }).get(noteId(MISSING_ID));
+    const result = await createNotesClient({ baseUrl, getToken }).get(
+      noteId(MISSING_ID)
+    );
 
     expect(result).toEqual({
       kind: "error",
@@ -184,7 +215,7 @@ describe("notes client", () => {
   });
 
   it("creates a note, sending the wire shape as JSON", async () => {
-    const result = await createNotesClient({ baseUrl }).create({
+    const result = await createNotesClient({ baseUrl, getToken }).create({
       title: "Compras",
       body: "leite",
     });
@@ -201,7 +232,7 @@ describe("notes client", () => {
   });
 
   it("omits an absent body from the wire payload", async () => {
-    const result = await createNotesClient({ baseUrl }).create({
+    const result = await createNotesClient({ baseUrl, getToken }).create({
       title: "Compras",
     });
 
@@ -212,7 +243,7 @@ describe("notes client", () => {
   });
 
   it("trims the title before sending it", async () => {
-    const result = await createNotesClient({ baseUrl }).create({
+    const result = await createNotesClient({ baseUrl, getToken }).create({
       title: "  Compras  ",
     });
 
@@ -225,7 +256,7 @@ describe("notes client", () => {
   it("rejects input outside the schema without calling the service", async () => {
     const before = posts;
 
-    const result = await createNotesClient({ baseUrl }).create({
+    const result = await createNotesClient({ baseUrl, getToken }).create({
       title: "   ",
       body: "x".repeat(10_001),
     });
@@ -249,7 +280,7 @@ describe("notes client", () => {
   });
 
   it("returns the service's 400 with its reasons", async () => {
-    const result = await createNotesClient({ baseUrl }).create({
+    const result = await createNotesClient({ baseUrl, getToken }).create({
       title: "Rejeitada",
     });
 
@@ -266,13 +297,15 @@ describe("notes client", () => {
   });
 
   it("deletes a note", async () => {
-    const result = await createNotesClient({ baseUrl }).delete(noteId(ID));
+    const result = await createNotesClient({ baseUrl, getToken }).delete(
+      noteId(ID)
+    );
 
     expect(result).toEqual({ kind: "ok", data: undefined });
   });
 
   it("returns the service's 404 when deleting an unknown note", async () => {
-    const result = await createNotesClient({ baseUrl }).delete(
+    const result = await createNotesClient({ baseUrl, getToken }).delete(
       noteId(MISSING_ID)
     );
 
@@ -295,6 +328,7 @@ describe("notes client", () => {
 
     const result = await createNotesClient({
       baseUrl: `http://127.0.0.1:${String(address.port)}`,
+      getToken,
     }).list();
 
     expect(result).toEqual({

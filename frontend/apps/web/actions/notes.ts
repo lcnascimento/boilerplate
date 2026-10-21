@@ -11,6 +11,7 @@ import {
   type Note,
 } from "@boilerplate/api/notes";
 
+import { requestActorToken } from "@/shared/auth/request-actor-token";
 import { logAPIFailure } from "@/shared/logging";
 
 // Next exposes every Server Action as a public endpoint, so arguments arrive as `unknown`.
@@ -18,6 +19,7 @@ import { logAPIFailure } from "@/shared/logging";
 function notesClient() {
   return createNotesClient({
     baseUrl: parseNotesEnv(process.env).NOTES_API_URL,
+    getToken: requestActorToken,
   });
 }
 
