@@ -8,22 +8,21 @@ clean-example:
 
 .PHONY: format
 format:
-	@$(MAKE) -C backend format
+	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate
 	@$(MAKE) -C frontend format
 
 .PHONY: lint
 lint:
-	@$(MAKE) -C backend lint o11y.lint proto.lint proto.breaking
+	@$(MAKE) -C backend lint o11y.lint proto.lint proto.breaking AGAINST=origin/main
 	@$(MAKE) -C frontend lint typecheck build
 	@echo "==> vacuum lint openapi"
 	@specs=$$(ls openapi/*.yaml 2>/dev/null); \
 	if [ -z "$$specs" ]; then echo "no OpenAPI specs"; else \
-		docker run --rm -v "$$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 \
+		docker run --rm -v "$(CURDIR):/work:ro" -w /work dshanley/vacuum:v0.33.0 \
 			lint --details --no-banner --no-style --no-update-check $$specs; \
 	fi
 
 .PHONY: test
 test:
-	@docker compose -f backend/docker-compose.yml up -d --wait postgres
 	@$(MAKE) -C backend test
 	@$(MAKE) -C frontend test

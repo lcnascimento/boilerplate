@@ -157,12 +157,12 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 
 ### Lint e testes
 
-**Tudo** (na raiz; cobre o que o CI cobre, menos o e2e e a conferência do código gerado):
+**Tudo** (na raiz; cobre o que o CI cobre, menos o e2e):
 
 ```sh
-make format   # golangci-lint fmt no backend e prettier no frontend
-make lint     # backend: lint, o11y.lint, proto.lint e proto.breaking; frontend: lint, typecheck e build; vacuum no OpenAPI
-make test     # sobe o Postgres do backend/docker-compose.yml e roda o make test do backend e o do frontend
+make format   # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
+make lint     # os linters, o typecheck e o build que o CI roda, no backend, no frontend e no OpenAPI
+make test     # os testes do backend (sobe o Postgres) e os do frontend
 ```
 
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
@@ -170,9 +170,9 @@ make test     # sobe o Postgres do backend/docker-compose.yml e roda o make test
 ```sh
 make format           # golangci-lint fmt (gci e gofmt)
 make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
-make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
+make test             # go test -race com cobertura: unit + componente (sobe o Postgres; exige o Docker; timeout de 3m)
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
-make test.component   # só os de componente (-run Component; timeout de 3m)
+make test.component   # só os de componente (-run Component; sobe o Postgres; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
 make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
 make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki; sloth validate, promtool e pint nos SLOs (ferramentas instaladas pelo make setup)

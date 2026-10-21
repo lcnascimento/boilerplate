@@ -147,8 +147,12 @@ mocks:
 			$(GOBIN)/mockgen -source "$$src" -destination "$$dir/internal/mocks/mocks.go" -package mocks; \
 		done)
 
+.PHONY: postgres
+postgres:
+	@docker compose up -d --wait postgres
+
 .PHONY: test
-test:
+test: postgres
 	$(call in_modules,test,$(call go_test,3m,-coverprofile=coverage.out))
 
 .PHONY: test.unit
@@ -156,7 +160,7 @@ test.unit:
 	$(call in_modules,test.unit,$(call go_test,30s,-short))
 
 .PHONY: test.component
-test.component:
+test.component: postgres
 	$(call in_modules,test.component,$(call go_test,3m,-run Component))
 
 .PHONY: sqlc
