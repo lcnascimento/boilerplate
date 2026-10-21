@@ -43,6 +43,8 @@ func TestLiveProbes_WithoutServicesExpectOnlyTheStack(t *testing.T) {
 		`present_over_time(pg_stat_statements_rows_total[15m])`,
 		`present_over_time(pg_stat_statements_seconds_total[15m])`,
 		`present_over_time(pg_up[15m])`,
+		`present_over_time(up{job="integrations/kafka"}[15m])`,
+		`present_over_time(up{job="integrations/postgres"}[15m])`,
 	}, exprs(t, nil))
 }
 

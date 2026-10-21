@@ -40,10 +40,15 @@ type Metric struct {
 	Labels    []string
 	Presence  Presence
 	EmittedBy Emitter
+	Jobs      []string
 }
 
 const (
 	TargetInfo = "target_info"
+
+	Up                  = "up"
+	KafkaExporterJob    = "integrations/kafka"
+	PostgresExporterJob = "integrations/postgres"
 
 	PgxpoolAcquiredConnections = "pgxpool_acquired_connections"
 	PgxpoolMaxConnections      = "pgxpool_max_connections"
@@ -155,6 +160,8 @@ var metrics = map[string]Metric{
 
 	PgxpoolAcquiredConnections: {Type: Gauge, Source: OTLP, Labels: pgxpool, EmittedBy: dbPool},
 	PgxpoolMaxConnections:      {Type: Gauge, Source: OTLP, Labels: pgxpool, EmittedBy: dbPool},
+
+	Up: {Type: Gauge, Source: Scrape, Jobs: []string{KafkaExporterJob, PostgresExporterJob}},
 
 	PgUp:                        {Type: Gauge, Source: Scrape},
 	PgSettingsMaxConnections:    {Type: Gauge, Source: Scrape},

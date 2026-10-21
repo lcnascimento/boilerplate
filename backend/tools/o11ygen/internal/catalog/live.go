@@ -107,6 +107,15 @@ func (m *Metric) probes(name string, services []service.Service) []artifact.Quer
 		}
 	}
 
+	if m.EmittedBy == nil && len(m.Jobs) > 0 {
+		probes := make([]artifact.Query, 0, len(m.Jobs))
+		for _, job := range m.Jobs {
+			probes = append(probes, probe(fmt.Sprintf(`{job=%q}`, job), name+" of "+job))
+		}
+
+		return probes
+	}
+
 	if m.EmittedBy == nil {
 		return []artifact.Query{probe("", name+" (stack)")}
 	}

@@ -198,23 +198,32 @@ func infra(name string, alerts ...alert) group {
 	return group{name: name, alerts: alerts}
 }
 
+// exporterDown fires on the exporter's own verdict, on a failed scrape (an exporter slower than the scrape timeout
+// reports nothing, not its verdict), and once the exporter sends nothing at all.
+func exporterDown(job, verdict string) string {
+	up := catalog.Up + `{job=` + strconv.Quote(job) + `}`
+
+	return fmt.Sprintf("%s or %s == 0 or absent_over_time(%s[5m])", verdict, up, up)
+}
+
 var infraGroups = []group{
 	infra("kafka", alert{
 		name:     "KafkaBrokersDown",
-		expr:     fmt.Sprintf("%s < 1 or absent_over_time(%s[5m])", catalog.KafkaBrokers, catalog.KafkaBrokers),
+		expr:     exporterDown(catalog.KafkaExporterJob, catalog.KafkaBrokers+" < 1"),
 		severity: critical,
-		summary:  "Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos",
-		description: "O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: " +
-			"nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy.",
+		summary:  "Kafka fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos",
+		description: "O exporter do Alloy não alcança nenhum broker do Kafka (a coleta falha ou vê zero brokers), " +
+			"ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. " +
+			"Veja primeiro o container kafka e depois o Alloy.",
 		dashboard: kafkaDashboard,
 	}),
 	infra("postgres", alert{
 		name:     "PostgresDown",
-		expr:     fmt.Sprintf("%s == 0 or absent_over_time(%s[5m])", catalog.PgUp, catalog.PgUp),
+		expr:     exporterDown(catalog.PostgresExporterJob, catalog.PgUp+" == 0"),
 		severity: critical,
-		summary:  "Postgres fora do ar, ou sem métricas do exporter há 5 minutos",
-		description: "O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: " +
-			"todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.",
+		summary:  "Postgres fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos",
+		description: "O exporter do Alloy não consegue se conectar ao Postgres (pg_up 0 ou a coleta falha), " +
+			"ou parou de mandar métricas: todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.",
 		dashboard: postgresDashboard,
 	}, alert{
 		name: "PostgresConnectionsNearMax",
