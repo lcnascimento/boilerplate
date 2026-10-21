@@ -1,0 +1,158 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useState, useTransition, type SubmitEvent } from "react";
+import { z } from "zod";
+
+import { Button } from "@boilerplate/ui/components/button";
+import { Input } from "@boilerplate/ui/components/input";
+import { Label } from "@boilerplate/ui/components/label";
+
+import { authClient } from "@/shared/auth/client";
+import {
+  ORGANIZATION_NAME_MAX_LENGTH,
+  PASSWORD_LENGTH,
+} from "@/shared/auth/policy";
+import { SIGNED_IN_HOME } from "@/shared/auth/routes";
+
+const signUpSchema = z.object({
+  name: z.string().trim().min(1),
+  email: z.email(),
+  password: z.string().min(PASSWORD_LENGTH.min).max(PASSWORD_LENGTH.max),
+  organizationName: z.string().trim().min(1).max(ORGANIZATION_NAME_MAX_LENGTH),
+});
+
+type SignUpInput = z.infer<typeof signUpSchema>;
+type Field = keyof SignUpInput;
+type FieldErrors = Partial<Record<Field, string>>;
+
+const fieldSchema = signUpSchema.keyof();
+
+const fields: readonly { field: Field; type: string; autoComplete: string }[] =
+  [
+    { field: "name", type: "text", autoComplete: "name" },
+    { field: "email", type: "email", autoComplete: "email" },
+    { field: "password", type: "password", autoComplete: "new-password" },
+    { field: "organizationName", type: "text", autoComplete: "organization" },
+  ];
+
+const serverFieldErrors: Readonly<Record<string, Field>> = {
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "email",
+  INVALID_EMAIL: "email",
+  PASSWORD_TOO_SHORT: "password",
+  PASSWORD_TOO_LONG: "password",
+};
+
+const emptyInput: Record<Field, string> = {
+  name: "",
+  email: "",
+  password: "",
+  organizationName: "",
+};
+
+export function SignUpForm() {
+  const t = useTranslations("auth");
+  const tValidation = useTranslations("validation");
+  const router = useRouter();
+  const [input, setInput] = useState(emptyInput);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string>();
+  const [isPending, startTransition] = useTransition();
+
+  const labels: Record<Field, string> = {
+    name: t("nameLabel"),
+    email: t("emailLabel"),
+    password: t("passwordLabel"),
+    organizationName: t("organizationNameLabel"),
+  };
+
+  function invalidMessage(field: Field, code: string): string {
+    if (input[field].trim() === "") return tValidation("required");
+    if (field === "email") {
+      return code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+        ? t("emailTaken")
+        : t("invalidEmail");
+    }
+    if (field === "password") return t("passwordPolicy", PASSWORD_LENGTH);
+    if (field === "organizationName") {
+      return tValidation("maxLength", { max: ORGANIZATION_NAME_MAX_LENGTH });
+    }
+    return tValidation("required");
+  }
+
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(undefined);
+
+    const parsed = signUpSchema.safeParse(input);
+    if (!parsed.success) {
+      const errors: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const field = fieldSchema.safeParse(issue.path[0]);
+        if (!field.success || errors[field.data] !== undefined) continue;
+        errors[field.data] = invalidMessage(field.data, issue.code);
+      }
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
+
+    startTransition(async () => {
+      const { error } = await authClient.signUp.email(parsed.data);
+      if (error) {
+        const code = error.code ?? "";
+        const field = serverFieldErrors[code];
+        if (field === undefined) setFormError(t("signUpFailed"));
+        else setFieldErrors({ [field]: invalidMessage(field, code) });
+        return;
+      }
+      router.replace(SIGNED_IN_HOME);
+      router.refresh();
+    });
+  }
+
+  return (
+    <form noValidate className="grid gap-4" onSubmit={handleSubmit}>
+      {fields.map(({ field, type, autoComplete }) => {
+        const id = `sign-up-${field}`;
+        const errorId = `${id}-error`;
+        const fieldError = fieldErrors[field];
+        return (
+          <div key={field} className="grid gap-2">
+            <Label htmlFor={id}>{labels[field]}</Label>
+            <Input
+              aria-describedby={fieldError ? errorId : undefined}
+              aria-invalid={fieldError !== undefined}
+              autoComplete={autoComplete}
+              id={id}
+              type={type}
+              value={input[field]}
+              onChange={(event) =>
+                setInput((current) => ({
+                  ...current,
+                  [field]: event.target.value,
+                }))
+              }
+            />
+            {fieldError ? (
+              <p className="text-sm text-destructive" id={errorId}>
+                {fieldError}
+              </p>
+            ) : null}
+          </div>
+        );
+      })}
+
+      {formError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {formError}
+        </p>
+      ) : null}
+
+      <Button aria-busy={isPending} disabled={isPending} type="submit">
+        {t("signUp")}
+      </Button>
+    </form>
+  );
+}
