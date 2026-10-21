@@ -6,10 +6,11 @@ import { Button } from "@boilerplate/ui/components/button";
 import { Card, CardContent } from "@boilerplate/ui/components/card";
 import { PageHeader } from "@boilerplate/ui/primitives/page-header";
 
+import { getActiveRole } from "@/actions/members";
 import { getNote } from "@/actions/notes";
 import { NOTES_HREF } from "@/shared/navigation";
 
-import { DeleteNoteDialog, NotesError } from "../_components";
+import { canNote, DeleteNoteDialog, NotesError } from "../_components";
 
 interface NotePageProps {
   params: Promise<{ id: string }>;
@@ -17,10 +18,11 @@ interface NotePageProps {
 
 export default async function NotePage({ params }: NotePageProps) {
   const { id } = await params;
-  const [t, format, result] = await Promise.all([
+  const [t, format, result, role] = await Promise.all([
     getTranslations("notes"),
     getFormatter(),
     getNote(id),
+    getActiveRole(),
   ]);
 
   const back = (
@@ -46,7 +48,11 @@ export default async function NotePage({ params }: NotePageProps) {
     <>
       {back}
       <PageHeader
-        action={<DeleteNoteDialog id={note.id} title={note.title} />}
+        action={
+          canNote(role, "delete") ? (
+            <DeleteNoteDialog id={note.id} title={note.title} />
+          ) : null
+        }
         title={note.title}
         description={
           <time dateTime={note.createdAt.toISOString()}>

@@ -2,6 +2,7 @@ package notes_test
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -9,9 +10,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.uber.org/mock/gomock"
 
 	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
@@ -26,7 +30,16 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 )
 
-var now = time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
+var (
+	now     = time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
+	metrics = sdkmetric.NewManualReader()
+)
+
+func TestMain(m *testing.M) {
+	otel.SetMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(metrics)))
+
+	os.Exit(m.Run())
+}
 
 type ApplicationSuite struct {
 	suite.Suite
@@ -232,4 +245,105 @@ func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 
 	s.Require().ErrorIs(err, notes.ErrDeleteNote)
 	s.Require().ErrorIs(err, domain.ErrNoteNotFound)
+}
+
+func (s *ApplicationSuite) TestDeniesWhatTheRoleLacksBeforeTheRepositoryEvenForAMissingNote() {
+	viewer, admin := actortest.Viewer(acme), actortest.Admin(acme)
+	missing := domain.NewNoteID()
+	create := &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras"}}
+
+	cases := map[string]struct {
+		call       func() error
+		permission string
+		role       string
+	}{
+		"viewer creates": {
+			call: func() error {
+				_, err := s.app.Create(s.T().Context(), viewer, create)
+
+				return err
+			},
+			permission: "note:create",
+			role:       "viewer",
+		},
+		"viewer deletes": {
+			call:       func() error { return s.app.Delete(s.T().Context(), viewer, missing) },
+			permission: "note:delete",
+			role:       "viewer",
+		},
+		"admin deletes": {
+			call:       func() error { return s.app.Delete(s.T().Context(), admin, missing) },
+			permission: "note:delete",
+			role:       "admin",
+		},
+	}
+
+	for name, tc := range cases {
+		s.Run(name, func() {
+			before := denials(s.T(), tc.permission, tc.role)
+
+			err := tc.call()
+
+			s.Require().ErrorIs(err, errors.ErrRequestUnauthorized)
+			s.Require().Equal(errors.KindUnauthorized, errors.Kind(err))
+			s.Require().Equal(before+1, denials(s.T(), tc.permission, tc.role))
+		})
+	}
+}
+
+func (s *ApplicationSuite) TestEveryRoleReadsNotes() {
+	note := fixture.RandomNote()
+
+	for _, a := range []*actor.Actor{actortest.Owner(acme), actortest.Admin(acme), actortest.Viewer(acme)} {
+		s.Run(a.Role.String(), func() {
+			s.repo.EXPECT().List(gomock.Any(), acme).Return([]*domain.Note{note}, nil)
+			s.repo.EXPECT().Get(gomock.Any(), acme, note.ID).Return(note, nil)
+
+			listed, err := s.app.List(s.T().Context(), a)
+			s.Require().NoError(err)
+			s.Require().Equal([]*domain.Note{note}, listed)
+
+			got, err := s.app.Get(s.T().Context(), a, note.ID)
+			s.Require().NoError(err)
+			s.Require().Equal(note, got)
+		})
+	}
+}
+
+func (s *ApplicationSuite) TestAdminCreatesNotes() {
+	s.repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	got, err := s.app.Create(s.T().Context(), actortest.Admin(acme), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Ideias"}})
+
+	s.Require().NoError(err)
+	s.Require().Equal("Ideias", got.Title)
+}
+
+func denials(t *testing.T, permission, role string) int64 {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, metrics.Collect(t.Context(), &rm))
+
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != "iam.actor.authorization.denials" {
+				continue
+			}
+
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok, "iam.actor.authorization.denials is a %T", m.Data)
+
+			for _, dp := range sum.DataPoints {
+				p, _ := dp.Attributes.Value("permission")
+				r, _ := dp.Attributes.Value("role")
+
+				if p.AsString() == permission && r.AsString() == role {
+					return dp.Value
+				}
+			}
+		}
+	}
+
+	return 0
 }

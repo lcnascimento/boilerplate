@@ -112,6 +112,29 @@ describe("CreateNoteDialog", () => {
     expect(createNoteMock).toHaveBeenCalledWith({ title: "Compras" });
   });
 
+  it("stays open and says the Role forbids it when the API answers 403", async () => {
+    createNoteMock.mockResolvedValue({
+      kind: "error",
+      error: {
+        code: "ERR_UNAUTHORIZED",
+        message: "unauthorized request",
+        retryable: false,
+        status: 403,
+      },
+    });
+    const user = renderDialog();
+    const dialog = await openDialog(user);
+
+    await user.type(screen.getByLabelText("Título"), "Compras");
+    await user.click(screen.getByRole("button", { name: "Criar" }));
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Sua Role não permite criar notas."
+    );
+    expect(dialog.isConnected).toBe(true);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
   it("stays open and says so when the service is unavailable", async () => {
     createNoteMock.mockResolvedValue({
       kind: "error",

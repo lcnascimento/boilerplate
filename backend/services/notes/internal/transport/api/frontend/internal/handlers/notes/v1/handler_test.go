@@ -1,6 +1,7 @@
 package v1_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
 
 	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/validator"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
@@ -219,6 +221,73 @@ func (s *HandlerSuite) TestDeleteRejectsMalformedID() {
 
 	s.Require().Equal(http.StatusBadRequest, rec.Code)
 }
+
+func TestHandler_AnswersEachRoleOnEachRouteAsTheMatrixSays(t *testing.T) {
+	t.Parallel()
+
+	acme := iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
+	note := fixture.RandomNote()
+
+	v, err := validator.New(validator.WithJSONFieldNames())
+	require.NoError(t, err)
+
+	app := notes.New(storedNote{note}, v)
+
+	const forbidden = `{"code": "ERR_UNAUTHORIZED", "message": "unauthorized request", "retryable": false}`
+
+	endpoints := []struct{ name, method, path, body string }{
+		{"create", http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras"}`},
+		{"list", http.MethodGet, "/notes/v1/notes", ""},
+		{"get", http.MethodGet, "/notes/v1/notes/" + note.ID.String(), ""},
+		{"delete", http.MethodDelete, "/notes/v1/notes/" + note.ID.String(), ""},
+	}
+
+	matrix := map[string]struct {
+		actor  *actor.Actor
+		status map[string]int
+	}{
+		"owner":  {actortest.Owner(acme), map[string]int{"create": 201, "list": 200, "get": 200, "delete": 204}},
+		"admin":  {actortest.Admin(acme), map[string]int{"create": 201, "list": 200, "get": 200, "delete": 403}},
+		"viewer": {actortest.Viewer(acme), map[string]int{"create": 403, "list": 200, "get": 200, "delete": 403}},
+	}
+
+	for role, tc := range matrix {
+		router := mux.NewRouter()
+		routes.RegisterNotes(router, app, withActor(tc.actor))
+
+		for _, rt := range endpoints {
+			t.Run(role+" "+rt.name, func(t *testing.T) {
+				t.Parallel()
+
+				req := httptest.NewRequestWithContext(t.Context(), rt.method, rt.path, strings.NewReader(rt.body))
+				rec := httptest.NewRecorder()
+
+				router.ServeHTTP(rec, req)
+
+				require.Equal(t, tc.status[rt.name], rec.Code)
+
+				if rec.Code == http.StatusForbidden {
+					require.JSONEq(t, forbidden, rec.Body.String())
+				}
+			})
+		}
+	}
+}
+
+// storedNote is a repository holding one note, so every route that reaches it succeeds.
+type storedNote struct{ note *domain.Note }
+
+func (storedNote) Create(context.Context, *actor.Actor, *domain.Note) error { return nil }
+
+func (r storedNote) Get(context.Context, iamdomain.OrganizationID, domain.NoteID) (*domain.Note, error) {
+	return r.note, nil
+}
+
+func (r storedNote) List(context.Context, iamdomain.OrganizationID) ([]*domain.Note, error) {
+	return []*domain.Note{r.note}, nil
+}
+
+func (storedNote) Delete(context.Context, *actor.Actor, domain.NoteID) error { return nil }
 
 func withActor(a *actor.Actor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

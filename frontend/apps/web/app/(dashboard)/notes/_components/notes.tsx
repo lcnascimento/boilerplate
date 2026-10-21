@@ -11,10 +11,11 @@ import type { Result } from "@boilerplate/api/core";
 import type { Note } from "@boilerplate/api/notes/schemas";
 
 interface NotesProps {
+  canCreate: boolean;
   notes: Promise<Result<Note[]>>;
 }
 
-export function Notes({ notes }: NotesProps) {
+export function Notes({ canCreate, notes }: NotesProps) {
   const t = useTranslations("notes");
   const result = use(notes);
 
@@ -24,7 +25,9 @@ export function Notes({ notes }: NotesProps) {
   if (result.data.length === 0) {
     return (
       <EmptyState
-        description={t("emptyDescription")}
+        description={t(
+          canCreate ? "emptyDescription" : "emptyDescriptionReadOnly"
+        )}
         icon={NotebookPen}
         title={t("emptyTitle")}
       />

@@ -7,6 +7,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -39,6 +40,10 @@ func (a *Application) Create(ctx context.Context, caller *actor.Actor, req *mode
 	ctx, span := a.onCreateStart(ctx)
 	defer span.End()
 
+	if err := caller.Authorize(ctx, roles.NoteCreate); err != nil {
+		return nil, a.onError(ctx, err)
+	}
+
 	if req == nil {
 		return nil, a.onError(ctx, domain.ErrInvalidInput.WithCause(errors.New("request body is required")))
 	}
@@ -67,6 +72,10 @@ func (a *Application) List(ctx context.Context, caller *actor.Actor) ([]*domain.
 	ctx, span := a.onListStart(ctx)
 	defer span.End()
 
+	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
+		return []*domain.Note{}, a.onError(ctx, err)
+	}
+
 	notes, err := a.notes.List(ctx, caller.OrganizationID)
 	if err != nil {
 		return []*domain.Note{}, a.onError(ctx, ErrListNotes.WithCause(err))
@@ -79,6 +88,10 @@ func (a *Application) Get(ctx context.Context, caller *actor.Actor, id domain.No
 	ctx, span := a.onGetStart(ctx, id)
 	defer span.End()
 
+	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
+		return nil, a.onError(ctx, err)
+	}
+
 	note, err := a.notes.Get(ctx, caller.OrganizationID, id)
 	if err != nil {
 		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
@@ -90,6 +103,10 @@ func (a *Application) Get(ctx context.Context, caller *actor.Actor, id domain.No
 func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
 	ctx, span := a.onDeleteStart(ctx, id)
 	defer span.End()
+
+	if err := caller.Authorize(ctx, roles.NoteDelete); err != nil {
+		return a.onError(ctx, err)
+	}
 
 	if err := a.notes.Delete(ctx, caller, id); err != nil {
 		return a.onError(ctx, ErrDeleteNote.WithCause(err))
