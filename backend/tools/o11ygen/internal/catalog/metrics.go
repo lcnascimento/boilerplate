@@ -297,7 +297,7 @@ var sourceLabels = map[Source][]string{
 	Scrape:           {"job", "instance"},
 	RecordingRule:    {"job"},
 	SlothRecording:   {"sloth_id", "sloth_service", "sloth_slo", "service"},
-	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "source"},
+	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "http_status_code", "source"},
 }
 
 var (
