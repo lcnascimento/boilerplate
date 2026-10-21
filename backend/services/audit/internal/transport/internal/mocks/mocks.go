@@ -117,16 +117,16 @@ func (m *MockConsumer) EXPECT() *MockConsumerMockRecorder {
 	return m.recorder
 }
 
-// Running mocks base method.
-func (m *MockConsumer) Running() bool {
+// Ready mocks base method.
+func (m *MockConsumer) Ready(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Running")
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "Ready", ctx)
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Running indicates an expected call of Running.
-func (mr *MockConsumerMockRecorder) Running() *gomock.Call {
+// Ready indicates an expected call of Ready.
+func (mr *MockConsumerMockRecorder) Ready(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Running", reflect.TypeOf((*MockConsumer)(nil).Running))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ready", reflect.TypeOf((*MockConsumer)(nil).Ready), ctx)
 }

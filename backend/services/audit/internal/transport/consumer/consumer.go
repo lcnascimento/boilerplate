@@ -25,6 +25,8 @@ var (
 
 	ErrRouterStopped = errors.New("events subscriber stopped while the process was running").
 				WithCode("ROUTER_STOPPED")
+
+	ErrNotConsuming = errors.New("events subscriber is not consuming").WithCode("SUBSCRIBER_NOT_CONSUMING")
 )
 
 type Consumer struct {
@@ -103,17 +105,17 @@ func (c *Consumer) Stop(_ context.Context) error {
 	return subscriber.Close()
 }
 
-func (c *Consumer) Running() bool {
+func (c *Consumer) Ready(ctx context.Context) error {
 	subscriber := c.subscriber.Load()
 	if subscriber == nil || c.stopped.Load() {
-		return false
+		return ErrNotConsuming
 	}
 
 	select {
 	case <-subscriber.Running():
-		return true
+		return subscriber.Ping(ctx)
 	default:
-		return false
+		return ErrNotConsuming
 	}
 }
 

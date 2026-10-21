@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	image      = "redpandadata/redpanda:v26.2.5"
+	Image      = "redpandadata/redpanda:v26.2.5"
 	partitions = 3
 	source     = "eventstest"
 )
@@ -34,7 +34,7 @@ type cluster struct {
 var startCluster = sync.OnceValues(func() (cluster, error) {
 	ctx := context.Background()
 
-	container, err := redpanda.Run(ctx, image)
+	container, err := redpanda.Run(ctx, Image)
 	if err != nil {
 		return cluster{}, err
 	}

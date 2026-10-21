@@ -49,6 +49,7 @@ var (
 type Forwarder struct {
 	router    *message.Router
 	publisher *kafka.Publisher
+	cluster   *events.Cluster
 	shutdown  func()
 
 	started  atomic.Bool
@@ -67,19 +68,26 @@ func New(outboxSubscriber message.Subscriber, brokers []string, opts ...Option) 
 		return nil, err
 	}
 
+	cluster, err := events.DialCluster(brokers, events.Topic)
+	if err != nil {
+		return nil, ErrKafkaUnavailable.WithCause(err)
+	}
+
 	publisher, err := newPublisher(brokers)
 	if err != nil {
+		_ = cluster.Close()
+
 		return nil, err
 	}
 
-	f := &Forwarder{publisher: publisher, shutdown: func() {}, runDone: make(chan struct{})}
+	f := &Forwarder{publisher: publisher, cluster: cluster, shutdown: func() {}, runDone: make(chan struct{})}
 	for _, opt := range opts {
 		opt(f)
 	}
 
 	f.router, err = message.NewRouter(message.RouterConfig{CloseTimeout: closeTimeout}, watermill.NopLogger{})
 	if err != nil {
-		_ = publisher.Close()
+		f.close()
 
 		return nil, ErrInvalidConfig.WithCause(err)
 	}
@@ -97,7 +105,7 @@ func New(outboxSubscriber message.Subscriber, brokers []string, opts ...Option) 
 		Middlewares:    []message.HandlerMiddleware{retry.Middleware, middleware.Recoverer},
 	})
 	if err != nil {
-		_ = publisher.Close()
+		f.close()
 
 		return nil, ErrInvalidConfig.WithCause(err)
 	}
@@ -150,9 +158,9 @@ func (f *Forwarder) Stop(context.Context) error {
 			<-f.runDone
 		}
 
-		publisherErr := f.publisher.Close()
+		publisherErr, clusterErr := f.publisher.Close(), f.cluster.Close()
 
-		for _, err := range []error{routerErr, publisherErr} {
+		for _, err := range []error{routerErr, publisherErr, clusterErr} {
 			if err != nil {
 				f.stopErr = ErrStop.WithCause(err)
 
@@ -164,12 +172,21 @@ func (f *Forwarder) Stop(context.Context) error {
 	return f.stopErr
 }
 
-func (f *Forwarder) Ready(context.Context) error {
+func (f *Forwarder) Ready(ctx context.Context) error {
 	if !f.router.IsRunning() || f.router.IsClosed() {
 		return ErrNotRunning
 	}
 
+	if err := f.cluster.Ping(ctx); err != nil {
+		return ErrKafkaUnavailable.WithCause(err)
+	}
+
 	return nil
+}
+
+func (f *Forwarder) close() {
+	_ = f.publisher.Close()
+	_ = f.cluster.Close()
 }
 
 func newPublisher(brokers []string) (*kafka.Publisher, error) {

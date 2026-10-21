@@ -13,11 +13,11 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport"
 )
 
-const pingTimeout = 2 * time.Second
+const checkTimeout = 2 * time.Second
 
 var (
-	ErrDatabaseUnhealthy  = errors.New("database did not answer the health ping")
-	ErrConsumerNotRunning = errors.New("events consumer is not running")
+	ErrDatabaseUnhealthy = errors.New("database did not answer the health ping")
+	ErrConsumerNotReady  = errors.New("events consumer is not consuming or cannot reach Kafka")
 )
 
 type handler struct {
@@ -48,12 +48,12 @@ func (h *handler) health(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) check(ctx context.Context) error {
-	if !h.consumer.Running() {
-		return ErrConsumerNotRunning
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
+
+	if err := h.consumer.Ready(ctx); err != nil {
+		return ErrConsumerNotReady.WithCause(err)
+	}
 
 	if err := h.db.Ping(ctx); err != nil {
 		return ErrDatabaseUnhealthy.WithCause(err)

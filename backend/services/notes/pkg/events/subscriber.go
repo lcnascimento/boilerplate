@@ -41,6 +41,7 @@ type Subscriber struct {
 	router     *message.Router
 	subscriber *kafka.Subscriber
 	dlq        *kafka.Publisher
+	cluster    *Cluster
 }
 
 func NewSubscriber(cfg SubscriberConfig) (*Subscriber, error) {
@@ -61,6 +62,16 @@ func newSubscriber(cfg SubscriberConfig, topic string) (*Subscriber, error) {
 	if err := s.connect(cfg.Brokers); err != nil {
 		return nil, err
 	}
+
+	cluster, err := DialCluster(cfg.Brokers, s.topic, s.dlqTopic())
+	if err != nil {
+		_ = s.subscriber.Close()
+		_ = s.dlq.Close()
+
+		return nil, err
+	}
+
+	s.cluster = cluster
 
 	poisonQueue, err := middleware.PoisonQueueWithFilter(dlqPublisher{s}, s.dlqTopic(), isPermanent)
 	if err != nil {
@@ -97,12 +108,17 @@ func (s *Subscriber) Running() <-chan struct{} {
 	return s.router.Running()
 }
 
+func (s *Subscriber) Ping(ctx context.Context) error {
+	return s.cluster.Ping(ctx)
+}
+
 func (s *Subscriber) Close() error {
 	routerErr := s.router.Close()
 	subscriberErr := s.subscriber.Close()
 	dlqErr := s.dlq.Close()
+	clusterErr := s.cluster.Close()
 
-	for _, err := range []error{routerErr, subscriberErr, dlqErr} {
+	for _, err := range []error{routerErr, subscriberErr, dlqErr, clusterErr} {
 		if err != nil {
 			return ErrSubscriberStopped.WithCause(err)
 		}
