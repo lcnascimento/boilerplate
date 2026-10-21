@@ -60,8 +60,7 @@ func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.Dashbo
 
 	sections = append(sections, logsSection())
 
-	out := dashboard.NewDashboardBuilder(svc.Name).
-		Uid(config.Namespace+"-"+svc.Name).
+	out := newDashboard(svc.Name).
 		Description("SLOs, alertas, uma seção por componente, runtime, banco e logs do serviço "+svc.Name+".").
 		Tags([]string{config.Namespace, "service"}).
 		Readonly().
