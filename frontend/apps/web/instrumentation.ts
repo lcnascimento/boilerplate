@@ -7,6 +7,9 @@ export async function register(): Promise<void> {
   const { logger } = await import("@/shared/logging");
 
   await Promise.all([
+    import("@/shared/auth/env").then(({ parseIamEnv }) =>
+      parseIamEnv(process.env)
+    ),
     // example:begin
     import("@boilerplate/api/notes").then(({ parseNotesEnv }) =>
       parseNotesEnv(process.env)

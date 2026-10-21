@@ -1,0 +1,106 @@
+import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
+import { nextCookies } from "better-auth/next-js";
+import { jwt, organization } from "better-auth/plugins";
+import { Pool } from "pg";
+
+import { parseIamEnv, type IamEnv } from "./env";
+import { ac, roles } from "./roles.gen";
+
+const DAY_SECONDS = 60 * 60 * 24;
+
+export const ACTOR_TOKEN_AUDIENCE = "boilerplate-api";
+
+function rejectUnknownRoles(role: string): Promise<void> {
+  const unknown = role.split(",").filter((name) => !Object.hasOwn(roles, name));
+  if (unknown.length === 0) return Promise.resolve();
+  return Promise.reject(
+    new APIError("BAD_REQUEST", {
+      code: "UNKNOWN_ROLE",
+      message: `Unknown role: ${unknown.join(", ")}`,
+    })
+  );
+}
+
+function createIam(env: IamEnv) {
+  const database = new Pool({ connectionString: env.IAM_DATABASE_URL });
+  const auth = betterAuth({
+    baseURL: env.BETTER_AUTH_URL,
+    secret: env.BETTER_AUTH_SECRET,
+    database,
+    emailAndPassword: { enabled: true },
+    session: { expiresIn: 7 * DAY_SECONDS, updateAge: DAY_SECONDS },
+    rateLimit: { storage: "database" },
+    disabledPaths: ["/token"],
+    advanced: {
+      defaultCookieAttributes: {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+      },
+      database: { generateId: "uuid" },
+    },
+    databaseHooks: {
+      session: {
+        create: {
+          before: async (session, context) => {
+            const adapter = context?.context.adapter;
+            if (adapter === undefined) return;
+
+            const [oldest] = await adapter.findMany<{ organizationId: string }>(
+              {
+                model: "member",
+                where: [{ field: "userId", value: session.userId }],
+                sortBy: { field: "createdAt", direction: "asc" },
+                limit: 1,
+              }
+            );
+            if (oldest === undefined) return;
+
+            return {
+              data: { ...session, activeOrganizationId: oldest.organizationId },
+            };
+          },
+        },
+      },
+    },
+    plugins: [
+      jwt({
+        disableSettingJwtHeader: true,
+        jwks: {
+          keyPairConfig: { alg: "EdDSA", crv: "Ed25519" },
+          rotationInterval: 30 * DAY_SECONDS,
+          gracePeriod: 7 * DAY_SECONDS,
+        },
+        jwt: {
+          issuer: env.BETTER_AUTH_URL,
+          audience: ACTOR_TOKEN_AUDIENCE,
+        },
+      }),
+      organization({
+        ac,
+        roles,
+        allowUserToCreateOrganization: false,
+        organizationHooks: {
+          beforeAddMember: ({ member }) => rejectUnknownRoles(member.role),
+          beforeUpdateMemberRole: ({ newRole }) => rejectUnknownRoles(newRole),
+          beforeCreateInvitation: ({ invitation }) =>
+            rejectUnknownRoles(invitation.role),
+        },
+      }),
+      nextCookies(),
+    ],
+  });
+
+  return { auth, database };
+}
+
+type Iam = ReturnType<typeof createIam>;
+
+let iam: Iam | undefined;
+
+// Lazy, so that `next build` can load the routes without the runtime environment.
+export function getIam(): Iam {
+  iam ??= createIam(parseIamEnv(process.env));
+  return iam;
+}

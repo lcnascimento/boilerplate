@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { ACME_OWNER } from "../scripts/iam-seed/users";
+
 test("home loads and switching the language changes the texts", async ({
   page,
 }) => {
@@ -7,7 +9,7 @@ test("home loads and switching the language changes the texts", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Bem-vindo ao Boilerplate" })
   ).toBeVisible();
-  await expect(page.getByText("Usuário local", { exact: true })).toBeVisible();
+  await expect(page.getByText(ACME_OWNER.name, { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Idioma" }).click();
   await page.getByRole("menuitemradio", { name: "English" }).click();
@@ -18,7 +20,6 @@ test("home loads and switching the language changes the texts", async ({
   await expect(
     page.getByRole("link", { name: "Home" }).and(page.locator("a[href='/']"))
   ).toHaveCount(1);
-  await expect(page.getByText("Local user", { exact: true })).toBeVisible();
 
   await page.reload();
   await expect(
