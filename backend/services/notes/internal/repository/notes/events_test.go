@@ -68,7 +68,7 @@ func TestComponentRepository_DeleteWritesNoteDeletedAtClockTime(t *testing.T) {
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 	require.NoError(t, repo.Create(t.Context(), note))
 
-	require.NoError(t, repo.Delete(t.Context(), note.ID))
+	require.NoError(t, repo.Delete(t.Context(), note.OrganizationID, note.ID))
 
 	got := outboxEvents(t, pool)
 	require.Len(t, got, 2)
@@ -90,7 +90,7 @@ func TestComponentRepository_DeleteWithoutEffectWritesNothing(t *testing.T) {
 
 	repo, pool := newRepositoryWithPool(t)
 
-	err := repo.Delete(t.Context(), domain.NewNoteID())
+	err := repo.Delete(t.Context(), acme, domain.NewNoteID())
 
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 	require.Empty(t, outboxEvents(t, pool))
@@ -123,7 +123,7 @@ func TestComponentRepository_ConcurrentDeletesWriteOneNoteDeleted(t *testing.T) 
 	var wg sync.WaitGroup
 
 	for i := range deletes {
-		wg.Go(func() { errs[i] = repo.Delete(t.Context(), note.ID) })
+		wg.Go(func() { errs[i] = repo.Delete(t.Context(), note.OrganizationID, note.ID) })
 	}
 
 	wg.Wait()
@@ -157,7 +157,7 @@ func TestComponentRepository_OutboxFailureLeavesNoNote(t *testing.T) {
 
 	require.ErrorIs(t, err, notes.ErrEmit)
 
-	_, err = repo.Get(t.Context(), note.ID)
+	_, err = repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
 
@@ -175,7 +175,7 @@ func TestComponentRepository_UnregisteredSchemaLeavesNoNote(t *testing.T) {
 
 	require.ErrorIs(t, err, events.ErrUnknownSchema)
 
-	_, err = repo.Get(t.Context(), note.ID)
+	_, err = repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
 

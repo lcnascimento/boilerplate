@@ -11,10 +11,11 @@ import (
 )
 
 type Note struct {
-	ID        pgtype.UUID
-	CreatedAt time.Time
-	Title     string
-	Body      string
+	ID             pgtype.UUID
+	CreatedAt      time.Time
+	Title          string
+	Body           string
+	OrganizationID pgtype.UUID
 }
 
 type WatermillNotesOutbox struct {

@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
 
@@ -18,9 +20,10 @@ func TestNote_MarshalsToWireContract(t *testing.T) {
 	t.Parallel()
 
 	note := domain.Note{
-		ID:          domain.MustParseNoteID("note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f"),
-		NoteContent: domain.NoteContent{Title: "Lista de compras", Body: ""},
-		CreatedAt:   time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC),
+		ID:             domain.MustParseNoteID("note_01928f4e-7b3a-7c2d-9e1f-2a3b4c5d6e7f"),
+		OrganizationID: iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"),
+		NoteContent:    domain.NoteContent{Title: "Lista de compras", Body: ""},
+		CreatedAt:      time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC),
 	}
 
 	out, err := json.Marshal(note)

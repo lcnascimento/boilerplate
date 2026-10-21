@@ -60,13 +60,12 @@ func TestApplication_DefaultClockIsUTCInMicroseconds(t *testing.T) {
 	require.WithinRange(t, got.CreatedAt, before.Truncate(time.Microsecond), after)
 }
 
+var acme = iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
+
 func owner(t *testing.T) *actor.Actor {
 	t.Helper()
 
-	orgID, err := iamdomain.ParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
-	require.NoError(t, err)
-
-	return actortest.Owner(orgID)
+	return actortest.Owner(acme)
 }
 
 func (s *ApplicationSuite) SetupTest() {
@@ -97,6 +96,7 @@ func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 	s.Require().Equal("Lista de compras", got.Title)
 	s.Require().Equal("Leite.", got.Body)
 	s.Require().Equal(now, got.CreatedAt)
+	s.Require().Equal("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", got.OrganizationID.String())
 	s.Require().Equal(got, stored)
 }
 
@@ -176,7 +176,7 @@ func (s *ApplicationSuite) TestCreateWrapsRepositoryErrors() {
 
 func (s *ApplicationSuite) TestListReturnsRepositoryOrder() {
 	newest, oldest := fixture.RandomNote(), fixture.RandomNote()
-	s.repo.EXPECT().List(gomock.Any()).Return([]*domain.Note{newest, oldest}, nil)
+	s.repo.EXPECT().List(gomock.Any(), acme).Return([]*domain.Note{newest, oldest}, nil)
 
 	got, err := s.app.List(s.T().Context(), s.owner)
 
@@ -185,7 +185,7 @@ func (s *ApplicationSuite) TestListReturnsRepositoryOrder() {
 }
 
 func (s *ApplicationSuite) TestListWrapsRepositoryErrors() {
-	s.repo.EXPECT().List(gomock.Any()).Return(nil, errors.ErrMock)
+	s.repo.EXPECT().List(gomock.Any(), acme).Return(nil, errors.ErrMock)
 
 	got, err := s.app.List(s.T().Context(), s.owner)
 
@@ -197,7 +197,7 @@ func (s *ApplicationSuite) TestListWrapsRepositoryErrors() {
 
 func (s *ApplicationSuite) TestGetReturnsNote() {
 	note := fixture.RandomNote()
-	s.repo.EXPECT().Get(gomock.Any(), note.ID).Return(note, nil)
+	s.repo.EXPECT().Get(gomock.Any(), acme, note.ID).Return(note, nil)
 
 	got, err := s.app.Get(s.T().Context(), s.owner, note.ID)
 
@@ -207,7 +207,7 @@ func (s *ApplicationSuite) TestGetReturnsNote() {
 
 func (s *ApplicationSuite) TestGetUnknownNoteIsNotFound() {
 	id := domain.NewNoteID()
-	s.repo.EXPECT().Get(gomock.Any(), id).Return(nil, domain.ErrNoteNotFound)
+	s.repo.EXPECT().Get(gomock.Any(), acme, id).Return(nil, domain.ErrNoteNotFound)
 
 	_, err := s.app.Get(s.T().Context(), s.owner, id)
 
@@ -218,14 +218,14 @@ func (s *ApplicationSuite) TestGetUnknownNoteIsNotFound() {
 
 func (s *ApplicationSuite) TestDeleteRemovesNote() {
 	id := domain.NewNoteID()
-	s.repo.EXPECT().Delete(gomock.Any(), id).Return(nil)
+	s.repo.EXPECT().Delete(gomock.Any(), acme, id).Return(nil)
 
 	s.Require().NoError(s.app.Delete(s.T().Context(), s.owner, id))
 }
 
 func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 	id := domain.NewNoteID()
-	s.repo.EXPECT().Delete(gomock.Any(), id).Return(domain.ErrNoteNotFound)
+	s.repo.EXPECT().Delete(gomock.Any(), acme, id).Return(domain.ErrNoteNotFound)
 
 	err := s.app.Delete(s.T().Context(), s.owner, id)
 

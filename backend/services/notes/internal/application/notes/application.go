@@ -35,7 +35,7 @@ func New(notes application.NotesRepository, v application.Validator, opts ...Opt
 	return app
 }
 
-func (a *Application) Create(ctx context.Context, _ *actor.Actor, req *models.CreateNoteRequest) (*domain.Note, error) {
+func (a *Application) Create(ctx context.Context, caller *actor.Actor, req *models.CreateNoteRequest) (*domain.Note, error) {
 	ctx, span := a.onCreateStart(ctx)
 	defer span.End()
 
@@ -44,9 +44,10 @@ func (a *Application) Create(ctx context.Context, _ *actor.Actor, req *models.Cr
 	}
 
 	note := &domain.Note{
-		ID:          domain.NewNoteID(),
-		NoteContent: req.NoteContent,
-		CreatedAt:   a.now(),
+		ID:             domain.NewNoteID(),
+		OrganizationID: caller.OrganizationID,
+		NoteContent:    req.NoteContent,
+		CreatedAt:      a.now(),
 	}
 
 	if err := a.validate(note); err != nil {
@@ -62,11 +63,11 @@ func (a *Application) Create(ctx context.Context, _ *actor.Actor, req *models.Cr
 	return note, nil
 }
 
-func (a *Application) List(ctx context.Context, _ *actor.Actor) ([]*domain.Note, error) {
+func (a *Application) List(ctx context.Context, caller *actor.Actor) ([]*domain.Note, error) {
 	ctx, span := a.onListStart(ctx)
 	defer span.End()
 
-	notes, err := a.notes.List(ctx)
+	notes, err := a.notes.List(ctx, caller.OrganizationID)
 	if err != nil {
 		return []*domain.Note{}, a.onError(ctx, ErrListNotes.WithCause(err))
 	}
@@ -74,11 +75,11 @@ func (a *Application) List(ctx context.Context, _ *actor.Actor) ([]*domain.Note,
 	return notes, nil
 }
 
-func (a *Application) Get(ctx context.Context, _ *actor.Actor, id domain.NoteID) (*domain.Note, error) {
+func (a *Application) Get(ctx context.Context, caller *actor.Actor, id domain.NoteID) (*domain.Note, error) {
 	ctx, span := a.onGetStart(ctx, id)
 	defer span.End()
 
-	note, err := a.notes.Get(ctx, id)
+	note, err := a.notes.Get(ctx, caller.OrganizationID, id)
 	if err != nil {
 		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
 	}
@@ -86,11 +87,11 @@ func (a *Application) Get(ctx context.Context, _ *actor.Actor, id domain.NoteID)
 	return note, nil
 }
 
-func (a *Application) Delete(ctx context.Context, _ *actor.Actor, id domain.NoteID) error {
+func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
 	ctx, span := a.onDeleteStart(ctx, id)
 	defer span.End()
 
-	if err := a.notes.Delete(ctx, id); err != nil {
+	if err := a.notes.Delete(ctx, caller.OrganizationID, id); err != nil {
 		return a.onError(ctx, ErrDeleteNote.WithCause(err))
 	}
 

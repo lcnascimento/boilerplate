@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
+import { storageStateOf } from "./auth-state";
 import { expect, test } from "./fixtures";
+import { WEB_URL } from "./stack";
 
 import type { Page } from "@playwright/test";
 
@@ -66,6 +68,34 @@ test("deleting a note after confirming removes it from the list", async ({
     page.getByRole("heading", { level: 1, name: "Notas" })
   ).toBeVisible();
   await expect(noteLink(page, title)).toHaveCount(0);
+});
+
+test("the Globex owner gets 404 on an Acme note", async ({
+  page,
+  browser,
+  marker,
+}) => {
+  const title = marker("acme-only");
+  await createNote(page, title, "só para a Acme");
+  await noteLink(page, title).click();
+  await expect(page).toHaveURL(/\/notes\/note_/);
+
+  const globex = await browser.newContext({
+    baseURL: WEB_URL,
+    storageState: storageStateOf("owner@globex.test"),
+  });
+  try {
+    const globexPage = await globex.newPage();
+    const response = await globexPage.goto(page.url());
+
+    expect(response?.status()).toBe(404);
+    await expect(
+      globexPage.getByRole("heading", { name: "Página não encontrada." })
+    ).toBeVisible();
+    await expect(globexPage.getByText(title)).toHaveCount(0);
+  } finally {
+    await globex.close();
+  }
 });
 
 for (const [name, id] of [

@@ -20,6 +20,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
 
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/routes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -158,6 +159,30 @@ func (s *HandlerSuite) TestGetUnknownNoteIsNotFound() {
 
 	s.Require().Equal(http.StatusNotFound, rec.Code)
 	s.Require().JSONEq(`{"code": "NOTE_NOT_FOUND", "message": "note not found", "retryable": false}`, rec.Body.String())
+}
+
+func (s *HandlerSuite) TestNoteOfAnotherOrganizationIsNotFound() {
+	globexOwner := actortest.Owner(iamdomain.MustParseOrganizationID("org_4d7a1c3e-5b6f-4a8b-9c0d-1e2f3a4b5c6d"))
+	router := mux.NewRouter()
+	routes.RegisterNotes(router, s.service, withActor(globexOwner))
+
+	s.service.EXPECT().Get(gomock.Any(), globexOwner, s.note.ID).Return(nil, notes.ErrGetNote.WithCause(domain.ErrNoteNotFound))
+	s.service.EXPECT().Delete(gomock.Any(), globexOwner, s.note.ID).Return(notes.ErrDeleteNote.WithCause(domain.ErrNoteNotFound))
+
+	for method, body := range map[string]string{
+		http.MethodGet:    `{"code": "NOTE_NOT_FOUND", "message": "failed to get note", "retryable": false, "details": {"reasons": ["note not found"]}}`,
+		http.MethodDelete: `{"code": "NOTE_NOT_FOUND", "message": "failed to delete note", "retryable": false, "details": {"reasons": ["note not found"]}}`,
+	} {
+		s.Run(method, func() {
+			req := httptest.NewRequestWithContext(s.T().Context(), method, "/notes/v1/notes/"+s.note.ID.String(), nil)
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			s.Require().Equal(http.StatusNotFound, rec.Code)
+			s.Require().JSONEq(body, rec.Body.String())
+		})
+	}
 }
 
 func (s *HandlerSuite) TestGetRejectsMalformedID() {
