@@ -8,8 +8,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 )
 
 const (
@@ -162,7 +164,7 @@ func newRepository(t *testing.T) (*pgxpool.Pool, *outbox.Repository) {
 		t.Skip("component test: needs Postgres")
 	}
 
-	pool := testdb.New(t)
+	pool := testdb.New(t, migrations.FS)
 
 	return pool, outbox.New(pool)
 }

@@ -2,16 +2,16 @@ package migrations_test
 
 import (
 	"database/sql"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/postgres/migrate"
+	"github.com/lcnascimento/go-kit/postgres/testdb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 )
 
 func TestComponentMigrations_CreatesNotesTable(t *testing.T) {
@@ -19,7 +19,7 @@ func TestComponentMigrations_CreatesNotesTable(t *testing.T) {
 
 	db := newDatabase(t)
 
-	require.NoError(t, migrations.Up(t.Context(), db))
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
 
 	createdAt := time.Date(2026, 10, 12, 18, 0, 0, 0, time.UTC)
 	_, err := db.ExecContext(t.Context(),
@@ -39,76 +39,18 @@ func TestComponentMigrations_CreatesNotesTable(t *testing.T) {
 	require.True(t, createdAt.Equal(gotCreatedAt))
 }
 
-func TestComponentMigrations_RerunIsNoop(t *testing.T) {
-	t.Parallel()
-
-	db := newDatabase(t)
-
-	require.NoError(t, migrations.Up(t.Context(), db))
-	require.NoError(t, migrations.Up(t.Context(), db))
-}
-
-func TestComponentMigrations_ConcurrentRunsAllSucceed(t *testing.T) {
-	t.Parallel()
-
-	db := newDatabase(t)
-
-	const runs = 4
-
-	errs := make([]error, runs)
-
-	var wg sync.WaitGroup
-	for i := range runs {
-		wg.Go(func() { errs[i] = migrations.Up(t.Context(), db) })
-	}
-
-	wg.Wait()
-
-	for _, err := range errs {
-		require.NoError(t, err)
-	}
-}
-
-func TestComponentMigrations_AppliedVersionWithoutFileAsksForReset(t *testing.T) {
-	t.Parallel()
-
-	db := newDatabase(t)
-
-	require.NoError(t, migrations.Up(t.Context(), db))
-
-	_, err := db.ExecContext(t.Context(), `INSERT INTO goose_db_version (version_id, is_applied) VALUES (99999, true)`)
-	require.NoError(t, err)
-
-	err = migrations.Up(t.Context(), db)
-
-	require.ErrorIs(t, err, migrations.ErrUnknownAppliedVersion)
-	require.Contains(t, err.Error(), "make db.reset")
-}
-
-func TestComponentMigrations_DownRevertsTheLatestMigration(t *testing.T) {
-	t.Parallel()
-
-	db := newDatabase(t)
-
-	require.NoError(t, migrations.Up(t.Context(), db))
-	require.NoError(t, migrations.Down(t.Context(), db))
-
-	require.False(t, tableExists(t, db, "watermill_notes_outbox"))
-	require.True(t, tableExists(t, db, "notes"))
-}
-
 func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
 	t.Parallel()
 
 	db := newDatabase(t)
 
-	require.NoError(t, migrations.Up(t.Context(), db))
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
 
 	for rollbacks := 0; ; rollbacks++ {
 		require.Less(t, rollbacks, 1000, "Down never ran out of migrations")
 
-		err := migrations.Down(t.Context(), db)
-		if errors.Is(err, migrations.ErrNothingToRollBack) {
+		err := migrate.Down(t.Context(), db, migrations.FS)
+		if errors.Is(err, migrate.ErrNothingToRollBack) {
 			break
 		}
 
@@ -116,31 +58,7 @@ func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
 	}
 
 	require.False(t, tableExists(t, db, "notes"))
-	require.NoError(t, migrations.Up(t.Context(), db))
-	require.True(t, tableExists(t, db, "notes"))
-}
-
-func TestComponentMigrations_DownWithNothingAppliedFails(t *testing.T) {
-	t.Parallel()
-
-	db := newDatabase(t)
-
-	require.ErrorIs(t, migrations.Down(t.Context(), db), migrations.ErrNothingToRollBack)
-}
-
-func TestComponentMigrations_DownWithAppliedVersionWithoutFileAsksForReset(t *testing.T) {
-	t.Parallel()
-
-	db := newDatabase(t)
-
-	require.NoError(t, migrations.Up(t.Context(), db))
-
-	_, err := db.ExecContext(t.Context(), `INSERT INTO goose_db_version (version_id, is_applied) VALUES (99999, true)`)
-	require.NoError(t, err)
-
-	err = migrations.Down(t.Context(), db)
-
-	require.ErrorIs(t, err, migrations.ErrUnknownAppliedVersion)
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
 	require.True(t, tableExists(t, db, "notes"))
 }
 

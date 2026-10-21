@@ -22,9 +22,11 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
@@ -349,7 +351,7 @@ func newEnv(t *testing.T) *env {
 	schemaIDs, err := events.LookupSchemaIDs(t.Context(), e.Registry(t))
 	require.NoError(t, err)
 
-	return &env{Env: e, brokers: e.Brokers, pool: testdb.New(t), schemaIDs: schemaIDs}
+	return &env{Env: e, brokers: e.Brokers, pool: testdb.New(t, migrations.FS), schemaIDs: schemaIDs}
 }
 
 func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {

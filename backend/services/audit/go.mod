@@ -1,6 +1,6 @@
 module github.com/lcnascimento/boilerplate/backend/services/audit
 
-go 1.27.2
+go 1.27.3
 
 replace github.com/lcnascimento/boilerplate/backend/services/notes/pkg => ../notes/pkg
 
@@ -13,9 +13,8 @@ require (
 	github.com/lcnascimento/go-kit/errors v1.9.3
 	github.com/lcnascimento/go-kit/http v1.5.0
 	github.com/lcnascimento/go-kit/o11y v1.8.0
+	github.com/lcnascimento/go-kit/postgres v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/validator v1.11.0
-	github.com/peterldowns/pgtestdb v0.1.1
-	github.com/pressly/goose/v3 v3.29.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -68,9 +67,11 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/peterldowns/pgtestdb v0.1.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/pressly/goose/v3 v3.29.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.7 // indirect
@@ -110,3 +111,5 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
+
+replace github.com/lcnascimento/go-kit/postgres => ../../../../go-kit/postgres

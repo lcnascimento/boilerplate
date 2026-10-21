@@ -7,9 +7,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lcnascimento/go-kit/postgres/testdb"
+
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/idomain"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/repository/entries"
-	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/repository/internal/testdb"
+	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/repository/migrations"
 )
 
 type row struct {
@@ -176,5 +178,5 @@ func newPool(t *testing.T) *pgxpool.Pool {
 		t.Skip("component test")
 	}
 
-	return testdb.New(t)
+	return testdb.New(t, migrations.FS)
 }
