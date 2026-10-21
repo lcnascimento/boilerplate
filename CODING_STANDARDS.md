@@ -15,6 +15,7 @@ test:
 ```
 
 Fix: delete both lines. Encode the postgres requirement as a target prerequisite; if humans need the usage notes, write them as a document with `foundation:documentation`.
+
 Source: `earn-every-comment`.
 
 ## Give every domain list one source
