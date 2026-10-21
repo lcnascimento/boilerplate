@@ -226,8 +226,6 @@ var processAlerts = []inheritedAlert{
 	},
 }
 
-// recordsIn5m sums a Loki recorded rate1m over 5 minutes: the ruler writes one sample a minute, absent when no log
-// matched, so increase() would miss a single record.
 func recordsIn5m(series, process string, extra map[string]string) string {
 	matchers := `service=` + strconv.Quote(process)
 	for _, name := range slices.Sorted(maps.Keys(extra)) {

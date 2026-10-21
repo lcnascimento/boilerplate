@@ -40,8 +40,6 @@ otelcol.receiver.loki "containers" {
   }
 }
 
-// Container logs reach Loki in the shape of the services' OTLP logs: the message as the line, the level as the
-// severity, and the other fields as structured metadata. A line in an unknown format keeps its text.
 otelcol.processor.transform "containers" {
   error_mode = "ignore"
 
@@ -53,13 +51,9 @@ otelcol.processor.transform "containers" {
       `set(resource.attributes["container.name"], log.attributes["container"])`,
       `set(resource.attributes["container.image.name"], log.attributes["image"])`,
       `delete_matching_keys(log.attributes, "^(service|container|image|loki\\.attribute\\.labels)$")`,
-      // JSON (kafka-console).
       `merge_maps(log.cache, ParseJSON(log.body), "upsert") where IsMatch(log.body, "^\\{")`,
-      // logfmt (alloy, grafana, loki, prometheus, pyroscope, tempo).
       `merge_maps(log.cache, ParseKeyValue(log.body), "upsert") where IsMatch(log.body, "^[A-Za-z_][A-Za-z0-9_.]*=")`,
-      // log4j (kafka, schema-registry): [timestamp] LEVEL message (logger)
       `merge_maps(log.cache, ExtractPatterns(log.body, "^\\[[^\\]]+\\] (?P<level>[A-Z]+) (?P<msg>.*?)(?: \\((?P<logger>[^()]+)\\))?$"), "upsert") where IsMatch(log.body, "^\\[\\d{4}-\\d{2}-\\d{2} [^\\]]+\\] [A-Z]+ ")`,
-      // postgres: timestamp [pid] LEVEL:  message; DETAIL, HINT and STATEMENT lines keep their prefix in the message.
       `merge_maps(log.cache, ExtractPatterns(log.body, "^\\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\[(?P<pid>\\d+)\\] (?:(?P<level>DEBUG[1-5]|LOG|INFO|NOTICE|WARNING|ERROR|FATAL|PANIC):\\s+)?(?P<msg>.*)$"), "upsert") where IsMatch(log.body, "^\\d{4}-\\d{2}-\\d{2} \\S+ \\S+ \\[\\d+\\] ")`,
       `set(log.cache["msg"], log.cache["message"]) where log.cache["msg"] == nil`,
       `set(log.cache["level"], log.cache["lvl"]) where log.cache["level"] == nil`,
@@ -126,7 +120,7 @@ otelcol.processor.filter "drop_infra_noise" {
 }
 
 // Tempo's service graph names a database after server.address (localhost for a process on the host) and a broker
-// only after peer.service. Creating a message writes the outbox, not Kafka, so it gets no broker peer.
+// only after peer.service.
 otelcol.processor.transform "peer_service" {
   error_mode = "ignore"
 
@@ -167,8 +161,7 @@ otelcol.receiver.loki "faro" {
 }
 
 // faro.receiver writes each signal as a logfmt line without labels: its fields become structured metadata, and the
-// Faro app becomes the OTLP service. Each known kind gets a short line and a severity, like the services' logs; a
-// shape not listed here keeps its logfmt line.
+// Faro app becomes the OTLP service.
 otelcol.processor.transform "faro" {
   error_mode = "ignore"
 
@@ -183,14 +176,11 @@ otelcol.processor.transform "faro" {
       `delete_matching_keys(log.attributes, "^(timestamp|traceID|spanID)$")`,
       `merge_maps(log.cache, ExtractPatterns(log.attributes["page_url"], "^[a-z]+://[^/]+(?P<page_path>[^?#]*)"), "upsert") where log.attributes["page_url"] != nil`,
       `set(log.cache["level"], "INFO") where log.attributes["kind"] == "event" or log.attributes["kind"] == "measurement"`,
-      // log: console.error: <message>
       `set(log.body, log.attributes["message"]) where log.attributes["kind"] == "log" and log.attributes["message"] != nil`,
       `set(log.cache["level"], ToUpperCase(log.attributes["level"])) where log.attributes["kind"] == "log" and log.attributes["level"] != nil`,
       `set(log.cache["level"], "INFO") where log.cache["level"] == "LOG"`,
-      // exception: <type>: <value>
       `set(log.body, Concat([log.attributes["type"], log.attributes["value"]], ": ")) where log.attributes["kind"] == "exception" and log.attributes["value"] != nil`,
       `set(log.cache["level"], "ERROR") where log.attributes["kind"] == "exception"`,
-      // web-vitals <name> <value> <rating> <page path>
       `set(log.cache["vital"], "CLS") where log.attributes["type"] == "web-vitals" and log.attributes["value_cls"] != nil`,
       `set(log.cache["value"], Format("%.3f", [Double(log.attributes["value_cls"])])) where log.cache["vital"] == "CLS"`,
       `set(log.cache["vital"], "LCP") where log.attributes["type"] == "web-vitals" and log.attributes["value_lcp"] != nil`,
@@ -203,7 +193,6 @@ otelcol.processor.transform "faro" {
       `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_ttfb"]))])) where log.cache["vital"] == "TTFB"`,
       `set(log.body, Concat(["web-vitals", log.cache["vital"], log.cache["value"], log.attributes["context_rating"], log.cache["page_path"]], " ")) where log.cache["value"] != nil`,
       `set(log.cache["level"], "WARN") where log.cache["value"] != nil and log.attributes["context_rating"] == "poor"`,
-      // event: <name>, with a summary for the Faro events that carry one.
       `set(log.body, log.attributes["event_name"]) where log.attributes["kind"] == "event" and log.attributes["event_name"] != nil`,
       `merge_maps(log.cache, ExtractPatterns(log.attributes["event_data_url.full"], "^[a-z]+://[^/]+(?P<fetch_path>[^?#]*)"), "upsert") where log.attributes["event_name"] == "faro.tracing.fetch" and log.attributes["event_data_url.full"] != nil`,
       `set(log.body, Concat(["fetch", log.attributes["event_data_http.request.method"], log.cache["fetch_path"], log.attributes["event_data_http.response.status_code"], Format("%dms", [Int(Double(log.attributes["event_data_duration_ns"]) / 1000000.0)])], " ")) where log.cache["fetch_path"] != nil`,

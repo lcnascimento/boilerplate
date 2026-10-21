@@ -3,15 +3,16 @@ package health
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/http/httpserver/util"
+
+	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
-const checkTimeout = 2 * time.Second
+const checkTimeout = 2 * events.PingTimeout
 
 var ErrUnhealthy = errors.New("a readiness check failed")
 
