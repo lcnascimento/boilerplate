@@ -26,7 +26,7 @@ tests:
               severity: critical
             exp_annotations:
               summary: "fixture-api responde 5xx em todo /health há 2 minutos"
-              description: "Todo /health de fixture-api respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-api por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown)."
+              description: "Todo /health de fixture-api respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o Postgres) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-api por que o health check falha e os alertas das dependências (PostgresDown)."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md"
               dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
 
@@ -62,7 +62,7 @@ tests:
               severity: critical
             exp_annotations:
               summary: "fixture-consumer responde 5xx em todo /health há 2 minutos"
-              description: "Todo /health de fixture-consumer respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-consumer por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown)."
+              description: "Todo /health de fixture-consumer respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o consumer e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-consumer por que o health check falha e os alertas das dependências (KafkaBrokersDown)."
               runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md"
               dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
       - eval_time: 6m

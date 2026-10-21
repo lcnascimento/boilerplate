@@ -18,7 +18,7 @@ groups:
           severity: critical
         annotations:
           dashboard_url: http://localhost:3010/d/boilerplate-notes
-          description: 'Todo /health de notes-api-frontend respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de notes-api-frontend por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown).'
+          description: 'Todo /health de notes-api-frontend respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o Postgres) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de notes-api-frontend por que o health check falha e os alertas das dependências (PostgresDown).'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: notes-api-frontend responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
@@ -72,7 +72,7 @@ groups:
           severity: critical
         annotations:
           dashboard_url: http://localhost:3010/d/boilerplate-notes
-          description: 'Todo /health de notes-worker-forwarder respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de notes-worker-forwarder por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown).'
+          description: 'Todo /health de notes-worker-forwarder respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o Postgres, o forwarder e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de notes-worker-forwarder por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown).'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: notes-worker-forwarder responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
