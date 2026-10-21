@@ -55,6 +55,24 @@ otelcol.processor.filter "drop_infra_noise" {
   }
 
   output {
+    traces = [otelcol.processor.transform.peer_service.input]
+  }
+}
+
+// Tempo's service graph names a database after server.address (localhost for a process on the host) and a broker
+// only after peer.service. Creating a message writes the outbox, not Kafka, so it gets no broker peer.
+otelcol.processor.transform "peer_service" {
+  error_mode = "ignore"
+
+  trace_statements {
+    context    = "span"
+    statements = [
+      `set(span.attributes["peer.service"], "postgres") where span.attributes["db.system.name"] == "postgresql" and span.attributes["peer.service"] == nil`,
+      `set(span.attributes["peer.service"], "kafka") where span.attributes["messaging.system"] == "kafka" and span.attributes["messaging.operation.type"] != "create" and span.attributes["peer.service"] == nil`,
+    ]
+  }
+
+  output {
     traces = [otelcol.exporter.otlp.tempo.input]
   }
 }
