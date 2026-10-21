@@ -82,6 +82,13 @@ jobs:
     with:
       bootstrap: make init NAME=acme-app
 
+  init-suppressions:
+    name: A / suppressions
+    needs: init
+    uses: ./.github/workflows/ci-suppressions.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
   clean-init:
     name: B / make clean-example + make init
     if: github.repository == 'lcnascimento/boilerplate'
@@ -149,5 +156,12 @@ jobs:
     name: B / e2e
     needs: clean-init
     uses: ./.github/workflows/ci-e2e.yml
+    with:
+      bootstrap: *clean-init
+
+  clean-init-suppressions:
+    name: B / suppressions
+    needs: clean-init
+    uses: ./.github/workflows/ci-suppressions.yml
     with:
       bootstrap: *clean-init

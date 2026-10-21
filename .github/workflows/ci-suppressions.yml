@@ -1,0 +1,39 @@
+name: ci-suppressions
+
+on:
+  workflow_call:
+    inputs:
+      bootstrap:
+        description: Shell command run at the repository root right after checkout.
+        type: string
+        default: ""
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-suppressions-${{ github.ref }}-${{ inputs.bootstrap }}
+  cancel-in-progress: true
+
+jobs:
+  suppressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Bootstrap
+        if: inputs.bootstrap
+        env:
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.work
+          cache-dependency-path: backend/tools/go.sum
+
+      - name: Lint suppressions
+        run: make -C backend lint.suppressions
