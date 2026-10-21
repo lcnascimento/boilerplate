@@ -19,4 +19,15 @@ Use Conventional Commits: `<type>(<optional scope>): <imperative summary>`, with
 
 ## CI
 
-No CI is configured yet.
+CI is defined in `.github/workflows/` and is the deterministic gate: a pull request merges only when it passes. Read a failing run with `gh run view --log-failed`.
+
+| Workflow          | Job          | Runs on                                                         |
+| ----------------- | ------------ | --------------------------------------------------------------- |
+| `ci-backend.yml`  | `ci-backend` | pull requests touching `backend/**`                             |
+| `ci-e2e.yml`      | `e2e`        | pull requests and pushes to `main` touching backend or frontend |
+| `ci-frontend.yml` | `frontend`   | pull requests and pushes to `main` touching `frontend/**`       |
+| `ci-proto.yml`    | `buf`        | pull requests and pushes to `main` touching proto files         |
+| `ci-openapi.yml`  | `vacuum`     | pull requests touching `openapi/**`                             |
+| `ci-template.yml` | `init`       | every push, on any branch                                       |
+
+On a branch other than `main`, every workflow but `ci-template.yml` runs only on a pull request, so a pushed branch gets its full CI only once a PR is open, draft or not. Path filters skip the workflows a change doesn't touch.
