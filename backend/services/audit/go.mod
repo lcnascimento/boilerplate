@@ -9,12 +9,12 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/env v1.2.2
-	github.com/lcnascimento/go-kit/errors v1.9.3
-	github.com/lcnascimento/go-kit/http v1.5.0
-	github.com/lcnascimento/go-kit/o11y v1.8.0
-	github.com/lcnascimento/go-kit/postgres v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/validator v1.11.0
+	github.com/lcnascimento/go-kit/env v1.2.3
+	github.com/lcnascimento/go-kit/errors v1.9.4
+	github.com/lcnascimento/go-kit/http v1.5.1
+	github.com/lcnascimento/go-kit/o11y v1.8.1
+	github.com/lcnascimento/go-kit/postgres v1.0.0
+	github.com/lcnascimento/go-kit/validator v1.11.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -60,7 +60,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.20.1 // indirect
-	github.com/lcnascimento/go-kit/util v1.4.5 // indirect
+	github.com/lcnascimento/go-kit/util v1.4.6 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.12.3 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
@@ -111,5 +111,3 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
-
-replace github.com/lcnascimento/go-kit/postgres => ../../../../go-kit/postgres
