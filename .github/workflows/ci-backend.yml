@@ -47,37 +47,15 @@ jobs:
       - name: Setup
         run: make setup
 
-      - name: sqlc
+      - name: Generated files are up to date
         run: |
-          git add -A
-          make sqlc
-          git diff --exit-code
-          untracked=$(git ls-files --others --exclude-standard)
-          if [ -n "$untracked" ]; then echo "make sqlc created untracked files:"; echo "$untracked"; exit 1; fi
-
-      - name: mocks
-        run: |
-          git add -A
-          make mocks
-          git diff --exit-code
-          untracked=$(git ls-files --others --exclude-standard)
-          if [ -n "$untracked" ]; then echo "make mocks created untracked files:"; echo "$untracked"; exit 1; fi
-
-      - name: o11y.generate
-        run: |
-          git add -A
-          make o11y.generate
-          git diff --exit-code
-          untracked=$(git ls-files --others --exclude-standard)
-          if [ -n "$untracked" ]; then echo "make o11y.generate created untracked files:"; echo "$untracked"; exit 1; fi
-
-      - name: iam.generate
-        run: |
-          git add -A
-          make iam.generate
-          git diff --exit-code
-          untracked=$(git ls-files --others --exclude-standard)
-          if [ -n "$untracked" ]; then echo "make iam.generate created untracked files:"; echo "$untracked"; exit 1; fi
+          for target in sqlc mocks o11y.generate iam.generate; do
+            git add -A
+            make "$target"
+            git diff --exit-code || { echo "make $target changed tracked files"; exit 1; }
+            untracked=$(git ls-files --others --exclude-standard)
+            if [ -n "$untracked" ]; then echo "make $target created untracked files:"; echo "$untracked"; exit 1; fi
+          done
 
       - name: o11y.lint
         run: make o11y.lint
