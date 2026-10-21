@@ -173,11 +173,11 @@ o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo o11
 .PHONY: o11y.lint.rules
 o11y.lint.rules:
 	@echo "==> promtool check rules"
-	@$(GOBIN)/promtool check rules config/prometheus/rules/*.yaml config/prometheus/tests/fixture.yaml
+	@$(GOBIN)/promtool check rules config/prometheus/rules/*.yaml config/prometheus/tests/fixture*.yaml
 	@echo "==> promtool test rules"
 	@$(GOBIN)/promtool test rules config/prometheus/tests/*.test.yaml
 	@echo "==> pint lint"
-	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture.yaml
+	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture*.yaml
 
 .PHONY: o11y.lint.slo
 o11y.lint.slo:

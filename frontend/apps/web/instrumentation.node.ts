@@ -3,6 +3,8 @@ import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runti
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 
+import { seedLoginFailures } from "@/shared/auth/login-failures";
+
 new NodeSDK({
   instrumentations: [
     new UndiciInstrumentation(),
@@ -10,3 +12,5 @@ new NodeSDK({
     new PinoInstrumentation(),
   ],
 }).start();
+
+seedLoginFailures();

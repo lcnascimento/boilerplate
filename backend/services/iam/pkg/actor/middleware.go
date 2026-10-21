@@ -86,6 +86,8 @@ func NewMiddleware(ctx context.Context, cfg Config, opts ...Option) (func(http.H
 		),
 	}
 
+	onMiddlewareCreated(ctx)
+
 	return v.middleware, nil
 }
 

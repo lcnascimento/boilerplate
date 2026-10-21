@@ -109,6 +109,10 @@ const (
 
 	TracesSpanMetricsCalls   = "traces_spanmetrics_calls_total"
 	TracesSpanMetricsLatency = "traces_spanmetrics_latency"
+
+	IAMActorAuthenticationFailures = "iam_actor_authentication_failures_total"
+	IAMActorAuthorizationDenials   = "iam_actor_authorization_denials_total"
+	IAMLoginFailures               = "iam_login_failures_total"
 )
 
 const (
@@ -273,6 +277,15 @@ var metrics = map[string]Metric{
 
 	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
 	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
+
+	// The processes seed every label set at zero on start, so these exist before the first failure.
+	IAMActorAuthenticationFailures: {
+		Type: Counter, Source: OTLP, Labels: []string{"reason"}, EmittedBy: on(service.Go, actorAuth),
+	},
+	IAMActorAuthorizationDenials: {
+		Type: Counter, Source: OTLP, Labels: []string{"permission", "role"}, EmittedBy: on(service.Go, actorAuth),
+	},
+	IAMLoginFailures: {Type: Counter, Source: OTLP, Labels: []string{"reason"}, EmittedBy: on(service.Node, actorAuth)},
 }
 
 const (

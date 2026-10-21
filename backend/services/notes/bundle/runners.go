@@ -15,13 +15,14 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend"
 )
 
-func Run(app *fx.App) {
-	if code := run(app); code != 0 {
+// Run starts o11y before newApp builds the graph, so what constructors record reaches the exporters.
+func Run(newApp func() *fx.App) {
+	if code := run(newApp); code != 0 {
 		os.Exit(code)
 	}
 }
 
-func run(app *fx.App) int {
+func run(newApp func() *fx.App) int {
 	ctx := context.Background()
 
 	o11y.MustStart(ctx)
@@ -31,6 +32,8 @@ func run(app *fx.App) int {
 			onO11yShutdownFailed(ctx, err)
 		}
 	}()
+
+	app := newApp()
 
 	// fx only listens for signals from app.Wait on.
 	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)

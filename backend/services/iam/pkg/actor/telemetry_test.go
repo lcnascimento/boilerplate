@@ -124,3 +124,55 @@ func stringAttr(set attribute.Set, key attribute.Key) string {
 
 	return v.AsString()
 }
+
+func labelSets(t *testing.T, name string) []string {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, metrics.Collect(t.Context(), &rm))
+
+	var out []string
+
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != name {
+				continue
+			}
+
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok, "%s is a %T", name, m.Data)
+
+			for _, dp := range sum.DataPoints {
+				out = append(out, dp.Attributes.Encoded(attribute.DefaultEncoder()))
+			}
+		}
+	}
+
+	return out
+}
+
+func TestNewMiddleware_SeedsEveryRejectionReasonSoTheSeriesExistBeforeTheFirstFailure(t *testing.T) {
+	newMiddleware(t, actortest.NewIssuer(t).Config())
+
+	reasons := labelSets(t, authenticationFailures)
+	for _, reason := range []string{
+		"missing_header", "malformed", "bad_signature", "unknown_kid", "bad_alg", "bad_issuer", "bad_audience", "expired",
+		"missing_claim", "unknown_role",
+	} {
+		require.Contains(t, reasons, "reason="+reason)
+	}
+}
+
+// example:begin
+
+func TestNewMiddleware_SeedsEveryPermissionARoleLacksSoTheSeriesExistBeforeTheFirstDenial(t *testing.T) {
+	newMiddleware(t, actortest.NewIssuer(t).Config())
+
+	require.ElementsMatch(t, []string{
+		"permission=note:delete,role=admin",
+		"permission=note:create,role=viewer",
+		"permission=note:delete,role=viewer",
+	}, labelSets(t, "iam.actor.authorization.denials"))
+}
+
+// example:end

@@ -151,12 +151,47 @@ func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.
 	}
 }
 
+func TestLiveProbes_ExpectTheAuthenticationCountersOfTheProcessesThatDeclareActorAuth(t *testing.T) {
+	declared := []service.Service{
+		{
+			Name: "payments",
+			Processes: []service.Process{
+				service.Daemon("payments-api", service.API).WithActorAuth(),
+				service.Daemon("payments-internal", service.API),
+			},
+		},
+		{
+			Name:      "shop",
+			Runtime:   service.Node,
+			Processes: []service.Process{service.Daemon("shop", service.API, service.Browser).WithActorAuth()},
+		},
+	}
+
+	got := exprs(t, declared)
+
+	for _, want := range []string{
+		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/payments-api"}[15m])`,
+		`present_over_time(iam_actor_authorization_denials_total{job="boilerplate/payments-api"}[15m])`,
+		`present_over_time(iam_login_failures_total{job="boilerplate/shop"}[15m])`,
+	} {
+		assert.Contains(t, got, want)
+	}
+
+	for _, unwanted := range []string{
+		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/payments-internal"}[15m])`,
+		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/shop"}[15m])`,
+		`present_over_time(iam_login_failures_total{job="boilerplate/payments-api"}[15m])`,
+	} {
+		assert.NotContains(t, got, unwanted)
+	}
+}
+
 func TestLiveProbes_StayInsideTheCatalog(t *testing.T) {
 	declared := []service.Service{{
 		Name: "every",
 		Processes: []service.Process{
 			service.Daemon("every-process", service.API, service.Consumer, service.Worker, service.Browser).
-				WithConsumerGroup("every").WithDBPool(),
+				WithConsumerGroup("every").WithDBPool().WithActorAuth(),
 		},
 	}}
 

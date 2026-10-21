@@ -22,6 +22,11 @@ const (
 	reasonUnknownRole   reason = "unknown_role"
 )
 
+var reasons = []reason{
+	reasonMissingHeader, reasonMalformed, reasonBadSignature, reasonUnknownKID, reasonBadAlg, reasonBadIssuer,
+	reasonBadAudience, reasonExpired, reasonMissingClaim, reasonUnknownRole,
+}
+
 // reasonOf maps a jwt parse error to a reason. The checks run in order, because one token can fail several of them.
 func reasonOf(err error) reason {
 	checks := []struct {

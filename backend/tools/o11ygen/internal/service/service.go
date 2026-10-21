@@ -67,6 +67,7 @@ type Process struct {
 
 type processOptions struct {
 	dbPool        bool
+	actorAuth     bool
 	consumerGroup string
 	logAlerts     []LogAlert
 }
@@ -90,6 +91,14 @@ func (p Process) WithDBPool() Process {
 }
 
 func (p Process) DBPool() bool { return p.opts().dbPool }
+
+// WithActorAuth declares that the process authenticates its requests: Go with the iam actor middleware, Node with
+// Better Auth.
+func (p Process) WithActorAuth() Process {
+	return p.with(func(o *processOptions) { o.actorAuth = true })
+}
+
+func (p Process) ActorAuth() bool { return p.opts().actorAuth }
 
 func (p Process) WithConsumerGroup(group string) Process {
 	return p.with(func(o *processOptions) { o.consumerGroup = group })
@@ -250,6 +259,10 @@ func validateProcess(svc string, process Process, seen map[string]bool) error {
 
 	if process.Runs(Consumer) != (process.ConsumerGroup() != "") {
 		return errors.New("process %q must declare a consumer group if, and only if, it runs a consumer", process.name)
+	}
+
+	if process.ActorAuth() && !process.Runs(API) {
+		return errors.New("process %q declares actor auth but serves no api", process.name)
 	}
 
 	if process.DBPool() && !process.LongRunning() {

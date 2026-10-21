@@ -17,7 +17,7 @@ import (
 
 const (
 	rulesDir      = "config/prometheus/rules"
-	ruleFixture   = "config/prometheus/tests/fixture.yaml"
+	ruleFixtures  = "config/prometheus/tests/fixture*.yaml"
 	ruleTestsGlob = "../../config/prometheus/tests/*.test.yaml"
 	runbooksDir   = "../../../docs/runbooks"
 )
@@ -395,7 +395,14 @@ func TestGenerate_EveryAlertHasAHandWrittenRuleTest(t *testing.T) {
 	require.NoError(t, generate(root, services))
 
 	files := generatedRules(t, root)
-	files[filepath.Base(ruleFixture)] = readRules(t, filepath.Join(root, ruleFixture))
+	fixtures, err := filepath.Glob(filepath.Join(root, ruleFixtures))
+	require.NoError(t, err)
+	require.Len(t, fixtures, 2)
+
+	for _, fixture := range fixtures {
+		files[filepath.Base(fixture)] = readRules(t, fixture)
+	}
+
 	tested := testedAlerts(t)
 	checked := 0
 

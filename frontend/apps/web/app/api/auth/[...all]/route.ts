@@ -1,7 +1,6 @@
 import { getIam } from "@/shared/auth/auth";
+import { withLoginFailures } from "@/shared/auth/login-failures";
 
-function handle(request: Request): Promise<Response> {
-  return getIam().auth.handler(request);
-}
+const handle = withLoginFailures((request) => getIam().auth.handler(request));
 
 export { handle as GET, handle as POST };
