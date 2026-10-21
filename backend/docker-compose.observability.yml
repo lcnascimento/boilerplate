@@ -79,7 +79,8 @@ services:
     ports:
       - "4040:4040"
     volumes:
-      - pyroscope_data:/var/lib/pyroscope
+      # The image runs from / with every store under ./data, which it declares as an anonymous volume.
+      - pyroscope_data:/data
     networks:
       - boilerplate
 
