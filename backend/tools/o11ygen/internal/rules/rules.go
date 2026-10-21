@@ -40,8 +40,6 @@ func Kind() artifact.Kind {
 	}
 }
 
-// FixtureKind writes the rules of a service that runs every component, which the hand-written promtool tests load, so
-// that they keep testing every inherited alert whatever services a fork declares.
 func FixtureKind() artifact.Kind {
 	return artifact.Kind{
 		Dir:      "config/prometheus/tests",

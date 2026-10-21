@@ -30,7 +30,7 @@ type lokiRuleFile struct {
 func readLokiRules(t *testing.T, root, name string) map[string]map[string]string {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, lokiRulesDir, name)) //nolint:gosec // The path comes from the test's temporary directory.
+	raw, err := os.ReadFile(filepath.Join(root, lokiRulesDir, name))
 	require.NoError(t, err)
 
 	var file lokiRuleFile

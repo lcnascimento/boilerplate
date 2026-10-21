@@ -72,7 +72,7 @@ type section struct {
 func readBoard(t *testing.T, root, name string) board {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, dashboardsDir, name)) //nolint:gosec // Test temporary directory.
+	raw, err := os.ReadFile(filepath.Join(root, dashboardsDir, name))
 	require.NoError(t, err)
 
 	var out board

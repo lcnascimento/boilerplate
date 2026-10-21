@@ -9,7 +9,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
-// The latency thresholds are go-kit histogram bucket boundaries: a value between buckets would be interpolated.
 const (
 	APILatencyThresholdSeconds      = 0.25
 	ConsumerLatencyThresholdSeconds = 1

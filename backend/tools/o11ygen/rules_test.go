@@ -38,7 +38,7 @@ type ruleFile struct {
 func readRules(t *testing.T, file string) ruleFile {
 	t.Helper()
 
-	raw, err := os.ReadFile(file) //nolint:gosec // The path comes from the test's temporary directory.
+	raw, err := os.ReadFile(file)
 	require.NoError(t, err)
 
 	var rules ruleFile
@@ -321,7 +321,7 @@ func testedAlerts(t *testing.T) map[string]bool {
 	tested := map[string]bool{}
 
 	for _, path := range paths {
-		raw, err := os.ReadFile(path) //nolint:gosec // The path comes from globbing the repository's rule tests.
+		raw, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		var file ruleTestFile

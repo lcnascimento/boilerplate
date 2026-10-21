@@ -48,8 +48,6 @@ const (
 	Warning  Severity = "warning"
 )
 
-// LogAlert fires when more than MaxRecordsPer5m log records of Process pass Pipeline, the LogQL stages appended to the
-// process's stream selector (e.g. `|= "payment declined"`). Its runbook is docs/runbooks/<Name>.md.
 type LogAlert struct {
 	Name            string
 	Process         string

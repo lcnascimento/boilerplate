@@ -24,8 +24,6 @@ func runs(components ...service.Component) Emitter {
 	}
 }
 
-// on narrows an emitter to the services of one runtime: go-kit emits the Go and HTTP server series, the NodeSDK the
-// Node ones.
 func on(runtime service.Runtime, emitter Emitter) Emitter {
 	return func(svc *service.Service, process service.Process) bool {
 		return svc.Runtime == runtime && emitter(svc, process)
@@ -38,12 +36,8 @@ func outboxOf(serviceName string) Emitter {
 	}
 }
 
-// liveWindow spans a whole CI run, so a process that logged or exported once since it started counts as present.
 const liveWindow = "15m"
 
-// processSelectors scopes a series to the process that emits it. The other sources are probed once: Scrape carries
-// no process label, and a Loki recording exists only for a process that logged within the window, which a quiet
-// worker does not.
 var processSelectors = map[Source]func(process string) string{
 	OTLP:             jobSelector,
 	OTLPResource:     jobSelector,
@@ -60,8 +54,6 @@ func jobSelector(process string) string {
 	return fmt.Sprintf(`{job=%q}`, config.Namespace+"/"+process)
 }
 
-// LiveProbes are the queries that must return a series on the running stack: one per PresenceAlways metric the stack
-// emits, and one per process that emits it for the metrics the declared services emit.
 func LiveProbes(services []service.Service) ([]artifact.Query, error) {
 	names := make([]string, 0, len(metrics))
 	for name := range metrics {

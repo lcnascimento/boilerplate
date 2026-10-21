@@ -32,10 +32,9 @@ func generate(root string, declared []service.Service) error {
 		return err
 	}
 
-	return artifact.Generate(root, declared, append(kinds(), rules.FixtureKind())...)
+	return artifact.Generate(root, declared, append(loadedKinds(), rules.FixtureKind())...)
 }
 
-// kinds are the artifacts the stack loads. The rule fixture stays out: its fixture service emits no cataloged metric.
-func kinds() []artifact.Kind {
+func loadedKinds() []artifact.Kind {
 	return []artifact.Kind{dashboards.Kind(), rules.Kind(), logrules.Kind(), slo.SpecKind(), slo.RuleKind()}
 }

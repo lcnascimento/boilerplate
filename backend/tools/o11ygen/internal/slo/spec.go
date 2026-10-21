@@ -196,7 +196,6 @@ func specs(services []service.Service) ([]serviceSpec, error) {
 	return out, nil
 }
 
-// SpecKind writes one Sloth spec per service that declares or inherits an SLO.
 func SpecKind() artifact.Kind {
 	return artifact.Kind{
 		Dir:      "config/sloth",
@@ -219,7 +218,6 @@ func SpecKind() artifact.Kind {
 	}
 }
 
-// specQueries evaluates every SLI query over the shortest window Sloth alerts on.
 func specQueries(content []byte) ([]artifact.Query, error) {
 	var s spec
 	if err := yaml.Unmarshal(content, &s); err != nil {

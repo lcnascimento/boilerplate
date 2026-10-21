@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/rules"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
 )
 
 const (
@@ -57,7 +59,7 @@ type sloSpec struct {
 func readSLOSpec(t *testing.T, root, svc string) sloSpec {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, sloSpecsDir, svc+".yaml")) //nolint:gosec // Test temporary directory.
+	raw, err := os.ReadFile(filepath.Join(root, sloSpecsDir, svc+".yaml"))
 	require.NoError(t, err)
 
 	var spec sloSpec
@@ -153,10 +155,10 @@ type sloRule struct {
 	Annotations map[string]string `yaml:"annotations"`
 }
 
-func readSLORules(t *testing.T, root, svc string) []sloRule {
+func readOrdersSLORules(t *testing.T, root string) []sloRule {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, sloRulesDir, svc+".yaml")) //nolint:gosec // Test temporary directory.
+	raw, err := os.ReadFile(filepath.Join(root, sloRulesDir, "orders.yaml"))
 	require.NoError(t, err)
 
 	var file struct {
@@ -166,12 +168,12 @@ func readSLORules(t *testing.T, root, svc string) []sloRule {
 	}
 	require.NoError(t, yaml.Unmarshal(raw, &file))
 
-	var rules []sloRule
+	var out []sloRule
 	for _, group := range file.Groups {
-		rules = append(rules, group.Rules...)
+		out = append(out, group.Rules...)
 	}
 
-	return rules
+	return out
 }
 
 func TestGenerate_RunsSlothIntoPageAndTicketBurnRateAlertsPerSLO(t *testing.T) {
@@ -181,7 +183,7 @@ func TestGenerate_RunsSlothIntoPageAndTicketBurnRateAlertsPerSLO(t *testing.T) {
 
 	alerts := map[string]string{}
 
-	for _, rule := range readSLORules(t, root, "orders") {
+	for _, rule := range readOrdersSLORules(t, root) {
 		if rule.Alert == "" {
 			continue
 		}
@@ -215,7 +217,7 @@ func TestGenerate_EvaluatesTheSLIOverTheWhole30DayWindowWithoutOptimizing(t *tes
 
 	periods := map[string]string{}
 
-	for _, rule := range readSLORules(t, root, "orders") {
+	for _, rule := range readOrdersSLORules(t, root) {
 		if rule.Record == "slo:sli_error:ratio_rate30d" {
 			periods[rule.Labels["sloth_slo"]] = rule.Expr
 		}
@@ -277,7 +279,7 @@ func TestGenerate_AddsTheExtraSLOAProcessDeclares(t *testing.T) {
 
 	alerts := 0
 
-	for _, rule := range readSLORules(t, root, "orders") {
+	for _, rule := range readOrdersSLORules(t, root) {
 		if rule.Alert != "" && strings.Contains(rule.Expr, `sloth_slo="api-create-order-latency"`) {
 			alerts++
 		}
@@ -337,4 +339,46 @@ func TestGenerate_RejectsAnInvalidExtraSLO(t *testing.T) {
 			assert.Contains(t, describe(err), tc.reason)
 		})
 	}
+}
+
+var goKitO11yV180DurationBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}
+
+func TestLatencySLOThresholdsAreGoKitHistogramBuckets(t *testing.T) {
+	assert.Subset(t, goKitO11yV180DurationBuckets,
+		[]float64{slo.APILatencyThresholdSeconds, slo.ConsumerLatencyThresholdSeconds})
+}
+
+func TestGenerate_WritesEverySLORuleLineUnfolded(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, generate(root, []service.Service{ordersService}))
+
+	raw, err := os.ReadFile(filepath.Join(root, sloRulesDir, "orders.yaml"))
+	require.NoError(t, err)
+
+	lines := map[string]bool{}
+	for line := range strings.SplitSeq(string(raw), "\n") {
+		lines[strings.TrimPrefix(strings.TrimSpace(line), "expr: ")] = true
+	}
+
+	for _, rule := range readOrdersSLORules(t, root) {
+		for line := range strings.SplitSeq(strings.TrimSpace(rule.Expr), "\n") {
+			assert.True(t, lines[strings.TrimSpace(line)], "folded expr line %q", line)
+		}
+	}
+}
+
+func TestGenerate_GivesEveryKindADirectoryOfItsOwn(t *testing.T) {
+	owners := map[string]int{}
+	for _, kind := range append(loadedKinds(), rules.FixtureKind()) {
+		owners[kind.Dir]++
+	}
+
+	assert.Equal(t, map[string]int{
+		"config/grafana/provisioning/dashboards": 1,
+		"config/prometheus/rules":                1,
+		"config/prometheus/slo":                  1,
+		"config/prometheus/tests":                1,
+		"config/loki/rules/fake":                 1,
+		"config/sloth":                           1,
+	}, owners)
 }

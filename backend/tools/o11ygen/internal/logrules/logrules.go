@@ -37,7 +37,6 @@ type recordingRule struct {
 	Labels map[string]string `yaml:"labels,omitempty"`
 }
 
-// Kind writes the Loki ruler's recording rules of the `fake` tenant, the one Loki serves without auth_enabled.
 func Kind() artifact.Kind {
 	return artifact.Kind{
 		Dir: "config/loki/rules/fake", Glob: "*.yaml", LoadedBy: artifact.LokiRuler, Build: build, Queries: queries,
@@ -81,7 +80,6 @@ func streams(names ...string) string {
 	return `{service_namespace=` + strconv.Quote(config.Namespace) + `, service_name=~` + strconv.Quote(strings.Join(quoted, "|")) + `}`
 }
 
-// recording parses expr so that a broken rule fails the generator rather than the Loki ruler.
 func recording(record, expr string, labels map[string]string) (recordingRule, error) {
 	parsed, err := syntax.ParseSampleExpr(expr)
 	if err != nil {

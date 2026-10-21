@@ -34,8 +34,6 @@ const (
 	TempoSpanMetrics
 )
 
-// Metric is a cataloged series. Its EmittedBy is nil when the stack itself emits it, otherwise it picks the declared
-// processes that emit it.
 type Metric struct {
 	Type      Type
 	Source    Source
@@ -108,7 +106,6 @@ const (
 	TracesSpanMetricsLatency = "traces_spanmetrics_latency"
 )
 
-// The series Sloth records for every SLO, read by the SLO panels of the dashboards.
 const (
 	SLOErrorRatioRate5m  = "slo:sli_error:ratio_rate5m"
 	SLOErrorRatioRate30m = "slo:sli_error:ratio_rate30m"
@@ -278,13 +275,11 @@ var metrics = map[string]Metric{
 }
 
 var sourceLabels = map[Source][]string{
-	OTLP:          {"job", "instance", "service_name", "service_namespace"},
-	OTLPResource:  {"job", "instance"},
-	Scrape:        {"job", "instance"},
-	RecordingRule: {"job"},
-	// service is the process that emits the SLI.
-	SlothRecording: {"sloth_id", "sloth_service", "sloth_slo", "service"},
-	// service is the span's service.name; source is the external label of Tempo's metrics generator.
+	OTLP:             {"job", "instance", "service_name", "service_namespace"},
+	OTLPResource:     {"job", "instance"},
+	Scrape:           {"job", "instance"},
+	RecordingRule:    {"job"},
+	SlothRecording:   {"sloth_id", "sloth_service", "sloth_slo", "service"},
 	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "source"},
 }
 
