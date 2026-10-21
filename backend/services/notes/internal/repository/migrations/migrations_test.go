@@ -73,6 +73,32 @@ func TestComponentMigrations_NotesRejectAnotherOrganizationsRow(t *testing.T) {
 	require.ErrorContains(t, err, `new row violates row-level security policy for table "notes"`)
 }
 
+func TestComponentMigrations_NotesRequireAnOrganizationAndAreIndexedByIt(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	var nullable string
+
+	err := db.QueryRowContext(t.Context(),
+		`SELECT is_nullable FROM information_schema.columns WHERE table_name = 'notes' AND column_name = 'organization_id'`,
+	).Scan(&nullable)
+	require.NoError(t, err)
+	require.Equal(t, "NO", nullable)
+
+	var index string
+
+	err = db.QueryRowContext(t.Context(),
+		`SELECT indexdef FROM pg_indexes WHERE indexname = 'notes_organization_id_created_at_id_idx'`,
+	).Scan(&index)
+	require.NoError(t, err)
+	require.Equal(t,
+		"CREATE INDEX notes_organization_id_created_at_id_idx ON public.notes USING btree (organization_id, created_at DESC, id DESC)",
+		index)
+}
+
 func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
 	t.Parallel()
 

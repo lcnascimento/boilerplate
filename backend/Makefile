@@ -29,6 +29,8 @@ AGAINST ?= main
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
+MIGRATIONS_WITHOUT_TRANSACTION := $(if $(MIGRATIONS),$(shell grep -l '^-- +goose NO TRANSACTION' $(MIGRATIONS)))
+MIGRATIONS_IN_TRANSACTION := $(filter-out $(MIGRATIONS_WITHOUT_TRANSACTION),$(MIGRATIONS))
 
 PACKAGES = go list ./... | { grep -v -e '/cmd/' -e '/mocks$$' || true; }
 
@@ -121,7 +123,10 @@ o11y.tools:
 lint:
 	$(call in_modules,lint,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint run --timeout 10m ./...; fi)
 	@echo "==> lint migrations"
-	@if [ -z "$(MIGRATIONS)" ]; then echo "no migrations"; else $(GOBIN)/squawk --config .squawk.toml $(MIGRATIONS); fi
+	@if [ -z "$(MIGRATIONS)" ]; then echo "no migrations"; fi
+	@if [ -n "$(MIGRATIONS_IN_TRANSACTION)" ]; then $(GOBIN)/squawk --config .squawk.toml $(MIGRATIONS_IN_TRANSACTION); fi
+	@if [ -n "$(MIGRATIONS_WITHOUT_TRANSACTION)" ]; then \
+		$(GOBIN)/squawk --config .squawk.toml --no-assume-in-transaction $(MIGRATIONS_WITHOUT_TRANSACTION); fi
 
 .PHONY: lint.fix
 lint.fix:
