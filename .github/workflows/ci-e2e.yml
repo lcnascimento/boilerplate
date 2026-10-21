@@ -42,7 +42,6 @@ defaults:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    # The stack's iam env, for the steps that talk to the iam database outside Tilt.
     env:
       IAM_DATABASE_URL: postgres://iam:iam@localhost:5432/iam?sslmode=disable
       BETTER_AUTH_SECRET: dev-only-secret-change-me-in-production

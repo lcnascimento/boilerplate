@@ -8,25 +8,31 @@ import {
   signInHrefFor,
 } from "@/shared/auth/routes";
 
+async function hasValidSession(request: NextRequest): Promise<boolean> {
+  const session = await getIam().auth.api.getSession({
+    headers: request.headers,
+  });
+  return session !== null;
+}
+
+function hasSessionCookie(request: NextRequest): boolean {
+  return getSessionCookie(request) !== null;
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
 
   if (isAuthPath(pathname)) {
-    // A stale cookie must not bounce between here and the (dashboard) layout, so this checks the session itself.
-    const session = await getIam().auth.api.getSession({
-      headers: request.headers,
-    });
-    return session === null
-      ? NextResponse.next()
-      : NextResponse.redirect(new URL(SIGNED_IN_HOME, request.url));
+    return (await hasValidSession(request))
+      ? NextResponse.redirect(new URL(SIGNED_IN_HOME, request.url))
+      : NextResponse.next();
   }
 
-  // Only the cookie's presence: the (dashboard) layout validates the session.
-  return getSessionCookie(request) === null
-    ? NextResponse.redirect(
+  return hasSessionCookie(request)
+    ? NextResponse.next()
+    : NextResponse.redirect(
         new URL(signInHrefFor(`${pathname}${search}`), request.url)
-      )
-    : NextResponse.next();
+      );
 }
 
 export const config = {

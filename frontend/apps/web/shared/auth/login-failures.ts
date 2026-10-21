@@ -3,7 +3,6 @@ import { createAuthMiddleware, isAPIError } from "better-auth/api";
 
 export const LOGIN_FAILURES_METRIC = "iam.login.failures";
 
-// A metric label, so the set stays closed.
 const reasons = [
   "invalid_credentials",
   "rate_limited",
@@ -43,7 +42,7 @@ function reasonOf(
 
 let counter: Counter | undefined;
 
-// Created on first use, because the meter provider exists only once instrumentation.node.ts has started the SDK.
+// Lazy: the OTel API meter is a no-op until instrumentation.node.ts registers the SDK.
 function loginFailures(): Counter {
   counter ??= metrics
     .getMeter("@boilerplate/web")

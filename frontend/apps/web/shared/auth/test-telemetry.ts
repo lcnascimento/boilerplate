@@ -15,7 +15,6 @@ export interface TestTelemetry {
   spans(): Promise<tracing.ReadableSpan[]>;
 }
 
-// Starts the same SDK as instrumentation.node.ts, reading in memory instead of exporting over OTLP.
 export function startTestTelemetry(): TestTelemetry {
   const reader = new CollectingReader();
   const exporter = new tracing.InMemorySpanExporter();

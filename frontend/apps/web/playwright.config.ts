@@ -8,7 +8,6 @@ import { storageStateOf } from "./e2e/auth-state";
 import { WEB_URL } from "./e2e/stack";
 import { ACME_OWNER } from "./scripts/iam-seed/users";
 
-// The fixtures mint Actor tokens with the iam env, which outside Tilt comes from the same .env.local as `next dev`.
 const ENV_LOCAL = path.join(import.meta.dirname, ".env.local");
 if (existsSync(ENV_LOCAL)) process.loadEnvFile(ENV_LOCAL);
 

@@ -1,6 +1,5 @@
 .PHONY: env setup lint lint.fix format format.check typecheck test test.e2e build
 
-# The iam scripts and the e2e read apps/web/.env.local outside Tilt: create it, or append only the keys it lacks.
 env:
 	@example=apps/web/.env.example; env_file=apps/web/.env.local; \
 	if [ ! -f "$$env_file" ]; then echo "==> Creating $$env_file"; cp "$$example" "$$env_file"; exit 0; fi; \

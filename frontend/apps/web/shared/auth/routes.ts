@@ -33,5 +33,6 @@ export function parseCallbackUrl(raw: string | null | undefined): Route {
   if (!raw?.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) {
     return SIGNED_IN_HOME;
   }
+  // Next typedRoutes types a non-literal path only through `as Route`.
   return raw as Route;
 }

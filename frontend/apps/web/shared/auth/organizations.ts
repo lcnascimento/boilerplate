@@ -8,14 +8,15 @@ export interface UserOrganizations {
   organizations: readonly Organization[];
 }
 
-// `organizations` is oldest membership first, the same order session.create.before picks the first active one from.
 export function pickActiveOrganization(
-  organizations: readonly Organization[],
+  organizationsOldestMembershipFirst: readonly Organization[],
   activeOrganizationId: string | null
 ): Organization | null {
   return (
-    organizations.find(({ id }) => id === activeOrganizationId) ??
-    organizations[0] ??
+    organizationsOldestMembershipFirst.find(
+      ({ id }) => id === activeOrganizationId
+    ) ??
+    organizationsOldestMembershipFirst[0] ??
     null
   );
 }

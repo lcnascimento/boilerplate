@@ -1,26 +1,36 @@
 import { z } from "zod";
 
-const iamEnvSchema = z.object({
-  IAM_DATABASE_URL: z.url({
-    protocol: /^postgres(ql)?$/,
-    error: (issue) =>
-      issue.input === undefined
-        ? "IAM_DATABASE_URL is required"
-        : "IAM_DATABASE_URL must be a postgres:// URL",
-  }),
-  BETTER_AUTH_SECRET: z
-    .string({ error: "BETTER_AUTH_SECRET is required" })
-    .min(32, "BETTER_AUTH_SECRET must have at least 32 characters"),
-  BETTER_AUTH_URL: z
-    .url({
-      protocol: /^https?$/,
+const DEV_ONLY_SECRET = "dev-only-secret-change-me-in-production";
+
+const iamEnvSchema = z
+  .object({
+    NODE_ENV: z.string().optional(),
+    IAM_DATABASE_URL: z.url({
+      protocol: /^postgres(ql)?$/,
       error: (issue) =>
         issue.input === undefined
-          ? "BETTER_AUTH_URL is required"
-          : "BETTER_AUTH_URL must be an http(s) URL",
-    })
-    .transform((url) => url.replace(/\/+$/, "")),
-});
+          ? "IAM_DATABASE_URL is required"
+          : "IAM_DATABASE_URL must be a postgres:// URL",
+    }),
+    BETTER_AUTH_SECRET: z
+      .string({ error: "BETTER_AUTH_SECRET is required" })
+      .min(32, "BETTER_AUTH_SECRET must have at least 32 characters"),
+    BETTER_AUTH_URL: z
+      .url({
+        protocol: /^https?$/,
+        error: (issue) =>
+          issue.input === undefined
+            ? "BETTER_AUTH_URL is required"
+            : "BETTER_AUTH_URL must be an http(s) URL",
+      })
+      .transform((url) => url.replace(/\/+$/, "")),
+  })
+  .refine(
+    ({ NODE_ENV, BETTER_AUTH_SECRET }) =>
+      NODE_ENV !== "production" || BETTER_AUTH_SECRET !== DEV_ONLY_SECRET,
+    "BETTER_AUTH_SECRET is the dev-only secret; generate one for production (openssl rand -base64 32)"
+  )
+  .transform(({ NODE_ENV: _, ...env }) => env);
 
 export type IamEnv = z.infer<typeof iamEnvSchema>;
 

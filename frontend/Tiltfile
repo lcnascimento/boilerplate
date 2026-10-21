@@ -13,7 +13,6 @@ local('make -s env')
 
 iam_env = {
     'IAM_DATABASE_URL': 'postgres://iam:iam@localhost:5432/iam?sslmode=disable',
-    # Dev only: production must use its own secret.
     'BETTER_AUTH_SECRET': 'dev-only-secret-change-me-in-production',
     'BETTER_AUTH_URL': 'http://localhost:3000',
 }

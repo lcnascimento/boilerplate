@@ -9,6 +9,16 @@ const valid = {
 };
 
 describe("parseIamEnv", () => {
+  it("accepts the dev-only secret outside production", () => {
+    expect(
+      parseIamEnv({
+        ...valid,
+        NODE_ENV: "development",
+        BETTER_AUTH_SECRET: "dev-only-secret-change-me-in-production",
+      }).BETTER_AUTH_SECRET
+    ).toBe("dev-only-secret-change-me-in-production");
+  });
+
   it("reads the database, the secret and the URL, without a trailing slash", () => {
     expect(
       parseIamEnv({
@@ -35,6 +45,14 @@ describe("parseIamEnv", () => {
     [
       { ...valid, BETTER_AUTH_SECRET: "short" },
       "Invalid environment: BETTER_AUTH_SECRET must have at least 32 characters",
+    ],
+    [
+      {
+        ...valid,
+        NODE_ENV: "production",
+        BETTER_AUTH_SECRET: "dev-only-secret-change-me-in-production",
+      },
+      "Invalid environment: BETTER_AUTH_SECRET is the dev-only secret; generate one for production (openssl rand -base64 32)",
     ],
     [
       { ...valid, BETTER_AUTH_URL: "" },
