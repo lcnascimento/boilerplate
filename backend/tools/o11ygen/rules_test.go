@@ -92,11 +92,15 @@ func TestGenerate_InheritsTheAlertsOfEachProcessFromItsComponents(t *testing.T) 
 
 	assert.Equal(t, map[string]ruleFile{"infra.yaml": {}, "orders.yaml": {}}, mapKeysOnly(generatedRules(t, root)))
 	assert.Equal(t, map[string]map[string][]string{
-		"orders": {
+		"orders-api": {
 			"orders-api": {"ServiceTelemetryAbsent", "DBPoolSaturated", "SeriesBudgetExceeded", "CriticalLogRecorded"},
+		},
+		"orders-consumer": {
 			"orders-consumer": {
 				"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded", "CriticalLogRecorded",
 			},
+		},
+		"orders-worker": {
 			"orders-worker": {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded", "CriticalLogRecorded"},
 		},
 	}, alertsByGroupAndService(readRules(t, filepath.Join(root, rulesDir, "orders.yaml"))))

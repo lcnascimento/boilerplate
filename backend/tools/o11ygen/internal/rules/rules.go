@@ -48,7 +48,7 @@ func FixtureKind() artifact.Kind {
 		Glob:     "fixture.yaml",
 		LoadedBy: artifact.Promtool,
 		Build: func([]service.Service) ([]artifact.File, error) {
-			file, err := encode(fixture.Name, append([]group{serviceGroup(&fixture)}, recordingGroups...)...)
+			file, err := encode(fixture.Name, append(processGroups(&fixture), recordingGroups...)...)
 			if err != nil {
 				return nil, err
 			}
@@ -62,7 +62,7 @@ func FixtureKind() artifact.Kind {
 func AlertNames(dashboard string) []string {
 	var names []string
 
-	for _, group := range append([]group{serviceGroup(&fixture)}, infraGroups...) {
+	for _, group := range append(processGroups(&fixture), infraGroups...) {
 		for i := range group.alerts {
 			if a := &group.alerts[i]; (a.dashboard == dashboard || slices.Contains(a.listedOn, dashboard)) && !slices.Contains(names, a.name) {
 				names = append(names, a.name)
@@ -79,23 +79,30 @@ type group struct {
 	alerts  []alert
 }
 
-func serviceGroup(svc *service.Service) group {
-	out := group{name: svc.Name}
+func processGroups(svc *service.Service) []group {
+	var out []group
 
 	for _, proc := range svc.Processes {
 		p := process{Process: proc, service: svc}
+		g := group{name: p.Name()}
 
 		for _, inherited := range processAlerts {
 			if inherited.inheritedBy(&p) {
 				a := inherited.alert(&p)
 				a.service = p.Name()
-				out.alerts = append(out.alerts, a)
+				g.alerts = append(g.alerts, a)
 			}
 		}
-	}
 
-	for i := range svc.LogAlerts {
-		out.alerts = append(out.alerts, logAlert(svc.Name, &svc.LogAlerts[i]))
+		for i := range svc.LogAlerts {
+			if svc.LogAlerts[i].Process == p.Name() {
+				g.alerts = append(g.alerts, logAlert(svc.Name, &svc.LogAlerts[i]))
+			}
+		}
+
+		if len(g.alerts) > 0 {
+			out = append(out, g)
+		}
 	}
 
 	return out
@@ -109,7 +116,7 @@ func build(services []service.Service) ([]artifact.File, error) {
 			return nil, errors.New("service name %q is reserved for the infrastructure rules", infraFile)
 		}
 
-		file, err := encode(svc.Name, serviceGroup(&svc))
+		file, err := encode(svc.Name, processGroups(&svc)...)
 		if err != nil {
 			return nil, err
 		}
