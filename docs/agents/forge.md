@@ -21,7 +21,7 @@ Use Conventional Commits: `<type>(<optional scope>): <imperative summary>`, with
 
 CI is defined in `.github/workflows/` and is the deterministic gate: a pull request merges only when it passes. Read a failing run with `gh run view --log-failed`.
 
-Six workflows check the repository as it is, each on the paths it covers (plus its own workflow file):
+These workflows check the repository as it is, each on the paths it covers (plus its own workflow file):
 
 | Workflow              | Job            | Runs on                                                                    |
 | --------------------- | -------------- | -------------------------------------------------------------------------- |
@@ -32,6 +32,6 @@ Six workflows check the repository as it is, each on the paths it covers (plus i
 | `ci-openapi.yml`      | `vacuum`       | pull requests touching `openapi/**`                                        |
 | `ci-suppressions.yml` | `suppressions` | every pull request and push to `main`                                      |
 
-`ci-template.yml` runs on every push to any branch, with no path filter. It checks the template instead: it runs `make init` (scenario `A`) and `make clean-example` plus `make init` (scenario `B`), then calls the six workflows above on each result.
+`ci-template.yml` runs on every push to any branch, with no path filter. It checks the template instead: it runs `make init` (scenario `A`) and `make clean-example` plus `make init` (scenario `B`), then calls each workflow above on each result.
 
-On a branch other than `main`, the six workflows check the repository as it is only on a pull request, so a pushed branch gets its full CI only once a PR is open, draft or not.
+On a branch other than `main`, these workflows check the repository as it is only on a pull request, so a pushed branch gets its full CI only once a PR is open, draft or not.

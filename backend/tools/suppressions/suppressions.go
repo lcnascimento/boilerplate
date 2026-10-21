@@ -17,19 +17,19 @@ import (
 var directive = regexp.MustCompile(`(` + strings.Join([]string{
 	`//nolint([: ]|$)`,
 	`#\s*shellcheck\s+disable=`,
-	`(//|/\*)\s*eslint-disable`,
+	`(//|/\*|<!--)\s*eslint-disable`,
 	`//\s*@ts-(ignore|expect-error|nocheck)\b`,
 }, "|") + `).*`)
 
 var golangciConfig = regexp.MustCompile(`^\.golangci\.ya?ml$`)
 
-func Find(fsys fs.FS, paths []string) ([]string, error) {
+func find(fsys fs.FS, paths []string) ([]string, error) {
 	var found []string
 
 	for _, file := range paths {
 		content, err := fs.ReadFile(fsys, file)
 		if err != nil {
-			return nil, errors.New("reading %s", file).WithCause(err)
+			return nil, errors.New("failed to read a file").WithAttribute("path", file).WithCause(err)
 		}
 
 		if bytes.IndexByte(content, 0) >= 0 {
@@ -48,7 +48,7 @@ func Find(fsys fs.FS, paths []string) ([]string, error) {
 
 		exclusions, err := golangciExclusions(content)
 		if err != nil {
-			return nil, errors.New("parsing %s", file).WithCause(err)
+			return nil, errors.New("failed to read the golangci exclusions").WithAttribute("path", file).WithCause(err)
 		}
 
 		for _, exclusion := range exclusions {
@@ -62,7 +62,7 @@ func Find(fsys fs.FS, paths []string) ([]string, error) {
 func golangciExclusions(content []byte) ([]string, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(content, &doc); err != nil {
-		return nil, err
+		return nil, errors.New("failed to parse the config").WithCause(err)
 	}
 
 	var found []string
@@ -72,7 +72,7 @@ func golangciExclusions(content []byte) ([]string, error) {
 			for _, item := range lookup(&doc, section, "exclusions", list) {
 				line, err := oneLine(item)
 				if err != nil {
-					return nil, err
+					return nil, errors.New("failed to format an exclusion").WithCause(err)
 				}
 
 				found = append(found, fmt.Sprintf("%s.exclusions.%s: %s", section, list, line))
@@ -140,8 +140,8 @@ func flatten(node *yaml.Node) {
 	}
 }
 
-func Audit(fsys fs.FS, paths []string, allowlist []byte) (unexpected, stale []string, err error) {
-	found, err := Find(fsys, paths)
+func audit(fsys fs.FS, paths []string, allowlist []byte) (unexpected, stale []string, err error) {
+	found, err := find(fsys, paths)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -23,13 +23,13 @@ func main() {
 
 	flag.Parse()
 
-	ok, err := run(context.Background(), *root)
+	clean, err := run(context.Background(), *root)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "suppressions:", strings.Join(append([]string{err.Error()}, errors.Reasons(err)...), ": "))
+		fmt.Fprintln(os.Stderr, "suppressions:", strings.Join(append([]string{err.Error()}, errors.Reasons(err)...), ": "), errors.Attributes(err))
 		os.Exit(1)
 	}
 
-	if !ok {
+	if !clean {
 		os.Exit(1)
 	}
 }
@@ -44,10 +44,10 @@ func run(ctx context.Context, root string) (bool, error) {
 
 	allowlist, err := fs.ReadFile(fsys, allowlistFile)
 	if err != nil {
-		return false, errors.New("reading %s", allowlistFile).WithCause(err)
+		return false, errors.New("failed to read the allowlist").WithAttribute("path", allowlistFile).WithCause(err)
 	}
 
-	unexpected, stale, err := Audit(fsys, paths, allowlist)
+	unexpected, stale, err := audit(fsys, paths, allowlist)
 	if err != nil {
 		return false, err
 	}
@@ -65,7 +65,7 @@ func listFiles(ctx context.Context, root string, fsys fs.FS) ([]string, error) {
 
 	out, err := git.Output()
 	if err != nil {
-		return nil, errors.New("listing the files of %s", root).WithCause(err)
+		return nil, errors.New("failed to list the repository files").WithAttribute("root", root).WithCause(err)
 	}
 
 	var paths []string
@@ -82,7 +82,7 @@ func listFiles(ctx context.Context, root string, fsys fs.FS) ([]string, error) {
 		}
 
 		if err != nil {
-			return nil, errors.New("reading %s", path).WithCause(err)
+			return nil, errors.New("failed to stat a file").WithAttribute("path", path).WithCause(err)
 		}
 
 		paths = append(paths, path)

@@ -13,7 +13,7 @@ func TestFind_CommentDirectives(t *testing.T) {
 		"a/fixture.go": {Data: []byte("package a\n\nvar n = rand.IntN(9) //nolint:gosec // test data\n")},
 	}
 
-	found, err := Find(fsys, []string{"a/fixture.go"})
+	found, err := find(fsys, []string{"a/fixture.go"})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"a/fixture.go: //nolint:gosec // test data"}, found)
@@ -28,19 +28,20 @@ func TestFind_EachDirectiveKind(t *testing.T) {
 		{"shellcheck", "  # shellcheck disable=SC2086", []string{"f: # shellcheck disable=SC2086"}},
 		{"eslint next line", "// eslint-disable-next-line no-console -- debug", []string{"f: // eslint-disable-next-line no-console -- debug"}},
 		{"eslint block", "/* eslint-disable react/no-danger */", []string{"f: /* eslint-disable react/no-danger */"}},
+		{"eslint in markdown", "<!-- eslint-disable -->", []string{"f: <!-- eslint-disable -->"}},
 		{"ts expect error", "  // @ts-expect-error the types lag behind", []string{"f: // @ts-expect-error the types lag behind"}},
 		{"ts ignore", "//@ts-ignore", []string{"f: //@ts-ignore"}},
 		{"ts nocheck", "// @ts-nocheck", []string{"f: // @ts-nocheck"}},
 		{"linter named in a list", "    - nolintlint", nil},
 		{"prose mention", "Enable eslint-disable reporting and shellcheck.", nil},
-		{"code span in prose", "todo `//nolint` nomeie o linter", nil},
+		{"code span in prose", "every `//nolint` names its linter", nil},
 		{"bare nolint", "x := 1 //nolint", []string{"f: //nolint"}},
 		{"nolint for every linter with a reason", "x := 1 //nolint // generated", []string{"f: //nolint // generated"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			found, err := Find(fstest.MapFS{"f": {Data: []byte(tt.line + "\n")}}, []string{"f"})
+			found, err := find(fstest.MapFS{"f": {Data: []byte(tt.line + "\n")}}, []string{"f"})
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, found)
@@ -51,7 +52,7 @@ func TestFind_EachDirectiveKind(t *testing.T) {
 func TestFind_SkipsBinaryFiles(t *testing.T) {
 	fsys := fstest.MapFS{"logo.png": {Data: []byte("\x89PNG\x00//nolint\n")}}
 
-	found, err := Find(fsys, []string{"logo.png"})
+	found, err := find(fsys, []string{"logo.png"})
 	require.NoError(t, err)
 
 	assert.Empty(t, found)
@@ -83,7 +84,7 @@ formatters:
 `
 	fsys := fstest.MapFS{"backend/.golangci.yaml": {Data: []byte(config)}}
 
-	found, err := Find(fsys, []string{"backend/.golangci.yaml"})
+	found, err := find(fsys, []string{"backend/.golangci.yaml"})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{
@@ -139,7 +140,7 @@ func TestAudit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			unexpected, stale, err := Audit(fsys, paths, []byte(tt.allowlist))
+			unexpected, stale, err := audit(fsys, paths, []byte(tt.allowlist))
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.wantUnexpected, unexpected)

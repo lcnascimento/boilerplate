@@ -160,7 +160,7 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
 ```sh
-make lint             # golangci-lint (make lint.fix corrige o que der), squawk nas migrations e make lint.suppressions
+make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
 make lint.suppressions # falha com supressão de lint (nolint, shellcheck disable, eslint-disable, @ts-ignore, exclusões do .golangci.yaml) fora do .lint-suppressions da raiz
 make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
