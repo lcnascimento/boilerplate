@@ -18,6 +18,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Mensageria local (`backend/`) | Kafka 4.3 (KRaft, nó único, sem auto-create de tópicos), Confluent Schema Registry e [Redpanda Console](https://github.com/redpanda-data/console) via Docker Compose |
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
+| Identidade (`iam`) | [Better Auth](https://www.better-auth.com/) no app web (email e senha, sessão, Organizations, Members e Roles) sobre o database `iam`, e o módulo Go `backend/services/iam/pkg`, que valida o JWT de Actor emitido pelo web e checa as Permissions. Faz parte fixa da stack: o `make clean-example` não o remove |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
 | Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit) e commitlint (Conventional Commits no commit-msg) |
 | CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e`, `ci-openapi` e `ci-proto`, cada um disparado pelos caminhos da sua área |
@@ -97,8 +98,6 @@ No browser, o `web` manda RUM pelo [Grafana Faro](https://grafana.com/docs/grafa
 
 O app só fala com o backend pelo servidor: o Tilt passa a `<NAME>_API_URL` de cada serviço para o `next dev`. O `make -C frontend env` (chamado pelo `make -C frontend setup` e a cada carga do Tiltfile) cria `frontend/apps/web/.env.local` a partir do `.env.example` e, quando ele já existe, acrescenta só as chaves novas, como o `make -C backend env`. É dele que o `next dev` sem o Tilt, o `iam:token` e o e2e leem as variáveis; o `env` do Tilt tem precedência. Sem essas variáveis, o servidor recusa subir.
 
-Cada chamada do servidor a um serviço Go leva `Authorization: Bearer` com um JWT de Actor de vida curta (5 minutos), emitido por `mintActorToken` (`frontend/apps/web/shared/auth/actor-token.ts`, o único módulo de emissão, com o guard `server-only`). Ele confere o `member` da Organization, recusa sem membership ou com Role fora de `owner | admin | viewer`, e assina `{ sub: "user_<uuid>", org: "org_<uuid>", role }` com o plugin `jwt` do Better Auth. O cliente de `@boilerplate/api` recebe um `getToken`, e as server actions passam o `requestActorToken`, que lê a sessão e emite um token por chamada, sem cache, para a Organization ativa. No Go, o middleware de `iam/pkg/actor` valida o token contra o JWKS do web (`AUTH_JWKS_URL`, `AUTH_ISSUER`, `AUTH_AUDIENCE` no `.env.example` do serviço) e responde `401` sem ele; as rotas de health continuam públicas.
-
 ### Mensageria
 
 O `backend/docker-compose.yml` sobe um broker Kafka, o Schema Registry e o Redpanda Console, nessa ordem; no Tilt, `kafka → schema-registry → kafka-console`. O auto-create de tópicos está desligado: produzir num tópico que não existe falha, em vez de criar um tópico de uma partição. Cada serviço declara os próprios tópicos num `make kafka.topics` idempotente, que o Tilt roda como o recurso `<name>-topics` depois do `schema-registry`. Os nomes de tópico usam só pontos (`<serviço>.<agregado>.v<N>`), nunca `_`. Os serviços Go no host falam com o broker em `localhost:9092`; containers e ferramentas dentro da rede `boilerplate` usam `kafka:19092`. Tópicos e schemas ficam no volume `kafka_data` e sobrevivem a `tilt down`/`tilt up`. Sem o Tilt, em `backend/`: `docker compose up -d --wait kafka schema-registry` (mais `--profile console` para o Console).
@@ -156,6 +155,56 @@ A API abre o pool no boot e pinga o banco: com o banco inacessível, ela falha e
 Cada repositório escreve suas queries em SQL num `queries.sql` ao lado dele, e o [sqlc](https://sqlc.dev/) gera o código Go tipado num pacote `internal/db` do repositório (commitado). O `sqlc.yaml` na raiz do serviço tem um bloco `sql:` por repositório, com o `schema` apontando para as migrations. Depois de mudar uma query ou uma migration, rode `make sqlc` em `backend/`; o `ci-backend` falha se o código gerado estiver desatualizado.
 
 Se o banco tiver uma migration aplicada que a branch atual não conhece (por exemplo, depois de trocar de branch), o `<name>-migrate` e o `make db.migrate` falham com `UNKNOWN_APPLIED_MIGRATION`, pedindo para zerar o banco: rode `make db.reset`. Para zerar todos os bancos, apague o volume: `docker compose down -v` em `backend/`.
+
+### Autenticação e autorização
+
+O `iam` é parte fixa da stack, e não do exemplo: o `make clean-example` o mantém inteiro. Ele tem três partes:
+
+- o database `iam` e o serviço `backend/services/iam`, que só tem as migrations (`cmd/migrate` e os `make db.*`) e não tem API. No Tilt, a cadeia é `postgres → iam-db → iam-migrate → iam-seed → web`, e em runtime só o app web acessa esse database;
+- o [Better Auth](https://www.better-auth.com/) dentro do app web (`frontend/apps/web/shared/auth/`): cadastro e login com email e senha, sessão deslizante de 7 dias num cookie HttpOnly, Secure e SameSite=Strict, rate limit de login e Organizations com as Roles `owner`, `admin` e `viewer`. As telas são o `(auth)` (`/sign-in` e `/sign-up`), o seletor de Organization no topo da barra lateral, `/settings/members` e a tela "sem Organization". O `proxy.ts` manda quem não tem sessão para `/sign-in?callbackUrl=...`;
+- o módulo Go `backend/services/iam/pkg` (`domain`, `roles`, `actor` e `actor/actortest`), que os serviços Go usam para validar o token de Actor e checar as Permissions.
+
+O cadastro em `/sign-up` cria o User e uma Organization nova, com o User como Owner. Não há criação de Organization pela UI além dessa. Owner e Admin adicionam Users já cadastrados como Members em `/settings/members`, mudam a Role deles e os removem, e qualquer Member sai da Organization por lá.
+
+**Users do seed.** O recurso `iam-seed` do Tilt (`pnpm --filter @boilerplate/web iam:seed`, idempotente) cria as Organizations Acme e Globex com estes Users, todos com a senha de dev `dev-password` (`SEED_PASSWORD` em `frontend/apps/web/scripts/iam-seed/users.ts`):
+
+| User | Organization e Role |
+| --- | --- |
+| `owner@acme.test` | Owner da Acme |
+| `admin@acme.test` | Admin da Acme |
+| `viewer@acme.test` | Viewer da Acme |
+| `owner@globex.test` | Owner da Globex |
+| `admin@multi.test` | Admin da Acme e da Globex, para trocar de Organization |
+
+O e2e entra com cada um deles num setup project (`e2e/auth.setup.ts`) e guarda um `storageState` por User em `frontend/apps/web/e2e/.auth/` (gitignored); o Owner da Acme é o padrão, e um spec troca de User com `test.use({ storageState: storageStateOf("<email>") })`.
+
+**Variáveis.** O app web valida estas no boot (`parseIamEnv`, chamado no `instrumentation.ts`) e recusa subir sem elas. O Tilt as passa ao `web` e ao `iam-seed` (`iam_env` em `frontend/Tiltfile`), e o `.env.example` do app traz os mesmos valores para o `.env.local`:
+
+| Variável | O que é |
+| --- | --- |
+| `IAM_DATABASE_URL` | Conexão com o database `iam` (local: `postgres://iam:iam@localhost:5432/iam?sslmode=disable`) |
+| `BETTER_AUTH_SECRET` | Segredo que assina sessões e cifra as chaves do JWKS. O valor do repositório é só para dev: **em produção, gere outro** (`openssl rand -base64 32`) |
+| `BETTER_AUTH_URL` | URL base do app web (local: `http://localhost:3000`). É também o `iss` do token de Actor, então o `AUTH_ISSUER` dos serviços Go precisa ser igual a ela |
+
+**Token de Actor.** Cada chamada do servidor a um serviço Go leva `Authorization: Bearer` com um JWT de Actor de vida curta (5 minutos), emitido por `mintActorToken` (`frontend/apps/web/shared/auth/actor-token.ts`, o único módulo de emissão, com o guard `server-only`). Ele confere o `member` da Organization, recusa sem membership ou com Role fora de `owner | admin | viewer`, e assina `{ sub: "user_<uuid>", org: "org_<uuid>", role }` (EdDSA, `aud` = `boilerplate-api`) com o plugin `jwt` do Better Auth. O token nunca chega ao browser. O cliente de `@boilerplate/api` recebe um `getToken`, e as server actions passam o `requestActorToken`, que lê a sessão e emite um token por chamada, sem cache, para a Organization ativa. No Go, o middleware `actor.NewMiddleware` de `iam/pkg/actor` valida o token contra o JWKS do web (`AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example` do serviço), responde `401` sem ele e põe o Actor no contexto; as rotas de health continuam públicas. Um Member removido ou com a Role trocada perde o acesso no próximo token, em até 5 minutos.
+
+**Token para o Bruno.** Para chamar um serviço Go pela coleção Bruno, gere o token de um User do seed:
+
+```sh
+pnpm -C frontend --filter @boilerplate/web iam:token --as owner@acme.test [--org <slug>] [--ttl 1h]
+```
+
+Ele grava `IAM_TOKEN` no `.env` (gitignored) de cada coleção em `backend/config/bruno/collections/`, que a raiz da coleção usa em `request.auth` (`type: bearer`, `token: "{{process.env.IAM_TOKEN}}"`). Sem `--org`, vale a Organization mais antiga do User; sem `--ttl`, 5 minutos. Sem nenhuma coleção, ele imprime o token.
+
+**Permissions.** A matriz Role → Permissions é declarada uma vez em Go, em `backend/services/iam/pkg/roles/matrix.go`, e o `make iam.generate` gera dela o `frontend/apps/web/shared/auth/roles.gen.ts` (o `statement`, o `ac` e as `roles` do Better Auth), junto com as Permissions de membership do Better Auth (`ownerAc` para Owner, `adminAc` para Admin, nada para Viewer). A UI esconde o que a Role não permite com `roles[role].authorize(...)`, mas quem decide é o serviço Go: a application chama `actor.Can(permission)` e responde `403` quando a Role não a concede.
+
+<!-- example:begin -->
+
+No exemplo, as Notes pertencem a uma Organization: cada Member só vê as da Organization ativa (filtro no repositório e row-level security no database `notes`), o Owner lê, cria e apaga, o Admin lê e cria, e o Viewer só lê (`note:read`, `note:create` e `note:delete` na matriz).
+
+<!-- example:end -->
+
+A telemetria de identidade também é núcleo: o middleware e as server actions gravam `user.id` e `organization.id` nos spans e logs (nunca email nem nome), o Go conta `iam.actor.authentication.failures` por `reason` e `iam.actor.authorization.denials` por `permission` e `role`, e o web conta `iam.login.failures` por `reason`. Um processo declarado com `WithActorAuth()` no `o11ygen` ganha os painéis e o alerta de autenticação (ver Mensageria, acima).
 
 ### Lint e testes
 
@@ -233,7 +282,7 @@ O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint`
 
 ### Explorando a API e depurando
 
-- **Bruno**: abra `backend/config/bruno` no Bruno, ou rode uma coleção pela CLI a partir da pasta dela (`backend/config/bruno/collections/<Name>`): `npx @usebruno/cli run --env local`. As coleções autenticam com `{{process.env.IAM_TOKEN}}`: gere o token de um User do seed com `pnpm -C frontend --filter @boilerplate/web iam:token --as owner@acme.test [--org <slug>] [--ttl 1h]`, que grava `IAM_TOKEN` no `.env` (gitignored) de cada coleção. Sem `--org`, vale a Organization mais antiga do User; sem `--ttl`, 5 minutos.
+- **Bruno**: abra `backend/config/bruno` no Bruno, ou rode uma coleção pela CLI a partir da pasta dela (`backend/config/bruno/collections/<Name>`): `npx @usebruno/cli run --env local`. As coleções autenticam com `{{process.env.IAM_TOKEN}}`, que o `iam:token` grava (ver "Token para o Bruno" em [Autenticação e autorização](#autenticação-e-autorização)).
 - **Debug**: o build dos serviços é de debug (`-gcflags="all=-N -l"`). Com o serviço rodando pelo Tilt, use a configuração `Attach` do `.vscode/launch.json` e escolha o processo (o binário do serviço, `<name>_api_frontend`).
 
 <!-- example:begin -->
@@ -254,7 +303,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Backend**
 
-1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `DATABASE_URL` no `.env.example`.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/roles/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
    <!-- example:begin -->
    O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
    <!-- example:end -->
@@ -329,8 +378,9 @@ make clean-example
 ```
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
-- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
+- Mantém o `iam` inteiro: login, cadastro, troca de Organization e gestão de Members continuam funcionando, e o `make iam.generate`, que o script roda, deixa no `roles.gen.ts` só as Permissions de membership.
+- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, os testes das Permissions de Note em `iam/pkg/roles`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 
-O estado com zero serviços também é válido e fica verde: o `go.work` fica só com `quality`, `tools` e o núcleo `services/iam/pkg` (`make lint` e `make test` passam, sem migrations para o squawk), o `tilt up` sobe o Postgres, a observabilidade e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/`, `/profile/preferences` e o `not-found`, o e2e roda só o teste do shell e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`).
+O estado sem os serviços de exemplo também é válido e fica verde: o `go.work` fica com `quality`, `tools`, `services/iam` e `services/iam/pkg` (`make lint` e `make test` passam, com o squawk nas migrations do `iam`), o `tilt up` sobe o Postgres, a observabilidade, a cadeia do `iam` e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/` (a home depois do login), `/sign-in`, `/sign-up`, `/settings/members`, `/profile/preferences` e o `not-found`, o e2e roda os testes do shell, de login, cadastro, Organizations e Members, e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`). Um serviço novo entra como diz [Como adicionar um serviço](#como-adicionar-um-serviço), já com o `actor.NewMiddleware` para autenticar as rotas.

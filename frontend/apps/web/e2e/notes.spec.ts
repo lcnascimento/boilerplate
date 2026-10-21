@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { storageStateOf } from "./auth-state";
+import {
+  MULTI_ORGANIZATION_ADMIN,
+  SEED_PASSWORD,
+} from "../scripts/iam-seed/users";
+
+import { signedOut, storageStateOf } from "./auth-state";
 import { expect, test } from "./fixtures";
 import { WEB_URL } from "./stack";
 
@@ -149,3 +154,48 @@ for (const [name, id] of [
     ).toBeVisible();
   });
 }
+
+test.describe("as a Member of two Organizations", () => {
+  // Signs in on its own, so switching the active Organization never leaks into another test's session.
+  test.use({ storageState: signedOut });
+
+  function switcher(page: Page) {
+    return page.getByRole("button", { name: "Trocar de Organization" });
+  }
+
+  async function switchTo(page: Page, organization: string) {
+    await switcher(page).click();
+    await page.getByRole("menuitemradio", { name: organization }).click();
+    await expect(switcher(page)).toContainText(organization);
+  }
+
+  test("sees only the active Organization's notes, also after a reload", async ({
+    page,
+    marker,
+  }) => {
+    const acmeNote = marker("acme");
+    const globexNote = marker("globex");
+    const response = await page.request.post("/api/auth/sign-in/email", {
+      data: { email: MULTI_ORGANIZATION_ADMIN.email, password: SEED_PASSWORD },
+    });
+    expect(response.status()).toBe(200);
+
+    await createNote(page, acmeNote, "nota da Acme");
+    await expect(switcher(page)).toContainText("Acme");
+    await expect(noteLink(page, acmeNote)).toBeVisible();
+
+    await switchTo(page, "Globex");
+    await expect(noteLink(page, acmeNote)).toHaveCount(0);
+    await createNote(page, globexNote, "nota da Globex");
+    await expect(noteLink(page, globexNote)).toBeVisible();
+
+    await page.reload();
+    await expect(switcher(page)).toContainText("Globex");
+    await expect(noteLink(page, globexNote)).toBeVisible();
+    await expect(noteLink(page, acmeNote)).toHaveCount(0);
+
+    await switchTo(page, "Acme");
+    await expect(noteLink(page, acmeNote)).toBeVisible();
+    await expect(noteLink(page, globexNote)).toHaveCount(0);
+  });
+});
