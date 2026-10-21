@@ -162,7 +162,7 @@ sqlc:
 
 .PHONY: o11y.generate
 o11y.generate:
-	@go run ./tools/o11ygen -root .
+	@cd tools && GOWORK=off go run ./o11ygen -root ..
 
 .PHONY: o11y.lint
 o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo
