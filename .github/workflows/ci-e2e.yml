@@ -106,6 +106,13 @@ jobs:
             jq -r '.items[] | select(.status.triggerMode // 0 | IN(2, 3) | not) | "uiresource/" + .metadata.name')
           tilt wait --for=condition=Ready "${resources[@]}" --timeout=5m
 
+      - name: Better Auth schema check
+        env:
+          IAM_DATABASE_URL: postgres://iam:iam@localhost:5432/iam?sslmode=disable
+          BETTER_AUTH_SECRET: dev-only-secret-change-me-in-production
+          BETTER_AUTH_URL: http://localhost:3000
+        run: pnpm --filter @boilerplate/web iam:check-schema
+
       - name: e2e
         run: pnpm test:e2e
 
