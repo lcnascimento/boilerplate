@@ -1,6 +1,7 @@
 package frontend_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,11 +27,12 @@ func TestServer_HealthIsPublicAndNotesNeedAnActorToken(t *testing.T) {
 	db.EXPECT().Ping(gomock.Any()).Return(nil).AnyTimes()
 
 	issuer := actortest.NewIssuer(t)
-	authenticate, err := actor.NewMiddleware(t.Context(), issuer.Config())
-	require.NoError(t, err)
+	authenticator := actor.NewMiddleware(issuer.Config())
+	require.NoError(t, authenticator.Start(t.Context()))
+	t.Cleanup(func() { require.NoError(t, authenticator.Stop(context.WithoutCancel(t.Context()))) })
 
 	router := mux.NewRouter()
-	require.NoError(t, frontend.Register(frontend.New(notes, db, authenticate), router))
+	require.NoError(t, frontend.Register(frontend.New(notes, db, authenticator), router))
 
 	orgID, err := domain.ParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
 	require.NoError(t, err)

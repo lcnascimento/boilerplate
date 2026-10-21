@@ -36,9 +36,12 @@ var (
 		"iam.actor.authorization.denials", "Number of actions denied because the actor's role lacks the permission, by permission and role")
 )
 
-// onMiddlewareCreated adds zero to every label set the counters can take, so their series exist before the first failure.
-func onMiddlewareCreated(ctx context.Context) {
-	for _, r := range reasons {
+func onStarted(ctx context.Context) {
+	addZeroToEverySeries(ctx)
+}
+
+func addZeroToEverySeries(ctx context.Context) {
+	for r := range reasonCount {
 		authenticationFailures.Add(ctx, 0, rejection(r))
 	}
 
@@ -52,7 +55,7 @@ func onMiddlewareCreated(ctx context.Context) {
 }
 
 func rejection(r reason) otelmetric.AddOption {
-	return otelmetric.WithAttributes(attribute.String("reason", string(r)))
+	return otelmetric.WithAttributes(attribute.String("reason", r.String()))
 }
 
 func denial(p roles.Permission, role roles.Role) otelmetric.AddOption {
@@ -67,9 +70,9 @@ func onAuthenticated(ctx context.Context, a *Actor) context.Context {
 }
 
 func onRejected(ctx context.Context, r reason) {
-	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrFailureReason, string(r)))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrFailureReason, r.String()))
 	authenticationFailures.Add(ctx, 1, rejection(r))
-	logger.Warn(ctx, "request rejected: unauthenticated", log.String(attrFailureReason, string(r)))
+	logger.Warn(ctx, "request rejected: unauthenticated", log.String(attrFailureReason, r.String()))
 }
 
 func onDenied(ctx context.Context, a *Actor, p roles.Permission) {

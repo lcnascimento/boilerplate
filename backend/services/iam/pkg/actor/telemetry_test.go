@@ -41,8 +41,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// inSpan runs fn under a request span, like the go-kit Telemetry middleware opens, and returns that span's attributes.
-func inSpan(t *testing.T, fn func(ctx context.Context)) attribute.Set {
+func inRequestSpan(t *testing.T, fn func(ctx context.Context)) attribute.Set {
 	t.Helper()
 
 	ctx, span := tracer.Start(t.Context(), t.Name(), trace.WithSpanKind(trace.SpanKindServer))
@@ -73,7 +72,7 @@ func TestMiddleware_PutsTheActorIDsOnTheRequestSpanAndLogs(t *testing.T) {
 	requestLogger := log.MustNewLogger("handler", log.WithLogHandler(slog.NewJSONHandler(&logs, nil)))
 	mw := newMiddleware(t, issuer.Config())
 
-	span := inSpan(t, func(ctx context.Context) {
+	span := inRequestSpan(t, func(ctx context.Context) {
 		serve(ctx, mw, bearer(issuer.Mint(a)), func(r *http.Request) {
 			requestLogger.Info(r.Context(), "listing notes")
 		})
@@ -151,7 +150,7 @@ func labelSets(t *testing.T, name string) []string {
 	return out
 }
 
-func TestNewMiddleware_SeedsEveryRejectionReasonSoTheSeriesExistBeforeTheFirstFailure(t *testing.T) {
+func TestMiddleware_StartSeedsEveryRejectionReasonSoTheSeriesExistBeforeTheFirstFailure(t *testing.T) {
 	newMiddleware(t, actortest.NewIssuer(t).Config())
 
 	reasons := labelSets(t, authenticationFailures)
@@ -165,7 +164,7 @@ func TestNewMiddleware_SeedsEveryRejectionReasonSoTheSeriesExistBeforeTheFirstFa
 
 // example:begin
 
-func TestNewMiddleware_SeedsEveryPermissionARoleLacksSoTheSeriesExistBeforeTheFirstDenial(t *testing.T) {
+func TestMiddleware_StartSeedsEveryPermissionARoleLacksSoTheSeriesExistBeforeTheFirstDenial(t *testing.T) {
 	newMiddleware(t, actortest.NewIssuer(t).Config())
 
 	require.ElementsMatch(t, []string{

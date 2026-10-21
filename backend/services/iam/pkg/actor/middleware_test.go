@@ -49,7 +49,7 @@ func TestMiddleware_RejectsWithAGeneric401AndCountsTheReason(t *testing.T) {
 		{"not a jwt", func(*actortest.Issuer, *actor.Actor) string { return "Bearer not-a-jwt" }, "malformed"},
 		{"no kid", mint(actortest.WithoutHeader("kid")), "malformed"},
 		{"sub without the user prefix", mint(actortest.WithClaim("sub", "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d")), "malformed"},
-		{"signed by another key", mint(actortest.WithForeignKey()), "bad_signature"},
+		{"signed by another key", mint(actortest.WithUnpublishedKey()), "bad_signature"},
 		{"kid not in the JWKS", mint(actortest.WithHeader("kid", "a6f0c2de-5b8e-4f3a-9d1c-2e7b4a6c8f10")), "unknown_kid"},
 		{"alg other than EdDSA", mint(actortest.WithHeader("alg", "HS256")), "bad_alg"},
 		{"another issuer", mint(actortest.WithClaim("iss", "https://evil.test")), "bad_issuer"},
@@ -69,7 +69,7 @@ func TestMiddleware_RejectsWithAGeneric401AndCountsTheReason(t *testing.T) {
 
 			var rec *httptest.ResponseRecorder
 
-			span := inSpan(t, func(ctx context.Context) {
+			span := inRequestSpan(t, func(ctx context.Context) {
 				rec = serve(ctx, mw, authorization, func(*http.Request) {
 					t.Error("the middleware let the request through")
 				})
@@ -107,10 +107,11 @@ func mint(opts ...actortest.MintOption) func(*actortest.Issuer, *actor.Actor) st
 func newMiddleware(t *testing.T, cfg actor.Config, opts ...actor.Option) func(http.Handler) http.Handler {
 	t.Helper()
 
-	mw, err := actor.NewMiddleware(t.Context(), cfg, opts...)
-	require.NoError(t, err)
+	mw := actor.NewMiddleware(cfg, opts...)
+	require.NoError(t, mw.Start(t.Context()))
+	t.Cleanup(func() { require.NoError(t, mw.Stop(context.WithoutCancel(t.Context()))) })
 
-	return mw
+	return mw.Handler
 }
 
 func serve(ctx context.Context, mw func(http.Handler) http.Handler, authorization string, next func(*http.Request)) *httptest.ResponseRecorder {

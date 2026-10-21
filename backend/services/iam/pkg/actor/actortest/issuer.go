@@ -31,7 +31,6 @@ type signingKey struct {
 	private ed25519.PrivateKey
 }
 
-// Issuer stands in for the BFF: it signs Actor tokens with Ed25519 keys and serves their JWKS like Better Auth does.
 type Issuer struct {
 	tb     testing.TB
 	server *httptest.Server
@@ -60,7 +59,6 @@ func (i *Issuer) Config() actor.Config {
 	}
 }
 
-// Rotate signs every later token with a new key, and keeps publishing the old ones.
 func (i *Issuer) Rotate() {
 	i.mu.Lock()
 	defer i.mu.Unlock()

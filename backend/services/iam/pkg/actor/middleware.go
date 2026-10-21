@@ -20,7 +20,6 @@ import (
 const (
 	leeway = 30 * time.Second
 
-	// jwksTimeout bounds every JWKS fetch, including the wait for the unknown-kid limiter, so a dead JWKS never holds a request long.
 	jwksTimeout = 5 * time.Second
 
 	defaultRefetchInterval = 15 * time.Second
@@ -51,32 +50,24 @@ type claims struct {
 	Role string `json:"role"`
 }
 
-type verifier struct {
-	keys   keyfunc.Keyfunc
-	parser *jwt.Parser
+type Middleware struct {
+	cfg  Config
+	opts options
+
+	keys        keyfunc.Keyfunc
+	parser      *jwt.Parser
+	stopRefresh context.CancelFunc
 }
 
-// NewMiddleware does not fail when the JWKS is down: it answers 401 until a fetch succeeds. ctx bounds the JWKS refresh goroutine.
-func NewMiddleware(ctx context.Context, cfg Config, opts ...Option) (func(http.Handler) http.Handler, error) {
+func NewMiddleware(cfg Config, opts ...Option) *Middleware {
 	o := options{refetchInterval: defaultRefetchInterval}
 	for _, opt := range opts {
 		opt(&o)
 	}
 
-	keys, err := keyfunc.NewDefaultOverrideCtx(ctx, []string{cfg.JWKSURL}, keyfunc.Override{
-		HTTPTimeout:       jwksTimeout,
-		RateLimitWaitMax:  jwksTimeout,
-		RefreshUnknownKID: rate.NewLimiter(rate.Every(o.refetchInterval), 1),
-		RefreshErrorHandlerFunc: func(string) func(context.Context, error) {
-			return onJWKSRefreshFailed
-		},
-	})
-	if err != nil {
-		return nil, ErrNewMiddleware.WithCause(err)
-	}
-
-	v := &verifier{
-		keys: keys,
+	return &Middleware{
+		cfg:  cfg,
+		opts: o,
 		parser: jwt.NewParser(
 			jwt.WithIssuer(cfg.Issuer),
 			jwt.WithAudience(cfg.Audience),
@@ -85,18 +76,46 @@ func NewMiddleware(ctx context.Context, cfg Config, opts ...Option) (func(http.H
 			jwt.WithLeeway(leeway),
 		),
 	}
-
-	onMiddlewareCreated(ctx)
-
-	return v.middleware, nil
 }
 
-func (v *verifier) middleware(next http.Handler) http.Handler {
+func (m *Middleware) Start(ctx context.Context) error {
+	refreshCtx, stopRefresh := context.WithCancel(context.WithoutCancel(ctx))
+
+	keys, err := keyfunc.NewDefaultOverrideCtx(refreshCtx, []string{m.cfg.JWKSURL}, keyfunc.Override{
+		HTTPTimeout:       jwksTimeout,
+		RateLimitWaitMax:  jwksTimeout,
+		RefreshUnknownKID: rate.NewLimiter(rate.Every(m.opts.refetchInterval), 1),
+		RefreshErrorHandlerFunc: func(string) func(context.Context, error) {
+			return onJWKSRefreshFailed
+		},
+	})
+	if err != nil {
+		stopRefresh()
+
+		return ErrStartMiddleware.WithCause(err)
+	}
+
+	m.keys, m.stopRefresh = keys, stopRefresh
+
+	onStarted(ctx)
+
+	return nil
+}
+
+func (m *Middleware) Stop(context.Context) error {
+	if m.stopRefresh != nil {
+		m.stopRefresh()
+	}
+
+	return nil
+}
+
+func (m *Middleware) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		a, failure := v.authenticate(ctx, r.Header.Get("Authorization"))
-		if failure != "" {
+		a, failure, ok := m.authenticate(ctx, r.Header.Get("Authorization"))
+		if !ok {
 			onRejected(ctx, failure)
 			util.WriteError(ctx, w, errors.ErrRequestUnauthenticated)
 
@@ -108,27 +127,27 @@ func (v *verifier) middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (v *verifier) authenticate(ctx context.Context, header string) (*Actor, reason) {
+func (m *Middleware) authenticate(ctx context.Context, header string) (*Actor, reason, bool) {
 	if header == "" {
-		return nil, reasonMissingHeader
+		return nil, reasonMissingHeader, false
 	}
 
 	raw, ok := strings.CutPrefix(header, "Bearer ")
 	if !ok || raw == "" {
-		return nil, reasonMalformed
+		return nil, reasonMalformed, false
 	}
 
 	var c claims
-	if _, err := v.parser.ParseWithClaims(raw, &c, v.keyfunc(ctx)); err != nil {
-		return nil, reasonOf(err)
+	if _, err := m.parser.ParseWithClaims(raw, &c, m.keyfunc(ctx)); err != nil {
+		return nil, reasonOf(err), false
 	}
 
 	return actorOf(&c)
 }
 
 // keyfunc adds what keyfunc/v3 leaves out: it requires a kid, and accepts EdDSA only.
-func (v *verifier) keyfunc(ctx context.Context) jwt.Keyfunc {
-	lookup := v.keys.KeyfuncCtx(ctx)
+func (m *Middleware) keyfunc(ctx context.Context) jwt.Keyfunc {
+	lookup := m.keys.KeyfuncCtx(ctx)
 
 	return func(token *jwt.Token) (any, error) {
 		if token.Method.Alg() != jwt.SigningMethodEdDSA.Alg() {
@@ -148,25 +167,25 @@ func (v *verifier) keyfunc(ctx context.Context) jwt.Keyfunc {
 	}
 }
 
-func actorOf(c *claims) (*Actor, reason) {
+func actorOf(c *claims) (*Actor, reason, bool) {
 	if c.Subject == "" || c.Org == "" || c.Role == "" || c.IssuedAt == nil {
-		return nil, reasonMissingClaim
+		return nil, reasonMissingClaim, false
 	}
 
 	userID, err := domain.ParseUserID(c.Subject)
 	if err != nil {
-		return nil, reasonMalformed
+		return nil, reasonMalformed, false
 	}
 
 	orgID, err := domain.ParseOrganizationID(c.Org)
 	if err != nil {
-		return nil, reasonMalformed
+		return nil, reasonMalformed, false
 	}
 
 	role, err := roles.ParseRole(c.Role)
 	if err != nil {
-		return nil, reasonUnknownRole
+		return nil, reasonUnknownRole, false
 	}
 
-	return &Actor{UserID: userID, OrganizationID: orgID, Role: role}, ""
+	return &Actor{UserID: userID, OrganizationID: orgID, Role: role}, 0, true
 }

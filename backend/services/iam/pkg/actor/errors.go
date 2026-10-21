@@ -7,8 +7,7 @@ var (
 			WithCode("NO_ACTOR").
 			WithKind(errors.KindInternal)
 
-	ErrNewMiddleware = errors.New("failed to create the actor middleware").
-				WithCode("NEW_ACTOR_MIDDLEWARE")
+	ErrStartMiddleware = errors.New("failed to start the actor middleware")
 
 	errMissingKID = errors.New("token header has no kid").WithCode("MISSING_KID")
 	errBadAlg     = errors.New("token alg is not EdDSA").WithCode("BAD_ALG")

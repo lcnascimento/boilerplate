@@ -40,8 +40,7 @@ func WithoutHeader(name string) MintOption {
 	}
 }
 
-// WithForeignKey signs with a key the JWKS does not publish, under the kid of the current one.
-func WithForeignKey() MintOption {
+func WithUnpublishedKey() MintOption {
 	return func(tb testing.TB, s *mintSpec) {
 		tb.Helper()
 

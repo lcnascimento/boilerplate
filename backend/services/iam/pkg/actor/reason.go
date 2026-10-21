@@ -6,49 +6,61 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 )
 
-// reason says why the middleware rejected a request. It is a metric label, so the set stays closed.
-type reason string
+type reason int
 
 const (
-	reasonMissingHeader reason = "missing_header"
-	reasonMalformed     reason = "malformed"
-	reasonBadSignature  reason = "bad_signature"
-	reasonUnknownKID    reason = "unknown_kid"
-	reasonBadAlg        reason = "bad_alg"
-	reasonBadIssuer     reason = "bad_issuer"
-	reasonBadAudience   reason = "bad_audience"
-	reasonExpired       reason = "expired"
-	reasonMissingClaim  reason = "missing_claim"
-	reasonUnknownRole   reason = "unknown_role"
+	reasonMissingHeader reason = iota
+	reasonMalformed
+	reasonBadSignature
+	reasonUnknownKID
+	reasonBadAlg
+	reasonBadIssuer
+	reasonBadAudience
+	reasonExpired
+	reasonMissingClaim
+	reasonUnknownRole
+
+	reasonCount
 )
 
-var reasons = []reason{
-	reasonMissingHeader, reasonMalformed, reasonBadSignature, reasonUnknownKID, reasonBadAlg, reasonBadIssuer,
-	reasonBadAudience, reasonExpired, reasonMissingClaim, reasonUnknownRole,
+var reasonLabels = [reasonCount]string{
+	reasonMissingHeader: "missing_header",
+	reasonMalformed:     "malformed",
+	reasonBadSignature:  "bad_signature",
+	reasonUnknownKID:    "unknown_kid",
+	reasonBadAlg:        "bad_alg",
+	reasonBadIssuer:     "bad_issuer",
+	reasonBadAudience:   "bad_audience",
+	reasonExpired:       "expired",
+	reasonMissingClaim:  "missing_claim",
+	reasonUnknownRole:   "unknown_role",
 }
 
-// reasonOf maps a jwt parse error to a reason. The checks run in order, because one token can fail several of them.
-func reasonOf(err error) reason {
-	checks := []struct {
-		target error
-		reason reason
-	}{
-		{errMissingKID, reasonMalformed},
-		{errBadAlg, reasonBadAlg},
-		{errUnknownKID, reasonUnknownKID},
-		{jwt.ErrTokenMalformed, reasonMalformed},
-		{jwt.ErrTokenUnverifiable, reasonBadAlg},
-		{jwt.ErrTokenSignatureInvalid, reasonBadSignature},
-		{jwt.ErrTokenRequiredClaimMissing, reasonMissingClaim},
-		{jwt.ErrTokenExpired, reasonExpired},
-		{jwt.ErrTokenNotValidYet, reasonExpired},
-		{jwt.ErrTokenUsedBeforeIssued, reasonExpired},
-		{jwt.ErrTokenInvalidIssuer, reasonBadIssuer},
-		{jwt.ErrTokenInvalidAudience, reasonBadAudience},
-	}
+func (r reason) String() string {
+	return reasonLabels[r]
+}
 
-	for _, c := range checks {
-		if errors.Is(err, c.target) {
+var reasonsByCauseInPrecedence = []struct {
+	cause  error
+	reason reason
+}{
+	{errMissingKID, reasonMalformed},
+	{errBadAlg, reasonBadAlg},
+	{errUnknownKID, reasonUnknownKID},
+	{jwt.ErrTokenMalformed, reasonMalformed},
+	{jwt.ErrTokenUnverifiable, reasonBadAlg},
+	{jwt.ErrTokenSignatureInvalid, reasonBadSignature},
+	{jwt.ErrTokenRequiredClaimMissing, reasonMissingClaim},
+	{jwt.ErrTokenExpired, reasonExpired},
+	{jwt.ErrTokenNotValidYet, reasonExpired},
+	{jwt.ErrTokenUsedBeforeIssued, reasonExpired},
+	{jwt.ErrTokenInvalidIssuer, reasonBadIssuer},
+	{jwt.ErrTokenInvalidAudience, reasonBadAudience},
+}
+
+func reasonOf(err error) reason {
+	for _, c := range reasonsByCauseInPrecedence {
+		if errors.Is(err, c.cause) {
 			return c.reason
 		}
 	}

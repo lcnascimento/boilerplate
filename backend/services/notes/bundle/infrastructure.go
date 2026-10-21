@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/exaring/otelpgx"
-	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -117,28 +116,20 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 func ActorMiddleware() fx.Option {
 	return fx.Module(
 		"Actor Middleware",
-		fx.Provide(newActorMiddleware),
+		fx.Provide(fx.Annotate(newActorMiddleware, fx.As(new(transport.Authenticator)))),
 	)
 }
 
-func newActorMiddleware(lifecycle fx.Lifecycle) (mux.MiddlewareFunc, error) {
+func newActorMiddleware(lifecycle fx.Lifecycle) (*actor.Middleware, error) {
 	cfg, err := config.ActorAuth()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	middleware := actor.NewMiddleware(cfg)
+	lifecycle.Append(fx.Hook{OnStart: middleware.Start, OnStop: middleware.Stop})
 
-	authenticate, err := actor.NewMiddleware(ctx, cfg)
-	if err != nil {
-		cancel()
-
-		return nil, err
-	}
-
-	lifecycle.Append(fx.StopHook(cancel))
-
-	return authenticate, nil
+	return middleware, nil
 }
 
 func Repositories() fx.Option {

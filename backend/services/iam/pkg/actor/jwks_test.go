@@ -45,7 +45,6 @@ func TestMiddleware_RefetchesTheJWKSForAnUnknownKID(t *testing.T) {
 	require.Equal(t, http.StatusOK, serve(t.Context(), mw, bearer(issuer.Mint(viewer)), func(*http.Request) {}).Code)
 }
 
-// flakyJWKS answers 503 until up is set, then proxies to the issuer's JWKS.
 type flakyJWKS struct {
 	up     atomic.Bool
 	server *httptest.Server
