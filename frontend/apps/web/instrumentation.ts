@@ -4,7 +4,7 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   await import("./instrumentation.node");
-  const { logger } = await import("@/shared/logger");
+  const { logger } = await import("@/shared/logging");
 
   await Promise.all([
     // example:begin
@@ -22,6 +22,6 @@ export const onRequestError: Instrumentation.onRequestError = async (
 ) => {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  const { recordRequestError } = await import("@/shared/request-error");
+  const { recordRequestError } = await import("@/shared/logging");
   await recordRequestError(...args);
 };
