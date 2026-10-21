@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "iam:seed": "tsx scripts/iam-seed/index.ts",
     "iam:token": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/iam-token/index.ts",
-    "iam:check-schema": "pnpm dlx auth@1.7.12 check schema --config auth.config.ts"
+    "iam:check-schema": "tsx scripts/iam-check-schema/index.ts"
   },
   "dependencies": {
     "@boilerplate/api": "workspace:*",

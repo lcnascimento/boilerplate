@@ -1,20 +1,15 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+import { parseActorIds } from "@/shared/auth/actor-ids";
 import { mintActorToken } from "@/shared/auth/actor-token";
 import { getIam } from "@/shared/auth/auth";
 
-import { withEnvValue } from "./dotenv";
+import { brunoCollections, writeIamToken } from "./bruno";
 import { parseTtl } from "./ttl";
 
 const USAGE =
   "usage: pnpm --filter @boilerplate/web iam:token --as <email> [--org <slug>] [--ttl 1h]";
-
-const BRUNO_COLLECTIONS = path.resolve(
-  import.meta.dirname,
-  "../../../../../backend/config/bruno/collections"
-);
 
 const { values } = parseArgs({
   options: {
@@ -57,32 +52,28 @@ async function findOrganizationId(
   return oldest.organizationId;
 }
 
-function writeToBrunoCollections(token: string): string[] {
-  if (!existsSync(BRUNO_COLLECTIONS)) return [];
-  return readdirSync(BRUNO_COLLECTIONS, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
-      const envFile = path.join(BRUNO_COLLECTIONS, entry.name, ".env");
-      const current = existsSync(envFile) ? readFileSync(envFile, "utf8") : "";
-      writeFileSync(envFile, withEnvValue(current, "IAM_TOKEN", token));
-      return path.relative(process.cwd(), envFile);
-    });
-}
-
 try {
   const context = await auth.$context;
   const found = await context.internalAdapter.findUserByEmail(values.as);
   if (found === null) throw new Error(`no user with email ${values.as}`);
 
   const token = await mintActorToken({
-    userId: found.user.id,
-    organizationId: await findOrganizationId(found.user.id, values.org),
+    ...parseActorIds({
+      userId: found.user.id,
+      organizationId: await findOrganizationId(found.user.id, values.org),
+    }),
     ttlSeconds: values.ttl === undefined ? undefined : parseTtl(values.ttl),
   });
 
-  const written = writeToBrunoCollections(token);
-  if (written.length === 0) console.log(token);
-  for (const file of written) console.log(`wrote IAM_TOKEN to ${file}`);
+  const collections = brunoCollections();
+  if (collections.length === 0) {
+    console.error("no Bruno collection to write IAM_TOKEN to; the token:");
+    console.log(token);
+  }
+  for (const collection of collections) {
+    const envFile = writeIamToken(collection, token);
+    console.log(`wrote IAM_TOKEN to ${path.relative(process.cwd(), envFile)}`);
+  }
 } finally {
   await database.end();
 }
