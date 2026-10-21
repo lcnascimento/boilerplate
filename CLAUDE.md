@@ -16,6 +16,10 @@ single-context, docs backend Notion (workspace Boilerplate, through the `notion-
 
 GitHub at `github.com` through the `gh` CLI, repository `lcnascimento/boilerplate`. See `docs/agents/forge.md`.
 
+### Environment
+
+How to start the Project's dependencies and where its logs, metrics and traces live. See `docs/agents/environment.md`.
+
 ## Language
 
 - **Project language: Portuguese (pt-BR).** Talk to the user, and write documentation (`README.md`, `GLOSSARY.md` definitions, ADRs and other documents, Notion pages), issue tracker content and PR bodies, in Portuguese (pt-BR).

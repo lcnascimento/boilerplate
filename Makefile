@@ -5,3 +5,7 @@ init:
 .PHONY: clean-example
 clean-example:
 	@bash scripts/clean-example.sh
+
+.PHONY: grafana.token
+grafana.token:
+	@bash scripts/grafana-token.sh

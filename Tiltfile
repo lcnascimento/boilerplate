@@ -13,3 +13,11 @@ local_resource(
 include('./backend/Tiltfile')
 include('./openapi/Tiltfile')
 include('./frontend/Tiltfile')
+
+if os.getenv('TILT_STACK', '') != 'minimal':
+    local_resource(
+        'grafana-token',
+        cmd='make -s grafana.token',
+        resource_deps=['grafana'],
+        labels=['Monitoring'],
+    )
