@@ -46,7 +46,7 @@
       "panels": []
     },
     {
-      "type": "stat",
+      "type": "table",
       "id": 2,
       "targets": [
         {
@@ -54,190 +54,243 @@
             "type": "prometheus",
             "uid": "${prometheus_datasource}"
           },
-          "expr": "1 - max by (sloth_slo) (slo:sli_error:ratio_rate5m{sloth_service=\"notes\"})",
-          "legendFormat": "{{sloth_slo}}",
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:objective:ratio{sloth_service=\"notes\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d{sloth_service=\"notes\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio{sloth_service=\"notes\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio{sloth_service=\"notes\"})",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "D"
         }
       ],
-      "title": "SLI atual",
-      "description": "Fração de eventos bons de cada SLO nos últimos 5 minutos, segundo as recording rules do Sloth.",
+      "title": "SLOs",
+      "description": "Objetivo, SLI e budget restante de cada SLO na janela de 30 dias, e o burn rate atual (1 = queima o budget exatamente em 30 dias). O nome do serviço abre o dashboard dele.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
       "gridPos": {
-        "h": 5,
-        "w": 8,
+        "h": 10,
+        "w": 24,
         "x": 0,
         "y": 1
       },
       "repeatDirection": "h",
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "id": 3,
-      "targets": [
+      "transformations": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "max by (sloth_slo) (slo:period_error_budget_remaining:ratio{sloth_service=\"notes\"})",
-          "legendFormat": "{{sloth_slo}}",
-          "refId": "A"
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "service": 2,
+              "sloth_service": 0,
+              "sloth_slo": 1
+            },
+            "renameByName": {
+              "Value #A": "Objetivo",
+              "Value #B": "SLI (30d)",
+              "Value #C": "Budget restante (30d)",
+              "Value #D": "Burn rate",
+              "service": "Processo",
+              "sloth_service": "Serviço",
+              "sloth_slo": "SLO"
+            }
+          }
         }
       ],
-      "title": "Budget restante (30d)",
-      "description": "Fração do error budget de 30 dias que cada SLO ainda tem; abaixo de zero, o SLO já foi descumprido na janela.",
-      "transparent": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "repeatDirection": "h",
       "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
+        "frameIndex": 0,
+        "showHeader": true,
+        "showTypeIcons": false,
+        "footer": {
+          "show": false,
+          "reducer": null,
+          "countRows": false
         },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
+        "cellHeight": "sm"
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          "custom": {
+            "align": "auto",
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Serviço"
+            },
+            "properties": [
               {
-                "value": null,
-                "color": "red"
-              },
-              {
-                "value": 0,
-                "color": "yellow"
-              },
-              {
-                "value": 0.25,
-                "color": "green"
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Dashboard do serviço",
+                    "url": "/d/boilerplate-${__value.raw}?${__url_time_range}"
+                  }
+                ]
               }
             ]
           },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "type": "stat",
-      "id": 4,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "expr": "max by (sloth_slo) (slo:current_burn_rate:ratio{sloth_service=\"notes\"})",
-          "legendFormat": "{{sloth_slo}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Burn rate",
-      "description": "Velocidade com que cada SLO queima o budget nos últimos 5 minutos: 1 gasta o budget exatamente em 30 dias.",
-      "transparent": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "repeatDirection": "h",
-      "options": {
-        "graphMode": "area",
-        "colorMode": "value",
-        "justifyMode": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "percentChangeColorMode": "standard",
-        "orientation": "auto"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Objetivo"
+            },
+            "properties": [
               {
-                "value": null,
-                "color": "green"
+                "id": "unit",
+                "value": "percentunit"
               },
               {
-                "value": 1,
-                "color": "yellow"
-              },
-              {
-                "value": 6,
-                "color": "red"
+                "id": "decimals",
+                "value": 3
               }
             ]
           },
-          "color": {
-            "mode": "thresholds"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SLI (30d)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Budget restante (30d)"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.25
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Burn rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 6
+                    }
+                  ]
+                }
+              }
+            ]
           }
-        },
-        "overrides": []
+        ]
       }
     },
     {
       "type": "alertlist",
-      "id": 5,
+      "id": 3,
       "title": "Alertas do serviço",
       "description": "Alertas de cada processo de notes, inclusive os de burn rate dos SLOs.",
       "transparent": false,
@@ -245,7 +298,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 11
       },
       "repeatDirection": "h",
       "options": {
@@ -276,14 +329,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 21
       },
-      "id": 6,
+      "id": 4,
       "panels": []
     },
     {
       "type": "stat",
-      "id": 7,
+      "id": 5,
       "targets": [
         {
           "datasource": {
@@ -306,7 +359,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 22
       },
       "repeatDirection": "h",
       "options": {
@@ -333,7 +386,7 @@
     },
     {
       "type": "stat",
-      "id": 8,
+      "id": 6,
       "targets": [
         {
           "datasource": {
@@ -356,7 +409,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 22
       },
       "repeatDirection": "h",
       "options": {
@@ -383,7 +436,7 @@
     },
     {
       "type": "stat",
-      "id": 9,
+      "id": 7,
       "targets": [
         {
           "datasource": {
@@ -406,7 +459,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 22
       },
       "repeatDirection": "h",
       "options": {
@@ -449,7 +502,7 @@
     },
     {
       "type": "timeseries",
-      "id": 10,
+      "id": 8,
       "targets": [
         {
           "datasource": {
@@ -472,7 +525,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 27
       },
       "repeatDirection": "h",
       "options": {
@@ -503,7 +556,7 @@
     },
     {
       "type": "timeseries",
-      "id": 11,
+      "id": 9,
       "targets": [
         {
           "datasource": {
@@ -526,7 +579,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 27
       },
       "repeatDirection": "h",
       "options": {
@@ -557,7 +610,7 @@
     },
     {
       "type": "timeseries",
-      "id": 12,
+      "id": 10,
       "targets": [
         {
           "datasource": {
@@ -591,7 +644,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 35
       },
       "repeatDirection": "h",
       "options": {
@@ -639,7 +692,7 @@
     },
     {
       "type": "timeseries",
-      "id": 13,
+      "id": 11,
       "targets": [
         {
           "datasource": {
@@ -673,7 +726,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 30
+        "y": 35
       },
       "repeatDirection": "h",
       "options": {
@@ -742,14 +795,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 43
       },
-      "id": 14,
+      "id": 12,
       "panels": []
     },
     {
       "type": "stat",
-      "id": 15,
+      "id": 13,
       "targets": [
         {
           "datasource": {
@@ -772,7 +825,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 44
       },
       "repeatDirection": "h",
       "options": {
@@ -815,7 +868,7 @@
     },
     {
       "type": "stat",
-      "id": 16,
+      "id": 14,
       "targets": [
         {
           "datasource": {
@@ -838,7 +891,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 44
       },
       "repeatDirection": "h",
       "options": {
@@ -881,7 +934,7 @@
     },
     {
       "type": "timeseries",
-      "id": 17,
+      "id": 15,
       "targets": [
         {
           "datasource": {
@@ -904,7 +957,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 49
       },
       "repeatDirection": "h",
       "options": {
@@ -952,7 +1005,7 @@
     },
     {
       "type": "timeseries",
-      "id": 18,
+      "id": 16,
       "targets": [
         {
           "datasource": {
@@ -984,7 +1037,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 49
       },
       "repeatDirection": "h",
       "options": {
@@ -1015,7 +1068,7 @@
     },
     {
       "type": "timeseries",
-      "id": 19,
+      "id": 17,
       "targets": [
         {
           "datasource": {
@@ -1049,7 +1102,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 52
+        "y": 57
       },
       "repeatDirection": "h",
       "options": {
@@ -1080,7 +1133,7 @@
     },
     {
       "type": "timeseries",
-      "id": 20,
+      "id": 18,
       "targets": [
         {
           "datasource": {
@@ -1112,7 +1165,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 52
+        "y": 57
       },
       "repeatDirection": "h",
       "options": {
@@ -1149,13 +1202,13 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 65
       },
-      "id": 21,
+      "id": 19,
       "panels": [
         {
           "type": "timeseries",
-          "id": 22,
+          "id": 20,
           "targets": [
             {
               "datasource": {
@@ -1178,7 +1231,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 61
+            "y": 66
           },
           "repeatDirection": "h",
           "options": {
@@ -1209,7 +1262,7 @@
         },
         {
           "type": "timeseries",
-          "id": 23,
+          "id": 21,
           "targets": [
             {
               "datasource": {
@@ -1232,7 +1285,115 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 61
+            "y": 66
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 22,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus_datasource}"
+              },
+              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Goroutines",
+          "description": "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 74
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 23,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${prometheus_datasource}"
+              },
+              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}} {{go_memory_type}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memória Go",
+          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prometheus_datasource}"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 74
           },
           "repeatDirection": "h",
           "options": {
@@ -1270,114 +1431,6 @@
                 "type": "prometheus",
                 "uid": "${prometheus_datasource}"
               },
-              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Goroutines",
-          "description": "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 0,
-            "y": 69
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "short",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 25,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${prometheus_datasource}"
-              },
-              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}} {{go_memory_type}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Memória Go",
-          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 8,
-            "y": 69
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 26,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "${prometheus_datasource}"
-              },
               "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "alocação/s {{job}}",
               "refId": "A"
@@ -1403,7 +1456,7 @@
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 69
+            "y": 74
           },
           "repeatDirection": "h",
           "options": {
@@ -1442,13 +1495,13 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 82
       },
-      "id": 27,
+      "id": 25,
       "panels": [
         {
           "type": "timeseries",
-          "id": 28,
+          "id": 26,
           "targets": [
             {
               "datasource": {
@@ -1480,7 +1533,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 78
+            "y": 83
           },
           "repeatDirection": "h",
           "options": {
@@ -1511,7 +1564,7 @@
         },
         {
           "type": "timeseries",
-          "id": 29,
+          "id": 27,
           "targets": [
             {
               "datasource": {
@@ -1534,7 +1587,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 78
+            "y": 83
           },
           "repeatDirection": "h",
           "options": {
@@ -1573,14 +1626,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 91
       },
-      "id": 30,
+      "id": 28,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 31,
+      "id": 29,
       "targets": [
         {
           "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
@@ -1603,7 +1656,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 92
       },
       "repeatDirection": "h",
       "options": {
@@ -1634,7 +1687,7 @@
     },
     {
       "type": "logs",
-      "id": 32,
+      "id": 30,
       "targets": [
         {
           "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
@@ -1656,7 +1709,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 100
       },
       "repeatDirection": "h",
       "options": {

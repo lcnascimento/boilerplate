@@ -21,10 +21,6 @@ import (
 const (
 	rate      = "[$__rate_interval]"
 	errorLogs = `detected_level=~"error|critical|fatal"`
-
-	burnRateTicket = 1
-	burnRatePage   = 6
-	budgetLow      = 0.25
 )
 
 func topSection(svc *service.Service, declaresSLOs bool) section {
@@ -38,35 +34,8 @@ func topSection(svc *service.Service, declaresSLOs bool) section {
 		return section{title: "Alertas", panels: []panel{alerts}}
 	}
 
-	sloth := `{sloth_service=` + strconv.Quote(svc.Name) + `}`
-	bySLO := func(series string) string { return "max by (sloth_slo) (" + series + sloth + ")" }
-
 	return section{title: "SLOs e alertas", panels: []panel{
-		&single{
-			title:       "SLI atual",
-			description: "Fração de eventos bons de cada SLO nos últimos 5 minutos, segundo as recording rules do Sloth.",
-			unit:        "percentunit",
-			width:       thirdWidth,
-			queries:     []query{{expr: "1 - " + bySLO(catalog.SLOErrorRatioRate5m), legend: "{{sloth_slo}}"}},
-		},
-		&single{
-			title: "Budget restante (30d)",
-			description: "Fração do error budget de 30 dias que cada SLO ainda tem; abaixo de zero, o SLO já foi " +
-				"descumprido na janela.",
-			unit:    "percentunit",
-			width:   thirdWidth,
-			queries: []query{{expr: bySLO(catalog.SLOPeriodErrorBudgetRemainingRatio), legend: "{{sloth_slo}}"}},
-			steps:   []step{{color: "red"}, at(0, "yellow"), at(budgetLow, "green")},
-		},
-		&single{
-			title: "Burn rate",
-			description: "Velocidade com que cada SLO queima o budget nos últimos 5 minutos: 1 gasta o budget " +
-				"exatamente em 30 dias.",
-			unit:    "short",
-			width:   thirdWidth,
-			queries: []query{{expr: bySLO(catalog.SLOCurrentBurnRateRatio), legend: "{{sloth_slo}}"}},
-			steps:   []step{{color: "green"}, at(burnRateTicket, "yellow"), at(burnRatePage, "red")},
-		},
+		slos{selector: `{sloth_service=` + strconv.Quote(svc.Name) + `}`},
 		alerts,
 	}}
 }

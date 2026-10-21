@@ -231,12 +231,12 @@ func TestGenerate_ServiceDashboardTopsWithTheSlothSLOsAndTheServiceAlerts(t *tes
 
 	top := orders.section(t, "SLOs e alertas")
 
-	queries := map[string]string{}
+	queries := map[string][]string{}
 	filter := ""
 
 	for _, panel := range top.panels {
 		for _, target := range panel.Targets {
-			queries[panel.Title] = target.Expr
+			queries[panel.Type+" "+panel.Title] = append(queries[panel.Type+" "+panel.Title], target.Expr)
 		}
 
 		if panel.Type == "alertlist" {
@@ -244,12 +244,45 @@ func TestGenerate_ServiceDashboardTopsWithTheSlothSLOsAndTheServiceAlerts(t *tes
 		}
 	}
 
-	assert.Equal(t, map[string]string{
-		"SLI atual":             `1 - max by (sloth_slo) (slo:sli_error:ratio_rate5m{sloth_service="orders"})`,
-		"Budget restante (30d)": `max by (sloth_slo) (slo:period_error_budget_remaining:ratio{sloth_service="orders"})`,
-		"Burn rate":             `max by (sloth_slo) (slo:current_burn_rate:ratio{sloth_service="orders"})`,
-	}, queries)
+	bySLO := "max by (sloth_service, sloth_slo, service) "
+	assert.Equal(t, map[string][]string{"table SLOs": {
+		bySLO + `(slo:objective:ratio{sloth_service="orders"})`,
+		"1 - " + bySLO + `(slo:sli_error:ratio_rate30d{sloth_service="orders"})`,
+		bySLO + `(slo:period_error_budget_remaining:ratio{sloth_service="orders"})`,
+		bySLO + `(slo:current_burn_rate:ratio{sloth_service="orders"})`,
+	}}, queries)
 	assert.Equal(t, `{service=~"orders-api|orders-consumer|orders-worker"}`, filter)
+}
+
+func sloTableShape(t *testing.T, board map[string]any) map[string]any {
+	t.Helper()
+
+	for _, panel := range panelsOf(board) {
+		if panel["type"] != "table" {
+			continue
+		}
+
+		shape := map[string]any{}
+
+		for key, value := range panel {
+			if key != "id" && key != "gridPos" && key != "targets" {
+				shape[key] = value
+			}
+		}
+
+		return shape
+	}
+
+	require.Fail(t, "no SLO table")
+
+	return nil
+}
+
+func TestGenerate_ServiceDashboardShowsItsSLOsInTheOverviewTable(t *testing.T) {
+	root, _ := generateOrders(t)
+
+	assert.Equal(t, sloTableShape(t, readDashboard(t, root, "overview.json")),
+		sloTableShape(t, readDashboard(t, root, "orders.json")))
 }
 
 func exemplarExprs(panels []boardPanel) []string {
