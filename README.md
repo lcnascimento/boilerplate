@@ -142,7 +142,7 @@ make db.rollback   # desfaz só a última migration aplicada (a seção Down del
 make db.reset      # apaga o database, recria e migra de novo
 ```
 
-As migrations ficam em `internal/repository/migrations/` de cada serviço, embutidas no binário. Cada uma tem a seção `-- +goose Up` e a `-- +goose Down`, que a desfaz; um teste de componente desfaz e reaplica todas, então uma Down quebrada falha no `make test`. São numeradas em sequência com 5 dígitos, cada uma roda na sua transação e todas rodam sob advisory lock, então execuções concorrentes não se atropelam. A API não roda migrations no boot. O `cmd/migrate` loga cada migration aplicada ou desfeita pelo logger do o11y, como serviço `notes-migrate` no Grafana. Uma Down que apaga dado (`DROP TABLE`, `DROP COLUMN`) precisa de um `-- squawk-ignore <regra>` explícito antes do comando, para o `make lint` passar. Para criar a próxima, em `backend/`:
+As migrations ficam em `internal/repository/migrations/` de cada serviço, embutidas no binário (`migrations.FS`). O runner do `cmd/migrate` (`migrate.Run`) e o `testdb` dos testes de componente vêm do módulo [`postgres` do go-kit](https://github.com/lcnascimento/go-kit/tree/main/postgres), parametrizados por esse `fs.FS`; o serviço não tem cópia deles. Cada uma tem a seção `-- +goose Up` e a `-- +goose Down`, que a desfaz; um teste de componente desfaz e reaplica todas, então uma Down quebrada falha no `make test`. São numeradas em sequência com 5 dígitos, cada uma roda na sua transação e todas rodam sob advisory lock, então execuções concorrentes não se atropelam. A API não roda migrations no boot. O `cmd/migrate` loga cada migration aplicada ou desfeita pelo logger do o11y, como serviço `notes-migrate` no Grafana. Uma Down que apaga dado (`DROP TABLE`, `DROP COLUMN`) precisa de um `-- squawk-ignore <regra>` explícito antes do comando, para o `make lint` passar. Para criar a próxima, em `backend/`:
 
 ```sh
 make migration.new name=add_tags                  # basta enquanto só um serviço tem migrations
@@ -153,7 +153,7 @@ A API abre o pool no boot e pinga o banco: com o banco inacessível, ela falha e
 
 Cada repositório escreve suas queries em SQL num `queries.sql` ao lado dele, e o [sqlc](https://sqlc.dev/) gera o código Go tipado num pacote `internal/db` do repositório (commitado). O `sqlc.yaml` na raiz do serviço tem um bloco `sql:` por repositório, com o `schema` apontando para as migrations. Depois de mudar uma query ou uma migration, rode `make sqlc` em `backend/`; o `ci-backend` falha se o código gerado estiver desatualizado.
 
-Se o banco tiver uma migration aplicada que a branch atual não conhece (por exemplo, depois de trocar de branch), o `<name>-migrate` e o `make db.migrate` falham com uma mensagem pedindo `make db.reset`. Para zerar todos os bancos, apague o volume: `docker compose down -v` em `backend/`.
+Se o banco tiver uma migration aplicada que a branch atual não conhece (por exemplo, depois de trocar de branch), o `<name>-migrate` e o `make db.migrate` falham com `UNKNOWN_APPLIED_MIGRATION`, pedindo para zerar o banco: rode `make db.reset`. Para zerar todos os bancos, apague o volume: `docker compose down -v` em `backend/`.
 
 ### Lint e testes
 
@@ -176,7 +176,7 @@ make tidy             # go mod tidy
 make vuln-check       # govulncheck (só local, fora do CI)
 ```
 
-Os testes de componente (`TestComponent<Unit>_<Scenario>`, pulados com `-short`) rodam contra o Postgres de verdade, sem precisar do `<name>-db` nem do `<name>-migrate`: basta o container (`tilt up` ou `docker compose up -d postgres` em `backend/`). Cada teste ganha um database próprio, clonado de um template já migrado pelo [pgtestdb](https://github.com/peterldowns/pgtestdb), então eles rodam em paralelo e nunca tocam o database de dev. O template é reaproveitado entre execuções e só é recriado quando as migrations mudam; o database de um teste que falha fica no servidor, com o nome no log do teste. A conexão de admin vem de `POSTGRES_ADMIN_URL` (padrão: o superuser do compose, `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`). Com o Postgres fora do ar, eles falham (não pulam) com uma mensagem dizendo o que rodar.
+Os testes de componente (`TestComponent<Unit>_<Scenario>`, pulados com `-short`) rodam contra o Postgres de verdade, sem precisar do `<name>-db` nem do `<name>-migrate`: basta o container (`tilt up` ou `docker compose up -d postgres` em `backend/`). Cada teste ganha um database próprio, clonado de um template já migrado pelo [pgtestdb](https://github.com/peterldowns/pgtestdb), então eles rodam em paralelo e nunca tocam o database de dev. Eles conectam com um role sem superuser (o `pgtdbuser` do pgtestdb), porque superuser ignora row-level security mesmo com `FORCE`. O template é reaproveitado entre execuções e só é recriado quando as migrations mudam; o database de um teste que falha fica no servidor, com o nome no log do teste. A conexão de admin vem de `POSTGRES_ADMIN_URL` (padrão: o superuser do compose, `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`). Com o Postgres fora do ar, eles falham (não pulam) com uma mensagem dizendo o que rodar.
 
 <!-- example:begin -->
 

@@ -1,6 +1,6 @@
 module github.com/lcnascimento/boilerplate/backend/services/notes/pkg
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/IBM/sarama v1.61.1
@@ -8,10 +8,10 @@ require (
 	github.com/ThreeDotsLabs/watermill-kafka/v3 v3.1.4
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/google/uuid v1.6.0
-	github.com/lcnascimento/go-kit/errors v1.9.3
-	github.com/lcnascimento/go-kit/o11y v1.8.0
-	github.com/lcnascimento/go-kit/util v1.4.5
-	github.com/lcnascimento/go-kit/validator v1.11.0
+	github.com/lcnascimento/go-kit/errors v1.9.4
+	github.com/lcnascimento/go-kit/o11y v1.8.1
+	github.com/lcnascimento/go-kit/util v1.4.6
+	github.com/lcnascimento/go-kit/validator v1.11.1
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.44.0
 	github.com/twmb/franz-go/pkg/sr v1.8.0
@@ -59,7 +59,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.20.1 // indirect
-	github.com/lcnascimento/go-kit/env v1.2.2 // indirect
+	github.com/lcnascimento/go-kit/env v1.2.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect

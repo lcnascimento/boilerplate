@@ -1,11 +1,11 @@
 module github.com/lcnascimento/boilerplate/backend/tools
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/grafana/grafana-foundation-sdk/go v0.0.20
 	github.com/grafana/loki/v3 v3.7.8
-	github.com/lcnascimento/go-kit/errors v1.9.3
+	github.com/lcnascimento/go-kit/errors v1.9.4
 	github.com/prometheus/common v0.71.0
 	github.com/prometheus/prometheus v0.315.0
 	github.com/stretchr/testify v1.12.1

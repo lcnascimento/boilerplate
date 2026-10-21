@@ -1,6 +1,6 @@
 module github.com/lcnascimento/boilerplate/backend/services/notes
 
-go 1.27.2
+go 1.27.3
 
 replace github.com/lcnascimento/boilerplate/backend/services/notes/pkg => ./pkg
 
@@ -14,13 +14,12 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
-	github.com/lcnascimento/go-kit/env v1.2.2
-	github.com/lcnascimento/go-kit/errors v1.9.3
-	github.com/lcnascimento/go-kit/http v1.5.0
-	github.com/lcnascimento/go-kit/o11y v1.8.0
-	github.com/lcnascimento/go-kit/validator v1.11.0
-	github.com/peterldowns/pgtestdb v0.1.1
-	github.com/pressly/goose/v3 v3.29.0
+	github.com/lcnascimento/go-kit/env v1.2.3
+	github.com/lcnascimento/go-kit/errors v1.9.4
+	github.com/lcnascimento/go-kit/http v1.5.1
+	github.com/lcnascimento/go-kit/o11y v1.8.1
+	github.com/lcnascimento/go-kit/postgres v1.0.0
+	github.com/lcnascimento/go-kit/validator v1.11.1
 	github.com/stretchr/testify v1.12.1
 	github.com/twmb/franz-go/pkg/sr v1.8.0
 	go.opentelemetry.io/otel v1.47.0
@@ -78,7 +77,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.20.1 // indirect
-	github.com/lcnascimento/go-kit/util v1.4.5 // indirect
+	github.com/lcnascimento/go-kit/util v1.4.6 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.12.3 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
@@ -97,9 +96,11 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
+	github.com/peterldowns/pgtestdb v0.1.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/pressly/goose/v3 v3.29.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.7 // indirect

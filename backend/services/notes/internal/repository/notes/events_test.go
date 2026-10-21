@@ -12,8 +12,10 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/testdb"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
@@ -166,7 +168,7 @@ func TestComponentRepository_UnregisteredSchemaLeavesNoNote(t *testing.T) {
 		t.Skip("component test: needs Postgres")
 	}
 
-	repo := notes.New(testdb.New(t), events.SchemaIDs{})
+	repo := notes.New(testdb.New(t, migrations.FS), events.SchemaIDs{})
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
 	err := repo.Create(t.Context(), note)
