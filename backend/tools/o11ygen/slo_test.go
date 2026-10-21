@@ -254,10 +254,10 @@ func TestGenerate_AddsTheExtraSLOAProcessDeclares(t *testing.T) {
 			Name:        "api-create-order-latency",
 			Objective:   99.5,
 			Description: "Pedidos criados em até 500ms.",
-			SLI: service.EventsSLI(
-				`sum(rate(http_server_request_duration_seconds_bucket`+createOrder+`[{{.window}}]))`,
-				`sum(rate(http_server_request_duration_seconds_count`+createOrder+`[{{.window}}]))`,
-			),
+			SLI: service.EventsSLI{
+				ErrorQuery: `sum(rate(http_server_request_duration_seconds_bucket` + createOrder + `[{{.window}}]))`,
+				TotalQuery: `sum(rate(http_server_request_duration_seconds_count` + createOrder + `[{{.window}}]))`,
+			},
 		}},
 	}}
 
@@ -287,7 +287,10 @@ func TestGenerate_AddsTheExtraSLOAProcessDeclares(t *testing.T) {
 }
 
 func TestGenerate_RejectsAnInvalidExtraSLO(t *testing.T) {
-	sli := service.EventsSLI(`sum(rate(target_info[{{.window}}]))`, `sum(rate(target_info[{{.window}}]))`)
+	sli := service.EventsSLI{
+		ErrorQuery: `sum(rate(target_info[{{.window}}]))`,
+		TotalQuery: `sum(rate(target_info[{{.window}}]))`,
+	}
 
 	for name, tc := range map[string]struct {
 		slo    service.SLO
@@ -308,9 +311,13 @@ func TestGenerate_RejectsAnInvalidExtraSLO(t *testing.T) {
 		"without the window placeholder": {
 			slo: service.SLO{
 				Process: "orders-api", Name: "api-extra", Objective: 99, Description: "d",
-				SLI: service.RawSLI(`avg_over_time(target_info[5m])`),
+				SLI: service.RawSLI{ErrorRatioQuery: `avg_over_time(target_info[5m])`},
 			},
 			reason: `does not range over {{.window}}`,
+		},
+		"without an SLI": {
+			slo:    service.SLO{Process: "orders-api", Name: "api-extra", Objective: 99, Description: "d"},
+			reason: `the SLO has no SLI`,
 		},
 		"with an objective of 100%": {
 			slo:    service.SLO{Process: "orders-api", Name: "api-extra", Objective: 100, Description: "d", SLI: sli},

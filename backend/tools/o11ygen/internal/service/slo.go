@@ -8,13 +8,10 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 )
 
-// SLOWindow is the placeholder every SLI query uses for the window Sloth evaluates it over.
 const SLOWindow = "{{.window}}"
 
 var sloName = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)+$`)
 
-// SLO is an objective over a 30-day window that Process emits, beyond the ones it inherits from its components. Name
-// follows <component>-<sli> and is unique within the service.
 type SLO struct {
 	Process     string
 	Name        string
@@ -23,30 +20,22 @@ type SLO struct {
 	SLI         SLI
 }
 
-// SLI is built only by EventsSLI or RawSLI.
-type SLI struct {
-	errorQuery      string
-	totalQuery      string
-	errorRatioQuery string
+type SLI interface {
+	queries() []string
 }
 
-// EventsSLI divides the bad events by every event; both queries must range over SLOWindow.
-func EventsSLI(errorQuery, totalQuery string) SLI {
-	return SLI{errorQuery: errorQuery, totalQuery: totalQuery}
+type EventsSLI struct {
+	ErrorQuery string
+	TotalQuery string
 }
 
-// RawSLI is a query that already yields the error ratio (0-1) over SLOWindow.
-func RawSLI(errorRatioQuery string) SLI {
-	return SLI{errorRatioQuery: errorRatioQuery}
+type RawSLI struct {
+	ErrorRatioQuery string
 }
 
-func (s SLI) Events() (errorQuery, totalQuery string, ok bool) {
-	return s.errorQuery, s.totalQuery, s.errorQuery != ""
-}
+func (s EventsSLI) queries() []string { return []string{s.ErrorQuery, s.TotalQuery} }
 
-func (s SLI) Raw() (errorRatioQuery string, ok bool) {
-	return s.errorRatioQuery, s.errorRatioQuery != ""
-}
+func (s RawSLI) queries() []string { return []string{s.ErrorRatioQuery} }
 
 func validateSLOs(svc *Service) error {
 	for i := range svc.SLOs {
@@ -79,12 +68,11 @@ func (s *SLO) validate() error {
 		return errors.New("the SLO has no description")
 	}
 
-	queries := []string{s.SLI.errorRatioQuery}
-	if errorQuery, totalQuery, ok := s.SLI.Events(); ok {
-		queries = []string{errorQuery, totalQuery}
+	if s.SLI == nil {
+		return errors.New("the SLO has no SLI")
 	}
 
-	for _, query := range queries {
+	for _, query := range s.SLI.queries() {
 		if !strings.Contains(query, SLOWindow) {
 			return errors.New("the SLI query %q does not range over %s", query, SLOWindow)
 		}

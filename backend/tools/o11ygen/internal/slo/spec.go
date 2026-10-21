@@ -113,11 +113,11 @@ func specOf(svc string, slos []service.SLO) *spec {
 
 		var sli sliSpec
 
-		if errorQuery, totalQuery, ok := slo.SLI.Events(); ok {
-			sli.Events = &events{ErrorQuery: errorQuery, TotalQuery: totalQuery}
-		} else {
-			errorRatioQuery, _ := slo.SLI.Raw()
-			sli.Raw = &raw{ErrorRatioQuery: errorRatioQuery}
+		switch declared := slo.SLI.(type) {
+		case service.EventsSLI:
+			sli.Events = &events{ErrorQuery: declared.ErrorQuery, TotalQuery: declared.TotalQuery}
+		case service.RawSLI:
+			sli.Raw = &raw{ErrorRatioQuery: declared.ErrorRatioQuery}
 		}
 
 		out.SLOs = append(out.SLOs, sloSpec{
