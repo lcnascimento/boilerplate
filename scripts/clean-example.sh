@@ -69,6 +69,7 @@ git grep -lzE "$marker_re" -- ":!$self" | xargs -0 perl -0777 -i -ne '
 
 gofmt -w backend
 make -C backend o11y.generate
+make -C backend iam.generate
 
 drop_section() {
 	HEADING=$2 perl -0pi -e 's/^\Q$ENV{HEADING}\E\n.*?(?=^## |\z)//ms; s/\n+\z/\n/' "$1"

@@ -2,9 +2,12 @@ module github.com/lcnascimento/boilerplate/backend/tools
 
 go 1.27.3
 
+replace github.com/lcnascimento/boilerplate/backend/services/iam/pkg => ../services/iam/pkg
+
 require (
 	github.com/grafana/grafana-foundation-sdk/go v0.0.20
 	github.com/grafana/loki/v3 v3.7.8
+	github.com/lcnascimento/boilerplate/backend/services/iam/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/errors v1.9.4
 	github.com/prometheus/common v0.71.0
 	github.com/prometheus/prometheus v0.315.0
