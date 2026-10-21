@@ -3,6 +3,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { resolveActiveOrganization } from "./active-organization";
 import { mintActorToken } from "./actor-token";
 import { getIam } from "./auth";
 import { SIGN_IN_HREF } from "./routes";
@@ -14,13 +15,12 @@ export async function requestActorToken(): Promise<string> {
   });
   if (session === null) redirect(SIGN_IN_HREF);
 
-  const { activeOrganizationId } = session.session;
-  if (!activeOrganizationId) {
-    throw new Error(`user ${session.user.id} has no active organization`);
-  }
+  // With no Organization left, the (dashboard) layout shows the "no Organization" screen.
+  const organizations = await resolveActiveOrganization(session.session);
+  if (organizations === null) redirect("/");
 
   return mintActorToken({
     userId: session.user.id,
-    organizationId: activeOrganizationId,
+    organizationId: organizations.active.id,
   });
 }

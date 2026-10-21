@@ -4,6 +4,7 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { resolveActiveOrganization } from "@/shared/auth/active-organization";
 import { getIam } from "@/shared/auth/auth";
 import {
   addMemberInputSchema,
@@ -32,6 +33,7 @@ async function requireActor(requestHeaders: Headers): Promise<Actor | null> {
   const { auth } = getIam();
   const session = await auth.api.getSession({ headers: requestHeaders });
   if (session === null) redirect(SIGN_IN_HREF);
+  if ((await resolveActiveOrganization(session.session)) === null) return null;
 
   const member = await auth.api
     .getActiveMember({ headers: requestHeaders })

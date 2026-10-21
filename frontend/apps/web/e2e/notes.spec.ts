@@ -144,6 +144,8 @@ for (const [name, id] of [
     await expect(
       page.getByRole("heading", { name: "Página não encontrada." })
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Boilerplate" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Trocar de Organization" })
+    ).toBeVisible();
   });
 }
