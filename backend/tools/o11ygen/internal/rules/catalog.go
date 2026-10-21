@@ -54,6 +54,27 @@ var processAlerts = []inheritedAlert{
 		},
 	},
 	{
+		inheritedBy: func(p *process) bool { return p.LongRunning() && p.service.Runtime.RunsGoKit() },
+		alert: func(p *process) alert {
+			checks := func(status string) string {
+				return fmt.Sprintf(`sum by (job) (increase(%s{job=%s, http_route="/health", http_response_status_code=~%q}[2m])) > 0`,
+					catalog.HTTPServerRequestTotal, strconv.Quote(config.Namespace+"/"+p.Name()), status)
+			}
+
+			return alert{
+				name:     "HealthCheckFailing",
+				expr:     checks("5..") + " unless " + checks("2.."),
+				severity: critical,
+				summary:  p.Name() + " responde 5xx em todo /health há 2 minutos",
+				description: "Todo /health de " + p.Name() + " respondeu 5xx nos últimos 2 minutos: uma dependência que ele " +
+					"checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. " +
+					"Veja primeiro nos logs de " + p.Name() + " por que o health check falha e os alertas das dependências " +
+					"(PostgresDown, KafkaBrokersDown).",
+				dashboard: p.service.Name,
+			}
+		},
+	},
+	{
 		inheritedBy: func(p *process) bool { return p.DBPool() },
 		alert: func(p *process) alert {
 			return alert{

@@ -155,6 +155,7 @@ func TestGenerate_WritesOneDashboardPerServiceUnderTheUIDItsAlertsPointTo(t *tes
 	assert.Equal(t, map[string]string{
 		"SLOBurnRate":            ordersBoard,
 		"ServiceTelemetryAbsent": ordersBoard,
+		"HealthCheckFailing":     ordersBoard,
 		"CriticalLogRecorded":    ordersBoard,
 		"DBPoolSaturated":        ordersBoard,
 		"ConsumerLagHigh":        ordersBoard,

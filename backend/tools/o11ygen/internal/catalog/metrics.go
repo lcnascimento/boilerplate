@@ -185,8 +185,9 @@ var metrics = map[string]Metric{
 
 	JobSeriesCount: {Type: Gauge, Source: RecordingRule},
 
+	// Every Go process serves /health on a go-kit httpserver, probed by Tilt or the orchestrator.
 	HTTPServerRequestTotal: {
-		Type: Counter, Source: OTLP, Labels: httpServerLabels, EmittedBy: on(service.Go, runs(service.API)),
+		Type: Counter, Source: OTLP, Labels: httpServerLabels, EmittedBy: on(service.Go, everyProcess),
 	},
 	HTTPServerRequestDuration: {
 		Type: Histogram, Source: OTLP, Labels: append([]string{"url_scheme"}, httpServerLabels...),

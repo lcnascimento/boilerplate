@@ -1,0 +1,80 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires only for the process whose every health check failed
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_request_method="GET", http_response_status_code="200"}
+        values: 12 24 36 48 48 48 48
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_request_method="GET", http_response_status_code="503"}
+        values: 0 0 0 0 12 24 36
+      - series: http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_request_method="GET", http_response_status_code="200"}
+        values: 0+12x6
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: HealthCheckFailing
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: HealthCheckFailing
+        exp_alerts:
+          - exp_labels:
+              job: boilerplate/fixture-api
+              service: fixture-api
+              severity: critical
+            exp_annotations:
+              summary: "fixture-api responde 5xx em todo /health há 2 minutos"
+              description: "Todo /health de fixture-api respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-api por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown)."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
+
+  - name: stays quiet when failed checks at startup are followed by passing ones
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_request_method="GET", http_response_status_code="503"}
+        values: 2x6
+      - series: http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_request_method="GET", http_response_status_code="200"}
+        values: 10+12x6
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: HealthCheckFailing
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: HealthCheckFailing
+        exp_alerts: []
+
+  - name: resolves once the health check passes again
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_request_method="GET", http_response_status_code="503"}
+        values: 0+12x4 48 48 48
+      - series: http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_request_method="GET", http_response_status_code="200"}
+        values: 0 0 0 0 0 12 24 36
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: HealthCheckFailing
+        exp_alerts:
+          - exp_labels:
+              job: boilerplate/fixture-consumer
+              service: fixture-consumer
+              severity: critical
+            exp_annotations:
+              summary: "fixture-consumer responde 5xx em todo /health há 2 minutos"
+              description: "Todo /health de fixture-consumer respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (banco, Kafka, o consumer ou o forwarder dele) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-consumer por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown)."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
+      - eval_time: 6m
+        alertname: HealthCheckFailing
+        exp_alerts: []
+
+  - name: stays quiet for a route other than /health
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="503"}
+        values: 0+12x6
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: HealthCheckFailing
+        exp_alerts: []

@@ -53,6 +53,7 @@ func TestLiveProbes_ExpectWhatEachDeclaredProcessEmits(t *testing.T) {
 		Name: "orders",
 		Processes: []service.Process{
 			service.Daemon("orders-api", service.API).WithDBPool(),
+			service.Daemon("orders-worker", service.Worker),
 			service.OneShot("orders-migrate"),
 		},
 	}}
@@ -60,6 +61,7 @@ func TestLiveProbes_ExpectWhatEachDeclaredProcessEmits(t *testing.T) {
 	got := exprs(t, declared)
 
 	for _, want := range []string{
+		`present_over_time(http_server_request_total{job="boilerplate/orders-worker"}[15m])`,
 		`present_over_time(target_info{job="boilerplate/orders-api"}[15m])`,
 		`present_over_time(http_server_request_total{job="boilerplate/orders-api"}[15m])`,
 		`present_over_time(http_server_request_duration_seconds_count{job="boilerplate/orders-api"}[15m])`,
@@ -93,7 +95,8 @@ func TestLiveProbes_ExpectTheConsumerGroupSeriesOnceAConsumerIsDeclared(t *testi
 
 	assert.Contains(t, got, `present_over_time(kafka_consumergroup_uncommitted_offsets[15m])`)
 	assert.Contains(t, got, `present_over_time(messaging_process_duration_seconds_count{job="boilerplate/billing-consumer"}[15m])`)
-	assert.NotContains(t, got, `present_over_time(http_server_request_total{job="boilerplate/billing-consumer"}[15m])`)
+	assert.Contains(t, got, `present_over_time(http_server_request_total{job="boilerplate/billing-consumer"}[15m])`)
+	assert.NotContains(t, got, `present_over_time(http_server_request_duration_seconds_count{job="boilerplate/billing-consumer"}[15m])`)
 }
 
 func TestLiveProbes_ExpectTheOutboxOfTheServiceAWorkerBelongsTo(t *testing.T) {
