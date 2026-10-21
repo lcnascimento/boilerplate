@@ -4,8 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
+
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
 
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
@@ -15,12 +18,17 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/fixture"
 )
 
+var (
+	acme   = iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
+	globex = iamdomain.MustParseOrganizationID("org_4d7a1c3e-5b6f-4a8b-9c0d-1e2f3a4b5c6d")
+)
+
 func TestComponentRepository_StartsEmpty(t *testing.T) {
 	t.Parallel()
 
 	repo := newRepository(t)
 
-	got, err := repo.List(t.Context())
+	got, err := repo.List(t.Context(), acme)
 
 	require.NoError(t, err)
 	require.NotNil(t, got)
@@ -35,7 +43,7 @@ func TestComponentRepository_CreateThenGet(t *testing.T) {
 
 	require.NoError(t, repo.Create(t.Context(), note))
 
-	got, err := repo.Get(t.Context(), note.ID)
+	got, err := repo.Get(t.Context(), note.OrganizationID, note.ID)
 
 	require.NoError(t, err)
 	require.Equal(t, note, got)
@@ -46,7 +54,7 @@ func TestComponentRepository_GetUnknownIDReturnsNotFound(t *testing.T) {
 
 	repo := newRepository(t)
 
-	_, err := repo.Get(t.Context(), domain.NewNoteID())
+	_, err := repo.Get(t.Context(), acme, domain.NewNoteID())
 
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
@@ -64,7 +72,7 @@ func TestComponentRepository_ListReturnsNewestFirst(t *testing.T) {
 		require.NoError(t, repo.Create(t.Context(), note))
 	}
 
-	got, err := repo.List(t.Context())
+	got, err := repo.List(t.Context(), acme)
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"newest", "middle", "oldest"}, titles(got))
@@ -81,7 +89,7 @@ func TestComponentRepository_ListBreaksTimestampTiesByID(t *testing.T) {
 	require.NoError(t, repo.Create(t.Context(), first))
 	require.NoError(t, repo.Create(t.Context(), second))
 
-	got, err := repo.List(t.Context())
+	got, err := repo.List(t.Context(), acme)
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"second", "first"}, titles(got))
@@ -94,9 +102,9 @@ func TestComponentRepository_DeleteRemovesNote(t *testing.T) {
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 	require.NoError(t, repo.Create(t.Context(), note))
 
-	require.NoError(t, repo.Delete(t.Context(), note.ID))
+	require.NoError(t, repo.Delete(t.Context(), note.OrganizationID, note.ID))
 
-	_, err := repo.Get(t.Context(), note.ID)
+	_, err := repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
 
@@ -105,9 +113,97 @@ func TestComponentRepository_DeleteUnknownIDReturnsNotFound(t *testing.T) {
 
 	repo := newRepository(t)
 
-	err := repo.Delete(t.Context(), domain.NewNoteID())
+	err := repo.Delete(t.Context(), acme, domain.NewNoteID())
 
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
+}
+
+func TestComponentRepository_ListReturnsOnlyTheOrganizationsNotes(t *testing.T) {
+	t.Parallel()
+
+	repo := newRepository(t)
+	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
+	require.NoError(t, repo.Create(t.Context(), newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), newGlobexNote(at)))
+
+	acmeNotes, err := repo.List(t.Context(), acme)
+	require.NoError(t, err)
+
+	globexNotes, err := repo.List(t.Context(), globex)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"da Acme"}, titles(acmeNotes))
+	require.Equal(t, []string{"da Globex"}, titles(globexNotes))
+}
+
+func TestComponentRepository_GetFromAnotherOrganizationReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := newRepository(t)
+	note := newGlobexNote(time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+	require.NoError(t, repo.Create(t.Context(), note))
+
+	_, err := repo.Get(t.Context(), acme, note.ID)
+
+	require.ErrorIs(t, err, domain.ErrNoteNotFound)
+}
+
+func TestComponentRepository_DeleteFromAnotherOrganizationKeepsTheNote(t *testing.T) {
+	t.Parallel()
+
+	repo := newRepository(t)
+	note := newGlobexNote(time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+	require.NoError(t, repo.Create(t.Context(), note))
+
+	err := repo.Delete(t.Context(), acme, note.ID)
+
+	require.ErrorIs(t, err, domain.ErrNoteNotFound)
+
+	got, err := repo.Get(t.Context(), globex, note.ID)
+	require.NoError(t, err)
+	require.Equal(t, "da Globex", got.Title)
+}
+
+func TestComponentRepository_RowLevelSecurityHidesOtherOrganizationsWithoutWhere(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepositoryWithPool(t)
+	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
+	require.NoError(t, repo.Create(t.Context(), newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), newGlobexNote(at)))
+
+	tx, err := pool.Begin(t.Context())
+	require.NoError(t, err)
+
+	defer func() { _ = tx.Rollback(t.Context()) }()
+
+	_, err = tx.Exec(t.Context(), `SELECT set_config('app.organization_id', $1, true)`, acme.UUID().String())
+	require.NoError(t, err)
+
+	rows, err := tx.Query(t.Context(), `SELECT title FROM notes`)
+	require.NoError(t, err)
+
+	got, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	require.NoError(t, err)
+	require.Equal(t, []string{"da Acme"}, got)
+}
+
+func TestComponentRepository_TransactionWithoutOrganizationSeesNoNotes(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepositoryWithPool(t)
+	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
+	require.NoError(t, repo.Create(t.Context(), newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), newGlobexNote(at)))
+
+	tx, err := pool.Begin(t.Context())
+	require.NoError(t, err)
+
+	defer func() { _ = tx.Rollback(t.Context()) }()
+
+	var count int
+	require.NoError(t, tx.QueryRow(t.Context(), `SELECT count(*) FROM notes`).Scan(&count))
+	require.Zero(t, count)
 }
 
 func newRepository(t *testing.T) *notes.Repository {
@@ -134,6 +230,14 @@ func newNote(title string, createdAt time.Time) *domain.Note {
 	note := fixture.RandomNote()
 	note.Title = title
 	note.CreatedAt = createdAt
+	note.OrganizationID = acme
+
+	return note
+}
+
+func newGlobexNote(createdAt time.Time) *domain.Note {
+	note := newNote("da Globex", createdAt)
+	note.OrganizationID = globex
 
 	return note
 }

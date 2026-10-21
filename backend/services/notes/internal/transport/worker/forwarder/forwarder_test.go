@@ -68,7 +68,7 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 
 	env.startForwarder(t)
 	require.NoError(t, repo.Create(t.Context(), note))
-	require.NoError(t, repo.Delete(t.Context(), note.ID))
+	require.NoError(t, repo.Delete(t.Context(), note.OrganizationID, note.ID))
 
 	observer := env.subscribe(t, note.ID)
 	created := observer.next(t)
@@ -108,7 +108,7 @@ func TestComponentForwarder_KeepsTheOrderOfANoteUnderItsIDAsKey(t *testing.T) {
 
 	for range 3 {
 		require.NoError(t, repo.Create(t.Context(), note))
-		require.NoError(t, repo.Delete(t.Context(), note.ID))
+		require.NoError(t, repo.Delete(t.Context(), note.OrganizationID, note.ID))
 	}
 
 	env.startForwarder(t)

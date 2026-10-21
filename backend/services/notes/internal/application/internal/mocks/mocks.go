@@ -14,7 +14,8 @@ import (
 	reflect "reflect"
 	time "time"
 
-	domain "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
+	domain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+	domain0 "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,7 +44,7 @@ func (m *MockNotesRepository) EXPECT() *MockNotesRepositoryMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockNotesRepository) Create(ctx context.Context, note *domain.Note) error {
+func (m *MockNotesRepository) Create(ctx context.Context, note *domain0.Note) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, note)
 	ret0, _ := ret[0].(error)
@@ -57,47 +58,47 @@ func (mr *MockNotesRepositoryMockRecorder) Create(ctx, note any) *gomock.Call {
 }
 
 // Delete mocks base method.
-func (m *MockNotesRepository) Delete(ctx context.Context, id domain.NoteID) error {
+func (m *MockNotesRepository) Delete(ctx context.Context, orgID domain.OrganizationID, id domain0.NoteID) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret := m.ctrl.Call(m, "Delete", ctx, orgID, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockNotesRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
+func (mr *MockNotesRepositoryMockRecorder) Delete(ctx, orgID, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesRepository)(nil).Delete), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesRepository)(nil).Delete), ctx, orgID, id)
 }
 
 // Get mocks base method.
-func (m *MockNotesRepository) Get(ctx context.Context, id domain.NoteID) (*domain.Note, error) {
+func (m *MockNotesRepository) Get(ctx context.Context, orgID domain.OrganizationID, id domain0.NoteID) (*domain0.Note, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, id)
-	ret0, _ := ret[0].(*domain.Note)
+	ret := m.ctrl.Call(m, "Get", ctx, orgID, id)
+	ret0, _ := ret[0].(*domain0.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockNotesRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
+func (mr *MockNotesRepositoryMockRecorder) Get(ctx, orgID, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNotesRepository)(nil).Get), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNotesRepository)(nil).Get), ctx, orgID, id)
 }
 
 // List mocks base method.
-func (m *MockNotesRepository) List(ctx context.Context) ([]*domain.Note, error) {
+func (m *MockNotesRepository) List(ctx context.Context, orgID domain.OrganizationID) ([]*domain0.Note, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx)
-	ret0, _ := ret[0].([]*domain.Note)
+	ret := m.ctrl.Call(m, "List", ctx, orgID)
+	ret0, _ := ret[0].([]*domain0.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockNotesRepositoryMockRecorder) List(ctx any) *gomock.Call {
+func (mr *MockNotesRepositoryMockRecorder) List(ctx, orgID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesRepository)(nil).List), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesRepository)(nil).List), ctx, orgID)
 }
 
 // MockOutboxRepository is a mock of OutboxRepository interface.

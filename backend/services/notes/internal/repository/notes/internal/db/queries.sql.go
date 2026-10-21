@@ -13,20 +13,22 @@ import (
 )
 
 const createNote = `-- name: CreateNote :exec
-INSERT INTO notes (id, created_at, title, body)
-VALUES ($1, $2, $3, $4)
+INSERT INTO notes (id, organization_id, created_at, title, body)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateNoteParams struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	Title     string
-	Body      string
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	CreatedAt      time.Time
+	Title          string
+	Body           string
 }
 
 func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) error {
 	_, err := q.db.Exec(ctx, createNote,
 		arg.ID,
+		arg.OrganizationID,
 		arg.CreatedAt,
 		arg.Title,
 		arg.Body,
@@ -36,11 +38,16 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) error {
 
 const deleteNote = `-- name: DeleteNote :execrows
 DELETE FROM notes
-WHERE id = $1
+WHERE organization_id = $1 AND id = $2
 `
 
-func (q *Queries) DeleteNote(ctx context.Context, id uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteNote, id)
+type DeleteNoteParams struct {
+	OrganizationID uuid.UUID
+	ID             uuid.UUID
+}
+
+func (q *Queries) DeleteNote(ctx context.Context, arg DeleteNoteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteNote, arg.OrganizationID, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -48,31 +55,38 @@ func (q *Queries) DeleteNote(ctx context.Context, id uuid.UUID) (int64, error) {
 }
 
 const getNote = `-- name: GetNote :one
-SELECT id, created_at, title, body
+SELECT id, created_at, title, body, organization_id
 FROM notes
-WHERE id = $1
+WHERE organization_id = $1 AND id = $2
 `
 
-func (q *Queries) GetNote(ctx context.Context, id uuid.UUID) (Note, error) {
-	row := q.db.QueryRow(ctx, getNote, id)
+type GetNoteParams struct {
+	OrganizationID uuid.UUID
+	ID             uuid.UUID
+}
+
+func (q *Queries) GetNote(ctx context.Context, arg GetNoteParams) (Note, error) {
+	row := q.db.QueryRow(ctx, getNote, arg.OrganizationID, arg.ID)
 	var i Note
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.Title,
 		&i.Body,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const listNotes = `-- name: ListNotes :many
-SELECT id, created_at, title, body
+SELECT id, created_at, title, body, organization_id
 FROM notes
+WHERE organization_id = $1
 ORDER BY created_at DESC, id DESC
 `
 
-func (q *Queries) ListNotes(ctx context.Context) ([]Note, error) {
-	rows, err := q.db.Query(ctx, listNotes)
+func (q *Queries) ListNotes(ctx context.Context, organizationID uuid.UUID) ([]Note, error) {
+	rows, err := q.db.Query(ctx, listNotes, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +99,7 @@ func (q *Queries) ListNotes(ctx context.Context) ([]Note, error) {
 			&i.CreatedAt,
 			&i.Title,
 			&i.Body,
+			&i.OrganizationID,
 		); err != nil {
 			return nil, err
 		}
@@ -94,4 +109,13 @@ func (q *Queries) ListNotes(ctx context.Context) ([]Note, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const setOrganization = `-- name: SetOrganization :exec
+SELECT set_config('app.organization_id', $1::text, true)
+`
+
+func (q *Queries) SetOrganization(ctx context.Context, organizationID string) error {
+	_, err := q.db.Exec(ctx, setOrganization, organizationID)
+	return err
 }
