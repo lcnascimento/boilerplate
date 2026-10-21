@@ -1,0 +1,16 @@
+backend/.golangci.yaml: linters.exclusions.rules: {path: _test\.go, linters: [funlen, lll, errcheck, forcetypeassert, goconst, dupl]}
+backend/.golangci.yaml: linters.exclusions.rules: {path: o11ygen/internal/dashboards/, linters: [dupl, lll, mnd]}
+backend/.golangci.yaml: linters.exclusions.rules: {path: o11ygen/internal/dashboards/, linters: [staticcheck], text: 'SA1019: .*grafana-foundation-sdk/go/dashboard\..* is deprecated'}
+backend/.golangci.yaml: linters.exclusions.rules: {path: telemetry.go, linters: [gochecknoinits]}
+# example:begin
+backend/services/notes/pkg/fixture/note.go: //nolint:gosec // test data, not security
+# example:end
+backend/tools/o11ygen/internal/dashboards/queries.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/live_test.go: //nolint:tagliatelle // The Prometheus rules API names it so.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.
+backend/tools/o11ygen/servicedashboard_test.go: //nolint:tagliatelle // Grafana's dashboard schema.

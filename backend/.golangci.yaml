@@ -92,6 +92,9 @@ linters:
         - fieldalignment
     nakedret:
       max-func-lines: 1
+    nolintlint:
+      require-explanation: true
+      require-specific: true
     tagliatelle:
       case:
         rules:

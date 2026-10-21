@@ -118,10 +118,15 @@ o11y.tools:
 			&& unzip -p "$$zip" > "$$bin" && rm -f "$$zip")
 
 .PHONY: lint
-lint:
+lint: lint.suppressions
 	$(call in_modules,lint,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint run --timeout 10m ./...; fi)
 	@echo "==> lint migrations"
 	@if [ -z "$(MIGRATIONS)" ]; then echo "no migrations"; else $(GOBIN)/squawk --config .squawk.toml $(MIGRATIONS); fi
+
+.PHONY: lint.suppressions
+lint.suppressions:
+	@echo "==> lint suppressions"
+	@cd tools && GOWORK=off go run ./suppressions -root ../..
 
 .PHONY: lint.fix
 lint.fix:
