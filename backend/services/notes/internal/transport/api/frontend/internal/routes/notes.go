@@ -9,8 +9,10 @@ import (
 	v1 "github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/handlers/notes/v1"
 )
 
-func RegisterNotes(router *mux.Router, service transport.NotesService) {
+func RegisterNotes(router *mux.Router, service transport.NotesService, authenticate mux.MiddlewareFunc) {
 	sub := router.PathPrefix("/notes/v1/notes").Subrouter()
+	sub.Use(authenticate)
+
 	handler := v1.New(service)
 
 	sub.HandleFunc("", handler.Create).Methods(http.MethodPost).Name("CreateNote")

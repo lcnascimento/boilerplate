@@ -42,6 +42,11 @@ defaults:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    # The stack's iam env, for the steps that talk to the iam database outside Tilt.
+    env:
+      IAM_DATABASE_URL: postgres://iam:iam@localhost:5432/iam?sslmode=disable
+      BETTER_AUTH_SECRET: dev-only-secret-change-me-in-production
+      BETTER_AUTH_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v7
 
@@ -107,11 +112,10 @@ jobs:
           tilt wait --for=condition=Ready "${resources[@]}" --timeout=5m
 
       - name: Better Auth schema check
-        env:
-          IAM_DATABASE_URL: postgres://iam:iam@localhost:5432/iam?sslmode=disable
-          BETTER_AUTH_SECRET: dev-only-secret-change-me-in-production
-          BETTER_AUTH_URL: http://localhost:3000
         run: pnpm --filter @boilerplate/web iam:check-schema
+
+      - name: mintActorToken against the iam database
+        run: pnpm --filter @boilerplate/web exec vitest run shared/auth/actor-token.test.ts
 
       - name: e2e
         run: pnpm test:e2e

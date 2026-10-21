@@ -9,6 +9,8 @@ local_resource(
 
 MINIMAL_STACK = os.getenv('TILT_STACK', '') == 'minimal'
 
+local('make -s env')
+
 iam_env = {
     'IAM_DATABASE_URL': 'postgres://iam:iam@localhost:5432/iam?sslmode=disable',
     # Dev only: production must use its own secret.

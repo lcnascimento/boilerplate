@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/exaring/otelpgx"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
@@ -109,6 +112,33 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 	})
 
 	return pool, nil
+}
+
+func ActorMiddleware() fx.Option {
+	return fx.Module(
+		"Actor Middleware",
+		fx.Provide(newActorMiddleware),
+	)
+}
+
+func newActorMiddleware(lifecycle fx.Lifecycle) (mux.MiddlewareFunc, error) {
+	cfg, err := config.ActorAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	authenticate, err := actor.NewMiddleware(ctx, cfg)
+	if err != nil {
+		cancel()
+
+		return nil, err
+	}
+
+	lifecycle.Append(fx.StopHook(cancel))
+
+	return authenticate, nil
 }
 
 func Repositories() fx.Option {

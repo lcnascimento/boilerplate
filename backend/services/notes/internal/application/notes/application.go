@@ -6,6 +6,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
@@ -33,7 +35,7 @@ func New(notes application.NotesRepository, v application.Validator, opts ...Opt
 	return app
 }
 
-func (a *Application) Create(ctx context.Context, req *models.CreateNoteRequest) (*domain.Note, error) {
+func (a *Application) Create(ctx context.Context, _ *actor.Actor, req *models.CreateNoteRequest) (*domain.Note, error) {
 	ctx, span := a.onCreateStart(ctx)
 	defer span.End()
 
@@ -60,7 +62,7 @@ func (a *Application) Create(ctx context.Context, req *models.CreateNoteRequest)
 	return note, nil
 }
 
-func (a *Application) List(ctx context.Context) ([]*domain.Note, error) {
+func (a *Application) List(ctx context.Context, _ *actor.Actor) ([]*domain.Note, error) {
 	ctx, span := a.onListStart(ctx)
 	defer span.End()
 
@@ -72,7 +74,7 @@ func (a *Application) List(ctx context.Context) ([]*domain.Note, error) {
 	return notes, nil
 }
 
-func (a *Application) Get(ctx context.Context, id domain.NoteID) (*domain.Note, error) {
+func (a *Application) Get(ctx context.Context, _ *actor.Actor, id domain.NoteID) (*domain.Note, error) {
 	ctx, span := a.onGetStart(ctx, id)
 	defer span.End()
 
@@ -84,7 +86,7 @@ func (a *Application) Get(ctx context.Context, id domain.NoteID) (*domain.Note, 
 	return note, nil
 }
 
-func (a *Application) Delete(ctx context.Context, id domain.NoteID) error {
+func (a *Application) Delete(ctx context.Context, _ *actor.Actor, id domain.NoteID) error {
 	ctx, span := a.onDeleteStart(ctx, id)
 	defer span.End()
 
