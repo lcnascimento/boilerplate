@@ -23,6 +23,7 @@ import { Button } from "@boilerplate/ui/components/button";
 import { deleteNote } from "@/actions/notes";
 import { NOTES_HREF } from "@/shared/navigation";
 
+import type { APIError } from "@boilerplate/api/core";
 import type { Note } from "@boilerplate/api/notes/schemas";
 
 interface DeleteNoteDialogProps {
@@ -37,6 +38,13 @@ export function DeleteNoteDialog({ id, title }: DeleteNoteDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  function failureMessage(error: Pick<APIError, "code" | "status">) {
+    if (error.status === 403) return t("deleteForbidden");
+    if (error.code === ErrorCode.Unavailable)
+      return t("unavailableDescription");
+    return t("deleteFailed");
+  }
+
   function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
     // Radix closes the dialog on the action's click.
     event.preventDefault();
@@ -44,11 +52,7 @@ export function DeleteNoteDialog({ id, title }: DeleteNoteDialogProps) {
     startTransition(async () => {
       const result = await deleteNote(id);
       if (result.kind === "error") {
-        toast.error(
-          result.error.code === ErrorCode.Unavailable
-            ? t("unavailableDescription")
-            : t("deleteFailed")
-        );
+        toast.error(failureMessage(result.error));
         return;
       }
       setOpen(false);

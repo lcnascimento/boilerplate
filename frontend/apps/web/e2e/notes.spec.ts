@@ -98,6 +98,40 @@ test("the Globex owner gets 404 on an Acme note", async ({
   }
 });
 
+test.describe("as the Acme Admin", () => {
+  test.use({ storageState: storageStateOf("admin@acme.test") });
+
+  test("creates a note but is not offered to delete it", async ({
+    page,
+    marker,
+  }) => {
+    const title = marker("admin");
+
+    await createNote(page, title, "criada pelo Admin");
+    await noteLink(page, title).click();
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: title })
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Excluir" })).toHaveCount(0);
+  });
+});
+
+test.describe("as the Acme Viewer", () => {
+  test.use({ storageState: storageStateOf("viewer@acme.test") });
+
+  test("reads the notes but is not offered to create one", async ({ page }) => {
+    await page.goto("/notes");
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Notas" })
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Nova nota" })).toHaveCount(
+      0
+    );
+  });
+});
+
 for (const [name, id] of [
   ["an unknown note", `note_${randomUUID()}`],
   ["a note id without its prefix", randomUUID()],

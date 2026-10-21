@@ -83,6 +83,11 @@ async function attempt(
 const forbidden = { kind: "error", code: "forbidden" } as const;
 const invalidInput = { kind: "error", code: "invalidInput" } as const;
 
+export async function getActiveRole(): Promise<MemberRole | null> {
+  const actor = await requireActor(await headers());
+  return actor?.role ?? null;
+}
+
 export async function listMembers(): Promise<{
   actor: Member;
   members: Member[];

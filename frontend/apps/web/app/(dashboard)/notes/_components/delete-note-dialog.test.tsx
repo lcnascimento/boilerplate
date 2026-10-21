@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { noteIdSchema } from "@boilerplate/api/notes/schemas";
 import { messages } from "@boilerplate/i18n";
+import { Toaster } from "@boilerplate/ui/components/sonner";
 
 import { deleteNote } from "@/actions/notes";
 import { appMessages } from "@/shared/_messages";
@@ -29,6 +30,7 @@ function renderDialog() {
       timeZone="America/Sao_Paulo"
     >
       <DeleteNoteDialog id={ID} title="Compras" />
+      <Toaster />
     </NextIntlClientProvider>
   );
   return userEvent.setup();
@@ -40,12 +42,20 @@ async function openConfirmation(user: ReturnType<typeof userEvent.setup>) {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
   deleteNoteMock.mockReset();
   push.mockReset();
   refresh.mockReset();
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("DeleteNoteDialog", () => {
   it("names the note in the confirmation", async () => {
@@ -81,6 +91,29 @@ describe("DeleteNoteDialog", () => {
     expect(push).toHaveBeenCalledWith("/notes");
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("says the Role forbids it when the API answers 403", async () => {
+    deleteNoteMock.mockResolvedValue({
+      kind: "error",
+      error: {
+        code: "ERR_UNAUTHORIZED",
+        message: "unauthorized request",
+        retryable: false,
+        status: 403,
+      },
+    });
+    const user = renderDialog();
+    const confirmation = await openConfirmation(user);
+
+    await user.click(
+      within(confirmation).getByRole("button", { name: "Excluir" })
+    );
+
+    expect(
+      await screen.findByText("Sua Role não permite excluir notas.")
+    ).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("stays on the note when the service fails", async () => {
