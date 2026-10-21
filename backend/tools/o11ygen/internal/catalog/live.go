@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/lcnascimento/go-kit/errors"
@@ -55,17 +56,12 @@ func jobSelector(process string) string {
 }
 
 func LiveProbes(services []service.Service) ([]artifact.Query, error) {
-	names := make([]string, 0, len(metrics))
-	for name := range metrics {
-		names = append(names, name)
-	}
-
-	slices.Sort(names)
+	live := liveMetrics(services)
 
 	var probes []artifact.Query
 
-	for _, name := range names {
-		metric := metrics[name]
+	for _, name := range slices.Sorted(maps.Keys(live)) {
+		metric := live[name]
 		if metric.Presence != PresenceAlways {
 			continue
 		}
@@ -82,6 +78,19 @@ func LiveProbes(services []service.Service) ([]artifact.Query, error) {
 	}
 
 	return append(probes, faroProbes(services, liveWindow)...), nil
+}
+
+func liveMetrics(services []service.Service) map[string]Metric {
+	live := maps.Clone(metrics)
+
+	for i := range services {
+		for name, metric := range outboxMetrics {
+			metric.EmittedBy = outboxOf(services[i].Name)
+			live[outboxMetric(services[i].Name, name)] = metric
+		}
+	}
+
+	return live
 }
 
 func (m *Metric) probes(name string, services []service.Service) []artifact.Query {
