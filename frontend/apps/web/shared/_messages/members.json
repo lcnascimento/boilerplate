@@ -29,7 +29,7 @@
     "leave": "Sair da Organization",
     "leaveTitle": "Sair da Organization?",
     "leaveConfirm": "Sair",
-    "leaveDescription": "Você perde o acesso às Notes e aos Members desta Organization.",
+    "leaveDescription": "Você perde o acesso a tudo o que há nesta Organization.",
     "lastOwnerCannotLeave": "Você é o único Owner. Promova outro Member a Owner antes de sair.",
     "invalidEmail": "Informe um email válido.",
     "errors": {
@@ -71,7 +71,7 @@
     "leave": "Leave Organization",
     "leaveTitle": "Leave the Organization?",
     "leaveConfirm": "Leave",
-    "leaveDescription": "You lose access to this Organization's Notes and Members.",
+    "leaveDescription": "You lose access to everything in this Organization.",
     "lastOwnerCannotLeave": "You are the only Owner. Promote another Member to Owner before leaving.",
     "invalidEmail": "Enter a valid email.",
     "errors": {

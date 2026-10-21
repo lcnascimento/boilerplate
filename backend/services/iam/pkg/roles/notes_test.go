@@ -1,6 +1,5 @@
 package roles_test
 
-// example:begin
 import (
 	"testing"
 
@@ -52,5 +51,3 @@ func TestPermissions_ListsNotePermissionsInDeclarationOrder(t *testing.T) {
 	require.Equal(t, []roles.Permission{roles.NoteRead, roles.NoteCreate}, roles.Admin.Permissions())
 	require.Equal(t, []roles.Permission{roles.NoteRead}, roles.Viewer.Permissions())
 }
-
-// example:end
