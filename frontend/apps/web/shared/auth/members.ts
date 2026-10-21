@@ -70,7 +70,7 @@ export function memberPolicy(
   const isLastOwner = (member: Member) =>
     member.role === "owner" &&
     members.filter(({ role }) => role === "owner").length === 1;
-  const reaches = (member: Member) =>
+  const canActOn = (member: Member) =>
     canAssign(actor.role, member.role) && !isLastOwner(member);
 
   return {
@@ -85,9 +85,9 @@ export function memberPolicy(
       : "allowed",
     rows: members.map((member) => ({
       member,
-      canChangeRole: can(actor.role, "update") && reaches(member),
+      canChangeRole: can(actor.role, "update") && canActOn(member),
       canRemove:
-        can(actor.role, "delete") && member.id !== actor.id && reaches(member),
+        can(actor.role, "delete") && member.id !== actor.id && canActOn(member),
     })),
   };
 }

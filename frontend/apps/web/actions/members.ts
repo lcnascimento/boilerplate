@@ -71,7 +71,7 @@ const errorCodes: Record<string, MembersErrorCode> = {
   UNKNOWN_ROLE: "invalidInput",
 };
 
-async function attempt(
+async function runMembersOperation(
   operation: string,
   run: () => Promise<unknown>
 ): Promise<MembersResult> {
@@ -145,7 +145,7 @@ export async function addMember(input: unknown): Promise<MembersResult> {
   const user = await context.internalAdapter.findUserByEmail(parsed.data.email);
   if (user === null) return { kind: "error", code: "userNotFound" };
 
-  return attempt("members.add", () =>
+  return runMembersOperation("members.add", () =>
     auth.api.addMember({
       body: {
         userId: user.user.id,
@@ -164,7 +164,7 @@ export async function updateMemberRole(input: unknown): Promise<MembersResult> {
   const actor = await requireActor(requestHeaders);
   if (actor === null) return forbidden;
 
-  return attempt("members.updateRole", () =>
+  return runMembersOperation("members.updateRole", () =>
     getIam().auth.api.updateMemberRole({
       headers: requestHeaders,
       body: { ...parsed.data, organizationId: actor.organizationId },
@@ -180,7 +180,7 @@ export async function removeMember(input: unknown): Promise<MembersResult> {
   const actor = await requireActor(requestHeaders);
   if (actor === null) return forbidden;
 
-  return attempt("members.remove", () =>
+  return runMembersOperation("members.remove", () =>
     getIam().auth.api.removeMember({
       headers: requestHeaders,
       body: {
@@ -196,7 +196,7 @@ export async function leaveOrganization(): Promise<MembersResult> {
   const actor = await requireActor(requestHeaders);
   if (actor === null) return forbidden;
 
-  return attempt("members.leave", () =>
+  return runMembersOperation("members.leave", () =>
     getIam().auth.api.leaveOrganization({
       headers: requestHeaders,
       body: { organizationId: actor.organizationId },
