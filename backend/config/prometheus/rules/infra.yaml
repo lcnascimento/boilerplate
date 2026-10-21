@@ -2,27 +2,27 @@ groups:
   - name: kafka
     rules:
       - alert: KafkaBrokersDown
-        expr: kafka_brokers < 1 or absent_over_time(kafka_brokers[5m])
+        expr: kafka_brokers < 1 or up{job="integrations/kafka"} == 0 or absent_over_time(up{job="integrations/kafka"}[5m])
         labels:
           service: kafka
           severity: critical
         annotations:
           dashboard_url: http://localhost:3010/d/boilerplate-kafka
-          description: 'O exporter do Alloy não vê nenhum broker do Kafka, ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy.'
+          description: 'O exporter do Alloy não alcança nenhum broker do Kafka (a coleta falha ou vê zero brokers), ou parou de mandar métricas: nenhum Integration Event é publicado nem consumido. Veja primeiro o container kafka e depois o Alloy.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/KafkaBrokersDown.md
-          summary: Kafka sem brokers no ar, ou sem métricas do exporter há 5 minutos
+          summary: Kafka fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos
   - name: postgres
     rules:
       - alert: PostgresDown
-        expr: pg_up == 0 or absent_over_time(pg_up[5m])
+        expr: pg_up == 0 or up{job="integrations/postgres"} == 0 or absent_over_time(up{job="integrations/postgres"}[5m])
         labels:
           service: postgres
           severity: critical
         annotations:
           dashboard_url: http://localhost:3010/d/boilerplate-postgres
-          description: 'O exporter do Alloy não consegue se conectar ao Postgres, ou parou de mandar métricas: todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.'
+          description: 'O exporter do Alloy não consegue se conectar ao Postgres (pg_up 0 ou a coleta falha), ou parou de mandar métricas: todo serviço com banco falha. Veja primeiro o container postgres e depois o Alloy.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/PostgresDown.md
-          summary: Postgres fora do ar, ou sem métricas do exporter há 5 minutos
+          summary: Postgres fora do alcance do exporter do Alloy, ou sem métricas dele há 5 minutos
       - alert: PostgresConnectionsNearMax
         expr: sum(pg_stat_activity_count) / max(pg_settings_max_connections) > 0.8
         for: 5m

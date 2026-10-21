@@ -4,7 +4,7 @@ Severidade: `critical`. Alerta de infraestrutura, grupo `postgres`.
 
 ## Sintoma
 
-O `prometheus.exporter.postgres` do Alloy não consegue se conectar ao Postgres (`pg_up == 0`), ou o Prometheus não recebe `pg_up` há 5 minutos.
+O `prometheus.exporter.postgres` do Alloy não consegue se conectar ao Postgres (`pg_up == 0`), a coleta dele falha (`up{job="integrations/postgres"} == 0`), ou o Prometheus não recebe `up` desse job há 5 minutos.
 
 ## Impacto
 

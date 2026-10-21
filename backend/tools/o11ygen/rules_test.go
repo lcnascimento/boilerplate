@@ -93,15 +93,19 @@ func TestGenerate_InheritsTheAlertsOfEachProcessFromItsComponents(t *testing.T) 
 	assert.Equal(t, map[string]ruleFile{"infra.yaml": {}, "orders.yaml": {}}, mapKeysOnly(generatedRules(t, root)))
 	assert.Equal(t, map[string]map[string][]string{
 		"orders-api": {
-			"orders-api": {"ServiceTelemetryAbsent", "DBPoolSaturated", "SeriesBudgetExceeded", "CriticalLogRecorded"},
+			"orders-api": {"ServiceTelemetryAbsent", "HealthCheckFailing", "DBPoolSaturated", "SeriesBudgetExceeded", "CriticalLogRecorded"},
 		},
 		"orders-consumer": {
 			"orders-consumer": {
-				"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded", "CriticalLogRecorded",
+				"ServiceTelemetryAbsent", "HealthCheckFailing", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded",
+				"CriticalLogRecorded",
 			},
 		},
 		"orders-worker": {
-			"orders-worker": {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded", "CriticalLogRecorded"},
+			"orders-worker": {
+				"ServiceTelemetryAbsent", "HealthCheckFailing", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded",
+				"CriticalLogRecorded",
+			},
 		},
 	}, alertsByGroupAndService(readRules(t, filepath.Join(root, rulesDir, "orders.yaml"))))
 	assert.Equal(t, map[string]map[string][]string{
@@ -142,6 +146,10 @@ func TestGenerate_ScopesTheProcessAlertsToTheProcess(t *testing.T) {
 
 	assert.Equal(t, map[string]string{
 		"orders-consumer ServiceTelemetryAbsent": `absent_over_time(target_info{job="boilerplate/orders-consumer"}[5m])`,
+		"orders-consumer HealthCheckFailing": `sum by (job) (increase(http_server_request_total{job="boilerplate/orders-consumer",` +
+			` http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job)` +
+			` (increase(http_server_request_total{job="boilerplate/orders-consumer", http_route="/health",` +
+			` http_response_status_code=~"2.."}[2m])) > 0`,
 		"orders-consumer DBPoolSaturated": `max(pgxpool_acquired_connections{job="boilerplate/orders-consumer"}` +
 			` / pgxpool_max_connections{job="boilerplate/orders-consumer"}) > 0.9`,
 		"orders-consumer ConsumerLagHigh": `sum by (consumergroup)` +
@@ -149,6 +157,10 @@ func TestGenerate_ScopesTheProcessAlertsToTheProcess(t *testing.T) {
 		"orders-consumer DLQMessageReceived": `sum by (topic)` +
 			` (increase(kafka_topic_partition_current_offset{topic=~".+\\.orders\\.v2\\.dlq"}[5m])) > 0`,
 		"orders-worker ServiceTelemetryAbsent": `absent_over_time(target_info{job="boilerplate/orders-worker"}[5m])`,
+		"orders-worker HealthCheckFailing": `sum by (job) (increase(http_server_request_total{job="boilerplate/orders-worker",` +
+			` http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job)` +
+			` (increase(http_server_request_total{job="boilerplate/orders-worker", http_route="/health",` +
+			` http_response_status_code=~"2.."}[2m])) > 0`,
 		"orders-worker OutboxAgeAbsent": `absent(orders_outbox_oldest_pending_age_seconds` +
 			`{job="boilerplate/orders-worker"})`,
 		"orders-consumer SeriesBudgetExceeded": `job:series:count{job="boilerplate/orders-consumer"} > 2000`,
