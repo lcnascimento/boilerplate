@@ -210,7 +210,7 @@ o11y.check-live:
 		O11Y_LIVE_PROMETHEUS_URL="$${O11Y_LIVE_PROMETHEUS_URL:-http://localhost:9090}" \
 		O11Y_LIVE_LOKI_URL="$${O11Y_LIVE_LOKI_URL:-http://localhost:3100}" \
 		O11Y_LIVE_GRAFANA_URL="$${O11Y_LIVE_GRAFANA_URL:-http://admin:admin@localhost:3010}" \
-		go test -count=1 -timeout 6m -v -run '^TestLive$$' ./o11ygen
+		go test -count=1 -timeout 6m -v -run '^TestComponentStack_ServesGeneratedArtifacts$$' ./o11ygen
 
 .PHONY: proto.lint
 proto.lint:

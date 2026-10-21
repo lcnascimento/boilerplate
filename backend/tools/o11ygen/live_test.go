@@ -45,8 +45,12 @@ type liveStack struct {
 	generated  generatedArtifacts
 }
 
-func TestLive(t *testing.T) {
+func TestComponentStack_ServesGeneratedArtifacts(t *testing.T) {
 	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("component test")
+	}
 
 	stack := &liveStack{prometheus: os.Getenv("O11Y_LIVE_PROMETHEUS_URL")}
 	if stack.prometheus == "" {
