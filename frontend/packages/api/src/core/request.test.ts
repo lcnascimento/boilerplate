@@ -6,7 +6,7 @@ import {
 
 import {
   afterAll,
-  afterEach,
+  beforeEach,
   beforeAll,
   describe,
   expect,
@@ -248,12 +248,12 @@ describe("request", () => {
 });
 
 describe("request logging", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it("logs a network failure with its cause", async () => {
-    const error = vi.spyOn(logger, "error");
+    const error = vi.mocked(logger.error);
     const closed = createServer();
     await new Promise<void>((resolve) =>
       closed.listen(0, "127.0.0.1", resolve)
@@ -284,7 +284,7 @@ describe("request logging", () => {
     ["/widgets/not-json", 200, "UNEXPECTED"],
     ["/widgets/wrong-shape", 200, "UNEXPECTED"],
   ])("logs %s as a failure", async (path, status, code) => {
-    const error = vi.spyOn(logger, "error");
+    const error = vi.mocked(logger.error);
 
     await request({ url: `${baseUrl}${path}`, schema: widgetSchema });
 
@@ -297,7 +297,7 @@ describe("request logging", () => {
   it.each([["/widgets/1"], ["/widgets/missing"], ["/widgets/invalid"]])(
     "does not log %s, which the caller handles",
     async (path) => {
-      const error = vi.spyOn(logger, "error");
+      const error = vi.mocked(logger.error);
 
       await request({ url: `${baseUrl}${path}`, schema: widgetSchema });
 
