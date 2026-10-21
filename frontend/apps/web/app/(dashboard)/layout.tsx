@@ -1,11 +1,12 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { resolveActiveOrganization } from "@/shared/auth/active-organization";
 import { getIam } from "@/shared/auth/auth";
 import { SIGN_IN_HREF } from "@/shared/auth/routes";
 import { parseSidebarOpen, SIDEBAR_COOKIE_NAME } from "@/shared/cookies";
 
-import { DashboardShell } from "./_components";
+import { DashboardShell, NoOrganization } from "./_components";
 
 import type { ReactNode } from "react";
 
@@ -27,12 +28,15 @@ export default async function DashboardLayout({
 
   const { id, name, email, image } = session.user;
   await getIam().ensureSignUpOrganization(id);
+  const organizations = await resolveActiveOrganization(session.session);
+  if (organizations === null) return <NoOrganization />;
 
   return (
     <DashboardShell
       defaultOpen={parseSidebarOpen(
         cookieStore.get(SIDEBAR_COOKIE_NAME)?.value
       )}
+      organizations={organizations}
       user={{ id, name, email, avatarUrl: image ?? undefined }}
     >
       {children}

@@ -51,5 +51,7 @@ test("an unknown route shows the not-found inside the shell", async ({
   await expect(
     page.getByRole("heading", { name: "Página não encontrada." })
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Boilerplate" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Trocar de Organization" })
+  ).toBeVisible();
 });
