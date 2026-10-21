@@ -10,6 +10,7 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "frontend/apps/web/shared/auth/roles.gen.ts"
       - ".github/workflows/ci-backend.yml"
 
 concurrency:
@@ -69,6 +70,14 @@ jobs:
           git diff --exit-code
           untracked=$(git ls-files --others --exclude-standard)
           if [ -n "$untracked" ]; then echo "make o11y.generate created untracked files:"; echo "$untracked"; exit 1; fi
+
+      - name: iam.generate
+        run: |
+          git add -A
+          make iam.generate
+          git diff --exit-code
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then echo "make iam.generate created untracked files:"; echo "$untracked"; exit 1; fi
 
       - name: o11y.lint
         run: make o11y.lint

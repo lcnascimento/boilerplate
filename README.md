@@ -166,6 +166,7 @@ make test.unit        # só os de unidade (-short), sem banco nem Docker (timeou
 make test.component   # só os de componente (-run Component; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
 make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
+make iam.generate     # regenera o frontend/apps/web/shared/auth/roles.gen.ts (statement, ac e roles do Better Auth) a partir da matriz de Permissions em backend/services/iam/pkg/roles (commitado; o ci-backend falha se estiver desatualizado)
 make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki; sloth validate, promtool e pint nos SLOs (ferramentas instaladas pelo make setup)
 make o11y.check-live  # confere o gerado contra o stack completo no ar (tilt up, não o minimal): métricas do catálogo, teto de séries, regras, dashboards e datasources
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
@@ -330,4 +331,4 @@ make clean-example
 - Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
 
-O estado com zero serviços também é válido e fica verde: o `go.work` fica só com `quality` (`make lint` e `make test` passam, sem migrations para o squawk), o `tilt up` sobe o Postgres, a observabilidade e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/`, `/profile/preferences` e o `not-found`, o e2e roda só o teste do shell e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`).
+O estado com zero serviços também é válido e fica verde: o `go.work` fica só com `quality`, `tools` e o núcleo `services/iam/pkg` (`make lint` e `make test` passam, sem migrations para o squawk), o `tilt up` sobe o Postgres, a observabilidade e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/`, `/profile/preferences` e o `not-found`, o e2e roda só o teste do shell e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`).

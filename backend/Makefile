@@ -163,6 +163,10 @@ sqlc:
 o11y.generate:
 	@cd tools && GOWORK=off go run ./o11ygen -root ..
 
+.PHONY: iam.generate
+iam.generate:
+	@cd tools && GOWORK=off go run ./iamgen -out ../../frontend/apps/web/shared/auth/roles.gen.ts
+
 .PHONY: o11y.lint
 o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo o11y.lint.alloy
 

@@ -4,6 +4,8 @@ use ./quality
 
 use ./tools
 
+use ./services/iam/pkg
+
 // example:begin
 use (
 	./services/audit
