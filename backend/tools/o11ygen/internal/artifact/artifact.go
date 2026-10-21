@@ -28,8 +28,6 @@ type Query struct {
 	Origin   string
 }
 
-// Loader is what reads a kind's files; check-live asks the running stack for what the Prometheus, Loki ruler and
-// Grafana kinds generated.
 type Loader int
 
 const (
@@ -55,7 +53,6 @@ const (
 	fileMode = 0o644
 )
 
-// Split so that clean-example and ci-template, which grep the repository for fence markers, skip this line.
 var fenceMarkers = [][]byte{[]byte("example" + ":begin"), []byte("example" + ":end")}
 
 func Generate(root string, services []service.Service, kinds ...Kind) error {

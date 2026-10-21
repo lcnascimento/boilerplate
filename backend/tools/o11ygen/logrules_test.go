@@ -30,7 +30,7 @@ type lokiRuleFile struct {
 func readLokiRules(t *testing.T, root, name string) map[string]map[string]string {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, lokiRulesDir, name)) //nolint:gosec // The path comes from the test's temporary directory.
+	raw, err := os.ReadFile(filepath.Join(root, lokiRulesDir, name))
 	require.NoError(t, err)
 
 	var file lokiRuleFile
@@ -165,6 +165,7 @@ func TestGenerate_RecordsAndAlertsOnTheLogAlertsAServiceDeclares(t *testing.T) {
 	assert.NoError(t, catalog.Check(artifact.Query{Language: artifact.LogQL, Expr: recorded}))
 
 	type alert struct {
+		Group       string
 		Expr        string
 		Labels      map[string]string
 		Annotations map[string]string
@@ -175,7 +176,7 @@ func TestGenerate_RecordsAndAlertsOnTheLogAlertsAServiceDeclares(t *testing.T) {
 	for _, group := range readRules(t, filepath.Join(root, rulesDir, "orders.yaml")).Groups {
 		for _, rule := range group.Rules {
 			if rule.Alert == paymentDeclined.Name {
-				declaredAlerts = append(declaredAlerts, alert{Expr: rule.Expr, Labels: rule.Labels, Annotations: rule.Annotations})
+				declaredAlerts = append(declaredAlerts, alert{Group: group.Name, Expr: rule.Expr, Labels: rule.Labels, Annotations: rule.Annotations})
 			}
 		}
 	}
@@ -183,6 +184,7 @@ func TestGenerate_RecordsAndAlertsOnTheLogAlertsAServiceDeclares(t *testing.T) {
 	require.Len(t, declaredAlerts, 1)
 	assert.NoError(t, catalog.Check(artifact.Query{Language: artifact.PromQL, Expr: declaredAlerts[0].Expr}))
 	assert.Equal(t, []alert{{
+		Group:  "orders-api",
 		Expr:   `sum_over_time(service:log_alert_records:rate1m{service="orders-api", log_alert="PaymentDeclinedSpike"}[5m]) * 60 > 10`,
 		Labels: map[string]string{"service": "orders-api", "severity": "warning"},
 		Annotations: map[string]string{

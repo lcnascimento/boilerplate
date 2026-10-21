@@ -72,7 +72,7 @@ type section struct {
 func readBoard(t *testing.T, root, name string) board {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join(root, dashboardsDir, name)) //nolint:gosec // Test temporary directory.
+	raw, err := os.ReadFile(filepath.Join(root, dashboardsDir, name))
 	require.NoError(t, err)
 
 	var out board
@@ -251,27 +251,46 @@ func TestGenerate_ServiceDashboardTopsWithTheSlothSLOsAndTheServiceAlerts(t *tes
 	assert.Equal(t, `{service=~"orders-api|orders-consumer|orders-worker"}`, filter)
 }
 
-func TestGenerate_ServiceDashboardAsksForExemplarsOnlyOnLatencyHistograms(t *testing.T) {
-	_, orders := generateOrders(t)
+func exemplarExprs(panels []boardPanel) []string {
+	var out []string
 
-	var exemplars []string
-
-	for _, panel := range orders.everyPanel() {
-		for _, target := range panel.Targets {
+	for i := range panels {
+		for _, target := range panels[i].Targets {
 			if target.Exemplar {
-				exemplars = append(exemplars, panel.Title+": "+target.Expr)
+				out = append(out, panels[i].Title+": "+target.Expr)
 			}
+		}
+
+		out = append(out, exemplarExprs(panels[i].Panels)...)
+	}
+
+	return out
+}
+
+func TestGenerate_DashboardsAskForExemplarsOnlyOnTheGoLatencyHistograms(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, generate(root, []service.Service{ordersService, storefrontService}))
+
+	files, err := filepath.Glob(filepath.Join(root, dashboardsDir, "*.json"))
+	require.NoError(t, err)
+
+	exemplars := map[string][]string{}
+
+	for _, file := range files {
+		name := filepath.Base(file)
+		if exprs := exemplarExprs(readBoard(t, root, name).Panels); exprs != nil {
+			exemplars[name] = exprs
 		}
 	}
 
-	assert.Equal(t, []string{
-		`Latência p50/p99: histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket` +
-			`{job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"}[$__rate_interval])))`,
-		`Latência p50/p99: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket` +
-			`{job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"}[$__rate_interval])))`,
-		`Latência p99 por rota: histogram_quantile(0.99, sum by (le, http_route) (rate(` +
-			`http_server_request_duration_seconds_bucket{job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"}` +
-			`[$__rate_interval])))`,
+	api := `{job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"}[$__rate_interval])))`
+	assert.Equal(t, map[string][]string{"orders.json": {
+		`Latência p50/p99: histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket` + api,
+		`Latência p50/p99: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket` + api,
+		`Latência p50/p99 por rota: histogram_quantile(0.5, sum by (le, http_route) (rate(` +
+			`http_server_request_duration_seconds_bucket` + api,
+		`Latência p50/p99 por rota: histogram_quantile(0.99, sum by (le, http_route) (rate(` +
+			`http_server_request_duration_seconds_bucket` + api,
 		`Duração do processamento p50/p99: histogram_quantile(0.5, sum by (le) (rate(` +
 			`messaging_process_duration_seconds_bucket{job=~"boilerplate/(orders-consumer)"}[$__rate_interval])))`,
 		`Duração do processamento p50/p99: histogram_quantile(0.99, sum by (le) (rate(` +
@@ -280,7 +299,7 @@ func TestGenerate_ServiceDashboardAsksForExemplarsOnlyOnLatencyHistograms(t *tes
 			`messaging_client_operation_duration_seconds_bucket{job=~"boilerplate/(orders-worker)"}[$__rate_interval])))`,
 		`Duração do envio p50/p99: histogram_quantile(0.99, sum by (le) (rate(` +
 			`messaging_client_operation_duration_seconds_bucket{job=~"boilerplate/(orders-worker)"}[$__rate_interval])))`,
-	}, exemplars)
+	}}, exemplars)
 }
 
 func TestGenerate_ServiceDashboardDrawsTheSLOThresholdOnLatencyAndFreshness(t *testing.T) {
@@ -301,7 +320,7 @@ func TestGenerate_ServiceDashboardDrawsTheSLOThresholdOnLatencyAndFreshness(t *t
 
 	assert.Equal(t, map[string]float64{
 		"Latência p50/p99":                 0.25,
-		"Latência p99 por rota":            0.25,
+		"Latência p50/p99 por rota":        0.25,
 		"Duração do processamento p50/p99": 1,
 		"Idade da pendente mais antiga":    30,
 	}, lines)

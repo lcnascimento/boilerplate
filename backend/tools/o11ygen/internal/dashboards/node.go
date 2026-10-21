@@ -9,7 +9,7 @@ import (
 )
 
 // Next.js emits no http_server_* series, only a SERVER span per request named after its route.
-func spanMetricsAPISection(processes []service.Process) section {
+func spanMetricsAPISection(_ *service.Service, processes []service.Process) section {
 	selector := `service=~` + strconv.Quote(strings.Join(processNames(processes), "|")) + `, span_kind="SPAN_KIND_SERVER"`
 	failed := `status_code="STATUS_CODE_ERROR"`
 	calls := func(extra, by string) string {
@@ -59,21 +59,17 @@ func spanMetricsAPISection(processes []service.Process) section {
 		},
 		&graph{
 			title:       "Latência p50/p99",
-			description: "Percentis 50 e 99 da duração das requisições. Os pontos são exemplars: abrem o trace.",
+			description: "Percentis 50 e 99 da duração das requisições.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector),
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, ""),
 		},
 		&graph{
-			title:       "Latência p99 por rota",
-			description: "Percentil 99 da duração por método e rota.",
+			title:       "Latência p50/p99 por rota",
+			description: "Percentis 50 e 99 da duração por método e rota.",
 			unit:        "s",
 			width:       halfWidth,
-			queries: []query{{
-				expr:     quantile("0.99", catalog.TracesSpanMetricsLatency, selector, "le, span_name"),
-				legend:   "{{span_name}}",
-				exemplar: true,
-			}},
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, "span_name"),
 		},
 	}}
 }

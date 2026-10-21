@@ -75,7 +75,7 @@ func Declared(svc *service.Service) ([]service.SLO, error) {
 
 	for _, p := range svc.Processes {
 		for _, inherited := range goKitDefaults {
-			if svc.Runtime == service.Go && p.Runs(inherited.component) {
+			if svc.Runtime.RunsGoKit() && p.Runs(inherited.component) {
 				slo := inherited.slo(p, svc.Name)
 				slo.Process = p.Name()
 				out = append(out, slo)
@@ -113,11 +113,11 @@ func specOf(svc string, slos []service.SLO) *spec {
 
 		var sli sliSpec
 
-		if errorQuery, totalQuery, ok := slo.SLI.Events(); ok {
-			sli.Events = &events{ErrorQuery: errorQuery, TotalQuery: totalQuery}
-		} else {
-			errorRatioQuery, _ := slo.SLI.Raw()
-			sli.Raw = &raw{ErrorRatioQuery: errorRatioQuery}
+		switch declared := slo.SLI.(type) {
+		case service.EventsSLI:
+			sli.Events = &events{ErrorQuery: declared.ErrorQuery, TotalQuery: declared.TotalQuery}
+		case service.RawSLI:
+			sli.Raw = &raw{ErrorRatioQuery: declared.ErrorRatioQuery}
 		}
 
 		out.SLOs = append(out.SLOs, sloSpec{
@@ -196,7 +196,6 @@ func specs(services []service.Service) ([]serviceSpec, error) {
 	return out, nil
 }
 
-// SpecKind writes one Sloth spec per service that declares or inherits an SLO.
 func SpecKind() artifact.Kind {
 	return artifact.Kind{
 		Dir:      "config/sloth",
@@ -219,7 +218,6 @@ func SpecKind() artifact.Kind {
 	}
 }
 
-// specQueries evaluates every SLI query over the shortest window Sloth alerts on.
 func specQueries(content []byte) ([]artifact.Query, error) {
 	var s spec
 	if err := yaml.Unmarshal(content, &s); err != nil {

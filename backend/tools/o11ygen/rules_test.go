@@ -38,7 +38,7 @@ type ruleFile struct {
 func readRules(t *testing.T, file string) ruleFile {
 	t.Helper()
 
-	raw, err := os.ReadFile(file) //nolint:gosec // The path comes from the test's temporary directory.
+	raw, err := os.ReadFile(file)
 	require.NoError(t, err)
 
 	var rules ruleFile
@@ -92,11 +92,15 @@ func TestGenerate_InheritsTheAlertsOfEachProcessFromItsComponents(t *testing.T) 
 
 	assert.Equal(t, map[string]ruleFile{"infra.yaml": {}, "orders.yaml": {}}, mapKeysOnly(generatedRules(t, root)))
 	assert.Equal(t, map[string]map[string][]string{
-		"orders": {
+		"orders-api": {
 			"orders-api": {"ServiceTelemetryAbsent", "DBPoolSaturated", "SeriesBudgetExceeded", "CriticalLogRecorded"},
+		},
+		"orders-consumer": {
 			"orders-consumer": {
 				"ServiceTelemetryAbsent", "ConsumerLagHigh", "DLQMessageReceived", "SeriesBudgetExceeded", "CriticalLogRecorded",
 			},
+		},
+		"orders-worker": {
 			"orders-worker": {"ServiceTelemetryAbsent", "DBPoolSaturated", "OutboxAgeAbsent", "SeriesBudgetExceeded", "CriticalLogRecorded"},
 		},
 	}, alertsByGroupAndService(readRules(t, filepath.Join(root, rulesDir, "orders.yaml"))))
@@ -317,7 +321,7 @@ func testedAlerts(t *testing.T) map[string]bool {
 	tested := map[string]bool{}
 
 	for _, path := range paths {
-		raw, err := os.ReadFile(path) //nolint:gosec // The path comes from globbing the repository's rule tests.
+		raw, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		var file ruleTestFile

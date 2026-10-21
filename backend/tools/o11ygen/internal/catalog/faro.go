@@ -11,8 +11,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
-// FaroKind is the kind faro.receiver gives each browser signal it writes to Loki. The Alloy Faro pipeline turns every
-// field of the line into structured metadata, so LogQL filters and unwraps them without a parser.
 type FaroKind string
 
 const (
@@ -47,7 +45,6 @@ type faroStream struct {
 	presence Presence
 }
 
-// A page load always sends the navigation event and the FCP and TTFB measurements; exceptions need a failing page.
 var faroStreams = map[FaroKind]faroStream{
 	FaroMeasurement: {labels: []string{
 		FaroTypeLabel, LCP.ValueLabel(), INP.ValueLabel(), CLS.ValueLabel(), FCP.ValueLabel(), TTFB.ValueLabel(),

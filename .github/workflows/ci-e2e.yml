@@ -102,10 +102,9 @@ jobs:
           # Tilt registers the resources only once the Tiltfile has loaded.
           tilt wait --for=condition=Ready 'uiresource/(Tiltfile)' --timeout=2m
           # A resource with auto_init=False (trigger modes 2 and 3), like the Playwright UI, never gets ready on its own.
-          resources=$(tilt get uiresource -o json |
+          mapfile -t resources < <(tilt get uiresource -o json |
             jq -r '.items[] | select(.status.triggerMode // 0 | IN(2, 3) | not) | "uiresource/" + .metadata.name')
-          # shellcheck disable=SC2086
-          tilt wait --for=condition=Ready $resources --timeout=5m
+          tilt wait --for=condition=Ready "${resources[@]}" --timeout=5m
 
       - name: e2e
         run: pnpm test:e2e

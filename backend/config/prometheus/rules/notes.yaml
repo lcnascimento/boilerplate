@@ -1,5 +1,5 @@
 groups:
-  - name: notes
+  - name: notes-api-frontend
     rules:
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/notes-api-frontend"}[5m])
@@ -43,6 +43,8 @@ groups:
           description: notes-api-frontend registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
           summary: '{{ $value | humanize }} log(s) Critical ou Fatal de notes-api-frontend nos últimos 5 minutos'
+  - name: notes-worker-forwarder
+    rules:
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/notes-worker-forwarder"}[5m])
         labels:

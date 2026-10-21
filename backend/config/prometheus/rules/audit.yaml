@@ -1,5 +1,5 @@
 groups:
-  - name: audit
+  - name: audit-consumer
     rules:
       - alert: ServiceTelemetryAbsent
         expr: absent_over_time(target_info{job="boilerplate/audit-consumer"}[5m])

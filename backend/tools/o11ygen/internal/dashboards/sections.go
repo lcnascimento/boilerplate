@@ -75,20 +75,29 @@ func quantile(q, histogram, selector, by string) string {
 	return "histogram_quantile(" + q + ", sum by (" + by + ") (rate(" + histogram + "_bucket{" + selector + "}" + rate + ")))"
 }
 
-func quantiles(histogram, selector string) []query {
+var exemplarHistograms = map[string]bool{
+	catalog.HTTPServerRequestDuration:        true,
+	catalog.MessagingProcessDuration:         true,
+	catalog.MessagingClientOperationDuration: true,
+}
+
+func quantiles(histogram, selector, label string) []query {
+	by, legend := "le", ""
+	if label != "" {
+		by, legend = "le, "+label, " {{"+label+"}}"
+	}
+
+	exemplar := exemplarHistograms[histogram]
+
 	return []query{
-		{expr: quantile("0.5", histogram, selector, "le"), legend: "p50", exemplar: true},
-		{expr: quantile("0.99", histogram, selector, "le"), legend: "p99", exemplar: true},
+		{expr: quantile("0.5", histogram, selector, by), legend: "p50" + legend, exemplar: exemplar},
+		{expr: quantile("0.99", histogram, selector, by), legend: "p99" + legend, exemplar: exemplar},
 	}
 }
 
 func seconds(value float64) *float64 { return &value }
 
-func apiSection(svc *service.Service, processes []service.Process) section {
-	if svc.Runtime == service.Node {
-		return spanMetricsAPISection(processes)
-	}
-
+func goAPISection(_ *service.Service, processes []service.Process) section {
 	selector := job(processes) + `, http_route!~` + strconv.Quote(slo.ProbeRoutes)
 	requests := func(extra, by string) string {
 		matchers := selector
@@ -150,20 +159,16 @@ func apiSection(svc *service.Service, processes []service.Process) section {
 				"Os pontos são exemplars: abrem o trace.",
 			unit:    "s",
 			width:   halfWidth,
-			queries: quantiles(catalog.HTTPServerRequestDuration, selector),
+			queries: quantiles(catalog.HTTPServerRequestDuration, selector, ""),
 			sloLine: seconds(slo.APILatencyThresholdSeconds),
 		},
 		&graph{
-			title: "Latência p99 por rota",
-			description: "Percentil 99 da duração por rota; a linha é o limite do SLO api-latency. Clique numa " +
+			title: "Latência p50/p99 por rota",
+			description: "Percentis 50 e 99 da duração por rota; a linha é o limite do SLO api-latency. Clique numa " +
 				"série para ver os traces lentos da rota.",
-			unit:  "s",
-			width: halfWidth,
-			queries: []query{{
-				expr:     quantile("0.99", catalog.HTTPServerRequestDuration, selector, "le, http_route"),
-				legend:   "{{http_route}}",
-				exemplar: true,
-			}},
+			unit:    "s",
+			width:   halfWidth,
+			queries: quantiles(catalog.HTTPServerRequestDuration, selector, "http_route"),
 			sloLine: seconds(slo.APILatencyThresholdSeconds),
 			links:   []cog.Builder[dashboard.DashboardLink]{slowTracesLink(processes)},
 		},
@@ -205,7 +210,7 @@ func consumerSection(_ *service.Service, processes []service.Process) section {
 				"SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
 			unit:    "s",
 			width:   halfWidth,
-			queries: quantiles(catalog.MessagingProcessDuration, selector),
+			queries: quantiles(catalog.MessagingProcessDuration, selector, ""),
 			sloLine: seconds(slo.ConsumerLatencyThresholdSeconds),
 		},
 		&graph{
@@ -296,7 +301,7 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 			description: "Percentis 50 e 99 da duração do envio ao Kafka. Os pontos são exemplars: abrem o trace.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.MessagingClientOperationDuration, selector),
+			queries:     quantiles(catalog.MessagingClientOperationDuration, selector, ""),
 		},
 		&graph{
 			title:       "Limpeza",
@@ -317,7 +322,7 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 	}}
 }
 
-func runtimeSection() section {
+func goRuntimeSection() section {
 	byJob := func(expr string) string { return "sum by (job) (" + expr + ")" }
 
 	return section{title: "Runtime", collapsed: true, panels: []panel{
@@ -463,7 +468,7 @@ func drilldownLinks(svc *service.Service) []cog.Builder[dashboard.DashboardLink]
 				"&var-filters="+filter("service_name", "=", name)))
 	}
 
-	if svc.Runtime != service.Go {
+	if !runtimeDashboards[svc.Runtime].profiles {
 		return out
 	}
 

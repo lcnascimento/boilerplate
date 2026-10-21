@@ -11,7 +11,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/bundle"
 )
 
-const defaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" //nolint:gosec // local docker-compose credentials
+const defaultAdminURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 func TestComponentNewPool_ConnectionsCarryTheServiceName(t *testing.T) {
 	if testing.Short() {

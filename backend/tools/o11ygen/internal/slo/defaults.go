@@ -9,7 +9,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
-// The latency thresholds are go-kit histogram bucket boundaries: a value between buckets would be interpolated.
 const (
 	APILatencyThresholdSeconds      = 0.25
 	ConsumerLatencyThresholdSeconds = 1
@@ -34,10 +33,10 @@ var goKitDefaults = []inheritedSLO{
 			Name:        "api-availability",
 			Objective:   threeNines,
 			Description: "Requisições HTTP de " + p.Name() + " respondidas sem 5xx, fora as de health e readiness.",
-			SLI: service.EventsSLI(
-				orZero(rate(catalog.HTTPServerRequestTotal, apiSelector(p), `http_response_status_code=~"5.."`)),
-				rate(catalog.HTTPServerRequestTotal, apiSelector(p)),
-			),
+			SLI: service.EventsSLI{
+				ErrorQuery: orZero(rate(catalog.HTTPServerRequestTotal, apiSelector(p), `http_response_status_code=~"5.."`)),
+				TotalQuery: rate(catalog.HTTPServerRequestTotal, apiSelector(p)),
+			},
 		}
 	}},
 	{component: service.API, slo: func(p service.Process, _ string) service.SLO {
@@ -53,10 +52,10 @@ var goKitDefaults = []inheritedSLO{
 			Name:        "consumer-success",
 			Objective:   threeNines,
 			Description: "Tentativas de processamento de mensagens de " + p.Name() + " que terminam sem erro.",
-			SLI: service.EventsSLI(
-				orZero(rate(catalog.MessagingProcessDuration+"_count", job(p), `error_type!=""`)),
-				rate(catalog.MessagingProcessDuration+"_count", job(p)),
-			),
+			SLI: service.EventsSLI{
+				ErrorQuery: orZero(rate(catalog.MessagingProcessDuration+"_count", job(p), `error_type!=""`)),
+				TotalQuery: rate(catalog.MessagingProcessDuration+"_count", job(p)),
+			},
 		}
 	}},
 	{component: service.Consumer, slo: func(p service.Process, _ string) service.SLO {
@@ -73,8 +72,8 @@ var goKitDefaults = []inheritedSLO{
 			Objective: twoNines,
 			Description: "Minutos em que a mensagem pendente mais antiga do outbox de " + svc +
 				" tem até 30s, segundo " + p.Name() + ".",
-			SLI: service.RawSLI("avg_over_time((max(" + catalog.OutboxOldestPendingAge(svc) + "{" + job(p) + "})" +
-				" > bool " + number(OutboxFreshnessThresholdSeconds) + ")[" + window + ":1m])"),
+			SLI: service.RawSLI{ErrorRatioQuery: "avg_over_time((max(" + catalog.OutboxOldestPendingAge(svc) + "{" + job(p) +
+				"}) > bool " + number(OutboxFreshnessThresholdSeconds) + ")[" + window + ":1m])"},
 		}
 	}},
 }
@@ -102,7 +101,10 @@ func orZero(query string) string {
 func slowerThan(histogram, selector string, seconds float64) service.SLI {
 	total := rate(histogram+"_count", selector)
 
-	return service.EventsSLI(total+" - "+rate(histogram+"_bucket", selector, "le="+strconv.Quote(number(seconds))), total)
+	return service.EventsSLI{
+		ErrorQuery: total + " - " + rate(histogram+"_bucket", selector, "le="+strconv.Quote(number(seconds))),
+		TotalQuery: total,
+	}
 }
 
 func number(value float64) string {

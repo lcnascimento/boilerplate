@@ -19,7 +19,6 @@ PINT_VERSION := v0.89.3
 LOKITOOL_VERSION := v3.7.8
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
-# The o11ygen tests and make o11y.generate run sloth.
 export PATH := $(GOBIN):$(PATH)
 
 MODULES := $(shell go list -m -f '{{.Dir}}')
@@ -50,7 +49,6 @@ define in_buf_dirs
 	done
 endef
 
-# $(1) binary, $(2) command printing the installed "$$bin" version, $(3) that version, $(4) download into "$$bin" ($$os, $$arch set).
 define install_release
 	@bin="$(GOBIN)/$(1)"; \
 	if [ "$$({ $(2); } 2>/dev/null)" != "$(3)" ]; then \
@@ -162,7 +160,7 @@ sqlc:
 
 .PHONY: o11y.generate
 o11y.generate:
-	@go run ./tools/o11ygen -root .
+	@cd tools && GOWORK=off go run ./o11ygen -root ..
 
 .PHONY: o11y.lint
 o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo

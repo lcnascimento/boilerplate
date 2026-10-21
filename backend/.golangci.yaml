@@ -118,6 +118,10 @@ linters:
           - forcetypeassert
           - goconst
           - dupl
+      - path: _test\.go
+        linters:
+          - gosec
+        text: "G(101|304):"
       - path: telemetry.go
         linters:
           - gochecknoinits

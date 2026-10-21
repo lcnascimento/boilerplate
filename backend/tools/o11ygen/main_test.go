@@ -136,14 +136,14 @@ func TestGenerate_QueriesStayInsideTheCatalog(t *testing.T) {
 
 	checked := 0
 
-	for _, kind := range kinds() {
+	for _, kind := range loadedKinds() {
 		require.NotNil(t, kind.Queries, "kind %s/%s registers no query extractor", kind.Dir, kind.Glob)
 
 		paths, err := filepath.Glob(filepath.Join(root, kind.Dir, kind.Glob))
 		require.NoError(t, err)
 
 		for _, path := range paths {
-			content, err := os.ReadFile(path) //nolint:gosec // The path comes from globbing the test's temporary directory.
+			content, err := os.ReadFile(path)
 			require.NoError(t, err)
 
 			queries, err := kind.Queries(content)
@@ -163,7 +163,7 @@ func TestGenerate_QueriesStayInsideTheCatalog(t *testing.T) {
 }
 
 func TestKinds_NameWhatLoadsThem(t *testing.T) {
-	for _, kind := range kinds() {
+	for _, kind := range loadedKinds() {
 		assert.NotZero(t, kind.LoadedBy, "kind %s/%s does not say what loads it, so check-live cannot verify it", kind.Dir, kind.Glob)
 	}
 }

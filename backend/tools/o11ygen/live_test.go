@@ -26,16 +26,16 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
-// The backend directory: check-live reads the generated files the stack mounts, not a fresh generation.
-const backendRoot = "../.."
+const stackMountedRoot = "../.."
 
-// A process that just started reaches a recording rule after its first export (60s), the next evaluation (1m) and
-// the rule query offset (1m), up to 3 minutes (167s measured on a fresh stack), and ci-e2e checks right after the
-// services get ready.
 const (
-	liveTimeout  = 4 * time.Minute
-	livePoll     = 5 * time.Second
-	queryTimeout = 10 * time.Second
+	firstExport     = time.Minute
+	ruleEvaluation  = time.Minute
+	ruleQueryOffset = time.Minute
+	afterReadySlack = time.Minute
+	liveTimeout     = firstExport + ruleEvaluation + ruleQueryOffset + afterReadySlack
+	livePoll        = 5 * time.Second
+	queryTimeout    = 10 * time.Second
 )
 
 type liveStack struct {
@@ -225,12 +225,12 @@ func readGenerated(t *testing.T) generatedArtifacts {
 
 	var generated generatedArtifacts
 
-	for _, kind := range kinds() {
-		paths, err := filepath.Glob(filepath.Join(backendRoot, kind.Dir, kind.Glob))
+	for _, kind := range loadedKinds() {
+		paths, err := filepath.Glob(filepath.Join(stackMountedRoot, kind.Dir, kind.Glob))
 		require.NoError(t, err)
 
 		for _, file := range paths {
-			content, err := os.ReadFile(file) //nolint:gosec // The path comes from globbing a generated kind's directory.
+			content, err := os.ReadFile(file)
 			require.NoError(t, err)
 
 			switch kind.LoadedBy {
@@ -291,13 +291,13 @@ func ruleGroups(t *testing.T, file string, content []byte) []ruleGroup {
 func provisionedDatasources(t *testing.T) []string {
 	t.Helper()
 
-	paths, err := filepath.Glob(filepath.Join(backendRoot, "config", "grafana", "provisioning", "datasources", "*.yaml"))
+	paths, err := filepath.Glob(filepath.Join(stackMountedRoot, "config", "grafana", "provisioning", "datasources", "*.yaml"))
 	require.NoError(t, err)
 
 	uids := make([]string, 0, len(paths))
 
 	for _, file := range paths {
-		content, err := os.ReadFile(file) //nolint:gosec // The path comes from globbing the provisioning directory.
+		content, err := os.ReadFile(file)
 		require.NoError(t, err)
 
 		var provisioning struct {
@@ -397,7 +397,6 @@ func instantQuery(endpoint, expr string) ([]sample, error) {
 	return response.Data.Result, err
 }
 
-// getJSON sends the URL's user info, if any, as basic auth (Grafana's admin).
 func getJSON(endpoint string, out any) error {
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()

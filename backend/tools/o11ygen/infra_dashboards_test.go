@@ -91,7 +91,7 @@ func TestGenerate_KeepsTheInfraDashboardsAndTheHomeValidWithoutServices(t *testi
 	} {
 		assert.Equal(t, uid, readDashboard(t, root, name)["uid"], name)
 
-		content, err := os.ReadFile(filepath.Join(root, dashboardsDir, name)) //nolint:gosec // Test temp dir.
+		content, err := os.ReadFile(filepath.Join(root, dashboardsDir, name))
 		require.NoError(t, err)
 
 		queries, err := kind.Queries(content)

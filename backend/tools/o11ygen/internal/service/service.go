@@ -2,6 +2,7 @@ package service
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/lcnascimento/go-kit/errors"
 )
@@ -48,8 +49,6 @@ const (
 	Warning  Severity = "warning"
 )
 
-// LogAlert fires when more than MaxRecordsPer5m log records of Process pass Pipeline, the LogQL stages appended to the
-// process's stream selector (e.g. `|= "payment declined"`). Its runbook is docs/runbooks/<Name>.md.
 type LogAlert struct {
 	Name            string
 	Process         string
@@ -172,20 +171,42 @@ func validateLogAlerts(svc *Service) error {
 	return nil
 }
 
-func validateRuntime(runtime Runtime, process Process) error {
-	switch runtime {
-	case Go:
-		return nil
-	case Node:
-		goKitOnly := func(c Component) bool { return c != API && c != Browser }
-		if process.dbPool || slices.ContainsFunc(process.components, goKitOnly) {
-			return errors.New("process %q runs on Node, which only instruments api and browser", process.name)
-		}
+type runtimeTraits struct {
+	name       string
+	components []Component
+	dbPool     bool
+	goKit      bool
+}
 
-		return nil
-	default:
+var runtimes = map[Runtime]runtimeTraits{
+	Go:   {name: "Go", components: []Component{API, Consumer, Worker, Browser}, dbPool: true, goKit: true},
+	Node: {name: "Node", components: []Component{API, Browser}},
+}
+
+func (r Runtime) RunsGoKit() bool { return runtimes[r].goKit }
+
+func listed(components []Component) string {
+	names := make([]string, len(components))
+	for i, c := range components {
+		names[i] = string(c)
+	}
+
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+}
+
+func validateRuntime(runtime Runtime, process Process) error {
+	traits, ok := runtimes[runtime]
+	if !ok {
 		return errors.New("process %q declares unknown runtime %d", process.name, runtime)
 	}
+
+	uninstrumented := func(c Component) bool { return !slices.Contains(traits.components, c) }
+	if (process.dbPool && !traits.dbPool) || slices.ContainsFunc(process.components, uninstrumented) {
+		return errors.New("process %q runs on %s, which only instruments %s", process.name, traits.name,
+			listed(traits.components))
+	}
+
+	return nil
 }
 
 func validateProcess(svc string, process Process, seen map[string]bool) error {
