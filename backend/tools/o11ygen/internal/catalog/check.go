@@ -129,12 +129,12 @@ func selectorLabels(selector *parser.VectorSelector) (labelSet, error) {
 }
 
 func metricLabels(series string) (labelSet, error) {
-	if metric, ok := metrics[series]; ok {
+	if metric, ok := lookup(series); ok {
 		return setOf(targetLabels, sourceLabels[metric.Source], metric.Labels), nil
 	}
 
 	for suffix := range histogramSeries {
-		metric, ok := metrics[strings.TrimSuffix(series, suffix)]
+		metric, ok := lookup(strings.TrimSuffix(series, suffix))
 		if !ok || metric.Type != Histogram || !strings.HasSuffix(series, suffix) {
 			continue
 		}

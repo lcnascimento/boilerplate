@@ -48,6 +48,11 @@ func TestCheck_AcceptsQueriesInsideTheCatalog(t *testing.T) {
 			Expr: `quantile_over_time(0.75, {service_name=~"web"} | kind="measurement" | type="web-vitals" | ` +
 				`value_lcp!="" | unwrap value_lcp [$__auto]) by ()`,
 		},
+		"the outbox of any service": {
+			Language: artifact.PromQL,
+			Expr: `sum by (outcome) (increase(orders_outbox_purge_runs_total{job="boilerplate/orders-worker"}[5m])) ` +
+				`+ on () group_left max(billing_outbox_oldest_pending_age_seconds)`,
+		},
 		"labels a label_format introduces": {
 			Language: artifact.LogQL,
 			Expr:     `sum by (service) (count_over_time({service_name=~".+"} | label_format service=service_name [1m]))`,

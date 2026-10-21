@@ -266,12 +266,29 @@ var metrics = map[string]Metric{
 
 	TracesSpanMetricsCalls:   {Type: Counter, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
 	TracesSpanMetricsLatency: {Type: Histogram, Source: TempoSpanMetrics, EmittedBy: runs(service.API)},
+}
 
-	// example:begin
-	OutboxOldestPendingAge("notes"): {Type: Gauge, Source: OTLP, EmittedBy: outboxOf("notes")},
-	OutboxPurgedMessages("notes"):   {Type: Counter, Source: OTLP, EmittedBy: outboxOf("notes")},
-	OutboxPurgeRuns("notes"):        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}, EmittedBy: outboxOf("notes")},
-	// example:end
+const (
+	outboxOldestPendingAge = "oldest_pending_age_seconds"
+	outboxPurgedMessages   = "purged_messages_total"
+	outboxPurgeRuns        = "purge_runs_total"
+)
+
+var outboxMetrics = map[string]Metric{
+	outboxOldestPendingAge: {Type: Gauge, Source: OTLP},
+	outboxPurgedMessages:   {Type: Counter, Source: OTLP},
+	outboxPurgeRuns:        {Type: Counter, Source: OTLP, Labels: []string{"outcome"}},
+}
+
+func lookup(series string) (Metric, bool) {
+	if metric, ok := metrics[series]; ok {
+		return metric, true
+	}
+
+	_, name, ok := strings.Cut(series, "_outbox_")
+	metric, known := outboxMetrics[name]
+
+	return metric, ok && known
 }
 
 var sourceLabels = map[Source][]string{
@@ -289,15 +306,15 @@ var (
 )
 
 func OutboxOldestPendingAge(serviceName string) string {
-	return outboxMetric(serviceName, "oldest_pending_age_seconds")
+	return outboxMetric(serviceName, outboxOldestPendingAge)
 }
 
 func OutboxPurgedMessages(serviceName string) string {
-	return outboxMetric(serviceName, "purged_messages_total")
+	return outboxMetric(serviceName, outboxPurgedMessages)
 }
 
 func OutboxPurgeRuns(serviceName string) string {
-	return outboxMetric(serviceName, "purge_runs_total")
+	return outboxMetric(serviceName, outboxPurgeRuns)
 }
 
 func outboxMetric(serviceName, name string) string {

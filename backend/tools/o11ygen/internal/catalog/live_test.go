@@ -94,6 +94,27 @@ func TestLiveProbes_ExpectTheConsumerGroupSeriesOnceAConsumerIsDeclared(t *testi
 	assert.NotContains(t, got, `present_over_time(http_server_request_total{job="boilerplate/billing-consumer"}[15m])`)
 }
 
+func TestLiveProbes_ExpectTheOutboxOfTheServiceAWorkerBelongsTo(t *testing.T) {
+	declared := []service.Service{
+		{Name: "orders", Processes: []service.Process{service.Daemon("orders-worker", service.Worker)}},
+		{Name: "billing", Processes: []service.Process{service.Daemon("billing-api", service.API)}},
+	}
+
+	got := exprs(t, declared)
+
+	for _, want := range []string{
+		`present_over_time(orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker"}[15m])`,
+		`present_over_time(orders_outbox_purged_messages_total{job="boilerplate/orders-worker"}[15m])`,
+		`present_over_time(orders_outbox_purge_runs_total{job="boilerplate/orders-worker"}[15m])`,
+	} {
+		assert.Contains(t, got, want)
+	}
+
+	for _, probe := range got {
+		assert.NotContains(t, probe, "billing_outbox_")
+	}
+}
+
 func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.T) {
 	declared := []service.Service{{
 		Name:      "web",
