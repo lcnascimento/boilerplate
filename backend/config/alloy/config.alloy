@@ -167,7 +167,8 @@ otelcol.receiver.loki "faro" {
 }
 
 // faro.receiver writes each signal as a logfmt line without labels: its fields become structured metadata, and the
-// Faro app becomes the OTLP service.
+// Faro app becomes the OTLP service. Each known kind gets a short line and a severity, like the services' logs; a
+// shape not listed here keeps its logfmt line.
 otelcol.processor.transform "faro" {
   error_mode = "ignore"
 
@@ -177,6 +178,61 @@ otelcol.processor.transform "faro" {
       `merge_maps(log.attributes, ParseKeyValue(log.body), "upsert")`,
       `set(resource.attributes["service.name"], log.attributes["app_name"])`,
       `set(resource.attributes["service.namespace"], log.attributes["app_namespace"])`,
+      `set(log.trace_id.string, log.attributes["traceID"]) where log.attributes["traceID"] != nil`,
+      `set(log.span_id.string, log.attributes["spanID"]) where log.attributes["spanID"] != nil`,
+      `delete_matching_keys(log.attributes, "^(timestamp|traceID|spanID)$")`,
+      `merge_maps(log.cache, ExtractPatterns(log.attributes["page_url"], "^[a-z]+://[^/]+(?P<page_path>[^?#]*)"), "upsert") where log.attributes["page_url"] != nil`,
+      `set(log.cache["level"], "INFO") where log.attributes["kind"] == "event" or log.attributes["kind"] == "measurement"`,
+      // log: console.error: <message>
+      `set(log.body, log.attributes["message"]) where log.attributes["kind"] == "log" and log.attributes["message"] != nil`,
+      `set(log.cache["level"], ToUpperCase(log.attributes["level"])) where log.attributes["kind"] == "log" and log.attributes["level"] != nil`,
+      `set(log.cache["level"], "INFO") where log.cache["level"] == "LOG"`,
+      // exception: <type>: <value>
+      `set(log.body, Concat([log.attributes["type"], log.attributes["value"]], ": ")) where log.attributes["kind"] == "exception" and log.attributes["value"] != nil`,
+      `set(log.cache["level"], "ERROR") where log.attributes["kind"] == "exception"`,
+      // web-vitals <name> <value> <rating> <page path>
+      `set(log.cache["vital"], "CLS") where log.attributes["type"] == "web-vitals" and log.attributes["value_cls"] != nil`,
+      `set(log.cache["value"], Format("%.3f", [Double(log.attributes["value_cls"])])) where log.cache["vital"] == "CLS"`,
+      `set(log.cache["vital"], "LCP") where log.attributes["type"] == "web-vitals" and log.attributes["value_lcp"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_lcp"]))])) where log.cache["vital"] == "LCP"`,
+      `set(log.cache["vital"], "INP") where log.attributes["type"] == "web-vitals" and log.attributes["value_inp"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_inp"]))])) where log.cache["vital"] == "INP"`,
+      `set(log.cache["vital"], "FCP") where log.attributes["type"] == "web-vitals" and log.attributes["value_fcp"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_fcp"]))])) where log.cache["vital"] == "FCP"`,
+      `set(log.cache["vital"], "TTFB") where log.attributes["type"] == "web-vitals" and log.attributes["value_ttfb"] != nil`,
+      `set(log.cache["value"], Format("%dms", [Int(Double(log.attributes["value_ttfb"]))])) where log.cache["vital"] == "TTFB"`,
+      `set(log.body, Concat(["web-vitals", log.cache["vital"], log.cache["value"], log.attributes["context_rating"], log.cache["page_path"]], " ")) where log.cache["value"] != nil`,
+      `set(log.cache["level"], "WARN") where log.cache["value"] != nil and log.attributes["context_rating"] == "poor"`,
+      // event: <name>, with a summary for the Faro events that carry one.
+      `set(log.body, log.attributes["event_name"]) where log.attributes["kind"] == "event" and log.attributes["event_name"] != nil`,
+      `merge_maps(log.cache, ExtractPatterns(log.attributes["event_data_url.full"], "^[a-z]+://[^/]+(?P<fetch_path>[^?#]*)"), "upsert") where log.attributes["event_name"] == "faro.tracing.fetch" and log.attributes["event_data_url.full"] != nil`,
+      `set(log.body, Concat(["fetch", log.attributes["event_data_http.request.method"], log.cache["fetch_path"], log.attributes["event_data_http.response.status_code"], Format("%dms", [Int(Double(log.attributes["event_data_duration_ns"]) / 1000000.0)])], " ")) where log.cache["fetch_path"] != nil`,
+      `set(log.cache["level"], "ERROR") where log.cache["fetch_path"] != nil and Int(log.attributes["event_data_http.response.status_code"]) >= 500`,
+      `merge_maps(log.cache, ExtractPatterns(log.attributes["event_data_name"], "^[a-z]+://[^/]+(?P<entry_path>[^?#]*)"), "upsert") where IsMatch(log.attributes["event_name"], "^faro\\.performance\\.(navigation|resource)$") and log.attributes["event_data_name"] != nil`,
+      `set(log.body, Concat(["navigation", log.cache["entry_path"], Format("%dms", [Int(Double(log.attributes["event_data_duration"]))])], " ")) where log.attributes["event_name"] == "faro.performance.navigation" and log.cache["entry_path"] != nil`,
+      `set(log.body, Concat(["resource", log.attributes["event_data_initiatorType"], log.cache["entry_path"], Format("%dms", [Int(Double(log.attributes["event_data_duration"]))])], " ")) where log.attributes["event_name"] == "faro.performance.resource" and log.cache["entry_path"] != nil`,
+      `set(log.severity_text, log.cache["level"]) where log.cache["level"] != nil and IsMatch(log.cache["level"], "^(TRACE|DEBUG|INFO|WARN|ERROR)$")`,
+      `set(log.severity_number, SEVERITY_NUMBER_TRACE) where log.severity_text == "TRACE"`,
+      `set(log.severity_number, SEVERITY_NUMBER_DEBUG) where log.severity_text == "DEBUG"`,
+      `set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_text == "INFO"`,
+      `set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_text == "WARN"`,
+      `set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_text == "ERROR"`,
+      `delete_key(log.attributes, "level") where log.severity_text != ""`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.filter.faro.input]
+  }
+}
+
+// faro.tracing.fetch already reports every fetch and XHR, with its trace.
+otelcol.processor.filter "faro" {
+  error_mode = "ignore"
+
+  logs {
+    log_record = [
+      `attributes["event_name"] == "faro.performance.resource" and (attributes["event_data_initiatorType"] == "fetch" or attributes["event_data_initiatorType"] == "xmlhttprequest")`,
     ]
   }
 
