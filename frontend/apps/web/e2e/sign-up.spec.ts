@@ -7,6 +7,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { Client } from "pg";
+import { z } from "zod";
 
 import { ACME_OWNER } from "../scripts/iam-seed/users";
 import { SIGNED_IN_HOME } from "../shared/auth/routes";
@@ -35,9 +36,15 @@ async function fillSignUp(page: Page, visitor: Visitor) {
   await page.getByLabel("Nome", { exact: true }).fill(visitor.name);
   await page.getByLabel("Email").fill(visitor.email);
   await page.getByLabel("Senha").fill(visitor.password);
-  await page.getByLabel("Nome da organização").fill(visitor.organizationName);
+  await page.getByLabel("Nome da Organization").fill(visitor.organizationName);
   await page.getByRole("button", { name: "Criar conta" }).click();
 }
+
+const signedUpSchema = z.object({ user: z.object({ id: z.string() }) });
+
+const organizationsSchema = z.array(
+  z.object({ id: z.string(), name: z.string() })
+);
 
 async function signUpThroughApi(
   request: APIRequestContext,
@@ -47,7 +54,7 @@ async function signUpThroughApi(
     data: visitor,
   });
   expect(response.status()).toBe(200);
-  const { user } = (await response.json()) as { user: { id: string } };
+  const { user } = signedUpSchema.parse(await response.json());
   return user.id;
 }
 
@@ -56,7 +63,7 @@ async function organizationsOf(
 ): Promise<{ id: string; name: string }[]> {
   const response = await request.get("/api/auth/organization/list");
   expect(response.status()).toBe(200);
-  return (await response.json()) as { id: string; name: string }[];
+  return organizationsSchema.parse(await response.json());
 }
 
 async function inIamDatabase(
@@ -71,7 +78,42 @@ async function inIamDatabase(
   }
 }
 
+async function undoSignUpOrganization(
+  userId: string,
+  organizationName: string
+): Promise<void> {
+  await inIamDatabase(async (client) => {
+    await client.query(
+      `DELETE FROM organization WHERE id IN (SELECT "organizationId" FROM member WHERE "userId" = $1)`,
+      [userId]
+    );
+    await client.query(
+      `UPDATE session SET "activeOrganizationId" = NULL WHERE "userId" = $1`,
+      [userId]
+    );
+    await client.query(
+      `UPDATE "user" SET "pendingOrganizationName" = $2 WHERE id = $1`,
+      [userId, organizationName]
+    );
+  });
+}
+
 test.use({ storageState: signedOut });
+
+test("a sign-up through the API without an organization name is refused", async ({
+  request,
+}) => {
+  const { organizationName: _, ...withoutOrganization } = newVisitor();
+
+  const response = await request.post("/api/auth/sign-up/email", {
+    data: withoutOrganization,
+  });
+
+  expect(response.status()).toBe(400);
+  expect(await response.json()).toMatchObject({
+    code: "INVALID_ORGANIZATION_NAME",
+  });
+});
 
 test("a visitor signs up and lands on the home as Owner of the new organization", async ({
   page,
@@ -129,21 +171,7 @@ test("the signed-in layout creates a missing sign-up organization once", async (
 }) => {
   const visitor = newVisitor();
   const userId = await signUpThroughApi(page.request, visitor);
-  // Puts the user back where a failed sign-up hook leaves it: no organization, none active.
-  await inIamDatabase(async (client) => {
-    await client.query(
-      `DELETE FROM organization WHERE id IN (SELECT "organizationId" FROM member WHERE "userId" = $1)`,
-      [userId]
-    );
-    await client.query(
-      `UPDATE session SET "activeOrganizationId" = NULL WHERE "userId" = $1`,
-      [userId]
-    );
-    await client.query(
-      `UPDATE "user" SET "pendingOrganizationName" = $2 WHERE id = $1`,
-      [userId, visitor.organizationName]
-    );
-  });
+  await undoSignUpOrganization(userId, visitor.organizationName);
   expect(await organizationsOf(page.request)).toEqual([]);
 
   await page.goto("/profile/preferences");

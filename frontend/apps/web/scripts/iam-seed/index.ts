@@ -1,5 +1,6 @@
 import { getIam } from "@/shared/auth/auth";
 
+import { createUserOutsideSignUp } from "./create-user";
 import { SEED_PASSWORD, seedOrganizations, type SeedUser } from "./users";
 
 const { auth, database } = getIam();
@@ -9,11 +10,13 @@ async function ensureUser({ name, email }: SeedUser): Promise<string> {
   const existing = await context.internalAdapter.findUserByEmail(email);
   if (existing) return existing.user.id;
 
-  const { user } = await auth.api.signUpEmail({
-    body: { name, email, password: SEED_PASSWORD },
+  const userId = await createUserOutsideSignUp(context, {
+    name,
+    email,
+    password: SEED_PASSWORD,
   });
   console.log(`created user ${email}`);
-  return user.id;
+  return userId;
 }
 
 async function ensureOrganization(

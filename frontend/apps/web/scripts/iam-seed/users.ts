@@ -1,9 +1,11 @@
+import type { MemberRole } from "@/shared/auth/members";
+
 export const SEED_PASSWORD = "dev-password";
 
 export interface SeedUser {
   name: string;
   email: string;
-  role: "owner" | "admin" | "viewer";
+  role: MemberRole;
 }
 
 export interface SeedOrganization {
@@ -19,7 +21,6 @@ export const ACME_OWNER = {
   role: "owner",
 } as const satisfies SeedUser;
 
-// Admin of both Acme and Globex, for switching the active Organization.
 export const MULTI_ORGANIZATION_ADMIN = {
   name: "Eva Admin",
   email: "admin@multi.test",

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { createUserOutsideSignUp } from "../scripts/iam-seed/create-user";
 import {
   ACME_OWNER,
   MULTI_ORGANIZATION_ADMIN,
@@ -17,7 +18,6 @@ const GLOBEX_OWNER_EMAIL = "owner@globex.test";
 
 test.use({ storageState: signedOut });
 
-// Each test signs in on its own, so switching the active Organization never leaks into another test's session.
 async function signIn(page: Page, email: string, password: string) {
   const response = await page.request.post("/api/auth/sign-in/email", {
     data: { email, password },
@@ -51,38 +51,35 @@ async function organizationId(slug: string): Promise<string> {
   return organization.id;
 }
 
-// Signs `page` up as a throwaway User who is a Viewer of `slugs`, oldest membership first, and deletes them afterwards.
-async function withVisitorIn(
+async function asThrowawayViewerOf(
   page: Page,
-  slugs: readonly string[],
+  slugsOldestMembershipFirst: readonly string[],
   run: (userId: string) => Promise<void>
 ) {
   const suffix = randomUUID().slice(0, 8);
-  const response = await page.request.post("/api/auth/sign-up/email", {
-    data: {
-      name: `Iris ${suffix}`,
-      email: `e2e-organizations-${suffix}@example.test`,
-      password: "e2e-password",
-    },
-  });
-  expect(response.status()).toBe(200);
-  const { user } = (await response.json()) as { user: { id: string } };
-
+  const visitor = {
+    name: `Iris ${suffix}`,
+    email: `e2e-organizations-${suffix}@example.test`,
+    password: "e2e-password",
+  };
   const { auth } = getIam();
+  const context = await auth.$context;
+  const userId = await createUserOutsideSignUp(context, visitor);
+
   try {
-    for (const slug of slugs) {
+    for (const slug of slugsOldestMembershipFirst) {
       await auth.api.addMember({
         body: {
           organizationId: await organizationId(slug),
-          userId: user.id,
+          userId,
           role: "viewer",
         },
       });
     }
-    await run(user.id);
+    await signIn(page, visitor.email, visitor.password);
+    await run(userId);
   } finally {
-    const { internalAdapter } = await auth.$context;
-    await internalAdapter.deleteUser(user.id);
+    await context.internalAdapter.deleteUser(userId);
   }
 }
 
@@ -122,7 +119,7 @@ test("a Member of two Organizations switches the active one and sees its Members
 test("a User removed from the active Organization lands on another membership", async ({
   page,
 }) => {
-  await withVisitorIn(page, ["acme", "globex"], async (userId) => {
+  await asThrowawayViewerOf(page, ["acme", "globex"], async (userId) => {
     await page.goto(MEMBERS_HREF);
     await expect(switcher(page)).toContainText("Acme");
 
@@ -143,7 +140,7 @@ test("a User removed from the active Organization lands on another membership", 
 test("a User who lost every membership is told so and can sign out", async ({
   page,
 }) => {
-  await withVisitorIn(page, ["globex"], async (userId) => {
+  await asThrowawayViewerOf(page, ["globex"], async (userId) => {
     await page.goto(MEMBERS_HREF);
     await expect(switcher(page)).toContainText("Globex");
 

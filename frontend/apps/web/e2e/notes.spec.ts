@@ -156,7 +156,6 @@ for (const [name, id] of [
 }
 
 test.describe("as a Member of two Organizations", () => {
-  // Signs in on its own, so switching the active Organization never leaks into another test's session.
   test.use({ storageState: signedOut });
 
   function switcher(page: Page) {

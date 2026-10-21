@@ -30,8 +30,6 @@ async function hasMembership(
   return (rowCount ?? 0) > 0;
 }
 
-// A User owes an Organization while "pendingOrganizationName" is set: sign-up sets it, and the first
-// run that sees it either creates that Organization or, if the User already has a membership, drops it.
 export async function ensureSignUpOrganization(
   database: Pool,
   createOrganization: CreateOrganization,
