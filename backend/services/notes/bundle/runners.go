@@ -6,7 +6,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
 	"github.com/lcnascimento/go-kit/o11y"
@@ -15,14 +14,13 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend"
 )
 
-// Run starts o11y before newApp builds the graph, so what constructors record reaches the exporters.
-func Run(newApp func() *fx.App) {
-	if code := run(newApp); code != 0 {
+func Run(newAppAfterO11yStarts func() *fx.App) {
+	if code := run(newAppAfterO11yStarts); code != 0 {
 		os.Exit(code)
 	}
 }
 
-func run(newApp func() *fx.App) int {
+func run(newAppAfterO11yStarts func() *fx.App) int {
 	ctx := context.Background()
 
 	o11y.MustStart(ctx)
@@ -33,7 +31,7 @@ func run(newApp func() *fx.App) int {
 		}
 	}()
 
-	app := newApp()
+	app := newAppAfterO11yStarts()
 
 	// fx only listens for signals from app.Wait on.
 	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
@@ -73,10 +71,10 @@ func frontendServerOptions() []fx.Option {
 		fx.Provide(func(
 			notes transport.NotesService,
 			db transport.Database,
-			authenticate mux.MiddlewareFunc,
+			authenticator transport.Authenticator,
 			shutdowner fx.Shutdowner,
 		) *frontend.Server {
-			return frontend.New(notes, db, authenticate, frontend.WithShutdown(func() {
+			return frontend.New(notes, db, authenticator, frontend.WithShutdown(func() {
 				_ = shutdowner.Shutdown(fx.ExitCode(1))
 			}))
 		}),

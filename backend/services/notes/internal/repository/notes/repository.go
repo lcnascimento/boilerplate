@@ -39,7 +39,7 @@ func New(pool *pgxpool.Pool, schemaIDs events.SchemaIDs, opts ...Option) *Reposi
 }
 
 func (r *Repository) Create(ctx context.Context, caller *actor.Actor, note *domain.Note) error {
-	return r.inTx(ctx, note.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
+	return r.inOrganizationTx(ctx, note.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
 		err := queries.CreateNote(ctx, db.CreateNoteParams{
 			ID:             note.ID.UUID(),
 			OrganizationID: note.OrganizationID.UUID(),
@@ -64,7 +64,7 @@ func (r *Repository) Create(ctx context.Context, caller *actor.Actor, note *doma
 func (r *Repository) Get(ctx context.Context, orgID iamdomain.OrganizationID, id domain.NoteID) (*domain.Note, error) {
 	var note *domain.Note
 
-	err := r.inTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
+	err := r.inOrganizationTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
 		row, err := queries.GetNote(ctx, db.GetNoteParams{OrganizationID: orgID.UUID(), ID: id.UUID()})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrNoteNotFound
@@ -85,7 +85,7 @@ func (r *Repository) Get(ctx context.Context, orgID iamdomain.OrganizationID, id
 func (r *Repository) List(ctx context.Context, orgID iamdomain.OrganizationID) ([]*domain.Note, error) {
 	var out []*domain.Note
 
-	err := r.inTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
+	err := r.inOrganizationTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
 		rows, err := queries.ListNotes(ctx, orgID.UUID())
 		if err != nil {
 			return ErrQuery.WithCause(err)
@@ -103,7 +103,7 @@ func (r *Repository) List(ctx context.Context, orgID iamdomain.OrganizationID) (
 }
 
 func (r *Repository) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
-	return r.inTx(ctx, caller.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
+	return r.inOrganizationTx(ctx, caller.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
 		deleted, err := queries.DeleteNote(ctx, db.DeleteNoteParams{OrganizationID: caller.OrganizationID.UUID(), ID: id.UUID()})
 		if err != nil {
 			return ErrQuery.WithCause(err)
@@ -120,8 +120,7 @@ func (r *Repository) Delete(ctx context.Context, caller *actor.Actor, id domain.
 	})
 }
 
-// inTx scopes the transaction to orgID, so the notes row-level security policy only shows that Organization's rows.
-func (r *Repository) inTx(ctx context.Context, orgID iamdomain.OrganizationID, fn func(pgx.Tx, *db.Queries) error) error {
+func (r *Repository) inOrganizationTx(ctx context.Context, orgID iamdomain.OrganizationID, fn func(pgx.Tx, *db.Queries) error) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return ErrQuery.WithCause(err)
