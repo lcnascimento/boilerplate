@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { use } from "react";
 
@@ -5,11 +6,16 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@boilerplate/ui/components/card";
 
-import { CALLBACK_URL_PARAM, parseCallbackUrl } from "@/shared/auth/routes";
+import {
+  CALLBACK_URL_PARAM,
+  parseCallbackUrl,
+  SIGN_UP_HREF,
+} from "@/shared/auth/routes";
 
 import { SignInForm } from "../_components";
 
@@ -36,6 +42,12 @@ export default function SignInPage({ searchParams }: SignInPageProps) {
           )}
         />
       </CardContent>
+      <CardFooter className="text-sm text-muted-foreground">
+        {t("noAccount")}&nbsp;
+        <Link className="underline underline-offset-4" href={SIGN_UP_HREF}>
+          {t("goToSignUp")}
+        </Link>
+      </CardFooter>
     </Card>
   );
 }

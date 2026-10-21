@@ -6,6 +6,8 @@ import type { Route } from "next";
 
 export const SIGN_IN_HREF = "/sign-in" satisfies Route;
 
+export const SIGN_UP_HREF = "/sign-up" satisfies Route;
+
 export const CALLBACK_URL_PARAM = "callbackUrl";
 
 const signedInHomes: readonly Route[] = [
@@ -16,7 +18,7 @@ const signedInHomes: readonly Route[] = [
 
 export const SIGNED_IN_HOME: Route = signedInHomes[0] ?? "/";
 
-const authPaths: readonly string[] = [SIGN_IN_HREF];
+const authPaths: readonly string[] = [SIGN_IN_HREF, SIGN_UP_HREF];
 
 export function isAuthPath(pathname: string): boolean {
   return authPaths.includes(pathname);

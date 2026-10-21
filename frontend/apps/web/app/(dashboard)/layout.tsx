@@ -26,6 +26,7 @@ export default async function DashboardLayout({
   if (session === null) redirect(SIGN_IN_HREF);
 
   const { id, name, email, image } = session.user;
+  await getIam().ensureSignUpOrganization(id);
 
   return (
     <DashboardShell
