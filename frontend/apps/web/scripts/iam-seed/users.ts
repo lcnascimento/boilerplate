@@ -19,6 +19,13 @@ export const ACME_OWNER = {
   role: "owner",
 } as const satisfies SeedUser;
 
+// Admin of both Acme and Globex, for switching the active Organization.
+export const MULTI_ORGANIZATION_ADMIN = {
+  name: "Eva Admin",
+  email: "admin@multi.test",
+  role: "admin",
+} as const satisfies SeedUser;
+
 export const seedOrganizations: readonly SeedOrganization[] = [
   {
     name: "Acme",
@@ -27,16 +34,21 @@ export const seedOrganizations: readonly SeedOrganization[] = [
     members: [
       { name: "Bruno Admin", email: "admin@acme.test", role: "admin" },
       { name: "Carla Viewer", email: "viewer@acme.test", role: "viewer" },
+      MULTI_ORGANIZATION_ADMIN,
     ],
   },
   {
     name: "Globex",
     slug: "globex",
     owner: { name: "Diego Owner", email: "owner@globex.test", role: "owner" },
-    members: [],
+    members: [MULTI_ORGANIZATION_ADMIN],
   },
 ];
 
-export const seedUsers: readonly SeedUser[] = seedOrganizations.flatMap(
-  ({ owner, members }) => [owner, ...members]
-);
+export const seedUsers: readonly SeedUser[] = [
+  ...new Map(
+    seedOrganizations
+      .flatMap(({ owner, members }) => [owner, ...members])
+      .map((user) => [user.email, user])
+  ).values(),
+];
