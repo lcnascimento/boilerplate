@@ -67,7 +67,8 @@ type alerting struct {
 }
 
 type alert struct {
-	Labels map[string]string `yaml:"labels"`
+	Labels      map[string]string `yaml:"labels"`
+	Annotations map[string]string `yaml:"annotations"`
 }
 
 func Declared(svc *service.Service) ([]service.SLO, error) {
@@ -127,11 +128,28 @@ func specOf(svc string, slos []service.SLO) *spec {
 			Labels:      map[string]string{"service": slo.Process},
 			SLI:         sli,
 			Alerting: alerting{
-				Name:        alertName,
-				Labels:      map[string]string{"service": slo.Process, "sloth_slo": slo.Name},
-				Annotations: annotations(svc, slo),
-				PageAlert:   alert{Labels: map[string]string{"severity": "critical"}},
-				TicketAlert: alert{Labels: map[string]string{"severity": "warning"}},
+				Name:   alertName,
+				Labels: map[string]string{"service": slo.Process, "sloth_slo": slo.Name},
+				Annotations: map[string]string{
+					"runbook_url":   config.RunbookBaseURL + "/" + alertName + ".md",
+					"dashboard_url": config.GrafanaURL + "/d/" + config.Namespace + "-" + svc,
+				},
+				PageAlert: alert{
+					Labels: map[string]string{"severity": "critical"},
+					Annotations: severityAnnotations(slo,
+						"queimando o error budget rápido demais", "5m ou 30m",
+						"Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. "+
+							"Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de "+
+							slo.Process+"."),
+				},
+				TicketAlert: alert{
+					Labels: map[string]string{"severity": "warning"},
+					Annotations: severityAnnotations(slo,
+						"consumindo o error budget acima do ritmo sustentável", "2h ou 6h",
+						"Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota "+
+							"antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço "+
+							"(qual SLI piorou e desde quando) e depois pelos logs de erro de "+slo.Process+"."),
+				},
 			},
 		})
 	}
@@ -139,18 +157,15 @@ func specOf(svc string, slos []service.SLO) *spec {
 	return out
 }
 
-func annotations(svc string, slo *service.SLO) map[string]string {
-	title := "SLO " + slo.Name + " de " + slo.Process + " queimando o error budget rápido demais"
+// shortWindows names the windows $value comes from: the expr is `(short and long) or (short and long)` and `and`
+// keeps the left-hand sample.
+func severityAnnotations(slo *service.SLO, state, shortWindows, guidance string) map[string]string {
+	title := "SLO " + slo.Name + " de " + slo.Process + " " + state
 
 	return map[string]string{
-		"title": title,
-		"summary": title + ": {{ $value | humanizePercentage }} de eventos ruins na janela curta" +
-			" ({{ $labels.sloth_severity }})",
-		"description": slo.Description + " No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. " +
-			"Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de " +
-			slo.Process + ".",
-		"runbook_url":   config.RunbookBaseURL + "/" + alertName + ".md",
-		"dashboard_url": config.GrafanaURL + "/d/" + config.Namespace + "-" + svc,
+		"title":       title,
+		"summary":     title + ": {{ $value | humanizePercentage }} de eventos ruins na janela curta (" + shortWindows + ")",
+		"description": slo.Description + " " + guidance,
 	}
 }
 
@@ -234,7 +249,8 @@ func specQueries(content []byte) ([]artifact.Query, error) {
 		})
 	}
 
-	for _, slo := range s.SLOs {
+	for i := range s.SLOs {
+		slo := &s.SLOs[i]
 		if slo.SLI.Events != nil {
 			add(slo.Name, "error_query", slo.SLI.Events.ErrorQuery)
 			add(slo.Name, "total_query", slo.SLI.Events.TotalQuery)
