@@ -2,9 +2,9 @@
 
 Judgement rules for review. A rule a linter could check belongs in the linter, not here.
 
-## Hold config comments to `earn-every-comment`
+## Hold every comment, config included, to `earn-every-comment`
 
-Config files (Alloy, YAML, Makefile, Tiltfile, Dockerfile, CI workflows) carry no lighter comment bar than code, and are where narration and usage manuals pile up unnoticed.
+Config files (Alloy, YAML, Makefile, Tiltfile, Dockerfile, CI workflows) carry the same comment bar as code, and are where narration and usage manuals pile up unnoticed.
 
 Violation:
 
@@ -14,19 +14,12 @@ Violation:
 test:
 ```
 
-Fix: delete both lines. A setup step goes in `docs/agents/environment.md` or the README.
-
-Survives (exception 2, vendor behavior we cannot reshape):
-
-```alloy
-// otelcol.receiver.loki emits one request per line, which overflows the exporter queue on a burst.
-```
-
+Fix: delete both lines. Encode the postgres requirement as a target prerequisite; if humans need the usage notes, write them as a document with `foundation:documentation`.
 Source: `earn-every-comment`.
 
 ## Give every domain list one source
 
-A closed set of domain values (components, roles, statuses, event names) is declared once in code; every other use derives from it, so adding a value cannot miss a copy.
+A closed set of domain values (components, roles, statuses, event names) is declared once at its authoritative source (a schema when one owns it, code otherwise); every other use derives from it, so adding a value cannot miss a copy.
 
 Violation:
 
@@ -44,4 +37,4 @@ var components = []Component{API, Consumer, Worker, Browser}
 
 and range over `components` at each use. A test that enumerates the set on purpose, to pin it, is not a copy.
 
-Source: `type-system-discipline` (derive instead of duplicating a shape another file owns).
+Source: `model-the-domain`.
