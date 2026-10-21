@@ -78,6 +78,13 @@ if not minimal:
         links=[link('http://localhost:3010', 'UI')],
     )
 
+    local_resource(
+        'grafana-token',
+        labels=['Monitoring'],
+        cmd='make -s grafana.token',
+        resource_deps=['grafana'],
+    )
+
 # example:begin
 include('./services/notes/Tiltfile')
 include('./services/audit/Tiltfile')

@@ -212,6 +212,10 @@ o11y.check-live:
 		O11Y_LIVE_GRAFANA_URL="$${O11Y_LIVE_GRAFANA_URL:-http://admin:admin@localhost:3010}" \
 		go test -count=1 -timeout 6m -v -run '^TestComponentStack_ServesGeneratedArtifacts$$' ./o11ygen
 
+.PHONY: grafana.token
+grafana.token:
+	@bash scripts/grafana-token.sh
+
 .PHONY: proto.lint
 proto.lint:
 	$(call in_buf_dirs,proto.lint,$(GOBIN)/buf lint)

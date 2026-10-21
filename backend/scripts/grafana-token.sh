@@ -7,11 +7,11 @@ account=MCP
 var=GRAFANA_SERVICE_ACCOUNT_TOKEN
 
 fail() {
-	echo "make grafana-token: $*" >&2
+	echo "make grafana.token: $*" >&2
 	exit 1
 }
 
-root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
 cd "$root"
 
 [[ -f .env ]] || cp .env.example .env
