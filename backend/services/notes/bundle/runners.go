@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
 	"github.com/lcnascimento/go-kit/o11y"
@@ -65,8 +66,14 @@ func frontendServerOptions() []fx.Option {
 		Database(),
 		Repositories(),
 		NotesService(),
-		fx.Provide(func(notes transport.NotesService, db transport.Database, shutdowner fx.Shutdowner) *frontend.Server {
-			return frontend.New(notes, db, frontend.WithShutdown(func() {
+		ActorMiddleware(),
+		fx.Provide(func(
+			notes transport.NotesService,
+			db transport.Database,
+			authenticate mux.MiddlewareFunc,
+			shutdowner fx.Shutdowner,
+		) *frontend.Server {
+			return frontend.New(notes, db, authenticate, frontend.WithShutdown(func() {
 				_ = shutdowner.Shutdown(fx.ExitCode(1))
 			}))
 		}),

@@ -13,7 +13,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/errors"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/routes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/mocks"
@@ -25,6 +30,7 @@ import (
 type HandlerSuite struct {
 	suite.Suite
 
+	actor    *actor.Actor
 	note     *domain.Note
 	noteJSON string
 	service  *mocks.MockNotesService
@@ -42,13 +48,39 @@ func (s *HandlerSuite) SetupTest() {
 	s.note = fixture.RandomNote()
 	s.noteJSON = wireJSON(s.T(), s.note)
 
+	orgID, err := iamdomain.ParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
+	s.Require().NoError(err)
+	s.actor = actortest.Owner(orgID)
+
 	s.router = mux.NewRouter()
-	routes.RegisterNotes(s.router, s.service)
+	routes.RegisterNotes(s.router, s.service, withActor(s.actor))
+}
+
+func (s *HandlerSuite) TestAnswersInternalErrorWithoutAnActorInContext() {
+	router := mux.NewRouter()
+	routes.RegisterNotes(router, s.service, func(next http.Handler) http.Handler { return next })
+
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras"}`},
+		{http.MethodGet, "/notes/v1/notes", ""},
+		{http.MethodGet, "/notes/v1/notes/" + s.note.ID.String(), ""},
+		{http.MethodDelete, "/notes/v1/notes/" + s.note.ID.String(), ""},
+	} {
+		s.Run(tc.method+" "+tc.path, func() {
+			req := httptest.NewRequestWithContext(s.T().Context(), tc.method, tc.path, strings.NewReader(tc.body))
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			s.Require().Equal(http.StatusInternalServerError, rec.Code)
+			s.Require().JSONEq(`{"code": "NO_ACTOR", "message": "no actor in context", "retryable": false}`, rec.Body.String())
+		})
+	}
 }
 
 func (s *HandlerSuite) TestCreateReturnsCreatedNote() {
 	s.service.EXPECT().
-		Create(gomock.Any(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras", Body: "Leite, ovos e café."}}).
+		Create(gomock.Any(), s.actor, &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras", Body: "Leite, ovos e café."}}).
 		Return(s.note, nil)
 
 	rec := s.serve(http.MethodPost, "/notes/v1/notes", `{"title":"Lista de compras","body":"Leite, ovos e café."}`)
@@ -70,7 +102,7 @@ func (s *HandlerSuite) TestCreateRejectsMalformedBody() {
 
 func (s *HandlerSuite) TestCreateWritesInvalidInputWithReasons() {
 	invalid := domain.ErrInvalidInput.WithCause(errors.New("[title] is a required field"))
-	s.service.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, invalid)
+	s.service.EXPECT().Create(gomock.Any(), s.actor, gomock.Any()).Return(nil, invalid)
 
 	rec := s.serve(http.MethodPost, "/notes/v1/notes", `{"title":""}`)
 
@@ -84,7 +116,7 @@ func (s *HandlerSuite) TestCreateWritesInvalidInputWithReasons() {
 }
 
 func (s *HandlerSuite) TestListReturnsEnvelope() {
-	s.service.EXPECT().List(gomock.Any()).Return([]*domain.Note{s.note}, nil)
+	s.service.EXPECT().List(gomock.Any(), s.actor).Return([]*domain.Note{s.note}, nil)
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes", "")
 
@@ -93,7 +125,7 @@ func (s *HandlerSuite) TestListReturnsEnvelope() {
 }
 
 func (s *HandlerSuite) TestListWithoutNotesReturnsEmptyArray() {
-	s.service.EXPECT().List(gomock.Any()).Return(nil, nil)
+	s.service.EXPECT().List(gomock.Any(), s.actor).Return(nil, nil)
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes", "")
 
@@ -102,7 +134,7 @@ func (s *HandlerSuite) TestListWithoutNotesReturnsEmptyArray() {
 }
 
 func (s *HandlerSuite) TestListWritesInternalErrors() {
-	s.service.EXPECT().List(gomock.Any()).Return(nil, errors.New("failed to list notes"))
+	s.service.EXPECT().List(gomock.Any(), s.actor).Return(nil, errors.New("failed to list notes"))
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes", "")
 
@@ -111,7 +143,7 @@ func (s *HandlerSuite) TestListWritesInternalErrors() {
 }
 
 func (s *HandlerSuite) TestGetReturnsNote() {
-	s.service.EXPECT().Get(gomock.Any(), s.note.ID).Return(s.note, nil)
+	s.service.EXPECT().Get(gomock.Any(), s.actor, s.note.ID).Return(s.note, nil)
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes/"+s.note.ID.String(), "")
 
@@ -120,7 +152,7 @@ func (s *HandlerSuite) TestGetReturnsNote() {
 }
 
 func (s *HandlerSuite) TestGetUnknownNoteIsNotFound() {
-	s.service.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, domain.ErrNoteNotFound)
+	s.service.EXPECT().Get(gomock.Any(), s.actor, gomock.Any()).Return(nil, domain.ErrNoteNotFound)
 
 	rec := s.serve(http.MethodGet, "/notes/v1/notes/"+s.note.ID.String(), "")
 
@@ -141,7 +173,7 @@ func (s *HandlerSuite) TestGetRejectsMalformedID() {
 }
 
 func (s *HandlerSuite) TestDeleteReturnsNoContent() {
-	s.service.EXPECT().Delete(gomock.Any(), s.note.ID).Return(nil)
+	s.service.EXPECT().Delete(gomock.Any(), s.actor, s.note.ID).Return(nil)
 
 	rec := s.serve(http.MethodDelete, "/notes/v1/notes/"+s.note.ID.String(), "")
 
@@ -150,7 +182,7 @@ func (s *HandlerSuite) TestDeleteReturnsNoContent() {
 }
 
 func (s *HandlerSuite) TestDeleteUnknownNoteIsNotFound() {
-	s.service.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(domain.ErrNoteNotFound)
+	s.service.EXPECT().Delete(gomock.Any(), s.actor, gomock.Any()).Return(domain.ErrNoteNotFound)
 
 	rec := s.serve(http.MethodDelete, "/notes/v1/notes/"+s.note.ID.String(), "")
 
@@ -161,6 +193,14 @@ func (s *HandlerSuite) TestDeleteRejectsMalformedID() {
 	rec := s.serve(http.MethodDelete, "/notes/v1/notes/note_bad", "")
 
 	s.Require().Equal(http.StatusBadRequest, rec.Code)
+}
+
+func withActor(a *actor.Actor) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(actortest.Context(r.Context(), a)))
+		})
+	}
 }
 
 func wireJSON(t *testing.T, n *domain.Note) string {

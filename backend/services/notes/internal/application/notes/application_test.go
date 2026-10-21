@@ -10,8 +10,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/notes"
@@ -25,8 +30,9 @@ var now = time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
 type ApplicationSuite struct {
 	suite.Suite
 
-	repo *mocks.MockNotesRepository
-	app  *notes.Application
+	repo  *mocks.MockNotesRepository
+	app   *notes.Application
+	owner *actor.Actor
 }
 
 func TestApplication(t *testing.T) {
@@ -45,13 +51,22 @@ func TestApplication_DefaultClockIsUTCInMicroseconds(t *testing.T) {
 	require.NoError(t, err)
 
 	before := time.Now()
-	got, err := notes.New(repo, v).Create(t.Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
+	got, err := notes.New(repo, v).Create(t.Context(), owner(t), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
 	after := time.Now()
 
 	require.NoError(t, err)
 	require.Equal(t, time.UTC, got.CreatedAt.Location())
 	require.Zero(t, got.CreatedAt.Nanosecond()%int(time.Microsecond))
 	require.WithinRange(t, got.CreatedAt, before.Truncate(time.Microsecond), after)
+}
+
+func owner(t *testing.T) *actor.Actor {
+	t.Helper()
+
+	orgID, err := iamdomain.ParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f")
+	require.NoError(t, err)
+
+	return actortest.Owner(orgID)
 }
 
 func (s *ApplicationSuite) SetupTest() {
@@ -62,6 +77,8 @@ func (s *ApplicationSuite) SetupTest() {
 	s.Require().NoError(err)
 
 	s.app = notes.New(s.repo, v, notes.WithClock(func() time.Time { return now }))
+
+	s.owner = owner(s.T())
 }
 
 func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
@@ -73,7 +90,7 @@ func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 		return nil
 	})
 
-	got, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras", Body: "Leite."}})
+	got, err := s.app.Create(s.T().Context(), s.owner, &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Lista de compras", Body: "Leite."}})
 
 	s.Require().NoError(err)
 	s.Require().True(strings.HasPrefix(got.ID.String(), "note_"), got.ID.String())
@@ -86,7 +103,7 @@ func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 func (s *ApplicationSuite) TestCreateWithoutBodyKeepsEmptyBody() {
 	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
-	got, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Ideias"}})
+	got, err := s.app.Create(s.T().Context(), s.owner, &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Ideias"}})
 
 	s.Require().NoError(err)
 	s.Require().Empty(got.Body)
@@ -124,7 +141,7 @@ func (s *ApplicationSuite) TestCreateRejectsInvalidInputWithEveryReason() {
 
 	for name, tc := range cases {
 		s.Run(name, func() {
-			_, err := s.app.Create(s.T().Context(), tc.req)
+			_, err := s.app.Create(s.T().Context(), s.owner, tc.req)
 
 			s.Require().ErrorIs(err, domain.ErrInvalidInput)
 			s.Require().Equal(errors.KindInvalidInput, errors.Kind(err))
@@ -140,7 +157,7 @@ func (s *ApplicationSuite) TestCreateValidatesConcurrently() {
 
 	for range 20 {
 		wg.Go(func() {
-			_, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{})
+			_, err := s.app.Create(s.T().Context(), s.owner, &models.CreateNoteRequest{})
 			s.ErrorIs(err, domain.ErrInvalidInput)
 		})
 	}
@@ -151,7 +168,7 @@ func (s *ApplicationSuite) TestCreateValidatesConcurrently() {
 func (s *ApplicationSuite) TestCreateWrapsRepositoryErrors() {
 	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.ErrMock)
 
-	_, err := s.app.Create(s.T().Context(), &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
+	_, err := s.app.Create(s.T().Context(), s.owner, &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
 
 	s.Require().ErrorIs(err, notes.ErrCreateNote)
 	s.Require().ErrorIs(err, errors.ErrMock)
@@ -161,7 +178,7 @@ func (s *ApplicationSuite) TestListReturnsRepositoryOrder() {
 	newest, oldest := fixture.RandomNote(), fixture.RandomNote()
 	s.repo.EXPECT().List(gomock.Any()).Return([]*domain.Note{newest, oldest}, nil)
 
-	got, err := s.app.List(s.T().Context())
+	got, err := s.app.List(s.T().Context(), s.owner)
 
 	s.Require().NoError(err)
 	s.Require().Equal([]*domain.Note{newest, oldest}, got)
@@ -170,7 +187,7 @@ func (s *ApplicationSuite) TestListReturnsRepositoryOrder() {
 func (s *ApplicationSuite) TestListWrapsRepositoryErrors() {
 	s.repo.EXPECT().List(gomock.Any()).Return(nil, errors.ErrMock)
 
-	got, err := s.app.List(s.T().Context())
+	got, err := s.app.List(s.T().Context(), s.owner)
 
 	s.Require().ErrorIs(err, notes.ErrListNotes)
 	s.Require().ErrorIs(err, errors.ErrMock)
@@ -182,7 +199,7 @@ func (s *ApplicationSuite) TestGetReturnsNote() {
 	note := fixture.RandomNote()
 	s.repo.EXPECT().Get(gomock.Any(), note.ID).Return(note, nil)
 
-	got, err := s.app.Get(s.T().Context(), note.ID)
+	got, err := s.app.Get(s.T().Context(), s.owner, note.ID)
 
 	s.Require().NoError(err)
 	s.Require().Equal(note, got)
@@ -192,7 +209,7 @@ func (s *ApplicationSuite) TestGetUnknownNoteIsNotFound() {
 	id := domain.NewNoteID()
 	s.repo.EXPECT().Get(gomock.Any(), id).Return(nil, domain.ErrNoteNotFound)
 
-	_, err := s.app.Get(s.T().Context(), id)
+	_, err := s.app.Get(s.T().Context(), s.owner, id)
 
 	s.Require().ErrorIs(err, notes.ErrGetNote)
 	s.Require().ErrorIs(err, domain.ErrNoteNotFound)
@@ -203,14 +220,14 @@ func (s *ApplicationSuite) TestDeleteRemovesNote() {
 	id := domain.NewNoteID()
 	s.repo.EXPECT().Delete(gomock.Any(), id).Return(nil)
 
-	s.Require().NoError(s.app.Delete(s.T().Context(), id))
+	s.Require().NoError(s.app.Delete(s.T().Context(), s.owner, id))
 }
 
 func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 	id := domain.NewNoteID()
 	s.repo.EXPECT().Delete(gomock.Any(), id).Return(domain.ErrNoteNotFound)
 
-	err := s.app.Delete(s.T().Context(), id)
+	err := s.app.Delete(s.T().Context(), s.owner, id)
 
 	s.Require().ErrorIs(err, notes.ErrDeleteNote)
 	s.Require().ErrorIs(err, domain.ErrNoteNotFound)
