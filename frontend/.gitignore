@@ -14,6 +14,7 @@ coverage/
 __screenshots__/
 test-results/
 playwright-report/
+apps/web/e2e/.auth/
 
 .turbo/
 
