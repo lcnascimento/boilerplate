@@ -1,6 +1,7 @@
 {
   "uid": "boilerplate-postgres",
-  "title": "Postgres — Conexões · Locks · Queries · Cardinalidade",
+  "title": "postgres",
+  "description": "Conexões, locks, queries e cardinalidade de métricas, a partir do Postgres e do Prometheus.",
   "tags": [
     "postgres",
     "boilerplate",

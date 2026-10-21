@@ -62,14 +62,14 @@ func spanMetricsAPISection(_ *service.Service, processes []service.Process) sect
 			description: "Percentis 50 e 99 da duração das requisições.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, ""),
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, grouping{}),
 		},
 		&graph{
 			title:       "Latência p50/p99 por rota",
 			description: "Percentis 50 e 99 da duração por método e rota.",
 			unit:        "s",
 			width:       halfWidth,
-			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, "span_name"),
+			queries:     quantiles(catalog.TracesSpanMetricsLatency, selector, groupBy("span_name")),
 		},
 	}}
 }

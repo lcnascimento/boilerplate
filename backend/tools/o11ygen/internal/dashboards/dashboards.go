@@ -8,6 +8,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/artifact"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
 )
@@ -16,6 +17,10 @@ func Kind() artifact.Kind {
 	return artifact.Kind{
 		Dir: "config/grafana/provisioning/dashboards", Glob: "*.json", LoadedBy: artifact.Grafana, Build: build, Queries: queries,
 	}
+}
+
+func newDashboard(name string) *dashboard.DashboardBuilder {
+	return dashboard.NewDashboardBuilder(name).Uid(config.Namespace + "-" + name)
 }
 
 type board struct {

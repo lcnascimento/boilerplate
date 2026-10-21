@@ -15,8 +15,7 @@ import (
 const bySLO = "max by (sloth_service, sloth_slo, service) "
 
 func overviewDashboard() *dashboard.DashboardBuilder {
-	return dashboard.NewDashboardBuilder("Overview").
-		Uid(config.Namespace+"-overview").
+	return newDashboard("overview").
 		Tags([]string{config.Namespace, "overview"}).
 		Readonly().
 		Tooltip(1).

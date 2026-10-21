@@ -15,6 +15,7 @@ import (
 
 type boardTarget struct {
 	Expr      string `json:"expr"`
+	Legend    string `json:"legendFormat"` //nolint:tagliatelle // Grafana's dashboard schema.
 	Exemplar  bool   `json:"exemplar"`
 	QueryType string `json:"queryType"` //nolint:tagliatelle // Grafana's dashboard schema.
 }
@@ -287,9 +288,9 @@ func TestGenerate_DashboardsAskForExemplarsOnlyOnTheGoLatencyHistograms(t *testi
 	assert.Equal(t, map[string][]string{"orders.json": {
 		`Latência p50/p99: histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket` + api,
 		`Latência p50/p99: histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket` + api,
-		`Latência p50/p99 por rota: histogram_quantile(0.5, sum by (le, http_route) (rate(` +
+		`Latência p50/p99 por rota: histogram_quantile(0.5, sum by (le, http_response_status_code, http_request_method, http_route) (rate(` +
 			`http_server_request_duration_seconds_bucket` + api,
-		`Latência p50/p99 por rota: histogram_quantile(0.99, sum by (le, http_route) (rate(` +
+		`Latência p50/p99 por rota: histogram_quantile(0.99, sum by (le, http_response_status_code, http_request_method, http_route) (rate(` +
 			`http_server_request_duration_seconds_bucket` + api,
 		`Duração do processamento p50/p99: histogram_quantile(0.5, sum by (le) (rate(` +
 			`messaging_process_duration_seconds_bucket{job=~"boilerplate/(orders-consumer)"}[$__rate_interval])))`,
@@ -388,8 +389,51 @@ func TestGenerate_ServiceDashboardLinksARouteToItsSlowTraces(t *testing.T) {
 	assert.Equal(t, "${tempo_datasource}", panes["slow"].Datasource)
 	assert.Equal(t, "traceql", panes["slow"].Queries[0].QueryType)
 	assert.Equal(t, `{resource.service.name=~"orders-api" && kind=server && span.http.route="${__field.labels.http_route}" `+
+		`&& span.http.request.method="${__field.labels.http_request_method}" `+
+		`&& span.http.response.status_code=${__field.labels.http_response_status_code} `+
 		`&& duration > 250ms}`, panes["slow"].Queries[0].Query)
 	assert.Equal(t, map[string]string{"from": "${__from}", "to": "${__to}"}, panes["slow"].Range)
+}
+
+func legendsByTitle(panels []boardPanel, titles ...string) map[string][]string {
+	out := map[string][]string{}
+
+	for i := range panels {
+		for _, title := range titles {
+			if panels[i].Title != title {
+				continue
+			}
+
+			for _, target := range panels[i].Targets {
+				out[title] = append(out[title], target.Expr+" => "+target.Legend)
+			}
+		}
+	}
+
+	return out
+}
+
+func TestGenerate_ServiceDashboardGroupsEveryRoutePanelByStatusMethodAndRoute(t *testing.T) {
+	_, orders := generateOrders(t)
+
+	selector := `job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"`
+	byRoute := "http_response_status_code, http_request_method, http_route"
+	legend := "{{http_response_status_code}} {{http_request_method}} {{http_route}}"
+	quantile := func(q string) string {
+		return "histogram_quantile(" + q + ", sum by (le, " + byRoute + ") (rate(http_server_request_duration_seconds_bucket{" +
+			selector + "}[$__rate_interval])))"
+	}
+
+	assert.Equal(t, map[string][]string{
+		"Taxa por rota": {
+			"sum by (" + byRoute + ") (rate(http_server_request_total{" + selector + "}[$__rate_interval])) => " + legend,
+		},
+		"4xx/5xx por rota": {
+			"sum by (" + byRoute + ") (rate(http_server_request_total{" + selector +
+				`, http_response_status_code=~"4..|5.."}[$__rate_interval])) => ` + legend,
+		},
+		"Latência p50/p99 por rota": {quantile("0.5") + " => p50 " + legend, quantile("0.99") + " => p99 " + legend},
+	}, legendsByTitle(orders.section(t, "api").panels, "Taxa por rota", "4xx/5xx por rota", "Latência p50/p99 por rota"))
 }
 
 func TestGenerate_RejectsAServiceNamedAfterAnInfrastructureDashboard(t *testing.T) {

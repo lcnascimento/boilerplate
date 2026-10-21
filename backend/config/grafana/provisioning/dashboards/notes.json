@@ -456,13 +456,13 @@
             "type": "prometheus",
             "uid": "${prometheus_datasource}"
           },
-          "expr": "sum by (http_route, http_request_method) (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval]))",
-          "legendFormat": "{{http_request_method}} {{http_route}}",
+          "expr": "sum by (http_response_status_code, http_request_method, http_route) (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}} {{http_request_method}} {{http_route}}",
           "refId": "A"
         }
       ],
       "title": "Taxa por rota",
-      "description": "Requisições por segundo por rota e método.",
+      "description": "Requisições por segundo por status, método e rota.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
@@ -510,13 +510,13 @@
             "type": "prometheus",
             "uid": "${prometheus_datasource}"
           },
-          "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\", http_response_status_code=~\"4..|5..\"}[$__rate_interval]))",
-          "legendFormat": "{{http_response_status_code}} {{http_route}}",
+          "expr": "sum by (http_response_status_code, http_request_method, http_route) (rate(http_server_request_total{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\", http_response_status_code=~\"4..|5..\"}[$__rate_interval]))",
+          "legendFormat": "{{http_response_status_code}} {{http_request_method}} {{http_route}}",
           "refId": "A"
         }
       ],
       "title": "4xx/5xx por rota",
-      "description": "Respostas de erro por segundo, por rota e status; só o 5xx queima budget.",
+      "description": "Respostas de erro por segundo, por status, método e rota; só o 5xx queima budget.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
@@ -647,8 +647,8 @@
             "uid": "${prometheus_datasource}"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.5, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
-          "legendFormat": "p50 {{http_route}}",
+          "expr": "histogram_quantile(0.5, sum by (le, http_response_status_code, http_request_method, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
+          "legendFormat": "p50 {{http_response_status_code}} {{http_request_method}} {{http_route}}",
           "refId": "A"
         },
         {
@@ -657,13 +657,13 @@
             "uid": "${prometheus_datasource}"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
-          "legendFormat": "p99 {{http_route}}",
+          "expr": "histogram_quantile(0.99, sum by (le, http_response_status_code, http_request_method, http_route) (rate(http_server_request_duration_seconds_bucket{job=~\"boilerplate/(notes-api-frontend)\", http_route!~\"/ping|/health\"}[$__rate_interval])))",
+          "legendFormat": "p99 {{http_response_status_code}} {{http_request_method}} {{http_route}}",
           "refId": "B"
         }
       ],
       "title": "Latência p50/p99 por rota",
-      "description": "Percentis 50 e 99 da duração por rota; a linha é o limite do SLO api-latency. Clique numa série para ver os traces lentos da rota.",
+      "description": "Percentis 50 e 99 da duração por status, método e rota; a linha é o limite do SLO api-latency. Clique numa série para ver os traces lentos dela.",
       "transparent": false,
       "datasource": {
         "type": "prometheus",
@@ -710,7 +710,7 @@
               "type": "",
               "icon": "",
               "tooltip": "",
-              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22${tempo_datasource}%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22${tempo_datasource}%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
+              "url": "/explore?schemaVersion=1\u0026panes=%7B%22slow%22%3A%7B%22datasource%22%3A%22${tempo_datasource}%22%2C%22queries%22%3A%5B%7B%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22${tempo_datasource}%22%7D%2C%22query%22%3A%22%7Bresource.service.name%3D~%5C%22notes-api-frontend%5C%22+%26%26+kind%3Dserver+%26%26+span.http.route%3D%5C%22${__field.labels.http_route}%5C%22+%26%26+span.http.request.method%3D%5C%22${__field.labels.http_request_method}%5C%22+%26%26+span.http.response.status_code%3D${__field.labels.http_response_status_code}+%26%26+duration+%3E+250ms%7D%22%2C%22queryType%22%3A%22traceql%22%2C%22refId%22%3A%22A%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22${__from}%22%2C%22to%22%3A%22${__to}%22%7D%7D%7D",
               "tags": [],
               "asDropdown": false,
               "placement": "inControlsMenu",
