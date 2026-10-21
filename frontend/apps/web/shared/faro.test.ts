@@ -1,31 +1,34 @@
 /**
  * @vitest-environment jsdom
  */
-import {
-  BaseTransport,
-  faro,
-  initializeFaro,
-  type TransportItem,
-  TransportItemType,
-} from "@grafana/faro-web-sdk";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { parseFaroEnv, reportBoundaryError } from "./faro";
+import { parseFaroEnv } from "./faro";
 
-class MemoryTransport extends BaseTransport {
-  readonly name = "memory";
-  readonly version = "0.0.0";
-  readonly items: TransportItem[] = [];
+import type { TransportItem } from "@grafana/faro-web-sdk";
 
-  send(items: TransportItem | TransportItem[]): void {
-    this.items.push(...[items].flat());
+async function freshFaro() {
+  vi.resetModules();
+  const sdk = await import("@grafana/faro-web-sdk");
+  const { reportBoundaryError } = await import("./faro");
+
+  class MemoryTransport extends sdk.BaseTransport {
+    readonly name = "memory";
+    readonly version = "0.0.0";
+    readonly items: TransportItem[] = [];
+
+    send(items: TransportItem | TransportItem[]): void {
+      this.items.push(...[items].flat());
+    }
+
+    exceptions() {
+      return this.items
+        .filter((item) => item.type === sdk.TransportItemType.EXCEPTION)
+        .map(({ payload }) => payload);
+    }
   }
-}
 
-function exceptionsIn(transport: MemoryTransport) {
-  return transport.items
-    .filter((item) => item.type === TransportItemType.EXCEPTION)
-    .map(({ payload }) => payload);
+  return { sdk, reportBoundaryError, transport: new MemoryTransport() };
 }
 
 describe("parseFaroEnv", () => {
@@ -69,33 +72,36 @@ describe("parseFaroEnv", () => {
   });
 });
 
-// Faro is a process-wide singleton: the no-op case runs before the one that starts it.
 describe("reportBoundaryError", () => {
-  const transport = new MemoryTransport();
+  let faro: Awaited<ReturnType<typeof freshFaro>>;
+
+  beforeEach(async () => {
+    faro = await freshFaro();
+  });
 
   it("does nothing while Faro is off", () => {
     expect(() =>
-      reportBoundaryError(new Error("before Faro started"))
+      faro.reportBoundaryError(new Error("before Faro started"))
     ).not.toThrow();
   });
 
   it("pushes the error and its digest to Faro", () => {
-    initializeFaro({
+    faro.sdk.initializeFaro({
       app: { name: "web" },
       instrumentations: [],
-      transports: [transport],
+      transports: [faro.transport],
       batching: { enabled: false },
       sessionTracking: { enabled: false },
     });
-    const pushError = vi.spyOn(faro.api, "pushError");
+    const pushError = vi.spyOn(faro.sdk.faro.api, "pushError");
     const error = Object.assign(new Error("boom"), { digest: "1234567890" });
 
-    reportBoundaryError(error);
+    faro.reportBoundaryError(error);
 
     expect(pushError).toHaveBeenCalledWith(error, {
       context: { digest: "1234567890" },
     });
-    expect(exceptionsIn(transport)).toMatchObject([
+    expect(faro.transport.exceptions()).toMatchObject([
       { type: "Error", value: "boom", context: { digest: "1234567890" } },
     ]);
   });
