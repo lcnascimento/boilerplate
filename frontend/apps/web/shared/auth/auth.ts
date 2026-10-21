@@ -8,6 +8,7 @@ import { z } from "zod";
 import { logger } from "@/shared/logging";
 
 import { parseIamEnv, type IamEnv } from "./env";
+import { loginFailureHook } from "./login-failures";
 import { ORGANIZATION_NAME_MAX_LENGTH, PASSWORD_LENGTH } from "./policy";
 import { ac, roles } from "./roles.gen";
 import { ensureSignUpOrganization as ensureOrganization } from "./sign-up-organization";
@@ -72,6 +73,7 @@ function createIam(env: IamEnv) {
     session: { expiresIn: 7 * DAY_SECONDS, updateAge: DAY_SECONDS },
     rateLimit: { storage: "database" },
     disabledPaths: ["/token"],
+    hooks: { after: loginFailureHook },
     advanced: {
       defaultCookieAttributes: {
         httpOnly: true,

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { resolveActiveOrganization } from "./active-organization";
+import { annotateActorSpan } from "./actor-span";
 import { mintActorToken } from "./actor-token";
 import { getIam } from "./auth";
 import { SIGN_IN_HREF } from "./routes";
@@ -19,8 +20,10 @@ export async function requestActorToken(): Promise<string> {
   const organizations = await resolveActiveOrganization(session.session);
   if (organizations === null) redirect("/");
 
-  return mintActorToken({
+  const actor = {
     userId: session.user.id,
     organizationId: organizations.active.id,
-  });
+  };
+  annotateActorSpan(actor);
+  return mintActorToken(actor);
 }

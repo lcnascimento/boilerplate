@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { resolveActiveOrganization } from "@/shared/auth/active-organization";
+import { annotateActorSpan } from "@/shared/auth/actor-span";
 import { getIam } from "@/shared/auth/auth";
 import {
   addMemberInputSchema,
@@ -43,6 +44,10 @@ async function requireActor(requestHeaders: Headers): Promise<Actor | null> {
     });
   if (member === null) return null;
 
+  annotateActorSpan({
+    userId: session.user.id,
+    organizationId: member.organizationId,
+  });
   return {
     memberId: member.id,
     organizationId: member.organizationId,
