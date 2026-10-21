@@ -1,6 +1,7 @@
 package consumer_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -41,6 +42,29 @@ func TestOnAny_RecordsTheEventAsAnAuditEntry(t *testing.T) {
 	err := consumer.New(service, []string{"localhost:9092"}).OnAny(t.Context(), noteCreatedEvent())
 
 	require.NoError(t, err)
+}
+
+func TestOnAny_RecordsTheActorOfTheEnvelope(t *testing.T) {
+	t.Parallel()
+
+	event := noteCreatedEvent()
+	event.ActorID = "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"
+	event.ActorOrganizationID = "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"
+
+	var recorded *idomain.Entry
+
+	service := mocks.NewMockAuditService(gomock.NewController(t))
+	service.EXPECT().Record(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, entry *idomain.Entry) error {
+		recorded = entry
+
+		return nil
+	})
+
+	err := consumer.New(service, []string{"localhost:9092"}).OnAny(t.Context(), event)
+
+	require.NoError(t, err)
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", recorded.ActorID)
+	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", recorded.ActorOrganizationID)
 }
 
 func TestOnAny_PassesTheServiceErrorThrough(t *testing.T) {

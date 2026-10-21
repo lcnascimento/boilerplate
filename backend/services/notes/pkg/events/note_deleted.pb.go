@@ -22,10 +22,11 @@ const (
 )
 
 type NoteDeleted struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganizationId string                 `protobuf:"bytes,2,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *NoteDeleted) Reset() {
@@ -65,13 +66,21 @@ func (x *NoteDeleted) GetId() string {
 	return ""
 }
 
+func (x *NoteDeleted) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
 var File_boilerplate_notes_v1_note_deleted_proto protoreflect.FileDescriptor
 
 const file_boilerplate_notes_v1_note_deleted_proto_rawDesc = "" +
 	"\n" +
-	"'boilerplate/notes/v1/note_deleted.proto\x12\x14boilerplate.notes.v1\"\x1d\n" +
+	"'boilerplate/notes/v1/note_deleted.proto\x12\x14boilerplate.notes.v1\"F\n" +
 	"\vNoteDeleted\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02idBNZLgithub.com/lcnascimento/boilerplate/backend/services/notes/pkg/events;eventsb\x06proto3"
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationIdBNZLgithub.com/lcnascimento/boilerplate/backend/services/notes/pkg/events;eventsb\x06proto3"
 
 var (
 	file_boilerplate_notes_v1_note_deleted_proto_rawDescOnce sync.Once

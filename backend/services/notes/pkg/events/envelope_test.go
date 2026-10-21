@@ -15,25 +15,29 @@ func TestEnvelope_Headers(t *testing.T) {
 	t.Parallel()
 
 	envelope := events.Envelope{
-		ID:              "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		Source:          "notes",
-		Type:            "acme.notes.v1.NoteCreated",
-		Time:            time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
-		Subject:         "note_0199f1a2-0000-7000-8000-000000000001",
-		PartitionKey:    "note_0199f1a2-0000-7000-8000-000000000001",
-		SpecVersion:     events.SpecVersion,
-		DataContentType: events.ContentType,
+		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+		Source:              "notes",
+		Type:                "acme.notes.v1.NoteCreated",
+		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
+		Subject:             "note_0199f1a2-0000-7000-8000-000000000001",
+		PartitionKey:        "note_0199f1a2-0000-7000-8000-000000000001",
+		SpecVersion:         events.SpecVersion,
+		DataContentType:     events.ContentType,
+		ActorID:             "user_0199f1a2-0000-7000-8000-0000000000a1",
+		ActorOrganizationID: "org_0199f1a2-0000-7000-8000-0000000000b2",
 	}
 
 	require.Equal(t, map[string]string{
-		"ce_id":           "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		"ce_source":       "notes",
-		"ce_type":         "acme.notes.v1.NoteCreated",
-		"ce_time":         "2026-10-17T12:30:45.123456789Z",
-		"ce_subject":      "note_0199f1a2-0000-7000-8000-000000000001",
-		"ce_partitionkey": "note_0199f1a2-0000-7000-8000-000000000001",
-		"ce_specversion":  "1.0",
-		"content-type":    "application/protobuf",
+		"ce_id":                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+		"ce_source":              "notes",
+		"ce_type":                "acme.notes.v1.NoteCreated",
+		"ce_time":                "2026-10-17T12:30:45.123456789Z",
+		"ce_subject":             "note_0199f1a2-0000-7000-8000-000000000001",
+		"ce_partitionkey":        "note_0199f1a2-0000-7000-8000-000000000001",
+		"ce_specversion":         "1.0",
+		"content-type":           "application/protobuf",
+		"ce_actorid":             "user_0199f1a2-0000-7000-8000-0000000000a1",
+		"ce_actororganizationid": "org_0199f1a2-0000-7000-8000-0000000000b2",
 	}, envelope.Headers())
 }
 
@@ -41,15 +45,17 @@ func TestParseEnvelope(t *testing.T) {
 	t.Parallel()
 
 	full := map[string]string{
-		"ce_id":           "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		"ce_source":       "notes",
-		"ce_type":         "acme.notes.v1.NoteDeleted",
-		"ce_time":         "2026-10-17T12:30:45.5-03:00",
-		"ce_subject":      "note_1",
-		"ce_partitionkey": "note_1",
-		"ce_specversion":  "1.0",
-		"content-type":    "application/protobuf",
-		"traceparent":     "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+		"ce_id":                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+		"ce_source":              "notes",
+		"ce_type":                "acme.notes.v1.NoteDeleted",
+		"ce_time":                "2026-10-17T12:30:45.5-03:00",
+		"ce_subject":             "note_1",
+		"ce_partitionkey":        "note_1",
+		"ce_specversion":         "1.0",
+		"content-type":           "application/protobuf",
+		"traceparent":            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+		"ce_actorid":             "user_1",
+		"ce_actororganizationid": "org_1",
 	}
 
 	without := func(key string) map[string]string {
@@ -74,14 +80,16 @@ func TestParseEnvelope(t *testing.T) {
 			name:    "all headers",
 			headers: full,
 			want: events.Envelope{
-				ID:              "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-				Source:          "notes",
-				Type:            "acme.notes.v1.NoteDeleted",
-				Time:            time.Date(2026, 10, 17, 15, 30, 45, 500000000, time.UTC),
-				Subject:         "note_1",
-				PartitionKey:    "note_1",
-				SpecVersion:     "1.0",
-				DataContentType: "application/protobuf",
+				ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+				Source:              "notes",
+				Type:                "acme.notes.v1.NoteDeleted",
+				Time:                time.Date(2026, 10, 17, 15, 30, 45, 500000000, time.UTC),
+				Subject:             "note_1",
+				PartitionKey:        "note_1",
+				SpecVersion:         "1.0",
+				DataContentType:     "application/protobuf",
+				ActorID:             "user_1",
+				ActorOrganizationID: "org_1",
 			},
 		},
 		{
@@ -143,14 +151,16 @@ func TestEnvelope_RoundTrip(t *testing.T) {
 	t.Parallel()
 
 	envelope := events.Envelope{
-		ID:              "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		Source:          "notes",
-		Type:            "acme.notes.v1.NoteCreated",
-		Time:            time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
-		Subject:         "note_1",
-		PartitionKey:    "note_1",
-		SpecVersion:     events.SpecVersion,
-		DataContentType: events.ContentType,
+		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+		Source:              "notes",
+		Type:                "acme.notes.v1.NoteCreated",
+		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
+		Subject:             "note_1",
+		PartitionKey:        "note_1",
+		SpecVersion:         events.SpecVersion,
+		DataContentType:     events.ContentType,
+		ActorID:             "user_1",
+		ActorOrganizationID: "org_1",
 	}
 
 	got, err := events.ParseEnvelope(envelope.Headers())

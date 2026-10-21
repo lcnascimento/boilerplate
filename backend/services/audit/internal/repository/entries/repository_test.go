@@ -27,6 +27,9 @@ type row struct {
 	KafkaTopic      string
 	KafkaPartition  int32
 	KafkaOffset     int64
+
+	ActorID             *string
+	ActorOrganizationID *string
 }
 
 func TestComponentRepository_InsertStoresEveryField(t *testing.T) {
@@ -55,6 +58,9 @@ func TestComponentRepository_InsertStoresEveryField(t *testing.T) {
 		KafkaTopic:     "notes.note.v1",
 		KafkaPartition: 2,
 		KafkaOffset:    41,
+
+		ActorID:             new("user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"),
+		ActorOrganizationID: new("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"),
 	}, rows[0])
 }
 
@@ -70,6 +76,22 @@ func TestComponentRepository_InsertWithoutSubjectStoresNull(t *testing.T) {
 	rows := readRows(t, pool)
 	require.Len(t, rows, 1)
 	require.Nil(t, rows[0].Subject)
+}
+
+func TestComponentRepository_InsertWithoutActorStoresNull(t *testing.T) {
+	t.Parallel()
+
+	pool := newPool(t)
+	entry := noteCreatedEntry()
+	entry.ActorID = ""
+	entry.ActorOrganizationID = ""
+
+	require.NoError(t, entries.New(pool).Insert(t.Context(), entry))
+
+	rows := readRows(t, pool)
+	require.Len(t, rows, 1)
+	require.Nil(t, rows[0].ActorID)
+	require.Nil(t, rows[0].ActorOrganizationID)
 }
 
 func TestComponentRepository_InsertOfSameSourceAndIDKeepsTheOriginal(t *testing.T) {
@@ -138,6 +160,9 @@ func noteCreatedEntry() *idomain.Entry {
 		KafkaTopic:     "notes.note.v1",
 		KafkaPartition: 2,
 		KafkaOffset:    41,
+
+		ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		ActorOrganizationID: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
 	}
 }
 
@@ -146,7 +171,8 @@ func readRows(t *testing.T, pool *pgxpool.Pool) []row {
 
 	rows, err := pool.Query(t.Context(), `
 		SELECT source, id, type, spec_version, subject, time, data_content_type,
-			headers, payload, kafka_topic, kafka_partition, kafka_offset
+			headers, payload, kafka_topic, kafka_partition, kafka_offset,
+			actor_id, actor_organization_id
 		FROM audit_entries ORDER BY source, id`)
 	require.NoError(t, err)
 
@@ -160,6 +186,7 @@ func readRows(t *testing.T, pool *pgxpool.Pool) []row {
 		require.NoError(t, rows.Scan(
 			&r.Source, &r.ID, &r.Type, &r.SpecVersion, &r.Subject, &r.Time, &r.DataContentType,
 			&r.Headers, &r.Payload, &r.KafkaTopic, &r.KafkaPartition, &r.KafkaOffset,
+			&r.ActorID, &r.ActorOrganizationID,
 		))
 
 		r.Time = r.Time.UTC()

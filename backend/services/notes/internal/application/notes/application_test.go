@@ -1,6 +1,7 @@
 package notes_test
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"testing"
@@ -45,7 +46,7 @@ func TestApplication_DefaultClockIsUTCInMicroseconds(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockNotesRepository(ctrl)
-	repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+	repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	v, err := validator.New(validator.WithJSONFieldNames())
 	require.NoError(t, err)
@@ -83,7 +84,7 @@ func (s *ApplicationSuite) SetupTest() {
 func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 	var stored *domain.Note
 
-	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ any, note *domain.Note) error {
+	s.repo.EXPECT().Create(gomock.Any(), s.owner, gomock.Any()).DoAndReturn(func(_ context.Context, _ *actor.Actor, note *domain.Note) error {
 		stored = note
 
 		return nil
@@ -101,7 +102,7 @@ func (s *ApplicationSuite) TestCreateStoresAndReturnsNote() {
 }
 
 func (s *ApplicationSuite) TestCreateWithoutBodyKeepsEmptyBody() {
-	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+	s.repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	got, err := s.app.Create(s.T().Context(), s.owner, &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "Ideias"}})
 
@@ -166,7 +167,7 @@ func (s *ApplicationSuite) TestCreateValidatesConcurrently() {
 }
 
 func (s *ApplicationSuite) TestCreateWrapsRepositoryErrors() {
-	s.repo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.ErrMock)
+	s.repo.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.ErrMock)
 
 	_, err := s.app.Create(s.T().Context(), s.owner, &models.CreateNoteRequest{NoteContent: domain.NoteContent{Title: "a"}})
 
@@ -218,14 +219,14 @@ func (s *ApplicationSuite) TestGetUnknownNoteIsNotFound() {
 
 func (s *ApplicationSuite) TestDeleteRemovesNote() {
 	id := domain.NewNoteID()
-	s.repo.EXPECT().Delete(gomock.Any(), acme, id).Return(nil)
+	s.repo.EXPECT().Delete(gomock.Any(), s.owner, id).Return(nil)
 
 	s.Require().NoError(s.app.Delete(s.T().Context(), s.owner, id))
 }
 
 func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 	id := domain.NewNoteID()
-	s.repo.EXPECT().Delete(gomock.Any(), acme, id).Return(domain.ErrNoteNotFound)
+	s.repo.EXPECT().Delete(gomock.Any(), s.owner, id).Return(domain.ErrNoteNotFound)
 
 	err := s.app.Delete(s.T().Context(), s.owner, id)
 

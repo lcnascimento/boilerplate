@@ -16,6 +16,9 @@ const (
 	headerPartitionKey = "ce_partitionkey"
 	headerSpecVersion  = "ce_specversion"
 	headerContentType  = "content-type"
+
+	headerActorID             = "ce_actorid"
+	headerActorOrganizationID = "ce_actororganizationid"
 )
 
 type Envelope struct {
@@ -27,6 +30,9 @@ type Envelope struct {
 	PartitionKey    string
 	SpecVersion     string
 	DataContentType string
+
+	ActorID             string
+	ActorOrganizationID string
 }
 
 func (e *Envelope) Headers() map[string]string {
@@ -45,6 +51,8 @@ func (e *Envelope) Headers() map[string]string {
 	set(headerPartitionKey, e.PartitionKey)
 	set(headerSpecVersion, e.SpecVersion)
 	set(headerContentType, e.DataContentType)
+	set(headerActorID, e.ActorID)
+	set(headerActorOrganizationID, e.ActorOrganizationID)
 
 	if !e.Time.IsZero() {
 		headers[headerTime] = e.Time.Format(time.RFC3339Nano)
@@ -68,6 +76,9 @@ func ParseEnvelope(headers map[string]string) (Envelope, error) {
 		PartitionKey:    headers[headerPartitionKey],
 		SpecVersion:     headers[headerSpecVersion],
 		DataContentType: headers[headerContentType],
+
+		ActorID:             headers[headerActorID],
+		ActorOrganizationID: headers[headerActorOrganizationID],
 	}
 
 	if raw := headers[headerTime]; raw != "" {
