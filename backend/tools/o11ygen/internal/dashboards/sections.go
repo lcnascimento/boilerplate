@@ -97,11 +97,7 @@ func quantiles(histogram, selector, label string) []query {
 
 func seconds(value float64) *float64 { return &value }
 
-func apiSection(svc *service.Service, processes []service.Process) section {
-	if svc.Runtime == service.Node {
-		return spanMetricsAPISection(processes)
-	}
-
+func goAPISection(_ *service.Service, processes []service.Process) section {
 	selector := job(processes) + `, http_route!~` + strconv.Quote(slo.ProbeRoutes)
 	requests := func(extra, by string) string {
 		matchers := selector
@@ -326,7 +322,7 @@ func workerSection(svc *service.Service, processes []service.Process) section {
 	}}
 }
 
-func runtimeSection() section {
+func goRuntimeSection() section {
 	byJob := func(expr string) string { return "sum by (job) (" + expr + ")" }
 
 	return section{title: "Runtime", collapsed: true, panels: []panel{
@@ -472,7 +468,7 @@ func drilldownLinks(svc *service.Service) []cog.Builder[dashboard.DashboardLink]
 				"&var-filters="+filter("service_name", "=", name)))
 	}
 
-	if svc.Runtime != service.Go {
+	if !runtimeDashboards[svc.Runtime].profiles {
 		return out
 	}
 

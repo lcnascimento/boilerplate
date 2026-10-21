@@ -75,7 +75,7 @@ func Declared(svc *service.Service) ([]service.SLO, error) {
 
 	for _, p := range svc.Processes {
 		for _, inherited := range goKitDefaults {
-			if svc.Runtime == service.Go && p.Runs(inherited.component) {
+			if svc.Runtime.RunsGoKit() && p.Runs(inherited.component) {
 				slo := inherited.slo(p, svc.Name)
 				slo.Process = p.Name()
 				out = append(out, slo)

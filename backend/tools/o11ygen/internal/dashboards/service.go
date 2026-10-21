@@ -20,6 +20,19 @@ type section struct {
 	panels    []panel
 }
 
+var runtimeDashboards = map[service.Runtime]struct {
+	api      func(svc *service.Service, processes []service.Process) section
+	runtime  func() section
+	profiles bool
+}{
+	service.Go:   {api: goAPISection, runtime: goRuntimeSection, profiles: true},
+	service.Node: {api: spanMetricsAPISection, runtime: nodeRuntimeSection},
+}
+
+func apiSection(svc *service.Service, processes []service.Process) section {
+	return runtimeDashboards[svc.Runtime].api(svc, processes)
+}
+
 var componentSections = []struct {
 	component service.Component
 	section   func(svc *service.Service, processes []service.Process) section
@@ -39,11 +52,7 @@ func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.Dashbo
 		}
 	}
 
-	if svc.Runtime == service.Node {
-		sections = append(sections, nodeRuntimeSection())
-	} else {
-		sections = append(sections, runtimeSection())
-	}
+	sections = append(sections, runtimeDashboards[svc.Runtime].runtime())
 
 	if hasDBPool(svc) {
 		sections = append(sections, databaseSection())
