@@ -22,16 +22,21 @@ slos:
         sloth_slo: consumer-success
       annotations:
         dashboard_url: http://localhost:3010/d/boilerplate-audit
-        description: Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.
         runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
-        summary: 'SLO consumer-success de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta ({{ $labels.sloth_severity }})'
-        title: SLO consumer-success de audit-consumer queimando o error budget rápido demais
       page_alert:
         labels:
           severity: critical
+        annotations:
+          description: 'Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.'
+          summary: 'SLO consumer-success de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO consumer-success de audit-consumer queimando o error budget rápido demais
       ticket_alert:
         labels:
           severity: warning
+        annotations:
+          description: 'Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de audit-consumer.'
+          summary: 'SLO consumer-success de audit-consumer consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO consumer-success de audit-consumer consumindo o error budget acima do ritmo sustentável
   - name: consumer-latency
     objective: 99
     description: Tentativas de processamento de mensagens de audit-consumer que terminam em até 1s.
@@ -48,13 +53,18 @@ slos:
         sloth_slo: consumer-latency
       annotations:
         dashboard_url: http://localhost:3010/d/boilerplate-audit
-        description: Tentativas de processamento de mensagens de audit-consumer que terminam em até 1s. No ritmo atual, o error budget de 30 dias acaba antes do fim da janela. Veja primeiro no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.
         runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
-        summary: 'SLO consumer-latency de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta ({{ $labels.sloth_severity }})'
-        title: SLO consumer-latency de audit-consumer queimando o error budget rápido demais
       page_alert:
         labels:
           severity: critical
+        annotations:
+          description: 'Tentativas de processamento de mensagens de audit-consumer que terminam em até 1s. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.'
+          summary: 'SLO consumer-latency de audit-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO consumer-latency de audit-consumer queimando o error budget rápido demais
       ticket_alert:
         labels:
           severity: warning
+        annotations:
+          description: 'Tentativas de processamento de mensagens de audit-consumer que terminam em até 1s. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de audit-consumer.'
+          summary: 'SLO consumer-latency de audit-consumer consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO consumer-latency de audit-consumer consumindo o error budget acima do ritmo sustentável
