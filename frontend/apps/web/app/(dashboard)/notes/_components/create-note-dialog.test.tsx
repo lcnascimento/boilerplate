@@ -117,7 +117,7 @@ describe("CreateNoteDialog", () => {
       kind: "error",
       error: {
         code: "ERR_UNAUTHORIZED",
-        message: "unauthorized request",
+        message: "failed to create note",
         retryable: false,
         status: 403,
       },

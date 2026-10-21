@@ -16,6 +16,8 @@ import {
 } from "@/shared/auth/policy";
 import { SIGNED_IN_HOME } from "@/shared/auth/routes";
 
+import { firstErrorPerField, type FieldErrors } from "./field-errors";
+
 const signUpSchema = z.object({
   name: z.string().trim().min(1),
   email: z.email(),
@@ -25,7 +27,6 @@ const signUpSchema = z.object({
 
 type SignUpInput = z.infer<typeof signUpSchema>;
 type Field = keyof SignUpInput;
-type FieldErrors = Partial<Record<Field, string>>;
 
 const fieldSchema = signUpSchema.keyof();
 
@@ -56,7 +57,7 @@ export function SignUpForm() {
   const tValidation = useTranslations("validation");
   const router = useRouter();
   const [input, setInput] = useState(emptyInput);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<Field>>({});
   const [formError, setFormError] = useState<string>();
   const [isPending, startTransition] = useTransition();
 
@@ -87,13 +88,9 @@ export function SignUpForm() {
 
     const parsed = signUpSchema.safeParse(input);
     if (!parsed.success) {
-      const errors: FieldErrors = {};
-      for (const issue of parsed.error.issues) {
-        const field = fieldSchema.safeParse(issue.path[0]);
-        if (!field.success || errors[field.data] !== undefined) continue;
-        errors[field.data] = invalidMessage(field.data, issue.code);
-      }
-      setFieldErrors(errors);
+      setFieldErrors(
+        firstErrorPerField(parsed.error, fieldSchema, invalidMessage)
+      );
       return;
     }
     setFieldErrors({});

@@ -3,7 +3,6 @@
 import { UserMinus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useTransition, type MouseEvent } from "react";
 import { toast } from "sonner";
 
 import {
@@ -20,35 +19,30 @@ import {
 import { Button } from "@boilerplate/ui/components/button";
 
 import { removeMember } from "@/actions/members";
+import { useConfirmDialog } from "@/shared/hooks/use-confirm-dialog";
 
 import type { Member } from "@/shared/auth/members";
 
 interface RemoveMemberDialogProps {
-  member: Member;
+  member: Pick<Member, "id" | "name">;
 }
 
 export function RemoveMemberDialog({ member }: RemoveMemberDialogProps) {
   const t = useTranslations("members");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
-    // Radix closes the dialog on the action's click.
-    event.preventDefault();
-
-    startTransition(async () => {
+  const { open, setOpen, isPending, handleConfirm } = useConfirmDialog(
+    async () => {
       const result = await removeMember({ memberId: member.id });
       if (result.kind === "error") {
         toast.error(t(`errors.${result.code}`));
-        return;
+        return "failed";
       }
-      setOpen(false);
       toast.success(t("removed"));
       router.refresh();
-    });
-  }
+      return "done";
+    }
+  );
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

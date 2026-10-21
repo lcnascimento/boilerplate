@@ -21,19 +21,13 @@ import {
   useSidebar,
 } from "@boilerplate/ui/components/sidebar";
 
+import { useOrganizations } from "@/providers";
 import { authClient } from "@/shared/auth/client";
-
-import type { UserOrganizations } from "@/shared/auth/organizations";
 
 const APP_NAME = "Boilerplate";
 
-interface OrganizationSwitcherProps {
-  organizations: UserOrganizations;
-}
-
-export function OrganizationSwitcher({
-  organizations: { active, organizations },
-}: OrganizationSwitcherProps) {
+export function OrganizationSwitcher() {
+  const { active, organizations } = useOrganizations();
   const t = useTranslations("organizations");
   const { isMobile } = useSidebar();
   const router = useRouter();

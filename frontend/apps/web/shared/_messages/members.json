@@ -12,7 +12,7 @@
       "admin": "Admin",
       "viewer": "Viewer"
     },
-    "you": "você",
+    "nameWithYou": "{name} (você)",
     "addMember": "Adicionar Member",
     "addMemberDescription": "Informe o email de um User já cadastrado e a Role que ele terá.",
     "emailLabel": "Email",
@@ -54,7 +54,7 @@
       "admin": "Admin",
       "viewer": "Viewer"
     },
-    "you": "you",
+    "nameWithYou": "{name} (you)",
     "addMember": "Add Member",
     "addMemberDescription": "Enter the email of an existing User and the Role they will have.",
     "emailLabel": "Email",

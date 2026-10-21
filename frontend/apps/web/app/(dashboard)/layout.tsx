@@ -1,9 +1,10 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { resolveActiveOrganization } from "@/shared/auth/active-organization";
 import { getIam } from "@/shared/auth/auth";
 import { SIGN_IN_HREF } from "@/shared/auth/routes";
+import { getRequestSession } from "@/shared/auth/session";
 import { parseSidebarOpen, SIDEBAR_COOKIE_NAME } from "@/shared/cookies";
 
 import { DashboardShell, NoOrganization } from "./_components";
@@ -20,9 +21,7 @@ export default async function DashboardLayout({
 }: DashboardLayoutProps) {
   const [cookieStore, session] = await Promise.all([
     cookies(),
-    headers().then((requestHeaders) =>
-      getIam().auth.api.getSession({ headers: requestHeaders })
-    ),
+    getRequestSession(),
   ]);
   if (session === null) redirect(SIGN_IN_HREF);
 

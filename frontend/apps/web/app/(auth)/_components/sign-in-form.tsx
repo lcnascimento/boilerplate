@@ -11,6 +11,8 @@ import { Label } from "@boilerplate/ui/components/label";
 
 import { authClient } from "@/shared/auth/client";
 
+import { firstErrorPerField, type FieldErrors } from "./field-errors";
+
 import type { Route } from "next";
 
 const signInSchema = z.object({
@@ -18,8 +20,7 @@ const signInSchema = z.object({
   password: z.string().min(1),
 });
 
-type SignInInput = z.infer<typeof signInSchema>;
-type FieldErrors = Partial<Record<keyof SignInInput, string>>;
+type Field = keyof z.infer<typeof signInSchema>;
 
 const fieldSchema = signInSchema.keyof();
 
@@ -36,7 +37,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<Field>>({});
   const [formError, setFormError] = useState<string>();
   const [isPending, startTransition] = useTransition();
 
@@ -52,16 +53,13 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
     const parsed = signInSchema.safeParse({ email, password });
     if (!parsed.success) {
-      const errors: FieldErrors = {};
-      for (const issue of parsed.error.issues) {
-        const field = fieldSchema.safeParse(issue.path[0]);
-        if (!field.success || errors[field.data] !== undefined) continue;
-        errors[field.data] =
-          field.data === "email" && email !== ""
+      setFieldErrors(
+        firstErrorPerField(parsed.error, fieldSchema, (field) =>
+          field === "email" && email !== ""
             ? t("invalidEmail")
-            : tValidation("required");
-      }
-      setFieldErrors(errors);
+            : tValidation("required")
+        )
+      );
       return;
     }
     setFieldErrors({});

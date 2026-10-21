@@ -98,7 +98,7 @@ describe("DeleteNoteDialog", () => {
       kind: "error",
       error: {
         code: "ERR_UNAUTHORIZED",
-        message: "unauthorized request",
+        message: "failed to delete note",
         retryable: false,
         status: 403,
       },

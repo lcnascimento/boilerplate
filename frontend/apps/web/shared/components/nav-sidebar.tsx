@@ -22,22 +22,20 @@ import { isActiveHref, routesIn } from "@/shared/navigation";
 import { NavUser } from "./nav-user";
 import { OrganizationSwitcher } from "./organization-switcher";
 
-import type { UserOrganizations } from "@/shared/auth/organizations";
 import type { User } from "@boilerplate/types";
 
 interface NavSidebarProps {
   user: User;
-  organizations: UserOrganizations;
 }
 
-export function NavSidebar({ user, organizations }: NavSidebarProps) {
+export function NavSidebar({ user }: NavSidebarProps) {
   const t = useTranslations();
   const pathname = usePathname();
 
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
-        <OrganizationSwitcher organizations={organizations} />
+        <OrganizationSwitcher />
       </SidebarHeader>
 
       <SidebarContent>

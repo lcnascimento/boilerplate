@@ -53,7 +53,10 @@ async function fillForm(
   await user.type(screen.getByLabelText("Nome"), " Ada Lovelace ");
   await user.type(screen.getByLabelText("Email"), "ada@example.test");
   await user.type(screen.getByLabelText("Senha"), password);
-  await user.type(screen.getByLabelText("Nome da organização"), " Analytical ");
+  await user.type(
+    screen.getByLabelText("Nome da Organization"),
+    " Analytical "
+  );
   await user.click(screen.getByRole("button", { name: "Criar conta" }));
 }
 
@@ -80,7 +83,7 @@ describe("SignUpForm", () => {
 
     await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-    for (const label of ["Nome", "Email", "Senha", "Nome da organização"]) {
+    for (const label of ["Nome", "Email", "Senha", "Nome da Organization"]) {
       expect(fieldError(label)).toBe("Campo obrigatório");
     }
     expect(signUpMock).not.toHaveBeenCalled();

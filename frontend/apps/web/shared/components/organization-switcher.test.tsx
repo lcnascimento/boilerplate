@@ -8,6 +8,7 @@ import { messages } from "@boilerplate/i18n";
 import { SidebarProvider } from "@boilerplate/ui/components/sidebar";
 import { Toaster } from "@boilerplate/ui/components/sonner";
 
+import { OrganizationsProvider } from "@/providers";
 import { appMessages } from "@/shared/_messages";
 import { authClient } from "@/shared/auth/client";
 
@@ -38,9 +39,11 @@ function renderSwitcher(organizations: UserOrganizations) {
       messages={{ ...messages["pt-BR"], ...appMessages("pt-BR") }}
       timeZone="America/Sao_Paulo"
     >
-      <SidebarProvider>
-        <OrganizationSwitcher organizations={organizations} />
-      </SidebarProvider>
+      <OrganizationsProvider organizations={organizations}>
+        <SidebarProvider>
+          <OrganizationSwitcher />
+        </SidebarProvider>
+      </OrganizationsProvider>
       <Toaster />
     </NextIntlClientProvider>
   );
