@@ -52,8 +52,8 @@ A pushed branch with no pull request runs no CI: checks start when a PR opens (`
 
 After each push, run `gh pr checks <n> --watch --fail-fast` once, in the background, and wait for it to exit. Never wait with a `sleep` loop and never poll its output.
 
-The watch can exit on the previous commit's checks, so when it exits, read the runs of the pushed SHA with `gh run list --commit "$(git rev-parse HEAD)" --json databaseId,workflowName,status,conclusion`:
+The watch can exit on the previous commit's checks, so when it exits, confirm that `gh pr view <n> --json headRefOid` equals the pushed SHA, then read `gh pr checks <n> --json name,bucket,link`:
 
-- Failed: a run has `conclusion` `failure`, or `cancelled` with no newer run of the same workflow. Read it with `gh run view <databaseId> --log-failed`, even while other runs are still in progress.
-- Passed: there is at least one run, and every run is `completed` with `success` or `skipped`.
-- Stale: anything else (no run yet, or runs in progress with none failed). Run the same watch in the background once more; if the result is stale again, stop and report.
+- Failed: a check is in bucket `fail` or `cancel`. Read it with `gh run view --job <id> --log-failed`, where `<id>` is the last segment of its `link`, even while other checks are still pending.
+- Passed: there is at least one check, and every check is in bucket `pass` or `skipping`.
+- Stale: anything else (`headRefOid` differs, no check yet, or checks pending with none failed). Run the same watch in the background once more; if the result is stale again, stop and report.
