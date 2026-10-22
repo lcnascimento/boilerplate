@@ -32,7 +32,7 @@ Every job checks out the repository, runs the composite action `.github/actions/
 
 | Job             | Locally                                                                                                       |
 | --------------- | ------------------------------------------------------------------------------------------------------------- |
-| `format`        | `make format`; the job fails if it leaves a diff or an untracked file                                         |
+| `format`        | `make format.check` (refuses a dirty tree; fails if `make format` leaves a diff or an untracked file)         |
 | `lint`          | `make lint`                                                                                                   |
 | `test`          | `make test` (starts Postgres; needs Docker)                                                                   |
 | `e2e`           | `make stack.up && make test.e2e; make stack.down` (needs Tilt)                                                |
@@ -42,6 +42,8 @@ Every job checks out the repository, runs the composite action `.github/actions/
 
 Concurrency: `pull_request` cancels the previous run of the same pull request on a new push; `release` never cancels; `template` cancels on pull requests and never on `main`.
 
-`template` checks the template itself and runs only in the `lcnascimento/boilerplate` repository. Scenario `A` runs `make init NAME=acme-app`, scenario `B` runs `make clean-example` plus `make init`; each runs structural checks, then calls `quality_gate` with that command as its `bootstrap` input. After `setup`, the gate passes `bootstrap` to the composite action `.github/actions/bootstrap`, which runs it, then `git clean -fdX`, then `setup` again, so the bootstrapped project is set up like a fresh one. `make init` deletes `template.yml`, so a generated project keeps `quality_gate`, `pull_request` and `release`.
+`template` checks the template itself and runs only in the `lcnascimento/boilerplate` repository. Scenario `A` runs `make init NAME=acme-app`, scenario `B` runs `make clean-example` plus `make init`; each runs structural checks, then calls `quality_gate` with that command as its `bootstrap` input. Each `bootstrap` ends by committing its result, so `format.check` sees a clean tree. After `setup`, the gate passes `bootstrap` to the composite action `.github/actions/bootstrap`, which runs it, then `git clean -fdX`, then `setup` again, so the bootstrapped project is set up like a fresh one. `make init` deletes `template.yml`, so a generated project keeps `quality_gate`, `pull_request` and `release`.
+
+The lefthook `pre-push` hook runs `make format.check` then `make lint`, the same targets as the `format` and `lint` jobs.
 
 A pushed branch with no pull request runs no CI: checks start when a PR opens (`pull_request` at once, `template` once it is not a draft), and `release` and `template` run again after the merge to `main`.

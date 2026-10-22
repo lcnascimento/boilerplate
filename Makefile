@@ -14,6 +14,21 @@ format:
 	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate
 	@$(MAKE) -C frontend format
 
+.PHONY: format.check
+format.check:
+	@dirty=$$(git status --porcelain); \
+	if [ -n "$$dirty" ]; then \
+		echo "format.check needs a clean tree (commit, or git stash -u):"; echo "$$dirty"; exit 1; \
+	fi
+	@$(MAKE) format
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "make format changed the tree; commit the result:"; \
+		git --no-pager diff --stat; git --no-pager diff; \
+		untracked=$$(git ls-files --others --exclude-standard); \
+		if [ -n "$$untracked" ]; then echo "untracked files:"; echo "$$untracked"; fi; \
+		exit 1; \
+	fi
+
 .PHONY: lint
 lint:
 	@$(MAKE) -C backend lint o11y.lint proto.lint

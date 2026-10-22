@@ -19,7 +19,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Frontend (`frontend/`) | Next.js 16 (App Router, React Compiler), next-intl 4 (pt-BR e en), shadcn + Tailwind 4 + Storybook, Zod, Vitest, Testing Library e Playwright |
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
-| Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit) e commitlint (Conventional Commits no commit-msg) |
+| Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit, `format.check` e lint no pre-push) e commitlint (Conventional Commits no commit-msg) |
 | CI (`.github/workflows/`) | `quality_gate` (jobs `format`, `lint`, `test` e `e2e`, cada um num alvo do Makefile da raiz), chamado pelo `pull_request` (com o `lint.breaking` contra a base do PR) e pelo `release` (push na `main`), sem filtro de caminhos |
 
 ```text
@@ -161,6 +161,7 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 
 ```sh
 make format          # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
+make format.check    # com a árvore limpa: roda o make format e falha se ele mudar algum arquivo
 make lint            # os linters, o typecheck e o build, no backend, no frontend e no OpenAPI
 make lint.breaking   # buf breaking dos .proto contra AGAINST (padrão: origin/main); no CI, contra a base do PR
 make test            # sobe o Postgres e roda os testes de unidade e de componente do backend e do frontend
@@ -169,7 +170,7 @@ make test.e2e        # com o stack de pé: o e2e do Playwright e depois o make o
 make stack.down      # tilt down
 ```
 
-O job `format` falha se o `make format` deixar diff ou arquivo não rastreado, e o job `e2e` é `make stack.up && make test.e2e; make stack.down`.
+O job `format` é o `make format.check`, e o job `e2e` é `make stack.up && make test.e2e; make stack.down`.
 
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
@@ -242,6 +243,8 @@ docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --detai
 ```
 
 O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
+
+O pre-push roda, na raiz, `make format.check` e depois `make lint`, os mesmos alvos dos jobs `format` e `lint` da CI. O `make format.check` recusa uma árvore suja (lista os arquivos; faça commit ou `git stash -u`), roda o `make format` e falha se ele mudar algum arquivo, imprimindo o diff e os arquivos novos: assim um código gerado desatualizado (sqlc, mocks, o11y, proto) ou um arquivo fora do formato não chega ao push. Ele precisa do setup da primeira vez (`pnpm install`, `pnpm -C frontend install` e `make -C backend setup`) e do Docker rodando. Para pular o hook num push, use `LEFTHOOK=0 git push` ou `git push --no-verify`.
 
 ### Explorando a API e depurando
 
