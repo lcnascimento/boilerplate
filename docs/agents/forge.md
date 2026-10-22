@@ -19,18 +19,29 @@ Use Conventional Commits: `<type>(<optional scope>): <imperative summary>`, with
 
 ## CI
 
-CI is defined in `.github/workflows/` and is the deterministic gate: a pull request merges only when it passes. Read a failing run with `gh run view --log-failed`.
+CI is defined in `.github/workflows/` and is the deterministic gate: a pull request merges only when it passes. No workflow has path filters: every run checks the whole repository. Read a failing run with `gh run view --log-failed`.
 
-Five workflows check the repository as it is, each on the paths it covers (plus its own workflow file):
+| Workflow           | Runs on                                                                                           | Checks                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `quality_gate.yml` | `workflow_call` only                                                                              | jobs `format`, `lint`, `test` and `e2e`, in parallel                               |
+| `pull_request.yml` | every pull request, draft or not                                                                  | `quality_gate / <job>` and `lint.breaking`                                         |
+| `release.yml`      | pushes to `main`                                                                                  | `quality_gate / <job>`                                                             |
+| `template.yml`     | pull requests (opened, synchronize, reopened, ready for review; drafts skip) and pushes to `main` | `A / make init`, `A / <job>`, `B / make clean-example + make init` and `B / <job>` |
 
-| Workflow          | Job          | Runs on                                                                    |
-| ----------------- | ------------ | -------------------------------------------------------------------------- |
-| `ci-backend.yml`  | `ci-backend` | pull requests touching `backend/**`                                        |
-| `ci-e2e.yml`      | `e2e`        | pull requests and pushes to `main` touching backend, frontend or Tiltfiles |
-| `ci-frontend.yml` | `frontend`   | pull requests and pushes to `main` touching `frontend/**`                  |
-| `ci-proto.yml`    | `buf`        | pull requests and pushes to `main` touching proto or generated code        |
-| `ci-openapi.yml`  | `vacuum`     | pull requests touching `openapi/**`                                        |
+Every job checks out the repository, runs the composite action `.github/actions/setup` (Go from `backend/go.work` with `make -C backend setup`, Node from `.nvmrc` with `pnpm install` at the root and in `frontend/`, and Playwright Chromium for `test` and `e2e`) and then root Makefile targets only. A check reproduces locally with the target of the same name:
 
-`ci-template.yml` runs on every push to any branch, with no path filter. It checks the template instead: it runs `make init` (scenario `A`) and `make clean-example` plus `make init` (scenario `B`), then calls the five workflows above on each result.
+| Job             | Locally                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| `format`        | `make format`; the job fails if it leaves a diff or an untracked file                                         |
+| `lint`          | `make lint`                                                                                                   |
+| `test`          | `make test` (starts Postgres; needs Docker)                                                                   |
+| `e2e`           | `make stack.up && make test.e2e; make stack.down` (needs Tilt)                                                |
+| `lint.breaking` | `make lint.breaking` (`buf breaking` against `AGAINST`, default `origin/main`; CI passes the fetched PR base) |
 
-On a branch other than `main`, the five workflows check the repository as it is only on a pull request, so a pushed branch gets its full CI only once a PR is open, draft or not.
+`e2e` also installs Tilt, uploads the `tilt-logs` artifact on failure and the `playwright-report` artifact unless cancelled, and always runs `make stack.down`.
+
+Concurrency: `pull_request` cancels the previous run of the same pull request on a new push; `release` never cancels; `template` cancels on pull requests and never on `main`.
+
+`template` checks the template itself and runs only in the `lcnascimento/boilerplate` repository. Scenario `A` runs `make init NAME=acme-app`, scenario `B` runs `make clean-example` plus `make init`; each runs structural checks, then calls `quality_gate` with that command as its `bootstrap` input. The gate runs `bootstrap` after `setup`, then `git clean -fdX`, then `setup` again, so the bootstrapped project is set up like a fresh one. `make init` deletes `template.yml`, so a generated project keeps `quality_gate`, `pull_request` and `release`.
+
+A pushed branch with no pull request runs no CI: checks start when a PR opens (`pull_request` at once, `template` once it is not a draft), and `release` and `template` run again after the merge to `main`.
