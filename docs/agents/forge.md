@@ -14,7 +14,7 @@ Use Conventional Commits: `<type>(<optional scope>): <imperative summary>`, with
 
 - Work on a branch, never on `main`.
 - Open: `gh pr create --base main`, with the title following the commit convention and the body following the Project language.
-- Inspect: `gh pr view`; wait for checks with `gh pr checks --watch`.
+- Inspect: `gh pr view`; wait for checks as in [Waiting for checks](#waiting-for-checks).
 - Merge only after review and green checks.
 
 ## CI
@@ -47,3 +47,13 @@ Concurrency: `pull_request` cancels the previous run of the same pull request on
 The lefthook `pre-push` hook runs `make format.check` then `make lint`, the same targets as the `format` and `lint` jobs.
 
 A pushed branch with no pull request runs no CI: checks start when a PR opens (`pull_request` at once, `template` once it is not a draft), and `release` and `template` run again after the merge to `main`.
+
+### Waiting for checks
+
+After each push, run `gh pr checks <n> --watch --fail-fast` once, in the background, and wait for it to exit. Never wait with a `sleep` loop and never poll its output.
+
+The watch can exit on the previous commit's checks, so when it exits, read the runs of the pushed SHA with `gh run list --commit "$(git rev-parse HEAD)" --json databaseId,workflowName,status,conclusion`:
+
+- Failed: a run has `conclusion` `failure`, or `cancelled` with no newer run of the same workflow. Read it with `gh run view <databaseId> --log-failed`, even while other runs are still in progress.
+- Passed: there is at least one run, and every run is `completed` with `success` or `skipped`.
+- Stale: anything else (no run yet, or runs in progress with none failed). Run the same watch in the background once more; if the result is stale again, stop and report.
