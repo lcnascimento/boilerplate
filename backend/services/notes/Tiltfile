@@ -2,14 +2,14 @@
 
 local_resource(
     'notes-db',
-    labels=['notes'],
+    labels=['tooling'],
     cmd='make db.setup -s',
     resource_deps=['postgres'],
 )
 
 local_resource(
     'notes-topics',
-    labels=['notes'],
+    labels=['tooling'],
     cmd='make kafka.topics -s',
     deps=['Makefile'],
     resource_deps=['schema-registry'],
@@ -17,7 +17,7 @@ local_resource(
 
 local_resource(
     'notes-schemas',
-    labels=['notes'],
+    labels=['tooling'],
     cmd='make schemas.register -s',
     deps=['.env', '../../.env', 'pkg/events/', 'cmd/schemas/', 'bundle/schemas.go'],
     ignore=['./**/*_test.go', 'pkg/events/testdata/', 'pkg/events/eventstest/'],
@@ -26,7 +26,7 @@ local_resource(
 
 local_resource(
     'notes-migrate',
-    labels=['notes'],
+    labels=['tooling'],
     cmd='make db.migrate -s',
     deps=['.env', '../../.env', 'internal/repository/migrations/', 'cmd/migrate/'],
     ignore=['./**/*_test.go'],
@@ -35,7 +35,7 @@ local_resource(
 
 local_resource(
     'notes-api-frontend',
-    labels=['notes'],
+    labels=['backend'],
     cmd='make build.api.frontend -s',
     serve_cmd='make run.api.frontend -s',
     deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod'],
@@ -53,7 +53,7 @@ local_resource(
 
 local_resource(
     'notes-worker-forwarder',
-    labels=['notes'],
+    labels=['backend'],
     cmd='make build.worker.forwarder -s',
     serve_cmd='make run.worker.forwarder -s',
     deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod'],

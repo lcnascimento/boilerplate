@@ -162,7 +162,7 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 ```sh
 make format   # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
 make lint     # os linters, o typecheck e o build que o CI roda, no backend, no frontend e no OpenAPI
-make test     # os testes do backend (sobe o Postgres) e os do frontend
+make test     # sobe a infra (make infra.up) e roda os testes de unidade e de componente do backend e do frontend; o e2e fica no make test.frontend.e2e, com o tilt up no ar
 ```
 
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
