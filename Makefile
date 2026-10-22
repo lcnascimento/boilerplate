@@ -22,7 +22,41 @@ lint:
 			lint --details --no-banner --no-style --no-update-check $$specs; \
 	fi
 
+.PHONY: infra.up
+infra.up:
+	@$(MAKE) -C backend infra.up
+
+.PHONY: infra.down
+infra.down:
+	@$(MAKE) -C backend infra.down
+
 .PHONY: test
-test:
+test: infra.up
 	@$(MAKE) -C backend test
 	@$(MAKE) -C frontend test
+
+.PHONY: test.unit
+test.unit: test.backend.unit test.frontend.unit
+
+.PHONY: test.component
+test.component: test.backend.component test.frontend.component
+
+.PHONY: test.backend.unit
+test.backend.unit:
+	@$(MAKE) -C backend test.unit
+
+.PHONY: test.backend.component
+test.backend.component:
+	@$(MAKE) -C backend test.component
+
+.PHONY: test.frontend.unit
+test.frontend.unit:
+	@$(MAKE) -C frontend test.unit
+
+.PHONY: test.frontend.component
+test.frontend.component:
+	@$(MAKE) -C frontend test.component
+
+.PHONY: test.frontend.e2e
+test.frontend.e2e:
+	@$(MAKE) -C frontend test.e2e

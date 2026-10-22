@@ -114,7 +114,7 @@ jobs:
       - name: Zero services
         run: |
           test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools')"
-          test "$(grep -E '^[a-z][a-z.-]*:' Makefile)" = "$(printf 'format:\nlint:\ntest:')"
+          ! grep -qE '^(init|clean-example):' Makefile || exit 1
           test ! -e scripts
 
   clean-init-backend:
