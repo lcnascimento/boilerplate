@@ -1,4 +1,3 @@
-AGAINST ?= origin/main
 TILT_LOG ?= /tmp/tilt-up.log
 TILT_MANUAL_INIT_TRIGGER_MODES := [2, 3]
 
@@ -28,7 +27,7 @@ lint:
 
 .PHONY: lint.breaking
 lint.breaking:
-	@$(MAKE) -C backend proto.breaking AGAINST=$(AGAINST)
+	@$(MAKE) -C backend proto.breaking
 
 .PHONY: test
 test:

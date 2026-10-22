@@ -25,7 +25,7 @@ export PATH := $(GOBIN):$(PATH)
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
 BUF_DIRS := $(patsubst %/buf.yaml,%,$(shell find services -name buf.yaml -not -path '*/node_modules/*'))
-AGAINST ?= main
+AGAINST ?= origin/main
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
