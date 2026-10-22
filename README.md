@@ -20,7 +20,7 @@ Ele traz um serviço de exemplo, o `notes`, que atravessa todas as camadas: uma 
 | Monorepo do frontend | pnpm + Turborepo: app `apps/web`, pacotes `api`, `i18n`, `types`, `ui` e `utils`, configs compartilhadas em `tooling/{eslint,typescript}` |
 | Contrato (`openapi/`) | Uma spec OpenAPI 3.1 por serviço, servida pelo [Scalar](https://scalar.com/) e validada pelo [vacuum](https://quobix.com/vacuum/) |
 | Tooling raiz | [Tilt](https://tilt.dev/), lefthook (lint no pre-commit) e commitlint (Conventional Commits no commit-msg) |
-| CI (`.github/workflows/`) | `ci-backend`, `ci-frontend`, `ci-e2e`, `ci-openapi` e `ci-proto`, cada um disparado pelos caminhos da sua área |
+| CI (`.github/workflows/`) | `quality_gate` (jobs `format`, `lint`, `test` e `e2e`, cada um num alvo do Makefile da raiz), chamado pelo `pull_request` (com o `lint.breaking` contra a base do PR) e pelo `release` (push na `main`), sem filtro de caminhos |
 
 ```text
 backend/
@@ -79,7 +79,7 @@ E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`
 
 <!-- example:end -->
 
-Para um stack leve, sem observabilidade, Redpanda Console, Scalar nem `web-e2e-ui`, suba o modo mínimo:
+Para um stack leve, sem observabilidade, Redpanda Console, Scalar nem `playwright`, suba o modo mínimo:
 
 ```sh
 TILT_STACK=minimal tilt up
@@ -151,19 +151,25 @@ make migration.new name=add_tags service=<name>   # com mais de um
 
 A API abre o pool no boot e pinga o banco: com o banco inacessível, ela falha em até 5s com um erro dizendo o host e a causa. As queries aparecem nos traces do Grafana.
 
-Cada repositório escreve suas queries em SQL num `queries.sql` ao lado dele, e o [sqlc](https://sqlc.dev/) gera o código Go tipado num pacote `internal/db` do repositório (commitado). O `sqlc.yaml` na raiz do serviço tem um bloco `sql:` por repositório, com o `schema` apontando para as migrations. Depois de mudar uma query ou uma migration, rode `make sqlc` em `backend/`; o `ci-backend` falha se o código gerado estiver desatualizado.
+Cada repositório escreve suas queries em SQL num `queries.sql` ao lado dele, e o [sqlc](https://sqlc.dev/) gera o código Go tipado num pacote `internal/db` do repositório (commitado). O `sqlc.yaml` na raiz do serviço tem um bloco `sql:` por repositório, com o `schema` apontando para as migrations. Depois de mudar uma query ou uma migration, rode `make sqlc` em `backend/`; o `quality_gate / format` falha se o código gerado estiver desatualizado.
 
 Se o banco tiver uma migration aplicada que a branch atual não conhece (por exemplo, depois de trocar de branch), o `<name>-migrate` e o `make db.migrate` falham com `UNKNOWN_APPLIED_MIGRATION`, pedindo para zerar o banco: rode `make db.reset`. Para zerar todos os bancos, apague o volume: `docker compose down -v` em `backend/`.
 
 ### Lint e testes
 
-**Tudo** (na raiz; cobre o que o CI cobre, menos o e2e):
+**Tudo** (na raiz; cada job do CI roda o alvo de mesmo nome, então uma falha se reproduz com o mesmo comando):
 
 ```sh
-make format   # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
-make lint     # os linters, o typecheck e o build que o CI roda, no backend, no frontend e no OpenAPI
-make test     # sobe o Postgres e roda os testes de unidade e de componente do backend e do frontend; o e2e fica no make test.e2e, com o stack de pé (make stack.up; make stack.down o derruba)
+make format          # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
+make lint            # os linters, o typecheck e o build, no backend, no frontend e no OpenAPI
+make lint.breaking   # buf breaking dos .proto contra AGAINST (padrão: origin/main); no CI, contra a base do PR
+make test            # sobe o Postgres e roda os testes de unidade e de componente do backend e do frontend
+make stack.up        # sobe o stack completo do Tilt em background (log em TILT_LOG) e espera os recursos que iniciam sozinhos
+make test.e2e        # com o stack de pé: o e2e do Playwright e depois o make o11y.check-live
+make stack.down      # tilt down
 ```
+
+O job `format` falha se o `make format` deixar diff ou arquivo não rastreado, e o job `e2e` é `make stack.up && make test.e2e; make stack.down`.
 
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
@@ -174,11 +180,11 @@ make test             # go test -race com cobertura: unit + componente (sobe o P
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
 make test.component   # só os de componente (-run Component; sobe o Postgres; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
-make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
+make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o quality_gate / format falha se estiverem desatualizados)
 make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki; sloth validate, promtool e pint nos SLOs (ferramentas instaladas pelo make setup)
 make o11y.check-live  # confere o gerado contra o stack completo no ar (tilt up, não o minimal): métricas do catálogo, teto de séries, regras, dashboards e datasources
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
-make proto.generate   # regenera o Go dos .proto (commitado; o ci-proto falha se estiver desatualizado)
+make proto.generate   # regenera o Go dos .proto (commitado; o quality_gate / format falha se estiver desatualizado)
 make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
 make mocks            # regenera internal/mocks/mocks.go a partir de cada contracts.go
 make tidy             # go mod tidy
@@ -215,7 +221,7 @@ O e2e depende do Tilt: o `pnpm test:e2e` roda contra o stack já de pé (`tilt u
 
 O e2e divide os dados com o seu dev: cada teste cria os próprios registros com um marcador único `e2e-` (a fixture `marker`, em `e2e/fixtures.ts`), só faz asserções sobre eles e, no fim do teste, mesmo em falha, a fixture apaga pela API de cada serviço os registros com esses marcadores.
 
-No CI, o `ci-e2e` faz o mesmo caminho: sobe o stack completo (`tilt up`, com observabilidade e telemetria de verdade; o `minimal` é só para desenvolvimento) em background, espera ficarem prontos todos os recursos que iniciam sozinhos, roda o `pnpm test:e2e`, depois o `make o11y.check-live`, e sempre faz `tilt down`. Em falha, os logs do Tilt vão para o log do passo e para o artefato `tilt-logs`.
+No CI, o job `quality_gate / e2e` faz o mesmo caminho com os alvos da raiz, e você o reproduz localmente com `make stack.up && make test.e2e; make stack.down`. O `make stack.up` sobe o stack completo (`tilt up`, com observabilidade e telemetria de verdade; o `minimal` é só para desenvolvimento) em background e só retorna quando ficam prontos todos os recursos que iniciam sozinhos (os manuais, como os `test-*` do grupo `testing`, ficam de fora); o `make test.e2e` roda o `pnpm test:e2e` e depois o `make o11y.check-live`; o job sempre termina com `make stack.down`. Em falha, os logs do Tilt vão para o log do passo e para o artefato `tilt-logs`, e o relatório do Playwright vai para o artefato `playwright-report`.
 
 O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/live_test.go`), ligado por `O11Y_LIVE_PROMETHEUS_URL` e pulado sem ela; o alvo do Make aponta para as portas do Tilt (`O11Y_LIVE_PROMETHEUS_URL`, `O11Y_LIVE_LOKI_URL` e `O11Y_LIVE_GRAFANA_URL`, com o usuário `admin` na URL do Grafana). Ele repete as consultas por até 4 minutos: um processo recém-iniciado leva até uns 3 minutos para chegar a uma recording rule (o primeiro export, a próxima avaliação e o `rule_query_offset`), e falha se faltar:
 
@@ -227,7 +233,7 @@ O `make o11y.check-live` é um teste Go do `o11ygen` (`backend/tools/o11ygen/liv
 
 O que conferir vem do catálogo e dos arquivos gerados, então uma métrica, um dashboard ou um serviço novo entram na checagem sem mexer no teste. Uma métrica que vem do SDK de um processo (`OTLP`) precisa declarar o `EmittedBy`, e um tipo de artefato novo precisa dizer quem o carrega (`LoadedBy`): o `make test` falha sem isso.
 
-Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, contra o mesmo stack.
+Para depurar o e2e, o recurso `playwright` do Tilt abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, contra o mesmo stack.
 
 **OpenAPI** (na raiz; o `make lint` já roda):
 
@@ -299,7 +305,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
    O `turbo.json` já repassa `*_API_URL` para as tasks.
 
 10. Telas: as rotas em `frontend/apps/web/app/(dashboard)/<name>/`, as funções `"use server"` em `frontend/apps/web/actions/<name>.ts`, as mensagens em `frontend/apps/web/shared/_messages/<name>.json` (pt-BR e en no mesmo arquivo) registradas em `shared/_messages/index.ts`, e o item do menu em `navRoutes` (`shared/navigation.ts`).
-11. e2e: em `frontend/apps/web/e2e/stack.ts`, declare a `<NAME>_URL` (padrão, a porta do serviço) e acrescente o `/health` dela em `stackProbes`; se o e2e criar dados no serviço, acrescente em `e2e/fixtures.ts` uma limpeza em `cleanups` que apague pela API os registros com os marcadores. Em `frontend/Tiltfile`, acrescente o recurso do serviço às `resource_deps` do `web-e2e-ui`. O `ci-e2e` não muda: ele sobe o stack do Tilt sem citar recurso nenhum.
+11. e2e: em `frontend/apps/web/e2e/stack.ts`, declare a `<NAME>_URL` (padrão, a porta do serviço) e acrescente o `/health` dela em `stackProbes`; se o e2e criar dados no serviço, acrescente em `e2e/fixtures.ts` uma limpeza em `cleanups` que apague pela API os registros com os marcadores. Acrescente o recurso do serviço às `resource_deps` do `playwright` (em `frontend/Tiltfile`) e do `test-frontend-e2e` (no `Tiltfile` da raiz). O CI não muda: o `make stack.up` sobe o stack do Tilt sem citar recurso nenhum.
 
 Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para adicionar um serviço.
 
@@ -321,10 +327,11 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
    - `NAME` precisa casar com `^[a-z][a-z0-9-]*$` (ex.: `my-app`). Um nome inválido é rejeitado antes de qualquer arquivo ser tocado.
    - `boilerplate` vira `<name>` em todo arquivo versionado (módulos Go, escopo `@<name>/*`, rede docker, dashboards, `service.namespace`, cookie de idioma, servidor MCP) e `Boilerplate` vira o título derivado (`my-app` → `My App`).
    - Sai do `CLAUDE.md` a seção "Agent skills" e sai a pasta `docs/agents/` inteira.
-   - O script exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `init`, o workflow `ci-template` e esta seção do README.
+   - O script exige a árvore git limpa e o pnpm/Node instalados, e não faz commit. Depois de trocar o nome, ele se apaga junto com o alvo `init`, o workflow `template` e esta seção do README, roda o `pnpm install` (na raiz e em `frontend/`) e o `pnpm -C frontend format` (o nome novo muda o comprimento de algumas linhas, e o prettier quebra ou junta imports de novo), então a árvore já sai formatada.
    - Se algo der errado, `git checkout . && git clean -fd` volta ao estado anterior.
+   - Os `.env` não são versionados, então um `backend/.env` criado antes do `make init` (por um `make -C backend setup`, por exemplo) continua com o nome do template. Rode o `make init` antes do setup ou apague o `backend/.env` e rode `make -C backend setup` de novo.
 
-3. Revise o diff e siga os próximos passos que o script imprime: `pnpm install` (na raiz e em `frontend/`), `pnpm -C frontend format` (o nome novo muda o comprimento de algumas linhas, e o prettier quebra ou junta imports de novo), o setup do ai-foundation e o commit.
+3. Revise o diff e siga os próximos passos que o script imprime: o setup do ai-foundation e o commit.
 
 ## Removendo o exemplo
 
@@ -336,7 +343,7 @@ make clean-example
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
 - Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
-- Exige a árvore git limpa, não faz commit nem instala nada e, depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
-- Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso os próximos passos que o script imprime são `pnpm -C frontend install && pnpm -C frontend format` e o commit.
+- Exige a árvore git limpa e o pnpm/Node instalados, e não faz commit. Depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
+- Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso o script termina com `pnpm install` (na raiz e em `frontend/`) e `pnpm -C frontend format`; falta só revisar o diff e commitar.
 
 O estado com zero serviços também é válido e fica verde: o `go.work` fica só com `quality` (`make lint` e `make test` passam, sem migrations para o squawk), o `tilt up` sobe o Postgres, a observabilidade e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/`, `/profile/preferences` e o `not-found`, o e2e roda só o teste do shell e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`).
