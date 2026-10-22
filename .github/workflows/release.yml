@@ -1,0 +1,12 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality_gate:
+    uses: ./.github/workflows/quality_gate.yml

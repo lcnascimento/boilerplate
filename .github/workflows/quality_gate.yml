@@ -1,0 +1,129 @@
+name: quality_gate
+
+on:
+  workflow_call:
+    inputs:
+      bootstrap:
+        description: Shell command run at the repository root right after checkout.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  BOOTSTRAP: ${{ inputs.bootstrap }}
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Bootstrap
+        if: inputs.bootstrap
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: ./.github/actions/setup
+
+      - name: make format
+        run: |
+          git add -A
+          make format
+          git diff --exit-code
+          untracked=$(git ls-files --others --exclude-standard)
+          if [ -n "$untracked" ]; then echo "make format created untracked files:"; echo "$untracked"; exit 1; fi
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Bootstrap
+        if: inputs.bootstrap
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: ./.github/actions/setup
+
+      - name: make lint
+        run: make lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Bootstrap
+        if: inputs.bootstrap
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: ./.github/actions/setup
+        with:
+          playwright: shell
+
+      - name: make test
+        run: make test
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      TILT_VERSION: 0.37.8
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Bootstrap
+        if: inputs.bootstrap
+        run: bash -euo pipefail -c "$BOOTSTRAP"
+
+      - uses: ./.github/actions/setup
+        with:
+          playwright: full
+
+      - name: Restore the next dev cache
+        uses: actions/cache@v6
+        with:
+          path: frontend/apps/web/.next/dev/cache
+          key: next-dev-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: next-dev-
+
+      - name: Install Tilt
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/tilt-dev/tilt/releases/download/v${TILT_VERSION}/tilt.${TILT_VERSION}.linux.x86_64.tar.gz" |
+            tar -xz -C "$HOME/.local/bin" tilt
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/tilt" version
+
+      - name: make stack.up
+        run: make stack.up TILT_LOG="$RUNNER_TEMP/tilt-up.log"
+
+      - name: make test.e2e
+        run: make test.e2e
+
+      - name: Tilt logs
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/tilt-logs"
+          cp "$RUNNER_TEMP/tilt-up.log" "$RUNNER_TEMP/tilt-logs/" || true
+          tilt get uiresource > "$RUNNER_TEMP/tilt-logs/uiresources.txt" 2>&1 || true
+          tilt logs 2>&1 | tee "$RUNNER_TEMP/tilt-logs/tilt.log" || true
+
+      - name: Upload Tilt logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tilt-logs
+          path: ${{ runner.temp }}/tilt-logs/
+          retention-days: 7
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: frontend/apps/web/playwright-report/
+          retention-days: 7
+
+      - name: make stack.down
+        if: always()
+        run: make stack.down
