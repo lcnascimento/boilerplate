@@ -85,14 +85,15 @@ if leftovers=$(git grep -nE "$marker_re" -- ":!$self"); then
 fi
 
 rm -f "$self"
-grep -q '^[a-z][a-z-]*:' Makefile || rm -f Makefile
 rmdir scripts 2>/dev/null || true
+
+pnpm install
+pnpm -C frontend install
+pnpm -C frontend format
 
 cat <<'EOF'
 
 Removed the notes example. Next steps:
   1. Review the diff: git status && git diff
-  2. Install the frontend dependencies and format the files the fences left
-     behind: pnpm -C frontend install && pnpm -C frontend format
-  3. Commit: git add -A && git commit -m "chore: remove the notes example"
+  2. Commit: git add -A && git commit -m "chore: remove the notes example"
 EOF

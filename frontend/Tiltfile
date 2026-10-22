@@ -4,7 +4,7 @@ local_resource(
     'frontend-deps',
     cmd='pnpm install',
     deps=['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'],
-    labels=['frontend'],
+    labels=['tooling'],
 )
 
 MINIMAL_STACK = os.getenv('TILT_STACK', '') == 'minimal'
@@ -62,7 +62,7 @@ PLAYWRIGHT_UI_PORT = 9330
 
 if not MINIMAL_STACK:
     local_resource(
-        'web-e2e-ui',
+        'playwright',
         serve_cmd='pnpm --filter @boilerplate/web exec playwright test --ui-port={} --ui-host=127.0.0.1'.format(PLAYWRIGHT_UI_PORT),
         resource_deps=[
             'web',
@@ -70,12 +70,10 @@ if not MINIMAL_STACK:
             'notes-api-frontend',
             # example:end
         ],
-        auto_init=False,
-        trigger_mode=TRIGGER_MODE_MANUAL,
         readiness_probe=probe(
             period_secs=5,
             tcp_socket=tcp_socket_action(port=PLAYWRIGHT_UI_PORT),
         ),
         links=[link('http://127.0.0.1:{}'.format(PLAYWRIGHT_UI_PORT), 'Playwright UI')],
-        labels=['frontend'],
+        labels=['testing'],
     )

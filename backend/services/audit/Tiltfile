@@ -2,14 +2,14 @@
 
 local_resource(
     'audit-db',
-    labels=['audit'],
+    labels=['tooling'],
     cmd='make db.setup -s',
     resource_deps=['postgres'],
 )
 
 local_resource(
     'audit-migrate',
-    labels=['audit'],
+    labels=['tooling'],
     cmd='make db.migrate -s',
     deps=['.env', '../../.env', 'internal/repository/migrations/', 'cmd/migrate/'],
     ignore=['./**/*_test.go'],
@@ -18,7 +18,7 @@ local_resource(
 
 local_resource(
     'audit-topics',
-    labels=['audit'],
+    labels=['tooling'],
     cmd='make kafka.topics -s',
     deps=['Makefile'],
     resource_deps=['schema-registry'],
@@ -26,7 +26,7 @@ local_resource(
 
 local_resource(
     'audit-consumer',
-    labels=['audit'],
+    labels=['backend'],
     cmd='make build.consumer -s',
     serve_cmd='make run.consumer -s',
     deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'go.mod', '../notes/pkg/events/'],

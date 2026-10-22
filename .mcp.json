@@ -10,6 +10,14 @@
     "notion-boilerplate": {
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
+    },
+    "grafana": {
+      "command": "uvx",
+      "args": ["mcp-grafana"],
+      "env": {
+        "GRAFANA_URL": "http://localhost:3010",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+      }
     }
   }
 }

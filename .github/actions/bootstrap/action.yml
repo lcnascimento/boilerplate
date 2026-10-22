@@ -1,0 +1,26 @@
+name: bootstrap
+description: Run a command that transforms the checked-out project, then set the result up from a clean checkout of its tree.
+
+inputs:
+  command:
+    description: Shell command run at the repository root.
+    required: true
+  playwright:
+    description: "Playwright Chromium to install, passed to setup: none, shell or full."
+    default: none
+
+runs:
+  using: composite
+  steps:
+    - name: Bootstrap
+      shell: bash
+      env:
+        COMMAND: ${{ inputs.command }}
+      run: |
+        bash -euo pipefail -c "$COMMAND"
+        git clean -fdX
+
+    - name: Set up the bootstrapped project
+      uses: ./.github/actions/setup
+      with:
+        playwright: ${{ inputs.playwright }}

@@ -10,20 +10,20 @@ if not minimal:
 # Without wait=True, Tilt marks a compose resource ready once its container starts, ignoring its healthcheck.
 docker_compose(compose_files, wait=True, profiles=[] if minimal else ['console'])
 
-dc_resource('postgres', labels=['Database'])
+dc_resource('postgres', labels=['infrastructure'])
 
 local_resource(
     'postgres-extensions',
-    labels=['Database'],
+    labels=['tooling'],
     cmd='docker compose run --rm --no-deps postgres-extensions',
     resource_deps=['postgres'],
 )
 
-dc_resource('kafka', labels=['Messaging'])
+dc_resource('kafka', labels=['infrastructure'])
 
 dc_resource(
     'schema-registry',
-    labels=['Messaging'],
+    labels=['infrastructure'],
     resource_deps=['kafka'],
     links=[link('http://localhost:8081/subjects', 'API')],
 )
@@ -31,14 +31,14 @@ dc_resource(
 if not minimal:
     dc_resource(
         'kafka-console',
-        labels=['Messaging'],
+        labels=['infrastructure'],
         resource_deps=['schema-registry'],
         links=[link('http://localhost:8085', 'UI')],
     )
 
     dc_resource(
         'alloy',
-        labels=['Monitoring'],
+        labels=['monitoring'],
         resource_deps=['kafka', 'prometheus', 'loki', 'tempo', 'pyroscope'],
         links=[
             link('http://localhost:12345', 'UI'),
@@ -49,33 +49,40 @@ if not minimal:
 
     dc_resource(
         'prometheus',
-        labels=['Monitoring'],
+        labels=['monitoring'],
         links=[link('http://localhost:9090', 'UI')],
     )
 
     dc_resource(
         'loki',
-        labels=['Monitoring'],
+        labels=['monitoring'],
         links=[link('http://localhost:3100', 'API')],
     )
 
     dc_resource(
         'tempo',
-        labels=['Monitoring'],
+        labels=['monitoring'],
         links=[link('http://localhost:3200', 'API')],
     )
 
     dc_resource(
         'pyroscope',
-        labels=['Monitoring'],
+        labels=['monitoring'],
         links=[link('http://localhost:4040', 'UI / API')],
     )
 
     dc_resource(
         'grafana',
-        labels=['Monitoring'],
+        labels=['monitoring'],
         resource_deps=['alloy', 'prometheus', 'loki', 'tempo', 'pyroscope'],
         links=[link('http://localhost:3010', 'UI')],
+    )
+
+    local_resource(
+        'grafana-token',
+        labels=['monitoring'],
+        cmd='make -s grafana.token',
+        resource_deps=['grafana'],
     )
 
 include('./services/iam/Tiltfile')

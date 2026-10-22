@@ -17,7 +17,7 @@ PROMTOOL_VERSION := v3.15.0
 DASHBOARD_LINTER_VERSION := v0.3.0
 PINT_VERSION := v0.89.3
 LOKITOOL_VERSION := v3.7.8
-ALLOY_IMAGE := $(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
+ALLOY_IMAGE :=$(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 export PATH := $(GOBIN):$(PATH)
@@ -25,7 +25,7 @@ export PATH := $(GOBIN):$(PATH)
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
 BUF_DIRS := $(patsubst %/buf.yaml,%,$(shell find services -name buf.yaml -not -path '*/node_modules/*'))
-AGAINST ?= main
+AGAINST ?= origin/main
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
@@ -62,6 +62,17 @@ define install_release
 	fi
 endef
 
+define go_install
+	@have=$$(go version -m "$(GOBIN)/$(notdir $(1))" 2>/dev/null | awk -v build="$(3)" ' \
+		BEGIN { split(build, settings, " "); for (i in settings) want[settings[i]] = 1 } \
+		NR == 1 { go = $$2 } $$1 == "mod" { mod = $$3 } $$1 == "build" && $$2 in want { env = env " " $$2 } \
+		END { print go, mod env }'); \
+	if [ "$$have" != "$$(go env GOVERSION) $(strip $(2) $(3))" ]; then \
+		echo "==> Installing $(notdir $(1)) $(2) into $(GOBIN)"; \
+		$(3) go install $(1)@$(2); \
+	fi
+endef
+
 go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
@@ -79,18 +90,17 @@ env:
 
 .PHONY: setup
 setup: env
-	@echo "==> Installing Go tooling into $(GOBIN)"
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	@go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
-	@go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
-	@go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
-	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+	$(call go_install,github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+	$(call go_install,go.uber.org/mock/mockgen,$(MOCKGEN_VERSION))
+	$(call go_install,golang.org/x/vuln/cmd/govulncheck,$(GOVULNCHECK_VERSION))
+	$(call go_install,github.com/pressly/goose/v3/cmd/goose,$(GOOSE_VERSION))
+	$(call go_install,github.com/sqlc-dev/sqlc/cmd/sqlc,$(SQLC_VERSION),CGO_ENABLED=1)
 	@$(MAKE) -s squawk proto.tools o11y.tools
 
 .PHONY: proto.tools
 proto.tools:
-	@go install github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
-	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	$(call go_install,github.com/bufbuild/buf/cmd/buf,$(BUF_VERSION))
+	$(call go_install,google.golang.org/protobuf/cmd/protoc-gen-go,$(PROTOC_GEN_GO_VERSION))
 
 .PHONY: squawk
 squawk:
@@ -132,6 +142,10 @@ lint:
 lint.fix:
 	$(call in_modules,lint.fix,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint run --fix --timeout 10m ./...; fi)
 
+.PHONY: format
+format:
+	$(call in_modules,format,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint fmt ./...; fi)
+
 .PHONY: lint.cache.clean
 lint.cache.clean:
 	@$(GOBIN)/golangci-lint cache clean
@@ -148,8 +162,12 @@ mocks:
 			$(GOBIN)/mockgen -source "$$src" -destination "$$dir/internal/mocks/mocks.go" -package mocks; \
 		done)
 
+.PHONY: postgres
+postgres:
+	@docker compose up -d --wait postgres
+
 .PHONY: test
-test:
+test: postgres
 	$(call in_modules,test,$(call go_test,3m,-coverprofile=coverage.out))
 
 .PHONY: test.unit
@@ -157,7 +175,7 @@ test.unit:
 	$(call in_modules,test.unit,$(call go_test,30s,-short))
 
 .PHONY: test.component
-test.component:
+test.component: postgres
 	$(call in_modules,test.component,$(call go_test,3m,-run Component))
 
 .PHONY: sqlc
@@ -220,6 +238,10 @@ o11y.check-live:
 		O11Y_LIVE_LOKI_URL="$${O11Y_LIVE_LOKI_URL:-http://localhost:3100}" \
 		O11Y_LIVE_GRAFANA_URL="$${O11Y_LIVE_GRAFANA_URL:-http://admin:admin@localhost:3010}" \
 		go test -count=1 -timeout 6m -v -run '^TestComponentStack_ServesGeneratedArtifacts$$' ./o11ygen
+
+.PHONY: grafana.token
+grafana.token:
+	@bash scripts/grafana-token.sh
 
 .PHONY: proto.lint
 proto.lint:

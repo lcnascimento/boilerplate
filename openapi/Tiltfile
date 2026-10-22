@@ -8,6 +8,6 @@ if specs and not minimal:
 
     dc_resource(
         'scalar',
-        labels=['openapi'],
+        labels=['documentation'],
         links=[link('http://localhost:8090', 'API reference')],
     )

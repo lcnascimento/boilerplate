@@ -14,3 +14,11 @@ pre-commit:
       root: "frontend/"
       glob: "frontend/**/*.{ts,tsx,js,jsx,mjs,cjs}"
       run: pnpm lint
+
+pre-push:
+  piped: true
+  jobs:
+    - name: format-check
+      run: make format.check
+    - name: lint
+      run: make lint

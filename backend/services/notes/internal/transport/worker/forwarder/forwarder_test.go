@@ -251,22 +251,41 @@ func TestComponentForwarder_MessagingMetricsOmitTheDeliveryAttempt(t *testing.T)
 	env.startForwarder(t)
 	env.subscribe(t, note.ID).next(t)
 
-	recorded := messagingMetricAttributes(t)
-
-	for _, name := range []string{
+	names := []string{
 		"messaging.client.sent.messages",
 		"messaging.client.operation.duration",
 		"messaging.process.duration",
-	} {
-		require.NotEmpty(t, recorded[name], name)
+	}
+	recorded := messagingMetricAttributes(t, names...)
 
+	for _, name := range names {
 		for _, set := range recorded[name] {
 			require.False(t, set.HasValue("messaging.delivery.attempt"), "%s carries %v", name, set.ToSlice())
 		}
 	}
 }
 
-func messagingMetricAttributes(t *testing.T) map[string][]attribute.Set {
+func messagingMetricAttributes(t *testing.T, names ...string) map[string][]attribute.Set {
+	t.Helper()
+
+	var recorded map[string][]attribute.Set
+
+	require.Eventually(t, func() bool {
+		recorded = collectMetricAttributes(t)
+
+		for _, name := range names {
+			if len(recorded[name]) == 0 {
+				return false
+			}
+		}
+
+		return true
+	}, waitFor, 50*time.Millisecond, "no data points for %v", names)
+
+	return recorded
+}
+
+func collectMetricAttributes(t *testing.T) map[string][]attribute.Set {
 	t.Helper()
 
 	var collected metricdata.ResourceMetrics
@@ -294,6 +313,8 @@ func messagingMetricAttributes(t *testing.T) map[string][]attribute.Set {
 
 func histogram(t *testing.T, name string) (string, []float64) {
 	t.Helper()
+
+	messagingMetricAttributes(t, name)
 
 	var collected metricdata.ResourceMetrics
 	require.NoError(t, metrics.Collect(t.Context(), &collected))

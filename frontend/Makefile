@@ -1,4 +1,4 @@
-.PHONY: env setup lint lint.fix format format.check typecheck test test.e2e build
+.PHONY: env setup lint lint.fix format format.check typecheck test test.unit test.component test.e2e build
 
 env:
 	@example=apps/web/.env.example; env_file=apps/web/.env.local; \
@@ -30,7 +30,16 @@ typecheck:
 test:
 	pnpm turbo run test
 
+test.unit:
+	pnpm turbo run test --filter='!./packages/ui'
+
+test.component:
+	pnpm turbo run test --filter=./packages/ui
+
 test.e2e:
+	set -a && . apps/web/.env.local && set +a && \
+		pnpm --filter @boilerplate/web iam:check-schema && \
+		pnpm --filter @boilerplate/web exec vitest run shared/auth/actor-token.test.ts
 	pnpm turbo run test:e2e
 
 build:
