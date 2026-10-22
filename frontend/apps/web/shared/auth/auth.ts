@@ -6,6 +6,7 @@ import { Pool } from "pg";
 
 import { logger } from "@/shared/logging";
 
+import { listMembersOldestFirst } from "./actor";
 import { parseIamEnv, type IamEnv } from "./env";
 import { loginFailureHook } from "./login-failures";
 import { memberRoleSchema } from "./members";
@@ -89,22 +90,18 @@ function createIam(env: IamEnv) {
       },
       session: {
         create: {
-          before: async (session, context) => {
-            const adapter = context?.context.adapter;
-            if (adapter === undefined) return;
-
-            const [oldest] = await adapter.findMany<{ organizationId: string }>(
-              {
-                model: "member",
-                where: [{ field: "userId", value: session.userId }],
-                sortBy: { field: "createdAt", direction: "asc" },
-                limit: 1,
-              }
+          before: async (session) => {
+            const [oldest] = await listMembersOldestFirst(
+              database,
+              session.userId
             );
             if (oldest === undefined) return;
 
             return {
-              data: { ...session, activeOrganizationId: oldest.organizationId },
+              data: {
+                ...session,
+                activeOrganizationId: oldest.organization.id,
+              },
             };
           },
         },

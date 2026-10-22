@@ -6,7 +6,7 @@ export type CreateOrganization = (body: {
   name: string;
   slug: string;
   userId: string;
-}) => Promise<{ id: string }>;
+}) => Promise<unknown>;
 
 async function pendingOrganizationName(
   db: Pool | PoolClient,
@@ -48,15 +48,11 @@ export async function ensureSignUpOrganization(
     const name = await pendingOrganizationName(client, userId);
     if (name !== null) {
       if (!(await hasMembership(client, userId))) {
-        const { id } = await createOrganization({
+        await createOrganization({
           name,
           slug: organizationSlug(name),
           userId,
         });
-        await client.query(
-          `UPDATE session SET "activeOrganizationId" = $2 WHERE "userId" = $1 AND "activeOrganizationId" IS NULL`,
-          [userId, id]
-        );
       }
       await client.query(
         `UPDATE "user" SET "pendingOrganizationName" = NULL WHERE id = $1`,
