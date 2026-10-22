@@ -1,8 +1,12 @@
 import { z } from "zod";
 
+export const userIdSchema = z.uuid().brand<"UserId">();
+
+export const organizationIdSchema = z.uuid().brand<"OrganizationId">();
+
 const actorIdsSchema = z.object({
-  userId: z.uuid().brand<"UserId">(),
-  organizationId: z.uuid().brand<"OrganizationId">(),
+  userId: userIdSchema,
+  organizationId: organizationIdSchema,
 });
 
 export type ActorIds = z.infer<typeof actorIdsSchema>;
