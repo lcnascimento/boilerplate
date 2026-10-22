@@ -23,5 +23,17 @@
       "mcp__linear__list_issue_labels",
       "mcp__linear__list_issues"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[ -n \"$ZSH_VERSION\" ] && setopt nonomatch noequals' >> \"$CLAUDE_ENV_FILE\""
+          }
+        ]
+      }
+    ]
   }
 }
