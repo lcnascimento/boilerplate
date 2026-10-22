@@ -42,6 +42,10 @@ _Avoid_: Leitor, read-only, member
 O User agindo numa Organization, com a Role que tem nela, numa dada requisição.
 _Avoid_: Principal, caller, current user
 
+**Feature Flag**:
+Um interruptor que liga ou desliga uma funcionalidade para um User ou uma Organization, sem novo deploy.
+_Avoid_: Toggle, feature switch
+
 ### Notes
 
 **Note**:
