@@ -21,10 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: backend/go.work
-          cache-dependency-path: backend/**/go.sum
+      - uses: ./.github/actions/setup
 
       - name: make init
         run: make init NAME=acme-app
@@ -65,10 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: backend/go.work
-          cache-dependency-path: backend/**/go.sum
+      - uses: ./.github/actions/setup
 
       - name: make clean-example
         run: make clean-example
