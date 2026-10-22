@@ -62,8 +62,7 @@ test.frontend.e2e:
 	@$(MAKE) -C frontend test.e2e
 
 .PHONY: test.e2e
-test.e2e:
-	@$(MAKE) -C frontend test.e2e
+test.e2e: test.frontend.e2e
 	@$(MAKE) -C backend o11y.check-live
 
 .PHONY: stack.up
