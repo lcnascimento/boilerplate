@@ -9,7 +9,7 @@ import {
   seedOrganizations,
   type SeedOrganization,
 } from "../scripts/iam-seed/users";
-import { parseActorIds } from "../shared/auth/actor-ids";
+import { findActor } from "../shared/auth/actor";
 import { mintActorToken } from "../shared/auth/actor-token";
 import { getIam } from "../shared/auth/auth";
 
@@ -27,7 +27,8 @@ type Cleanup = (args: CleanupArgs) => Promise<void>;
 
 // example:begin
 async function ownerToken({ slug, owner }: SeedOrganization): Promise<string> {
-  const context = await getIam().auth.$context;
+  const { auth, database } = getIam();
+  const context = await auth.$context;
   const user = await context.internalAdapter.findUserByEmail(owner.email);
   const organization = await context.adapter.findOne<{ id: string }>({
     model: "organization",
@@ -39,7 +40,10 @@ async function ownerToken({ slug, owner }: SeedOrganization): Promise<string> {
     );
   }
   return mintActorToken(
-    parseActorIds({ userId: user.user.id, organizationId: organization.id })
+    await findActor(database, {
+      userId: user.user.id,
+      organizationId: organization.id,
+    })
   );
 }
 

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-import { parseActorIds } from "@/shared/auth/actor-ids";
+import { findActor, listMembersOldestFirst } from "@/shared/auth/actor";
 import { mintActorToken } from "@/shared/auth/actor-token";
 import { getIam } from "@/shared/auth/auth";
 
@@ -40,16 +40,11 @@ async function findOrganizationId(
     return organization.id;
   }
 
-  const [oldest] = await adapter.findMany<{ organizationId: string }>({
-    model: "member",
-    where: [{ field: "userId", value: userId }],
-    sortBy: { field: "createdAt", direction: "asc" },
-    limit: 1,
-  });
+  const [oldest] = await listMembersOldestFirst(database, userId);
   if (oldest === undefined) {
     throw new Error(`${String(values.as)} is not a member of any organization`);
   }
-  return oldest.organizationId;
+  return oldest.organization.id;
 }
 
 try {
@@ -57,13 +52,13 @@ try {
   const found = await context.internalAdapter.findUserByEmail(values.as);
   if (found === null) throw new Error(`no user with email ${values.as}`);
 
-  const token = await mintActorToken({
-    ...parseActorIds({
+  const token = await mintActorToken(
+    await findActor(database, {
       userId: found.user.id,
       organizationId: await findOrganizationId(found.user.id, values.org),
     }),
-    ttlSeconds: values.ttl === undefined ? undefined : parseTtl(values.ttl),
-  });
+    values.ttl === undefined ? undefined : parseTtl(values.ttl)
+  );
 
   const collections = brunoCollections();
   if (collections.length === 0) {
