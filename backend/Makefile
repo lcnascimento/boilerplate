@@ -17,7 +17,6 @@ PROMTOOL_VERSION := v3.15.0
 DASHBOARD_LINTER_VERSION := v0.3.0
 PINT_VERSION := v0.89.3
 LOKITOOL_VERSION := v3.7.8
-COMPOSE_ALL := docker compose -f docker-compose.yml -f docker-compose.observability.yml
 ALLOY_IMAGE :=$(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
@@ -151,15 +150,6 @@ mocks:
 .PHONY: postgres
 postgres:
 	@docker compose up -d --wait postgres
-
-.PHONY: infra.up
-infra.up:
-	@$(COMPOSE_ALL) --profile console up -d --wait
-	@$(COMPOSE_ALL) run --rm --no-deps postgres-extensions
-
-.PHONY: infra.down
-infra.down:
-	@$(COMPOSE_ALL) --profile console down
 
 .PHONY: test
 test: postgres
