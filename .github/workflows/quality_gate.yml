@@ -24,13 +24,8 @@ jobs:
         with:
           command: ${{ inputs.bootstrap }}
 
-      - name: make format
-        run: |
-          git add -A
-          make format
-          git diff --exit-code
-          untracked=$(git ls-files --others --exclude-standard)
-          if [ -n "$untracked" ]; then echo "make format created untracked files:"; echo "$untracked"; exit 1; fi
+      - name: make format.check
+        run: make format.check
 
   lint:
     runs-on: ubuntu-latest

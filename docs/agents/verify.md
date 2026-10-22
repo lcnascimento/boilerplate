@@ -2,7 +2,7 @@
 
 ## Static
 
-- `make format` (commit what it changes)
+- `make format.check` on a committed tree (commit what `make format` changes)
 - `make lint`
 
 ## Tests

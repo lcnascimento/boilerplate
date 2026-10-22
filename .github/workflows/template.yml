@@ -22,7 +22,7 @@ jobs:
     if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     env:
-      BOOTSTRAP: make init NAME=acme-app
+      BOOTSTRAP: 'make init NAME=acme-app && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: init"'
     outputs:
       bootstrap: ${{ env.BOOTSTRAP }}
     steps:
@@ -30,7 +30,7 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: make init
+      - name: make init, commit
         run: bash -euo pipefail -c "$BOOTSTRAP"
 
       - name: No marker left
@@ -50,10 +50,7 @@ jobs:
           grep -q 'APP_NAME = "Acme App"' frontend/apps/web/shared/components/nav-sidebar.tsx
 
       - name: clean-example still runs after init
-        run: |
-          git add -A
-          git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: init"
-          make clean-example
+        run: make clean-example
 
   init-quality_gate:
     name: A
@@ -67,7 +64,7 @@ jobs:
     if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     env:
-      BOOTSTRAP: 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'
+      BOOTSTRAP: 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: init"'
     outputs:
       bootstrap: ${{ env.BOOTSTRAP }}
     steps:
@@ -75,7 +72,7 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: make clean-example, commit, make init
+      - name: make clean-example, commit, make init, commit
         run: bash -euo pipefail -c "$BOOTSTRAP"
 
       - name: No fence nor marker left
