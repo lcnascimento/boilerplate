@@ -1,5 +1,5 @@
-AGAINST ?= origin/main
 TILT_LOG ?= /tmp/tilt-up.log
+TILT_MANUAL_INIT_TRIGGER_MODES := [2, 3]
 
 .PHONY: init
 init:
@@ -27,7 +27,7 @@ lint:
 
 .PHONY: lint.breaking
 lint.breaking:
-	@$(MAKE) -C backend proto.breaking AGAINST=$(AGAINST)
+	@$(MAKE) -C backend proto.breaking
 
 .PHONY: test
 test:
@@ -61,18 +61,17 @@ test.frontend.e2e:
 	@$(MAKE) -C frontend test.e2e
 
 .PHONY: test.e2e
-test.e2e:
-	@$(MAKE) -C frontend test.e2e
+test.e2e: test.frontend.e2e
 	@$(MAKE) -C backend o11y.check-live
 
-# A resource with auto_init=False (trigger modes 2 and 3), like the Playwright UI, never gets ready on its own.
 .PHONY: stack.up
 stack.up:
 	@tilt up --stream < /dev/null > "$(TILT_LOG)" 2>&1 &
 	@for _ in $$(seq 60); do tilt get uiresource > /dev/null 2>&1 && break; sleep 1; done
 	@tilt wait --for=condition=Ready 'uiresource/(Tiltfile)' --timeout=2m
 	@tilt wait --for=condition=Ready --timeout=5m $$(tilt get uiresource -o json | \
-		jq -r '.items[] | select(.status.triggerMode // 0 | IN(2, 3) | not) | "uiresource/" + .metadata.name')
+		jq -r --argjson manual_init '$(TILT_MANUAL_INIT_TRIGGER_MODES)' \
+			'.items[] | select(.status.triggerMode // 0 | IN($$manual_init[]) | not) | "uiresource/" + .metadata.name')
 
 .PHONY: stack.down
 stack.down:

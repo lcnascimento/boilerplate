@@ -185,7 +185,7 @@ make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check
 make o11y.check-live  # confere o gerado contra o stack completo no ar (tilt up, não o minimal): métricas do catálogo, teto de séries, regras, dashboards e datasources
 make proto.lint       # buf lint (STANDARD) em cada módulo buf (diretório com buf.yaml)
 make proto.generate   # regenera o Go dos .proto (commitado; o quality_gate / format falha se estiver desatualizado)
-make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: main)
+make proto.breaking   # buf breaking (FILE) contra AGAINST (padrão: origin/main)
 make mocks            # regenera internal/mocks/mocks.go a partir de cada contracts.go
 make tidy             # go mod tidy
 make vuln-check       # govulncheck (só local, fora do CI)

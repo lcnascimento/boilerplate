@@ -17,6 +17,7 @@ runs:
         case "$PLAYWRIGHT" in none|shell|full) ;; *) echo "::error::playwright must be none, shell or full, got '$PLAYWRIGHT'"; exit 1;; esac
 
     - uses: actions/setup-go@v7
+      id: go
       with:
         go-version-file: backend/go.work
         cache-dependency-path: backend/**/go.sum
@@ -25,7 +26,8 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/go/bin
-        key: gobin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/Makefile') }}
+        key: gobin-${{ runner.os }}-${{ runner.arch }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/Makefile') }}
+        restore-keys: gobin-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install the backend tooling
       shell: bash

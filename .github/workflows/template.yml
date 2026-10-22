@@ -10,21 +10,28 @@ permissions:
   contents: read
 
 concurrency:
-  group: template-${{ github.ref }}
+  group: template-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GENERATED_WORKFLOWS: pull_request.yml quality_gate.yml release.yml
 
 jobs:
   init:
     name: A / make init
     if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
+    env:
+      BOOTSTRAP: make init NAME=acme-app
+    outputs:
+      bootstrap: ${{ env.BOOTSTRAP }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
       - name: make init
-        run: make init NAME=acme-app
+        run: bash -euo pipefail -c "$BOOTSTRAP"
 
       - name: No marker left
         run: |
@@ -34,7 +41,7 @@ jobs:
       - name: Template-only parts are gone
         run: |
           test ! -e scripts/init.sh
-          test "$(ls .github/workflows)" = "$(printf 'pull_request.yml\nquality_gate.yml\nrelease.yml')"
+          test "$(ls .github/workflows | xargs)" = "$GENERATED_WORKFLOWS"
           test ! -e docs/agents
           ! grep -q '^init:' Makefile || exit 1
           ! grep -q '^## Como instanciar' README.md || exit 1
@@ -53,27 +60,23 @@ jobs:
     needs: init
     uses: ./.github/workflows/quality_gate.yml
     with:
-      bootstrap: make init NAME=acme-app
+      bootstrap: ${{ needs.init.outputs.bootstrap }}
 
   clean-init:
     name: B / make clean-example + make init
     if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
+    env:
+      BOOTSTRAP: 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'
+    outputs:
+      bootstrap: ${{ env.BOOTSTRAP }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
-      - name: make clean-example
-        run: make clean-example
-
-      - name: Commit, so init finds a clean tree
-        run: |
-          git add -A
-          git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example"
-
-      - name: make init
-        run: make init NAME=acme-app
+      - name: make clean-example, commit, make init
+        run: bash -euo pipefail -c "$BOOTSTRAP"
 
       - name: No fence nor marker left
         run: |
@@ -86,11 +89,11 @@ jobs:
           test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools')"
           ! grep -qE '^(init|clean-example):' Makefile || exit 1
           test ! -e scripts
-          test "$(ls .github/workflows)" = "$(printf 'pull_request.yml\nquality_gate.yml\nrelease.yml')"
+          test "$(ls .github/workflows | xargs)" = "$GENERATED_WORKFLOWS"
 
   clean-init-quality_gate:
     name: B
     needs: clean-init
     uses: ./.github/workflows/quality_gate.yml
     with:
-      bootstrap: 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'
+      bootstrap: ${{ needs.clean-init.outputs.bootstrap }}

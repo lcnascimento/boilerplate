@@ -25,7 +25,7 @@ export PATH := $(GOBIN):$(PATH)
 MODULES := $(shell go list -m -f '{{.Dir}}')
 
 BUF_DIRS := $(patsubst %/buf.yaml,%,$(shell find services -name buf.yaml -not -path '*/node_modules/*'))
-AGAINST ?= main
+AGAINST ?= origin/main
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
@@ -61,7 +61,11 @@ define install_release
 endef
 
 define go_install
-	@if [ "$$(go version -m "$(GOBIN)/$(notdir $(1))" 2>/dev/null | awk '$$1 == "mod" {print $$3}')" != "$(2)" ]; then \
+	@have=$$(go version -m "$(GOBIN)/$(notdir $(1))" 2>/dev/null | awk -v build="$(3)" ' \
+		BEGIN { split(build, settings, " "); for (i in settings) want[settings[i]] = 1 } \
+		NR == 1 { go = $$2 } $$1 == "mod" { mod = $$3 } $$1 == "build" && $$2 in want { env = env " " $$2 } \
+		END { print go, mod env }'); \
+	if [ "$$have" != "$$(go env GOVERSION) $(strip $(2) $(3))" ]; then \
 		echo "==> Installing $(notdir $(1)) $(2) into $(GOBIN)"; \
 		$(3) go install $(1)@$(2); \
 	fi
