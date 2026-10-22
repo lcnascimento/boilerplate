@@ -60,6 +60,13 @@ define install_release
 	fi
 endef
 
+define go_install
+	@if [ "$$(go version -m "$(GOBIN)/$(notdir $(1))" 2>/dev/null | awk '$$1 == "mod" {print $$3}')" != "$(2)" ]; then \
+		echo "==> Installing $(notdir $(1)) $(2) into $(GOBIN)"; \
+		$(3) go install $(1)@$(2); \
+	fi
+endef
+
 go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
@@ -77,18 +84,17 @@ env:
 
 .PHONY: setup
 setup: env
-	@echo "==> Installing Go tooling into $(GOBIN)"
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	@go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
-	@go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
-	@go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
-	@CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+	$(call go_install,github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+	$(call go_install,go.uber.org/mock/mockgen,$(MOCKGEN_VERSION))
+	$(call go_install,golang.org/x/vuln/cmd/govulncheck,$(GOVULNCHECK_VERSION))
+	$(call go_install,github.com/pressly/goose/v3/cmd/goose,$(GOOSE_VERSION))
+	$(call go_install,github.com/sqlc-dev/sqlc/cmd/sqlc,$(SQLC_VERSION),CGO_ENABLED=1)
 	@$(MAKE) -s squawk proto.tools o11y.tools
 
 .PHONY: proto.tools
 proto.tools:
-	@go install github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
-	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	$(call go_install,github.com/bufbuild/buf/cmd/buf,$(BUF_VERSION))
+	$(call go_install,google.golang.org/protobuf/cmd/protoc-gen-go,$(PROTOC_GEN_GO_VERSION))
 
 .PHONY: squawk
 squawk:
