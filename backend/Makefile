@@ -17,7 +17,8 @@ PROMTOOL_VERSION := v3.15.0
 DASHBOARD_LINTER_VERSION := v0.3.0
 PINT_VERSION := v0.89.3
 LOKITOOL_VERSION := v3.7.8
-ALLOY_IMAGE := $(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
+COMPOSE_ALL := docker compose -f docker-compose.yml -f docker-compose.observability.yml
+ALLOY_IMAGE :=$(shell awk '/image: grafana\/alloy:/ {print $$2}' docker-compose.observability.yml)
 
 GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 export PATH := $(GOBIN):$(PATH)
@@ -127,6 +128,10 @@ lint:
 lint.fix:
 	$(call in_modules,lint.fix,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint run --fix --timeout 10m ./...; fi)
 
+.PHONY: format
+format:
+	$(call in_modules,format,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint fmt ./...; fi)
+
 .PHONY: lint.cache.clean
 lint.cache.clean:
 	@$(GOBIN)/golangci-lint cache clean
@@ -143,8 +148,21 @@ mocks:
 			$(GOBIN)/mockgen -source "$$src" -destination "$$dir/internal/mocks/mocks.go" -package mocks; \
 		done)
 
+.PHONY: postgres
+postgres:
+	@docker compose up -d --wait postgres
+
+.PHONY: infra.up
+infra.up:
+	@$(COMPOSE_ALL) --profile console up -d --wait
+	@$(COMPOSE_ALL) run --rm --no-deps postgres-extensions
+
+.PHONY: infra.down
+infra.down:
+	@$(COMPOSE_ALL) --profile console down
+
 .PHONY: test
-test:
+test: postgres
 	$(call in_modules,test,$(call go_test,3m,-coverprofile=coverage.out))
 
 .PHONY: test.unit
@@ -152,7 +170,7 @@ test.unit:
 	$(call in_modules,test.unit,$(call go_test,30s,-short))
 
 .PHONY: test.component
-test.component:
+test.component: postgres
 	$(call in_modules,test.component,$(call go_test,3m,-run Component))
 
 .PHONY: sqlc

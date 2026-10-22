@@ -157,13 +157,22 @@ Se o banco tiver uma migration aplicada que a branch atual não conhece (por exe
 
 ### Lint e testes
 
+**Tudo** (na raiz; cobre o que o CI cobre, menos o e2e):
+
+```sh
+make format   # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
+make lint     # os linters, o typecheck e o build que o CI roda, no backend, no frontend e no OpenAPI
+make test     # sobe a infra (make infra.up) e roda os testes de unidade e de componente do backend e do frontend; o e2e fica no make test.frontend.e2e, com o tilt up no ar
+```
+
 **Backend** (em `backend/`, cada alvo roda em todos os módulos do `go.work`):
 
 ```sh
+make format           # golangci-lint fmt (gci e gofmt)
 make lint             # golangci-lint (make lint.fix corrige o que der) e squawk nas migrations
-make test             # go test -race com cobertura: unit + componente (exige o Postgres e o Docker; timeout de 3m)
+make test             # go test -race com cobertura: unit + componente (sobe o Postgres; exige o Docker; timeout de 3m)
 make test.unit        # só os de unidade (-short), sem banco nem Docker (timeout de 30s)
-make test.component   # só os de componente (-run Component; timeout de 3m)
+make test.component   # só os de componente (-run Component; sobe o Postgres; timeout de 3m)
 make sqlc             # regenera e confere (sqlc vet) o código das queries de cada serviço
 make o11y.generate    # regenera os dashboards, as regras do Prometheus, as do ruler do Loki e as specs e regras de SLO (sloth generate) a partir do o11ygen (commitados; o ci-backend falha se estiverem desatualizados)
 make o11y.lint        # dashboard-linter --strict nos dashboards; promtool check/test rules e pint nas regras; lokitool rules lint/check nas regras do Loki; sloth validate, promtool e pint nos SLOs (ferramentas instaladas pelo make setup)
@@ -220,7 +229,7 @@ O que conferir vem do catálogo e dos arquivos gerados, então uma métrica, um 
 
 Para depurar o e2e, o recurso `web-e2e-ui` do Tilt (manual: dispare-o na UI do Tilt) abre o [UI Mode](https://playwright.dev/docs/test-ui-mode) do Playwright em <http://127.0.0.1:9330>, contra o mesmo stack.
 
-**OpenAPI** (na raiz):
+**OpenAPI** (na raiz; o `make lint` já roda):
 
 ```sh
 docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details openapi/*.yaml

@@ -83,7 +83,6 @@ if leftovers=$(git grep -nE "$marker_re" -- ":!$self"); then
 fi
 
 rm -f "$self"
-grep -q '^[a-z][a-z-]*:' Makefile || rm -f Makefile
 rmdir scripts 2>/dev/null || true
 
 cat <<'EOF'
