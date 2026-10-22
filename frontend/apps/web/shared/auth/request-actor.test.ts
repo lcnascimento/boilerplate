@@ -1,7 +1,17 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { getIam } from "./auth";
 import { resolveRequestActor } from "./request-actor";
+
+import type { Pool } from "pg";
 
 vi.mock("server-only", () => ({}));
 
@@ -20,7 +30,11 @@ const FEBRUARY = "2026-02-01T00:00:00Z";
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
   "resolveRequestActor",
   () => {
-    const { database } = getIam();
+    let database: Pool;
+
+    beforeAll(() => {
+      database = getIam().database;
+    });
 
     async function removeFixtures() {
       await database.query(`DELETE FROM "user" WHERE id = $1`, [USER]);
