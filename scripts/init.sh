@@ -33,7 +33,7 @@ drop_section() {
 rm -rf docs/agents
 drop_section CLAUDE.md "## Agent skills"
 
-rm -f .github/workflows/ci-template.yml
+rm -f .github/workflows/template.yml
 drop_section README.md "## Como instanciar"
 perl -0pi -e 's/^\.PHONY: init\ninit:\n(?:\t.*\n)*\n?//m' Makefile
 

@@ -1,18 +1,22 @@
-name: ci-template
+name: template
 
-on: push
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-template-${{ github.ref }}
-  cancel-in-progress: true
+  group: template-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   init:
     name: A / make init
-    if: github.repository == 'lcnascimento/boilerplate'
+    if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -33,7 +37,7 @@ jobs:
       - name: Template-only parts are gone
         run: |
           test ! -e scripts/init.sh
-          test ! -e .github/workflows/ci-template.yml
+          test "$(ls .github/workflows)" = "$(printf 'pull_request.yml\nquality_gate.yml\nrelease.yml')"
           test ! -e docs/agents
           ! grep -q '^init:' Makefile || exit 1
           ! grep -q '^## Como instanciar' README.md || exit 1
@@ -47,44 +51,16 @@ jobs:
           git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: init"
           make clean-example
 
-  init-backend:
-    name: A / backend
+  init-quality_gate:
+    name: A
     needs: init
-    uses: ./.github/workflows/ci-backend.yml
-    with:
-      bootstrap: make init NAME=acme-app
-
-  init-frontend:
-    name: A / frontend
-    needs: init
-    uses: ./.github/workflows/ci-frontend.yml
-    with:
-      bootstrap: make init NAME=acme-app
-
-  init-openapi:
-    name: A / openapi
-    needs: init
-    uses: ./.github/workflows/ci-openapi.yml
-    with:
-      bootstrap: make init NAME=acme-app
-
-  init-proto:
-    name: A / proto
-    needs: init
-    uses: ./.github/workflows/ci-proto.yml
-    with:
-      bootstrap: make init NAME=acme-app
-
-  init-e2e:
-    name: A / e2e
-    needs: init
-    uses: ./.github/workflows/ci-e2e.yml
+    uses: ./.github/workflows/quality_gate.yml
     with:
       bootstrap: make init NAME=acme-app
 
   clean-init:
     name: B / make clean-example + make init
-    if: github.repository == 'lcnascimento/boilerplate'
+    if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -116,38 +92,11 @@ jobs:
           test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools')"
           ! grep -qE '^(init|clean-example):' Makefile || exit 1
           test ! -e scripts
+          test "$(ls .github/workflows)" = "$(printf 'pull_request.yml\nquality_gate.yml\nrelease.yml')"
 
-  clean-init-backend:
-    name: B / backend
+  clean-init-quality_gate:
+    name: B
     needs: clean-init
-    uses: ./.github/workflows/ci-backend.yml
+    uses: ./.github/workflows/quality_gate.yml
     with:
-      bootstrap: &clean-init 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'
-
-  clean-init-frontend:
-    name: B / frontend
-    needs: clean-init
-    uses: ./.github/workflows/ci-frontend.yml
-    with:
-      bootstrap: *clean-init
-
-  clean-init-openapi:
-    name: B / openapi
-    needs: clean-init
-    uses: ./.github/workflows/ci-openapi.yml
-    with:
-      bootstrap: *clean-init
-
-  clean-init-proto:
-    name: B / proto
-    needs: clean-init
-    uses: ./.github/workflows/ci-proto.yml
-    with:
-      bootstrap: *clean-init
-
-  clean-init-e2e:
-    name: B / e2e
-    needs: clean-init
-    uses: ./.github/workflows/ci-e2e.yml
-    with:
-      bootstrap: *clean-init
+      bootstrap: 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'
