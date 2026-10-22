@@ -24,7 +24,7 @@ _Avoid_: Perfil, permissão, grupo
 
 **Permission**:
 Uma ação sobre um tipo de recurso que uma Role concede ou não (ex.: apagar Note).
-_Avoid_: Capability, privilégio, ability
+_Avoid_: Capability, privilégio
 
 **Owner**:
 Role com todos os poderes na Organization, inclusive apagar Notes.
@@ -45,6 +45,10 @@ _Avoid_: Principal, caller, current user
 **Feature Flag**:
 Um interruptor que liga ou desliga uma funcionalidade para um User ou uma Organization, sem novo deploy.
 _Avoid_: Toggle, feature switch
+
+**Ability**:
+O que um Actor pode fazer numa requisição: as Permissions da sua Role, exceto as condicionadas a uma Feature Flag desligada, mais as Feature Flags ligadas para ele.
+_Avoid_: Access, entitlement, grant
 
 ### Notes
 
