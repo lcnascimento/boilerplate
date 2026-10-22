@@ -1,3 +1,6 @@
+AGAINST ?= origin/main
+TILT_LOG ?= /tmp/tilt-up.log
+
 .PHONY: init
 init:
 	@bash scripts/init.sh "$(NAME)"
@@ -13,7 +16,7 @@ format:
 
 .PHONY: lint
 lint:
-	@$(MAKE) -C backend lint o11y.lint proto.lint proto.breaking AGAINST=origin/main
+	@$(MAKE) -C backend lint o11y.lint proto.lint
 	@$(MAKE) -C frontend lint typecheck build
 	@echo "==> vacuum lint openapi"
 	@specs=$$(ls openapi/*.yaml 2>/dev/null); \
@@ -22,16 +25,12 @@ lint:
 			lint --details --no-banner --no-style --no-update-check $$specs; \
 	fi
 
-.PHONY: infra.up
-infra.up:
-	@$(MAKE) -C backend infra.up
-
-.PHONY: infra.down
-infra.down:
-	@$(MAKE) -C backend infra.down
+.PHONY: lint.breaking
+lint.breaking:
+	@$(MAKE) -C backend proto.breaking AGAINST=$(AGAINST)
 
 .PHONY: test
-test: infra.up
+test:
 	@$(MAKE) -C backend test
 	@$(MAKE) -C frontend test
 
@@ -60,3 +59,21 @@ test.frontend.component:
 .PHONY: test.frontend.e2e
 test.frontend.e2e:
 	@$(MAKE) -C frontend test.e2e
+
+.PHONY: test.e2e
+test.e2e:
+	@$(MAKE) -C frontend test.e2e
+	@$(MAKE) -C backend o11y.check-live
+
+# A resource with auto_init=False (trigger modes 2 and 3), like the Playwright UI, never gets ready on its own.
+.PHONY: stack.up
+stack.up:
+	@tilt up --stream < /dev/null > "$(TILT_LOG)" 2>&1 &
+	@for _ in $$(seq 60); do tilt get uiresource > /dev/null 2>&1 && break; sleep 1; done
+	@tilt wait --for=condition=Ready 'uiresource/(Tiltfile)' --timeout=2m
+	@tilt wait --for=condition=Ready --timeout=5m $$(tilt get uiresource -o json | \
+		jq -r '.items[] | select(.status.triggerMode // 0 | IN(2, 3) | not) | "uiresource/" + .metadata.name')
+
+.PHONY: stack.down
+stack.down:
+	@tilt down || true
