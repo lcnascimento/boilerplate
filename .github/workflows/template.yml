@@ -1,0 +1,96 @@
+name: template
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: template-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  init:
+    name: A / make init
+    if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: make init
+        run: make init NAME=acme-app
+
+      - name: No marker left
+        run: |
+          ! git grep -ni boilerplate || exit 1
+          ! git ls-files -co --exclude-standard | grep -i boilerplate || exit 1
+
+      - name: Template-only parts are gone
+        run: |
+          test ! -e scripts/init.sh
+          test "$(ls .github/workflows)" = "$(printf 'pull_request.yml\nquality_gate.yml\nrelease.yml')"
+          test ! -e docs/agents
+          ! grep -q '^init:' Makefile || exit 1
+          ! grep -q '^## Como instanciar' README.md || exit 1
+          test "$(grep '^## ' CLAUDE.md)" = "## Language"
+          test "$(head -1 README.md)" = "# Acme App"
+          grep -q 'APP_NAME = "Acme App"' frontend/apps/web/shared/components/nav-sidebar.tsx
+
+      - name: clean-example still runs after init
+        run: |
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: init"
+          make clean-example
+
+  init-quality_gate:
+    name: A
+    needs: init
+    uses: ./.github/workflows/quality_gate.yml
+    with:
+      bootstrap: make init NAME=acme-app
+
+  clean-init:
+    name: B / make clean-example + make init
+    if: github.repository == 'lcnascimento/boilerplate' && (github.event_name == 'push' || !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: make clean-example
+        run: make clean-example
+
+      - name: Commit, so init finds a clean tree
+        run: |
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example"
+
+      - name: make init
+        run: make init NAME=acme-app
+
+      - name: No fence nor marker left
+        run: |
+          ! git grep -n 'example[:]' || exit 1
+          ! git grep -ni boilerplate || exit 1
+          ! git ls-files -co --exclude-standard | grep -i boilerplate || exit 1
+
+      - name: Zero services
+        run: |
+          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools')"
+          ! grep -qE '^(init|clean-example):' Makefile || exit 1
+          test ! -e scripts
+          test "$(ls .github/workflows)" = "$(printf 'pull_request.yml\nquality_gate.yml\nrelease.yml')"
+
+  clean-init-quality_gate:
+    name: B
+    needs: clean-init
+    uses: ./.github/workflows/quality_gate.yml
+    with:
+      bootstrap: 'make clean-example && git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "chore: remove the example" && make init NAME=acme-app'

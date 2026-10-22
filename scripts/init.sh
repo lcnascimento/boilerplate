@@ -33,7 +33,7 @@ drop_section() {
 rm -rf docs/agents
 drop_section CLAUDE.md "## Agent skills"
 
-rm -f .github/workflows/ci-template.yml
+rm -f .github/workflows/template.yml
 drop_section README.md "## Como instanciar"
 perl -0pi -e 's/^\.PHONY: init\ninit:\n(?:\t.*\n)*\n?//m' Makefile
 
@@ -59,12 +59,14 @@ fi
 rm -f "$self"
 rmdir scripts 2>/dev/null || true
 
+pnpm install
+pnpm -C frontend install
+pnpm -C frontend format
+
 cat <<EOF
 
 Initialized "$title" ($name). Next steps:
   1. Review the diff: git status && git diff
-  2. Install the dependencies and re-format the frontend (the new name changes
-     line lengths): pnpm install && pnpm -C frontend install && pnpm -C frontend format
-  3. Run the ai-foundation setup for this project (Linear, Notion, forge).
-  4. Commit: git add -A && git commit -m "chore: initialize $name from the template"
+  2. Run the ai-foundation setup for this project (Linear, Notion, forge).
+  3. Commit: git add -A && git commit -m "chore: initialize $name from the template"
 EOF

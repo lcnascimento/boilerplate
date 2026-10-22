@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       bootstrap:
-        description: Shell command run at the repository root right after checkout.
+        description: Shell command run at the repository root after setup; the project it leaves is then set up from a clean checkout of its tree.
         type: string
         default: ""
 
@@ -20,11 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/setup
+
       - name: Bootstrap
         if: inputs.bootstrap
-        run: bash -euo pipefail -c "$BOOTSTRAP"
+        run: |
+          bash -euo pipefail -c "$BOOTSTRAP"
+          git clean -fdX
 
-      - uses: ./.github/actions/setup
+      - name: Set up the bootstrapped project
+        if: inputs.bootstrap
+        uses: ./.github/actions/setup
 
       - name: make format
         run: |
@@ -39,11 +45,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/setup
+
       - name: Bootstrap
         if: inputs.bootstrap
-        run: bash -euo pipefail -c "$BOOTSTRAP"
+        run: |
+          bash -euo pipefail -c "$BOOTSTRAP"
+          git clean -fdX
 
-      - uses: ./.github/actions/setup
+      - name: Set up the bootstrapped project
+        if: inputs.bootstrap
+        uses: ./.github/actions/setup
 
       - name: make lint
         run: make lint
@@ -53,11 +65,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/setup
+        with:
+          playwright: shell
+
       - name: Bootstrap
         if: inputs.bootstrap
-        run: bash -euo pipefail -c "$BOOTSTRAP"
+        run: |
+          bash -euo pipefail -c "$BOOTSTRAP"
+          git clean -fdX
 
-      - uses: ./.github/actions/setup
+      - name: Set up the bootstrapped project
+        if: inputs.bootstrap
+        uses: ./.github/actions/setup
         with:
           playwright: shell
 
@@ -71,11 +91,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: ./.github/actions/setup
+        with:
+          playwright: full
+
       - name: Bootstrap
         if: inputs.bootstrap
-        run: bash -euo pipefail -c "$BOOTSTRAP"
+        run: |
+          bash -euo pipefail -c "$BOOTSTRAP"
+          git clean -fdX
 
-      - uses: ./.github/actions/setup
+      - name: Set up the bootstrapped project
+        if: inputs.bootstrap
+        uses: ./.github/actions/setup
         with:
           playwright: full
 
