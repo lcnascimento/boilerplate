@@ -1,0 +1,62 @@
+name: setup
+description: Install the Go and pnpm/Node toolchains and, optionally, Playwright Chromium.
+
+inputs:
+  playwright:
+    description: "Playwright Chromium to install: none, shell (headless shell only) or full (with system deps)."
+    default: none
+
+runs:
+  using: composite
+  steps:
+    - name: Validate the playwright input
+      shell: bash
+      env:
+        PLAYWRIGHT: ${{ inputs.playwright }}
+      run: |
+        case "$PLAYWRIGHT" in none|shell|full) ;; *) echo "::error::playwright must be none, shell or full, got '$PLAYWRIGHT'"; exit 1;; esac
+
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: backend/go.work
+        cache-dependency-path: backend/**/go.sum
+
+    - name: Restore the Go tool binaries
+      uses: actions/cache@v6
+      with:
+        path: ~/go/bin
+        key: gobin-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/Makefile') }}
+
+    - name: Install the backend tooling
+      shell: bash
+      run: make -C backend setup
+
+    - uses: pnpm/action-setup@v6
+      with:
+        package_json_file: package.json
+
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+        cache-dependency-path: |
+          pnpm-lock.yaml
+          frontend/pnpm-lock.yaml
+
+    - name: Install the Node dependencies
+      shell: bash
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm --dir frontend install --frozen-lockfile
+
+    - name: Install Playwright Chromium shell
+      if: inputs.playwright == 'shell'
+      shell: bash
+      working-directory: frontend
+      run: pnpm --filter ./packages/ui exec playwright install --with-deps --only-shell chromium
+
+    - name: Install Playwright Chromium
+      if: inputs.playwright == 'full'
+      shell: bash
+      working-directory: frontend
+      run: pnpm --filter ./apps/web exec playwright install --with-deps chromium
