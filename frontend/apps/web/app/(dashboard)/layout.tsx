@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { resolveActiveOrganization } from "@/shared/auth/active-organization";
 import { getIam } from "@/shared/auth/auth";
+import { getRequestActor } from "@/shared/auth/request-actor";
 import { SIGN_IN_HREF } from "@/shared/auth/routes";
 import { getRequestSession } from "@/shared/auth/session";
 import { parseSidebarOpen, SIDEBAR_COOKIE_NAME } from "@/shared/cookies";
@@ -27,15 +27,16 @@ export default async function DashboardLayout({
 
   const { id, name, email, image } = session.user;
   await getIam().ensureSignUpOrganization(id);
-  const organizations = await resolveActiveOrganization(session.session);
-  if (organizations === null) return <NoOrganization />;
+  const requestActor = await getRequestActor();
+  if (requestActor.kind === "signed-out") redirect(SIGN_IN_HREF);
+  if (requestActor.kind === "no-organization") return <NoOrganization />;
 
   return (
     <DashboardShell
       defaultOpen={parseSidebarOpen(
         cookieStore.get(SIDEBAR_COOKIE_NAME)?.value
       )}
-      organizations={organizations}
+      organizations={requestActor.organizations}
       user={{ id, name, email, avatarUrl: image ?? undefined }}
     >
       {children}

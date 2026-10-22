@@ -4,9 +4,6 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { resolveActiveOrganization } from "@/shared/auth/active-organization";
-import { parseActorIds } from "@/shared/auth/actor-ids";
-import { annotateActorSpan } from "@/shared/auth/actor-span";
 import { getIam } from "@/shared/auth/auth";
 import {
   addMemberInputSchema,
@@ -16,46 +13,21 @@ import {
   removeMemberInputSchema,
   updateMemberRoleInputSchema,
   type Member,
-  type MemberRole,
   type MembersErrorCode,
   type MembersResult,
 } from "@/shared/auth/members";
+import { getRequestActor } from "@/shared/auth/request-actor";
 import { SIGN_IN_HREF } from "@/shared/auth/routes";
-import { getRequestSession } from "@/shared/auth/session";
 import { logger } from "@/shared/logging";
+
+import type { Actor } from "@/shared/auth/actor";
 
 // Next exposes every Server Action as a public endpoint, so arguments arrive as `unknown`.
 
-interface Actor {
-  memberId: string;
-  organizationId: string;
-  role: MemberRole;
-}
-
-async function requireActor(requestHeaders: Headers): Promise<Actor | null> {
-  const session = await getRequestSession();
-  if (session === null) redirect(SIGN_IN_HREF);
-  if ((await resolveActiveOrganization(session.session)) === null) return null;
-
-  const member = await getIam()
-    .auth.api.getActiveMember({ headers: requestHeaders })
-    .catch((error: unknown) => {
-      if (error instanceof APIError) return null;
-      throw error;
-    });
-  if (member === null) return null;
-
-  annotateActorSpan(
-    parseActorIds({
-      userId: session.user.id,
-      organizationId: member.organizationId,
-    })
-  );
-  return {
-    memberId: member.id,
-    organizationId: member.organizationId,
-    role: memberRoleSchema.parse(member.role),
-  };
+async function requireActor(): Promise<Actor | null> {
+  const requestActor = await getRequestActor();
+  if (requestActor.kind === "signed-out") redirect(SIGN_IN_HREF);
+  return requestActor.kind === "actor" ? requestActor.actor : null;
 }
 
 const errorCodes: Record<string, MembersErrorCode> = {
@@ -93,17 +65,12 @@ async function runMembersOperation(
 const forbidden = { kind: "error", code: "forbidden" } as const;
 const invalidInput = { kind: "error", code: "invalidInput" } as const;
 
-export async function getActiveRole(): Promise<MemberRole | null> {
-  const actor = await requireActor(await headers());
-  return actor?.role ?? null;
-}
-
 export async function listMembers(): Promise<{
   actor: Member;
   members: Member[];
 }> {
   const requestHeaders = await headers();
-  const actor = await requireActor(requestHeaders);
+  const actor = await requireActor();
   if (actor === null) notFound();
 
   const { members } = await getIam().auth.api.listMembers({
@@ -130,7 +97,7 @@ export async function addMember(input: unknown): Promise<MembersResult> {
   const parsed = addMemberInputSchema.safeParse(input);
   if (!parsed.success) return invalidInput;
 
-  const actor = await requireActor(await headers());
+  const actor = await requireActor();
   // auth.api.addMember checks no Permission at all: this action is the only gate.
   if (
     actor === null ||
@@ -161,7 +128,7 @@ export async function updateMemberRole(input: unknown): Promise<MembersResult> {
   if (!parsed.success) return invalidInput;
 
   const requestHeaders = await headers();
-  const actor = await requireActor(requestHeaders);
+  const actor = await requireActor();
   if (actor === null) return forbidden;
 
   return runMembersOperation("members.updateRole", () =>
@@ -177,7 +144,7 @@ export async function removeMember(input: unknown): Promise<MembersResult> {
   if (!parsed.success) return invalidInput;
 
   const requestHeaders = await headers();
-  const actor = await requireActor(requestHeaders);
+  const actor = await requireActor();
   if (actor === null) return forbidden;
 
   return runMembersOperation("members.remove", () =>
@@ -193,7 +160,7 @@ export async function removeMember(input: unknown): Promise<MembersResult> {
 
 export async function leaveOrganization(): Promise<MembersResult> {
   const requestHeaders = await headers();
-  const actor = await requireActor(requestHeaders);
+  const actor = await requireActor();
   if (actor === null) return forbidden;
 
   return runMembersOperation("members.leave", () =>

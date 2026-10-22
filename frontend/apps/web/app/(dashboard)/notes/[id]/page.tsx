@@ -6,8 +6,8 @@ import { Button } from "@boilerplate/ui/components/button";
 import { Card, CardContent } from "@boilerplate/ui/components/card";
 import { PageHeader } from "@boilerplate/ui/primitives/page-header";
 
-import { getActiveRole } from "@/actions/members";
 import { getNote } from "@/actions/notes";
+import { getRequestActor } from "@/shared/auth/request-actor";
 import { NOTES_HREF } from "@/shared/navigation";
 
 import { canNote, DeleteNoteDialog, NotesError } from "../_components";
@@ -18,12 +18,14 @@ interface NotePageProps {
 
 export default async function NotePage({ params }: NotePageProps) {
   const { id } = await params;
-  const [t, format, result, role] = await Promise.all([
+  const [t, format, result, requestActor] = await Promise.all([
     getTranslations("notes"),
     getFormatter(),
     getNote(id),
-    getActiveRole(),
+    getRequestActor(),
   ]);
+
+  const role = requestActor.kind === "actor" ? requestActor.actor.role : null;
 
   const back = (
     <Button asChild className="self-start" variant="ghost">

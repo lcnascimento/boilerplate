@@ -4,17 +4,18 @@ import { Suspense } from "react";
 import { Skeleton } from "@boilerplate/ui/components/skeleton";
 import { PageHeader } from "@boilerplate/ui/primitives/page-header";
 
-import { getActiveRole } from "@/actions/members";
 import { listNotes } from "@/actions/notes";
+import { getRequestActor } from "@/shared/auth/request-actor";
 
 import { canNote, CreateNoteDialog, Notes } from "./_components";
 
 export default async function NotesPage() {
   const notes = listNotes();
-  const [t, role] = await Promise.all([
+  const [t, requestActor] = await Promise.all([
     getTranslations("notes"),
-    getActiveRole(),
+    getRequestActor(),
   ]);
+  const role = requestActor.kind === "actor" ? requestActor.actor.role : null;
   const canCreate = canNote(role, "create");
 
   return (
