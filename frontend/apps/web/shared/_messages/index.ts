@@ -1,5 +1,6 @@
 import accountSettings from "./account-settings.json" with { type: "json" };
 import auth from "./auth.json" with { type: "json" };
+import invitations from "./invitations.json" with { type: "json" };
 import members from "./members.json" with { type: "json" };
 import nav from "./nav.json" with { type: "json" };
 // example:begin
@@ -15,6 +16,7 @@ export function appMessages(locale: Locale) {
   return {
     accountSettings: accountSettings[locale],
     auth: auth[locale],
+    invitations: invitations[locale],
     members: members[locale],
     nav: nav[locale],
     // example:begin

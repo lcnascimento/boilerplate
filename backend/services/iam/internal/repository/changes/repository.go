@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/google/uuid"
@@ -36,8 +37,8 @@ func New(pool *pgxpool.Pool, schemaIDs eventbus.SchemaIDs) *Repository {
 	return &Repository{pool: pool, schemaIDs: schemaIDs}
 }
 
-func (r *Repository) Translate(ctx context.Context, limit int32) (int, error) {
-	translated := 0
+func (r *Repository) Translate(ctx context.Context, limit int32) ([]*idomain.Event, error) {
+	var translated []*idomain.Event
 
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		queries := db.New(tx)
@@ -52,51 +53,61 @@ func (r *Repository) Translate(ctx context.Context, limit int32) (int, error) {
 		}
 
 		ids := make([]int64, 0, len(rows))
+		translated = make([]*idomain.Event, 0, len(rows))
 
 		for _, row := range rows {
-			if err := r.emit(ctx, tx, &row); err != nil {
+			event, err := r.emit(ctx, tx, &row)
+			if err != nil {
 				return err
 			}
 
 			ids = append(ids, row.ID)
+			translated = append(translated, event)
 		}
 
 		if err := queries.DeleteChanges(ctx, ids); err != nil {
 			return ErrQuery.WithCause(err)
 		}
 
-		translated = len(rows)
-
 		return nil
 	})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	return translated, nil
 }
 
-func (r *Repository) emit(ctx context.Context, tx pgx.Tx, row *db.LockChangesRow) error {
+func (r *Repository) OldestPendingAge(ctx context.Context) (time.Duration, error) {
+	seconds, err := db.New(r.pool).OldestChangeAge(ctx)
+	if err != nil {
+		return 0, ErrQuery.WithCause(err)
+	}
+
+	return time.Duration(seconds * float64(time.Second)), nil
+}
+
+func (r *Repository) emit(ctx context.Context, tx pgx.Tx, row *db.LockChangesRow) (*idomain.Event, error) {
 	change, err := toChange(row)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	event, err := change.Event()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	msg, err := r.newMessage(event)
 	if err != nil {
-		return ErrEmit.WithCause(err)
+		return nil, ErrEmit.WithCause(err)
 	}
 
 	if err := Outbox.Publish(ctx, tx, event.Topic, msg); err != nil {
-		return ErrEmit.WithCause(err)
+		return nil, ErrEmit.WithCause(err)
 	}
 
-	return nil
+	return event, nil
 }
 
 func toChange(row *db.LockChangesRow) (*idomain.Change, error) {
@@ -129,7 +140,7 @@ func (r *Repository) newMessage(event *idomain.Event) (*message.Message, error) 
 	envelope := eventbus.Envelope{
 		ID:              messageID.String(),
 		Source:          source,
-		Type:            string(event.Message.ProtoReflect().Descriptor().FullName()),
+		Type:            event.Type(),
 		Time:            event.Time.UTC(),
 		Subject:         event.Subject,
 		PartitionKey:    event.Subject,

@@ -18,6 +18,9 @@ var (
 	everyProcess Emitter = func(_ *service.Service, process service.Process) bool { return process.LongRunning() }
 	dbPool       Emitter = func(_ *service.Service, process service.Process) bool { return process.DBPool() }
 	actorAuth    Emitter = func(_ *service.Service, process service.Process) bool { return process.ActorAuth() }
+
+	identityChanges Emitter = func(_ *service.Service, process service.Process) bool { return process.IdentityChanges() }
+	auditLog        Emitter = func(_ *service.Service, process service.Process) bool { return process.AuditLog() }
 )
 
 func runs(components ...service.Component) Emitter {

@@ -26,26 +26,25 @@ import {
   SelectValue,
 } from "@boilerplate/ui/components/select";
 
-import { addMember } from "@/actions/members";
+import { createInvitation } from "@/actions/invitations";
 import {
-  addMemberInputSchema,
-  memberRoleSchema,
-  type MemberRole,
-} from "@/shared/auth/members";
+  createInvitationInputSchema,
+  invitableRoleSchema,
+  invitableRoles,
+  type InvitableRole,
+} from "@/shared/auth/invitations";
+import { INVITATION_EXPIRES_IN_DAYS } from "@/shared/auth/policy";
 
-interface AddMemberDialogProps {
-  assignableRoles: MemberRole[];
-}
+const DEFAULT_ROLE: InvitableRole = "viewer";
 
-const DEFAULT_ROLE: MemberRole = "viewer";
-
-export function AddMemberDialog({ assignableRoles }: AddMemberDialogProps) {
-  const t = useTranslations("members");
+export function InviteMemberDialog() {
+  const t = useTranslations("invitations");
+  const tMembers = useTranslations("members");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<MemberRole>(DEFAULT_ROLE);
+  const [role, setRole] = useState<InvitableRole>(DEFAULT_ROLE);
   const [emailError, setEmailError] = useState<string>();
   const [formError, setFormError] = useState<string>();
   const [isPending, startTransition] = useTransition();
@@ -64,7 +63,7 @@ export function AddMemberDialog({ assignableRoles }: AddMemberDialogProps) {
     event.preventDefault();
     setFormError(undefined);
 
-    const parsed = addMemberInputSchema.safeParse({
+    const parsed = createInvitationInputSchema.safeParse({
       email: email.trim(),
       role,
     });
@@ -75,13 +74,13 @@ export function AddMemberDialog({ assignableRoles }: AddMemberDialogProps) {
     setEmailError(undefined);
 
     startTransition(async () => {
-      const result = await addMember(parsed.data);
+      const result = await createInvitation(parsed.data);
       if (result.kind === "error") {
         setFormError(t(`errors.${result.code}`));
         return;
       }
       handleOpenChange(false);
-      toast.success(t("added"));
+      toast.success(t("sent"));
       router.refresh();
     });
   }
@@ -91,47 +90,56 @@ export function AddMemberDialog({ assignableRoles }: AddMemberDialogProps) {
       <DialogTrigger asChild>
         <Button>
           <UserPlus aria-hidden />
-          {t("addMember")}
+          {t("invite")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form noValidate className="grid gap-4" onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{t("addMember")}</DialogTitle>
-            <DialogDescription>{t("addMemberDescription")}</DialogDescription>
+            <DialogTitle>{t("inviteTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("inviteDescription", { days: INVITATION_EXPIRES_IN_DAYS })}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-2">
-            <Label htmlFor="member-email">{t("emailLabel")}</Label>
+            <Label htmlFor="invitation-email">{t("emailLabel")}</Label>
             <Input
-              aria-describedby={emailError ? "member-email-error" : undefined}
+              aria-describedby={
+                emailError ? "invitation-email-error" : undefined
+              }
               aria-invalid={emailError !== undefined}
               autoComplete="off"
-              id="member-email"
+              id="invitation-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
             {emailError ? (
-              <p className="text-sm text-destructive" id="member-email-error">
+              <p
+                className="text-sm text-destructive"
+                id="invitation-email-error"
+              >
                 {emailError}
               </p>
             ) : null}
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="member-role">{t("roleLabel")}</Label>
+            <Label htmlFor="invitation-role">{t("roleLabel")}</Label>
             <Select
               value={role}
-              onValueChange={(value) => setRole(memberRoleSchema.parse(value))}
+              onValueChange={(value) =>
+                setRole(invitableRoleSchema.parse(value))
+              }
             >
-              <SelectTrigger className="w-full" id="member-role">
+              <SelectTrigger className="w-full" id="invitation-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {assignableRoles.map((option) => (
+                {invitableRoles.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {t(`roles.${option}`)}
+                    {tMembers(`roles.${option}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -154,7 +162,7 @@ export function AddMemberDialog({ assignableRoles }: AddMemberDialogProps) {
               {tCommon("cancel")}
             </Button>
             <Button aria-busy={isPending} disabled={isPending} type="submit">
-              {t("add")}
+              {t("send")}
             </Button>
           </DialogFooter>
         </form>

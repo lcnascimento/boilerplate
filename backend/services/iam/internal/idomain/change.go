@@ -87,6 +87,10 @@ func (c *Change) Event() (*Event, error) {
 	}, nil
 }
 
+func (e *Event) Type() string {
+	return string(e.Message.ProtoReflect().Descriptor().FullName())
+}
+
 func (c *Change) untranslatable() errors.CustomError {
 	return ErrUntranslatableChange.
 		WithAttribute("change_id", strconv.FormatInt(c.ID, 10)).

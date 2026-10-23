@@ -4,7 +4,8 @@ import { z } from "zod";
 export type AuthAction =
   | { kind: "signUp"; email: string }
   | { kind: "signIn"; email: string }
-  | { kind: "createOrganization"; name: string };
+  | { kind: "createOrganization"; name: string }
+  | { kind: "createInvitation"; email: string };
 
 // A rule refuses an action by throwing a Better Auth APIError, which the caller receives as is.
 export type AuthRule = (action: AuthAction) => Promise<void>;
@@ -32,6 +33,12 @@ function actionOf(path: string, body: unknown): AuthAction | null {
       const parsed = organizationBodySchema.safeParse(body);
       return parsed.success
         ? { kind: "createOrganization", name: parsed.data.name }
+        : null;
+    }
+    case "/organization/invite-member": {
+      const parsed = emailBodySchema.safeParse(body);
+      return parsed.success
+        ? { kind: "createInvitation", email: parsed.data.email }
         : null;
     }
     default:

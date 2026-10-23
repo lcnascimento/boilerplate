@@ -47,7 +47,8 @@ func TestComponentRepository_SignUpWritesOneUserCreated(t *testing.T) {
 	translated, err := repo.Translate(t.Context(), batch)
 
 	require.NoError(t, err)
-	require.Equal(t, 1, translated)
+	require.Len(t, translated, 1)
+	require.Equal(t, "boilerplate.iam.v1.UserCreated", translated[0].Type())
 
 	got := outboxEvents(t, pool)
 	require.Len(t, got, 1)
@@ -172,7 +173,7 @@ func TestComponentRepository_TranslatedChangesAreGone(t *testing.T) {
 
 	translated, err := repo.Translate(t.Context(), batch)
 	require.NoError(t, err)
-	require.Zero(t, translated)
+	require.Empty(t, translated)
 	require.Len(t, outboxEvents(t, pool), 1)
 }
 
@@ -188,7 +189,7 @@ func TestComponentRepository_TranslatesAtMostTheLimit(t *testing.T) {
 	translated, err := repo.Translate(t.Context(), 2)
 
 	require.NoError(t, err)
-	require.Equal(t, 2, translated)
+	require.Len(t, translated, 2)
 	require.Equal(t, 1, pendingChanges(t, pool))
 	require.Len(t, outboxEvents(t, pool), 2)
 }
@@ -205,6 +206,30 @@ func TestComponentRepository_UntranslatableChangeHoldsBackTheBatch(t *testing.T)
 	require.ErrorIs(t, err, idomain.ErrUntranslatableChange)
 	require.Equal(t, 2, pendingChanges(t, pool))
 	require.Empty(t, outboxEvents(t, pool))
+}
+
+func TestComponentRepository_OldestPendingAgeIsZeroWithoutPendingChanges(t *testing.T) {
+	t.Parallel()
+
+	repo, _ := newRepository(t)
+
+	age, err := repo.OldestPendingAge(t.Context())
+
+	require.NoError(t, err)
+	require.Zero(t, age)
+}
+
+func TestComponentRepository_OldestPendingAgeIsTheAgeOfTheOldestChange(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepository(t)
+	inTx(t, pool, `INSERT INTO identity_change (occurred_at, table_name, operation, fields)
+		VALUES (now() - interval '10 minutes', 'user', 'INSERT', '{}'), (now() - interval '1 minute', 'user', 'INSERT', '{}')`)
+
+	age, err := repo.OldestPendingAge(t.Context())
+
+	require.NoError(t, err)
+	require.InDelta(t, (10 * time.Minute).Seconds(), age.Seconds(), 5)
 }
 
 func TestComponentRepository_ConcurrentStepsTranslateEachChangeOnce(t *testing.T) {
@@ -228,7 +253,7 @@ func TestComponentRepository_ConcurrentStepsTranslateEachChangeOnce(t *testing.T
 		wg.Go(func() {
 			for {
 				translated, err := repo.Translate(t.Context(), 3)
-				if err != nil || translated == 0 {
+				if err != nil || len(translated) == 0 {
 					errs[i] = err
 
 					return

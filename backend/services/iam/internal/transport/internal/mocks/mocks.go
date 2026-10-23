@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "go.uber.org/mock/gomock"
 )
@@ -38,6 +39,21 @@ func NewMockChangesService(ctrl *gomock.Controller) *MockChangesService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockChangesService) EXPECT() *MockChangesServiceMockRecorder {
 	return m.recorder
+}
+
+// OldestPendingAge mocks base method.
+func (m *MockChangesService) OldestPendingAge(ctx context.Context) (time.Duration, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OldestPendingAge", ctx)
+	ret0, _ := ret[0].(time.Duration)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OldestPendingAge indicates an expected call of OldestPendingAge.
+func (mr *MockChangesServiceMockRecorder) OldestPendingAge(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OldestPendingAge", reflect.TypeOf((*MockChangesService)(nil).OldestPendingAge), ctx)
 }
 
 // Translate mocks base method.

@@ -15,6 +15,7 @@ export const statement = {
     "delete",
     "transfer",
   ],
+  invitation: [...defaultStatements.invitation, "create", "cancel"],
   note: ["read", "create", "delete"],
 } as const;
 
@@ -29,11 +30,13 @@ export const roles = {
       "delete",
       "transfer",
     ],
+    invitation: [...ownerAc.statements.invitation, "create", "cancel"],
     note: ["read", "create", "delete"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,
     organization: [...adminAc.statements.organization, "update"],
+    invitation: [...adminAc.statements.invitation, "create", "cancel"],
     note: ["read", "create"],
   }),
   viewer: ac.newRole({

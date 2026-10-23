@@ -18,6 +18,10 @@ _Avoid_: Workspace, tenant, time
 O vínculo de um User com uma Organization, com exatamente uma Role.
 _Avoid_: Membership, participante
 
+**Invitation**:
+O convite, feito por um Owner ou Admin a um email, para que o User com esse email se torne Member da Organization com uma Role (Admin ou Viewer). Vale 7 dias e só vira Member se o convidado aceitar.
+_Avoid_: Invite, adicionar Member
+
 **Role**:
 O papel de um Member na sua Organization, que define o que ele pode fazer: Owner, Admin ou Viewer.
 _Avoid_: Perfil, permissão, grupo

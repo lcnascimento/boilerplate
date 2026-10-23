@@ -2,6 +2,7 @@ package changes
 
 import (
 	"context"
+	"time"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/application"
 )
@@ -27,5 +28,14 @@ func (a *Application) Translate(ctx context.Context) (int, error) {
 
 	a.onTranslated(ctx, translated)
 
-	return translated, nil
+	return len(translated), nil
+}
+
+func (a *Application) OldestPendingAge(ctx context.Context) (time.Duration, error) {
+	age, err := a.repo.OldestPendingAge(ctx)
+	if err != nil {
+		return 0, ErrOldestPendingAge.WithCause(err)
+	}
+
+	return age, nil
 }
