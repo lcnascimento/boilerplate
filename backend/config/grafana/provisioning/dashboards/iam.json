@@ -830,8 +830,8 @@
     },
     {
       "type": "row",
-      "collapsed": true,
-      "title": "Runtime",
+      "collapsed": false,
+      "title": "Mudanças de identidade",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -839,10 +839,214 @@
         "y": 51
       },
       "id": 13,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 14,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(iam_identity_change_oldest_pending_age_seconds{job=~\"boilerplate/(iam-worker)\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Mudança pendente mais antiga",
+      "description": "Idade da mudança de identidade mais antiga ainda não traduzida em Integration Event; 0 sem pendentes.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 52
+      },
+      "repeatDirection": "h",
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "percentChangeColorMode": "standard",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 300,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 15,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (job) (iam_identity_change_oldest_pending_age_seconds{job=~\"boilerplate/(iam-worker)\"})",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Idade da mudança pendente mais antiga",
+      "description": "Idade da mudança de identidade pendente mais antiga, por processo; a linha é o limite do alerta IdentityChangeBacklogHigh.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 52
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 300,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "axisSoftMax": 300,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 16,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cloudevents_event_type) (rate(iam_identity_change_translated_total{job=~\"boilerplate/(iam-worker)\"}[$__rate_interval]))",
+          "legendFormat": "{{cloudevents_event_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Traduzidas por tipo de evento",
+      "description": "Mudanças de identidade traduzidas em Integration Events por segundo, pelo tipo do evento.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 52
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "collapsed": true,
+      "title": "Runtime",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 17,
       "panels": [
         {
           "type": "timeseries",
-          "id": 14,
+          "id": 18,
           "targets": [
             {
               "datasource": {
@@ -865,7 +1069,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 52
+            "y": 61
           },
           "repeatDirection": "h",
           "options": {
@@ -896,7 +1100,7 @@
         },
         {
           "type": "timeseries",
-          "id": 15,
+          "id": 19,
           "targets": [
             {
               "datasource": {
@@ -919,7 +1123,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 52
+            "y": 61
           },
           "repeatDirection": "h",
           "options": {
@@ -950,7 +1154,7 @@
         },
         {
           "type": "timeseries",
-          "id": 16,
+          "id": 20,
           "targets": [
             {
               "datasource": {
@@ -972,200 +1176,6 @@
           "gridPos": {
             "h": 8,
             "w": 8,
-            "x": 0,
-            "y": 60
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "short",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 17,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}} {{go_memory_type}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Memória Go",
-          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 8,
-            "y": 60
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 18,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
-              "legendFormat": "alocação/s {{job}}",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job) (go_memory_gc_goal_bytes{job=~\"boilerplate/$process\"})",
-              "legendFormat": "meta do GC {{job}}",
-              "refId": "B"
-            }
-          ],
-          "title": "GC",
-          "description": "Bytes alocados no heap por segundo, e o tamanho de heap que dispara o próximo GC.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 16,
-            "y": 60
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        }
-      ]
-    },
-    {
-      "type": "row",
-      "collapsed": true,
-      "title": "Banco",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 68
-      },
-      "id": 19,
-      "panels": [
-        {
-          "type": "timeseries",
-          "id": 20,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job) (pgxpool_acquired_connections{job=~\"boilerplate/$process\"})",
-              "legendFormat": "em uso {{job}}",
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job) (pgxpool_max_connections{job=~\"boilerplate/$process\"})",
-              "legendFormat": "máximo {{job}}",
-              "refId": "B"
-            }
-          ],
-          "title": "Pool",
-          "description": "Conexões do pool pgx em uso e o máximo do pool, por processo; o alerta passa de 90%.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
             "x": 0,
             "y": 69
           },
@@ -1205,6 +1215,200 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
+              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}} {{go_memory_type}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memória Go",
+          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 69
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 22,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
+              "legendFormat": "alocação/s {{job}}",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job) (go_memory_gc_goal_bytes{job=~\"boilerplate/$process\"})",
+              "legendFormat": "meta do GC {{job}}",
+              "refId": "B"
+            }
+          ],
+          "title": "GC",
+          "description": "Bytes alocados no heap por segundo, e o tamanho de heap que dispara o próximo GC.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 69
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "collapsed": true,
+      "title": "Banco",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 77
+      },
+      "id": 23,
+      "panels": [
+        {
+          "type": "timeseries",
+          "id": 24,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job) (pgxpool_acquired_connections{job=~\"boilerplate/$process\"})",
+              "legendFormat": "em uso {{job}}",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job) (pgxpool_max_connections{job=~\"boilerplate/$process\"})",
+              "legendFormat": "máximo {{job}}",
+              "refId": "B"
+            }
+          ],
+          "title": "Pool",
+          "description": "Conexões do pool pgx em uso e o máximo do pool, por processo; o alerta passa de 90%.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 78
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 25,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
               "expr": "sum by (application_name, state) (pg_client_connections_count{application_name=~\"$process\"})",
               "legendFormat": "{{application_name}} {{state}}",
               "refId": "A"
@@ -1221,7 +1425,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 69
+            "y": 78
           },
           "repeatDirection": "h",
           "options": {
@@ -1260,14 +1464,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 86
       },
-      "id": 22,
+      "id": 26,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 23,
+      "id": 27,
       "targets": [
         {
           "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
@@ -1290,7 +1494,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 78
+        "y": 87
       },
       "repeatDirection": "h",
       "options": {
@@ -1321,7 +1525,7 @@
     },
     {
       "type": "logs",
-      "id": 24,
+      "id": 28,
       "targets": [
         {
           "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
@@ -1343,7 +1547,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 95
       },
       "repeatDirection": "h",
       "options": {

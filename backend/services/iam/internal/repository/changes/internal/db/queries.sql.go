@@ -63,3 +63,15 @@ func (q *Queries) LockChanges(ctx context.Context, limit int32) ([]LockChangesRo
 	}
 	return items, nil
 }
+
+const oldestChangeAge = `-- name: OldestChangeAge :one
+SELECT coalesce(extract(epoch FROM now() - min(occurred_at)), 0)::float8 AS seconds
+FROM identity_change
+`
+
+func (q *Queries) OldestChangeAge(ctx context.Context) (float64, error) {
+	row := q.db.QueryRow(ctx, oldestChangeAge)
+	var seconds float64
+	err := row.Scan(&seconds)
+	return seconds, err
+}

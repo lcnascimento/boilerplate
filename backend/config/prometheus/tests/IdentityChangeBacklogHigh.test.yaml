@@ -1,0 +1,41 @@
+rule_files:
+  - fixture.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires once the oldest pending identity change is older than five minutes
+    interval: 1m
+    input_series:
+      - series: iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}
+        values: 240+60x4
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: IdentityChangeBacklogHigh
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: IdentityChangeBacklogHigh
+        exp_alerts:
+          - exp_labels:
+              service: fixture-worker
+              severity: critical
+            exp_annotations:
+              summary: "fixture-worker com a mudança de identidade mais antiga há 6m 0s sem tradução"
+              description: "A mudança de identidade pendente mais antiga de fixture-worker passou de 5 minutos sem virar Integration Event: a tradução parou, ou travou numa mudança que ela não sabe traduzir, e o Audit Log deixa de receber as mudanças de identidade. Veja primeiro os logs de fixture-worker (UNTRANSLATABLE_CHANGE) e a idade da mudança pendente mais antiga no dashboard do serviço."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/IdentityChangeBacklogHigh.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
+
+  - name: stays quiet while the oldest pending identity change is five minutes old or younger, even when another worker lags
+    interval: 1m
+    input_series:
+      - series: iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}
+        values: 0 30 300 0x10
+      - series: iam_identity_change_oldest_pending_age_seconds{job="boilerplate/other-worker"}
+        values: 3600x10
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: IdentityChangeBacklogHigh
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: IdentityChangeBacklogHigh
+        exp_alerts: []

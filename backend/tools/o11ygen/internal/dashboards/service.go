@@ -53,8 +53,10 @@ func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.Dashbo
 		}
 	}
 
-	if auth, ok := authSection(svc); ok {
-		sections = append(sections, auth)
+	for _, optional := range []func(*service.Service) (section, bool){authSection, identityChangesSection, auditLogSection} {
+		if s, ok := optional(svc); ok {
+			sections = append(sections, s)
+		}
 	}
 
 	sections = append(sections, runtimeDashboards[svc.Runtime].runtime())

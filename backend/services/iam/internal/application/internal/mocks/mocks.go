@@ -12,7 +12,9 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
+	idomain "github.com/lcnascimento/boilerplate/backend/services/iam/internal/idomain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,11 +42,26 @@ func (m *MockChangesRepository) EXPECT() *MockChangesRepositoryMockRecorder {
 	return m.recorder
 }
 
+// OldestPendingAge mocks base method.
+func (m *MockChangesRepository) OldestPendingAge(ctx context.Context) (time.Duration, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OldestPendingAge", ctx)
+	ret0, _ := ret[0].(time.Duration)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OldestPendingAge indicates an expected call of OldestPendingAge.
+func (mr *MockChangesRepositoryMockRecorder) OldestPendingAge(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OldestPendingAge", reflect.TypeOf((*MockChangesRepository)(nil).OldestPendingAge), ctx)
+}
+
 // Translate mocks base method.
-func (m *MockChangesRepository) Translate(ctx context.Context, limit int32) (int, error) {
+func (m *MockChangesRepository) Translate(ctx context.Context, limit int32) ([]*idomain.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Translate", ctx, limit)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].([]*idomain.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -777,8 +777,8 @@
     },
     {
       "type": "row",
-      "collapsed": true,
-      "title": "Runtime",
+      "collapsed": false,
+      "title": "Audit Log",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -786,10 +786,77 @@
         "y": 46
       },
       "id": 12,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cloudevents_event_type) (increase(audit_entries_recorded_total{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval]))",
+          "legendFormat": "{{cloudevents_event_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Audit Entries por tipo de evento",
+      "description": "Audit Entries gravadas no intervalo, pelo tipo do evento; uma reentrega conta de novo.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "collapsed": true,
+      "title": "Runtime",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "id": 14,
       "panels": [
         {
           "type": "timeseries",
-          "id": 13,
+          "id": 15,
           "targets": [
             {
               "datasource": {
@@ -812,7 +879,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 47
+            "y": 56
           },
           "repeatDirection": "h",
           "options": {
@@ -843,7 +910,7 @@
         },
         {
           "type": "timeseries",
-          "id": 14,
+          "id": 16,
           "targets": [
             {
               "datasource": {
@@ -866,115 +933,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 47
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "bytes",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 15,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Goroutines",
-          "description": "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 0,
-            "y": 55
-          },
-          "repeatDirection": "h",
-          "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true,
-              "calcs": []
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "unit": "short",
-              "custom": {
-                "drawStyle": "line",
-                "lineWidth": 1,
-                "fillOpacity": 10,
-                "showPoints": "never",
-                "spanNulls": false
-              }
-            },
-            "overrides": []
-          }
-        },
-        {
-          "type": "timeseries",
-          "id": 16,
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-              },
-              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
-              "legendFormat": "{{job}} {{go_memory_type}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Memória Go",
-          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
-          "transparent": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 8,
-            "y": 55
+            "y": 56
           },
           "repeatDirection": "h",
           "options": {
@@ -1012,6 +971,114 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
+              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Goroutines",
+          "description": "Goroutines vivas por processo; uma subida sem volta costuma ser vazamento.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 64
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 18,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
+              "legendFormat": "{{job}} {{go_memory_type}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memória Go",
+          "description": "Memória usada pelo runtime Go por processo: heap e demais (other) e stacks.",
+          "transparent": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 64
+          },
+          "repeatDirection": "h",
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": []
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "showPoints": "never",
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 19,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
               "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
               "legendFormat": "alocação/s {{job}}",
               "refId": "A"
@@ -1037,7 +1104,7 @@
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 55
+            "y": 64
           },
           "repeatDirection": "h",
           "options": {
@@ -1076,13 +1143,13 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 72
       },
-      "id": 18,
+      "id": 20,
       "panels": [
         {
           "type": "timeseries",
-          "id": 19,
+          "id": 21,
           "targets": [
             {
               "datasource": {
@@ -1114,7 +1181,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 64
+            "y": 73
           },
           "repeatDirection": "h",
           "options": {
@@ -1145,7 +1212,7 @@
         },
         {
           "type": "timeseries",
-          "id": 20,
+          "id": 22,
           "targets": [
             {
               "datasource": {
@@ -1168,7 +1235,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 64
+            "y": 73
           },
           "repeatDirection": "h",
           "options": {
@@ -1207,14 +1274,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 72
+        "y": 81
       },
-      "id": 21,
+      "id": 23,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 22,
+      "id": 24,
       "targets": [
         {
           "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
@@ -1237,7 +1304,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 82
       },
       "repeatDirection": "h",
       "options": {
@@ -1268,7 +1335,7 @@
     },
     {
       "type": "logs",
-      "id": 23,
+      "id": 25,
       "targets": [
         {
           "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
@@ -1290,7 +1357,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 81
+        "y": 90
       },
       "repeatDirection": "h",
       "options": {

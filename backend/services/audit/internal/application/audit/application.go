@@ -32,7 +32,7 @@ func (a *Application) Record(ctx context.Context, entry *idomain.Entry) error {
 		return a.onError(ctx, ErrRecordEntry.WithCause(err))
 	}
 
-	a.onRecorded(ctx)
+	a.onRecorded(ctx, entry)
 
 	return nil
 }
