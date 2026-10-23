@@ -21,7 +21,7 @@ class TransferRefused extends Error {
   }
 }
 
-export async function transferOwnership(
+export async function transferOwnershipFor(
   actor: Actor,
   memberId: MemberId
 ): Promise<OwnershipResult> {

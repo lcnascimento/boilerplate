@@ -13,7 +13,7 @@ import {
   organizationIdSchema,
   userIdSchema,
 } from "./actor-ids";
-import { deleteOrganization } from "./organization-deletion";
+import { deleteOrganizationFor } from "./organization-deletion";
 import { fixtureDatabase } from "./test-database";
 
 import type { Actor } from "./actor";
@@ -43,7 +43,7 @@ function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
 const anaAsOwner = actor(ANA, ANA_MEMBER, "owner");
 
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
-  "deleteOrganization",
+  "deleteOrganizationFor",
   () => {
     let database: Pool;
 
@@ -152,7 +152,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
           [BRUNO_MEMBER, [BRUNO_MEMBER, ANA_MEMBER]]
         );
 
-        const deletion = deleteOrganization(anaAsOwner, "Initech");
+        const deletion = deleteOrganizationFor(anaAsOwner, "Initech");
         await new Promise((resolve) => setTimeout(resolve, 300));
         await transfer.query("COMMIT");
 
@@ -164,7 +164,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("deletes the Organization with its Members and Invitations, and nothing else", async () => {
-      expect(await deleteOrganization(anaAsOwner, "Initech")).toEqual({
+      expect(await deleteOrganizationFor(anaAsOwner, "Initech")).toEqual({
         kind: "ok",
       });
 
@@ -178,7 +178,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses a confirmation that is not exactly the name", async () => {
       for (const confirmation of ["initech", "Initech ", "Hooli", ""]) {
-        expect(await deleteOrganization(anaAsOwner, confirmation)).toEqual({
+        expect(await deleteOrganizationFor(anaAsOwner, confirmation)).toEqual({
           kind: "error",
           code: "nameMismatch",
         });
@@ -189,7 +189,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses an Admin", async () => {
       expect(
-        await deleteOrganization(actor(BRUNO, BRUNO_MEMBER, "admin"), "Initech")
+        await deleteOrganizationFor(
+          actor(BRUNO, BRUNO_MEMBER, "admin"),
+          "Initech"
+        )
       ).toEqual({ kind: "error", code: "forbidden" });
 
       expect(await remaining()).toEqual(untouched);
@@ -197,7 +200,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses an Actor who is no longer the Owner", async () => {
       expect(
-        await deleteOrganization(actor(BRUNO, BRUNO_MEMBER, "owner"), "Initech")
+        await deleteOrganizationFor(
+          actor(BRUNO, BRUNO_MEMBER, "owner"),
+          "Initech"
+        )
       ).toEqual({ kind: "error", code: "forbidden" });
 
       expect(await remaining()).toEqual(untouched);

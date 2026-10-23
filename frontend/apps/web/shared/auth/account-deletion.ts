@@ -100,7 +100,7 @@ async function passwordMatches(
   return context.password.verify({ hash: account.password, password });
 }
 
-export async function deleteAccount(
+export async function deleteAccountFor(
   actor: AuditedActor,
   headers: Headers,
   password: string

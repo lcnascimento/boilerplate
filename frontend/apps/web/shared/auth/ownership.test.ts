@@ -13,7 +13,7 @@ import {
   organizationIdSchema,
   userIdSchema,
 } from "./actor-ids";
-import { transferOwnership } from "./ownership";
+import { transferOwnershipFor } from "./ownership";
 import { fixtureDatabase } from "./test-database";
 
 import type { Actor } from "./actor";
@@ -49,7 +49,7 @@ function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
 const anaAsOwner = actor(ANA, ANA_MEMBER, "owner");
 
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
-  "transferOwnership",
+  "transferOwnershipFor",
   () => {
     let database: Pool;
 
@@ -122,7 +122,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     ];
 
     it("hands the Organization to a Viewer and keeps the Owner as Admin", async () => {
-      expect(await transferOwnership(anaAsOwner, CARLA_MEMBER)).toEqual({
+      expect(await transferOwnershipFor(anaAsOwner, CARLA_MEMBER)).toEqual({
         kind: "ok",
       });
 
@@ -134,7 +134,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("hands the Organization to an Admin", async () => {
-      expect(await transferOwnership(anaAsOwner, BRUNO_MEMBER)).toEqual({
+      expect(await transferOwnershipFor(anaAsOwner, BRUNO_MEMBER)).toEqual({
         kind: "ok",
       });
 
@@ -147,7 +147,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses an Admin", async () => {
       expect(
-        await transferOwnership(
+        await transferOwnershipFor(
           actor(BRUNO, BRUNO_MEMBER, "admin"),
           CARLA_MEMBER
         )
@@ -158,7 +158,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("promotes nobody when the Actor is no longer the Owner", async () => {
       expect(
-        await transferOwnership(
+        await transferOwnershipFor(
           actor(BRUNO, BRUNO_MEMBER, "owner"),
           CARLA_MEMBER
         )
@@ -168,7 +168,9 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses a Member of another Organization", async () => {
-      expect(await transferOwnership(anaAsOwner, CARLA_HOOLI_MEMBER)).toEqual({
+      expect(
+        await transferOwnershipFor(anaAsOwner, CARLA_HOOLI_MEMBER)
+      ).toEqual({
         kind: "error",
         code: "invalidInput",
       });
@@ -177,7 +179,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses the Owner themselves", async () => {
-      expect(await transferOwnership(anaAsOwner, ANA_MEMBER)).toEqual({
+      expect(await transferOwnershipFor(anaAsOwner, ANA_MEMBER)).toEqual({
         kind: "error",
         code: "invalidInput",
       });

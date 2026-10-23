@@ -8,7 +8,7 @@ import {
   vi,
 } from "vitest";
 
-import { deleteAccount, accountDeletionBlockers } from "./account-deletion";
+import { accountDeletionBlockers, deleteAccountFor } from "./account-deletion";
 import { organizationIdSchema, userIdSchema } from "./actor-ids";
 import { hashIp } from "./audit-connection";
 import { getIam } from "./auth";
@@ -172,7 +172,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses the Owner of an Organization with other Members, and deletes nothing", async () => {
-      expect(await deleteAccount(ana, fromIp, PASSWORD)).toEqual({
+      expect(await deleteAccountFor(ana, fromIp, PASSWORD)).toEqual({
         kind: "error",
         code: "ownsSharedOrganizations",
         organizations: [{ id: INITECH, name: "Initech" }],
@@ -182,16 +182,18 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses a wrong password, and deletes nothing", async () => {
-      expect(await deleteAccount(bruno, fromIp, "not-the-password")).toEqual({
-        kind: "error",
-        code: "invalidPassword",
-      });
+      expect(await deleteAccountFor(bruno, fromIp, "not-the-password")).toEqual(
+        {
+          kind: "error",
+          code: "invalidPassword",
+        }
+      );
 
       expect(await remaining()).toEqual(untouched);
     });
 
     it("deletes the User with the sole-Member Organizations, and keeps the shared ones", async () => {
-      expect(await deleteAccount(bruno, fromIp, PASSWORD)).toEqual({
+      expect(await deleteAccountFor(bruno, fromIp, PASSWORD)).toEqual({
         kind: "ok",
       });
 
@@ -246,7 +248,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     it("records the deleting User, their active Organization and the IP hash on every change", async () => {
       const ip = randomIp();
 
-      await deleteAccount(bruno, ip.headers, PASSWORD);
+      await deleteAccountFor(bruno, ip.headers, PASSWORD);
 
       const asBruno = { actorId: BRUNO, actorOrganizationId: BRUNO_SOLO };
       expect(await recordedChanges(ip.hash)).toEqual([
@@ -261,7 +263,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     it("records no Actor Organization when the deleting User has no active one", async () => {
       const ip = randomIp();
 
-      await deleteAccount(
+      await deleteAccountFor(
         { userId: bruno.userId, organizationId: null },
         ip.headers,
         PASSWORD
@@ -279,18 +281,20 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses more than three password attempts a minute, even with the right password", async () => {
       for (let attempt = 0; attempt < 3; attempt++) {
-        expect(await deleteAccount(bruno, fromIp, "not-the-password")).toEqual({
+        expect(
+          await deleteAccountFor(bruno, fromIp, "not-the-password")
+        ).toEqual({
           kind: "error",
           code: "invalidPassword",
         });
       }
 
-      expect(await deleteAccount(bruno, fromIp, PASSWORD)).toEqual({
+      expect(await deleteAccountFor(bruno, fromIp, PASSWORD)).toEqual({
         kind: "error",
         code: "tooManyAttempts",
       });
       expect(await remaining()).toEqual(untouched);
-      expect(await deleteAccount(ana, fromIp, "not-the-password")).toEqual({
+      expect(await deleteAccountFor(ana, fromIp, "not-the-password")).toEqual({
         kind: "error",
         code: "invalidPassword",
       });
@@ -306,7 +310,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
           [ANA_IN_BRUNO_SOLO, BRUNO_SOLO, ANA]
         );
 
-        const deletion = deleteAccount(bruno, fromIp, PASSWORD);
+        const deletion = deleteAccountFor(bruno, fromIp, PASSWORD);
         await new Promise((resolve) => setTimeout(resolve, 300));
         await joining.query("COMMIT");
 

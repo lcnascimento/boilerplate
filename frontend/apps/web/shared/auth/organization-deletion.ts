@@ -39,7 +39,7 @@ export async function deleteOwnedOrganization(
   return numAffectedRows === 1n ? "deleted" : "notMatched";
 }
 
-export async function deleteOrganization(
+export async function deleteOrganizationFor(
   actor: Actor,
   confirmation: string
 ): Promise<DeletionResult> {

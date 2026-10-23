@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 import {
   deleteAccountInputSchema,
@@ -11,31 +10,20 @@ import {
 } from "@/shared/auth/account";
 import {
   accountDeletionBlockers,
-  deleteAccount as deleteAccountOf,
+  deleteAccountFor,
 } from "@/shared/auth/account-deletion";
 import { userIdSchema } from "@/shared/auth/actor-ids";
 import { getIam } from "@/shared/auth/auth";
-import { getRequestActor } from "@/shared/auth/request-actor";
-import { SIGN_IN_HREF } from "@/shared/auth/routes";
-import { getRequestSession } from "@/shared/auth/session";
-import { logger } from "@/shared/logging";
+
+import {
+  logFailure,
+  requireAuditedActor,
+  requireSession,
+  serverAction,
+  unexpected,
+} from "./server-action";
 
 import type { Organization } from "@/shared/auth/organizations";
-
-// Next exposes every Server Action as a public endpoint, so arguments arrive as `unknown`.
-
-const invalidInput = { kind: "error", code: "invalidInput" } as const;
-const unexpected = { kind: "error", code: "unexpected" } as const;
-
-async function requireSession() {
-  const session = await getRequestSession();
-  if (session === null) redirect(SIGN_IN_HREF);
-  return session;
-}
-
-function logFailure(operation: string, error: unknown) {
-  logger.error({ err: error, operation }, "account operation failed");
-}
 
 export async function getAccountSettings(): Promise<{
   name: string;
@@ -50,58 +38,50 @@ export async function getAccountSettings(): Promise<{
   };
 }
 
-export async function renameUser(input: unknown): Promise<RenameUserResult> {
-  const parsed = userNameInputSchema.safeParse(input);
-  if (!parsed.success) return invalidInput;
+export const renameUser = serverAction(
+  userNameInputSchema,
+  async ({ name }): Promise<RenameUserResult> => {
+    const requestHeaders = await headers();
+    await requireSession();
 
-  const requestHeaders = await headers();
-  await requireSession();
-
-  try {
-    await getIam().auth.api.updateUser({
-      headers: requestHeaders,
-      body: { name: parsed.data.name },
-    });
-    return { kind: "ok" };
-  } catch (error) {
-    logFailure("account.rename", error);
-    return unexpected;
-  }
-}
-
-export async function deleteAccount(
-  input: unknown
-): Promise<AccountDeletionResult> {
-  const parsed = deleteAccountInputSchema.safeParse(input);
-  if (!parsed.success) return invalidInput;
-
-  const requestHeaders = await headers();
-  const { user } = await requireSession();
-  const requestActor = await getRequestActor();
-  const deletingUser = {
-    userId: userIdSchema.parse(user.id),
-    organizationId:
-      requestActor.kind === "actor" ? requestActor.actor.organizationId : null,
-  };
-
-  let result: AccountDeletionResult;
-  try {
-    result = await deleteAccountOf(
-      deletingUser,
-      new Headers(requestHeaders),
-      parsed.data.password
-    );
-  } catch (error) {
-    logFailure("account.delete", error);
-    return unexpected;
-  }
-
-  if (result.kind === "ok") {
     try {
-      await getIam().auth.api.signOut({ headers: requestHeaders });
+      await getIam().auth.api.updateUser({
+        headers: requestHeaders,
+        body: { name },
+      });
+      return { kind: "ok" };
     } catch (error) {
-      logFailure("account.delete.signOut", error);
+      logFailure("account.rename", error);
+      return unexpected;
     }
   }
-  return result;
-}
+);
+
+export const deleteAccount = serverAction(
+  deleteAccountInputSchema,
+  async ({ password }): Promise<AccountDeletionResult> => {
+    const requestHeaders = await headers();
+    const deletingUser = await requireAuditedActor();
+
+    let result: AccountDeletionResult;
+    try {
+      result = await deleteAccountFor(
+        deletingUser,
+        new Headers(requestHeaders),
+        password
+      );
+    } catch (error) {
+      logFailure("account.delete", error);
+      return unexpected;
+    }
+
+    if (result.kind === "ok") {
+      try {
+        await getIam().auth.api.signOut({ headers: requestHeaders });
+      } catch (error) {
+        logFailure("account.delete.signOut", error);
+      }
+    }
+    return result;
+  }
+);
