@@ -22,6 +22,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/metrictest"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/notes"
@@ -249,11 +250,11 @@ func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 
 func (s *ApplicationSuite) TestDeleteOrganizationNotesCountsEveryDeletedNote() {
 	s.repo.EXPECT().DeleteByOrganization(gomock.Any(), acme).Return(int64(3), nil)
-	before := deletedNotes(s.T())
+	before := metrictest.Counter(s.T(), metrics, "notes.notes.deleted")
 
 	s.Require().NoError(s.app.DeleteOrganizationNotes(s.T().Context(), acme))
 
-	s.Require().Equal(int64(3), deletedNotes(s.T())-before)
+	s.Require().Equal(int64(3), metrictest.Counter(s.T(), metrics, "notes.notes.deleted")-before)
 }
 
 func (s *ApplicationSuite) TestDeleteOrganizationNotesWrapsRepositoryErrors() {
@@ -340,33 +341,6 @@ func (s *ApplicationSuite) TestAdminCreatesNotes() {
 
 	s.Require().NoError(err)
 	s.Require().Equal("Ideias", got.Title)
-}
-
-func deletedNotes(t *testing.T) int64 {
-	t.Helper()
-
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, metrics.Collect(t.Context(), &rm))
-
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name != "notes.notes.deleted" {
-				continue
-			}
-
-			sum, ok := m.Data.(metricdata.Sum[int64])
-			require.True(t, ok, "notes.notes.deleted is a %T", m.Data)
-
-			var total int64
-			for _, dp := range sum.DataPoints {
-				total += dp.Value
-			}
-
-			return total
-		}
-	}
-
-	return 0
 }
 
 func denials(t *testing.T, permission, role string) int64 {
