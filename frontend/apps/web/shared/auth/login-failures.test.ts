@@ -6,6 +6,7 @@ import {
   LOGIN_FAILURES_METRIC,
   loginFailureHook,
   seedLoginFailures,
+  type SignInFailureReason,
   withLoginFailures,
 } from "./login-failures";
 import { startTestTelemetry } from "./test-telemetry";
@@ -13,6 +14,8 @@ import { startTestTelemetry } from "./test-telemetry";
 const telemetry = startTestTelemetry();
 
 const BASE_URL = "http://localhost:3000";
+
+let signInFailures: SignInFailureReason[] = [];
 
 function createAuth() {
   return betterAuth({
@@ -27,7 +30,12 @@ function createAuth() {
     }),
     emailAndPassword: { enabled: true, minPasswordLength: 8 },
     rateLimit: { enabled: true, storage: "memory" },
-    hooks: { after: loginFailureHook },
+    hooks: {
+      after: loginFailureHook((reason) => {
+        signInFailures.push(reason);
+        return Promise.resolve();
+      }),
+    },
   });
 }
 
@@ -174,5 +182,52 @@ describe("login failures", () => {
     );
 
     expect(Object.keys(await failures()).join(" ")).not.toContain(ana.email);
+  });
+});
+
+describe("sign-in failures", () => {
+  let auth: Auth;
+
+  beforeEach(async () => {
+    auth = createAuth();
+    await auth.api.signUpEmail({ body: ana });
+    signInFailures = [];
+  });
+
+  it("records a wrong password and an unknown email with the same reason", async () => {
+    await rejects(
+      auth.api.signInEmail({
+        body: { email: ana.email, password: "wrong-password" },
+      })
+    );
+    await rejects(
+      auth.api.signInEmail({
+        body: { email: "nobody@acme.test", password: ana.password },
+      })
+    );
+
+    expect(signInFailures).toEqual([
+      "invalid_credentials",
+      "invalid_credentials",
+    ]);
+  });
+
+  it("records a malformed email as invalid_input", async () => {
+    await rejects(
+      auth.api.signInEmail({
+        body: { email: "not-an-email", password: "whatever-it-is" },
+      })
+    );
+
+    expect(signInFailures).toEqual(["invalid_input"]);
+  });
+
+  it("records neither a successful sign-in nor a refused sign-up", async () => {
+    await auth.api.signInEmail({
+      body: { email: ana.email, password: ana.password },
+    });
+    await rejects(auth.api.signUpEmail({ body: ana }));
+
+    expect(signInFailures).toEqual([]);
   });
 });

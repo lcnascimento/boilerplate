@@ -8,6 +8,7 @@ import { listMembersOldestFirst } from "./actor";
 import {
   createAuditedDatabase,
   currentConnectionSettings,
+  recordSignInFailure,
 } from "./audit-connection";
 import { authRules, authRulesHook } from "./auth-rules";
 import { parseIamEnv, type IamEnv } from "./env";
@@ -50,7 +51,12 @@ function createIam(env: IamEnv) {
     session: { expiresIn: 7 * DAY_SECONDS, updateAge: DAY_SECONDS },
     rateLimit: { storage: "database" },
     disabledPaths: ["/token", "/organization/create"],
-    hooks: { before: authRulesHook(authRules), after: loginFailureHook },
+    hooks: {
+      before: authRulesHook(authRules),
+      after: loginFailureHook((reason) =>
+        recordSignInFailure(auditedDatabase, reason)
+      ),
+    },
     advanced,
     databaseHooks: {
       session: {
