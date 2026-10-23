@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package boilerplate.iam.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events;events";
+
+message MemberRemoved {
+  string member_id = 1;
+  string organization_id = 2;
+  string user_id = 3;
+  google.protobuf.Timestamp removed_at = 4;
+}

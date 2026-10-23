@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package boilerplate.iam.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events;events";
+
+message InvitationCanceled {
+  string invitation_id = 1;
+  string organization_id = 2;
+  google.protobuf.Timestamp canceled_at = 3;
+}

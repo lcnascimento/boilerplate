@@ -2,6 +2,7 @@ package forwarder_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,12 +32,7 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 		t.Skip("component test")
 	}
 
-	bus := eventbustest.New(t, events.Protos)
-	for _, topic := range events.Topics {
-		bus.CreateTopic(t, topic, 3)
-	}
-
-	bus.CreateTopic(t, eventbus.DLQTopic(events.UserTopic, bus.Group), 1)
+	bus := newBus(t)
 
 	schemaIDs, err := eventbus.LookupSchemaIDs(t.Context(), bus.Registry(t), events.Protos)
 	require.NoError(t, err)
@@ -56,16 +52,16 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 		`UPDATE account SET password = 'new-hash', "updatedAt" = now() WHERE "userId" = $1`, userID)
 	deleted := inTx(t, pool, `DELETE FROM "user" WHERE id = $1`, userID)
 
-	received := subscribe(t, bus)
+	received := subscribe(t, bus, events.UserTopic)
 	startWorker(t, pool, schemaIDs, bus.Brokers)
 
 	created, changed, gone := next(t, received), next(t, received), next(t, received)
 
-	requireEvent(t, created, signedUp, noRequest, &events.UserCreated{
+	requireEvent(t, created, ada, signedUp, noRequest, &events.UserCreated{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		CreatedAt: timestamppb.New(signedUp.at),
 	})
-	requireEvent(t, changed, passwordChanged, origin{
+	requireEvent(t, changed, ada, passwordChanged, origin{
 		actorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		actorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
 		ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
@@ -73,7 +69,7 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		ChangedAt: timestamppb.New(passwordChanged.at),
 	})
-	requireEvent(t, gone, deleted, noRequest, &events.UserDeleted{
+	requireEvent(t, gone, ada, deleted, noRequest, &events.UserDeleted{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		DeletedAt: timestamppb.New(deleted.at),
 	})
@@ -91,14 +87,21 @@ type origin struct {
 
 var noRequest = origin{}
 
-func requireEvent(t *testing.T, got *eventbus.Event, tx transaction, from origin, want proto.Message) {
+type aggregate struct {
+	topic   string
+	subject string
+}
+
+var ada = aggregate{topic: "iam.user.v1", subject: "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"}
+
+func requireEvent(t *testing.T, got *eventbus.Event, of aggregate, tx transaction, from origin, want proto.Message) {
 	t.Helper()
 
 	require.True(t, proto.Equal(want, got.Message), "want %v, got %v", want, got.Message)
-	require.Equal(t, "iam.user.v1", got.Topic)
+	require.Equal(t, of.topic, got.Topic)
 	require.Equal(t, "iam", got.Source)
 	require.Equal(t, string(want.ProtoReflect().Descriptor().FullName()), got.Type)
-	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", got.Subject)
+	require.Equal(t, of.subject, got.Subject)
 	require.Equal(t, tx.id, got.CorrelationID)
 	require.True(t, tx.at.Equal(got.Time), "want %v, got %v", tx.at, got.Time)
 	require.Equal(t, from, origin{
@@ -178,15 +181,35 @@ func (r recorder) Handle(_ context.Context, event *eventbus.Event) error {
 	return nil
 }
 
-func subscribe(t *testing.T, bus *eventbustest.Env) recorder {
+var createTopics sync.Once
+
+func newBus(t *testing.T) *eventbustest.Env {
 	t.Helper()
+
+	bus := eventbustest.New(t, events.Protos)
+
+	createTopics.Do(func() {
+		for _, topic := range events.Topics {
+			bus.CreateTopic(t, topic, 3)
+		}
+	})
+
+	return bus
+}
+
+func subscribe(t *testing.T, bus *eventbustest.Env, topics ...string) recorder {
+	t.Helper()
+
+	for _, topic := range topics {
+		bus.CreateTopic(t, eventbus.DLQTopic(topic, bus.Group), 1)
+	}
 
 	received := make(recorder, 100)
 
 	subscriber, err := eventbus.NewSubscriber(&eventbus.SubscriberConfig{
 		Brokers: bus.Brokers,
 		Group:   bus.Group,
-		Topics:  []string{events.UserTopic},
+		Topics:  topics,
 		Handler: received,
 	})
 	require.NoError(t, err)
