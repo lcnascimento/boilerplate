@@ -4,6 +4,7 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { runAsActor } from "@/shared/auth/audit-connection";
 import { getIam } from "@/shared/auth/auth";
 import { transferOwnershipInputSchema } from "@/shared/auth/members";
 import { deleteOrganization as deleteOrganizationOf } from "@/shared/auth/organization-deletion";
@@ -58,7 +59,9 @@ export async function transferOwnership(
   if (actor === null) return forbidden;
 
   try {
-    return await transferOwnershipOf(actor, parsed.data.memberId);
+    return await runAsActor(actor, new Headers(await headers()), () =>
+      transferOwnershipOf(actor, parsed.data.memberId)
+    );
   } catch (error) {
     logFailure("organization.transferOwnership", error);
     return unexpected;
@@ -114,7 +117,9 @@ export async function deleteOrganization(
   if (actor === null) return forbidden;
 
   try {
-    return await deleteOrganizationOf(actor, parsed.data.confirmation);
+    return await runAsActor(actor, new Headers(await headers()), () =>
+      deleteOrganizationOf(actor, parsed.data.confirmation)
+    );
   } catch (error) {
     logFailure("organization.delete", error);
     return unexpected;

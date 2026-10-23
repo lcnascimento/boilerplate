@@ -4,6 +4,10 @@ import { jwt, organization } from "better-auth/plugins";
 import { Pool } from "pg";
 
 import { listMembersOldestFirst } from "./actor";
+import {
+  createAuditedDatabase,
+  currentConnectionSettings,
+} from "./audit-connection";
 import { authRules, authRulesHook } from "./auth-rules";
 import { parseIamEnv, type IamEnv } from "./env";
 import { loginFailureHook } from "./login-failures";
@@ -17,10 +21,22 @@ export const ACTOR_TOKEN_AUDIENCE = "boilerplate-api";
 
 function createIam(env: IamEnv) {
   const database = new Pool({ connectionString: env.IAM_DATABASE_URL });
+  const advanced = {
+    defaultCookieAttributes: {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    },
+    database: { generateId: "uuid" },
+  } as const;
+  const auditedDatabase = createAuditedDatabase(
+    new Pool({ connectionString: env.IAM_DATABASE_URL }),
+    () => currentConnectionSettings(env.AUDIT_IP_HASH_KEY, { advanced })
+  );
   const auth = betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    database,
+    database: { db: auditedDatabase, type: "postgres", transaction: true },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: PASSWORD_LENGTH.min,
@@ -30,14 +46,7 @@ function createIam(env: IamEnv) {
     rateLimit: { storage: "database" },
     disabledPaths: ["/token"],
     hooks: { before: authRulesHook(authRules), after: loginFailureHook },
-    advanced: {
-      defaultCookieAttributes: {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-      },
-      database: { generateId: "uuid" },
-    },
+    advanced,
     databaseHooks: {
       session: {
         create: {
