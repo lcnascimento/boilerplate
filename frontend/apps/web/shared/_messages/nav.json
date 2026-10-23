@@ -10,7 +10,8 @@
     "toggleSidebar": "Recolher ou expandir a barra lateral",
     "settings": "Configurações",
     "settingsOrganization": "Organization",
-    "settingsAccount": "Conta"
+    "settingsAccount": "Conta",
+    "organizationSettings": "Configurações"
   },
   "en": {
     "home": "Home",
@@ -23,6 +24,7 @@
     "toggleSidebar": "Collapse or expand the sidebar",
     "settings": "Settings",
     "settingsOrganization": "Organization",
-    "settingsAccount": "Account"
+    "settingsAccount": "Account",
+    "organizationSettings": "Settings"
   }
 }

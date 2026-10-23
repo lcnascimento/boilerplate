@@ -3,6 +3,7 @@ import {
   // example:begin
   NotebookPen,
   // example:end
+  Settings,
   SlidersHorizontal,
   Users,
   type LucideIcon,
@@ -42,6 +43,12 @@ export const navRoutes = [
     area: "product",
   },
   // example:end
+  {
+    href: "/settings/organization",
+    labelKey: "nav.organizationSettings",
+    icon: Settings,
+    area: "organization",
+  },
   {
     href: "/settings/members",
     labelKey: "members.title",

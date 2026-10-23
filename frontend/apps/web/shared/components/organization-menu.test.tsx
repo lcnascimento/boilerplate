@@ -85,7 +85,7 @@ afterEach(() => {
 });
 
 describe("OrganizationMenu", () => {
-  it("shows the active Organization and links to its Members", async () => {
+  it("shows the active Organization and links to its settings and Members", async () => {
     const user = renderMenu(acmeActive);
 
     const trigger = screen.getByRole("button", {
@@ -94,6 +94,11 @@ describe("OrganizationMenu", () => {
     expect(trigger.textContent).toContain("Acme");
     await user.click(trigger);
 
+    expect(
+      screen
+        .getByRole("menuitem", { name: "Configurações" })
+        .getAttribute("href")
+    ).toBe("/settings/organization");
     expect(
       screen.getByRole("menuitem", { name: "Members" }).getAttribute("href")
     ).toBe("/settings/members");

@@ -4,6 +4,7 @@ import nav from "./nav.json" with { type: "json" };
 // example:begin
 import notes from "./notes.json" with { type: "json" };
 // example:end
+import organizationSettings from "./organization-settings.json" with { type: "json" };
 import organizations from "./organizations.json" with { type: "json" };
 import profile from "./profile.json" with { type: "json" };
 
@@ -17,6 +18,7 @@ export function appMessages(locale: Locale) {
     // example:begin
     notes: notes[locale],
     // example:end
+    organizationSettings: organizationSettings[locale],
     organizations: organizations[locale],
     profile: profile[locale],
   };

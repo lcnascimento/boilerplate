@@ -1,0 +1,40 @@
+{
+  "pt-BR": {
+    "description": "Como a Organization ativa é gerida e quem é o Owner dela.",
+    "transferTitle": "Transferir a propriedade",
+    "transferDescription": "O Member escolhido vira o Owner da Organization, e você continua nela como Admin.",
+    "newOwnerLabel": "Novo Owner",
+    "newOwnerPlaceholder": "Escolha um Member",
+    "candidate": "{name} ({role})",
+    "transfer": "Transferir",
+    "transferConfirmTitle": "Transferir a propriedade para {name}?",
+    "transferConfirmDescription": "{name} passa a ser o único Owner da Organization, e você vira Admin. Só {name} pode devolver a propriedade.",
+    "transferred": "Propriedade transferida para {name}.",
+    "noCandidates": "Não há outro Member para receber a propriedade.",
+    "ownedBy": "{name} é o Owner desta Organization. Só o Owner pode transferir a propriedade.",
+    "errors": {
+      "invalidInput": "Esse Member não pode receber a propriedade. Atualize a página e tente de novo.",
+      "forbidden": "Só o Owner pode transferir a propriedade.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
+    }
+  },
+  "en": {
+    "description": "How the active Organization is managed and who its Owner is.",
+    "transferTitle": "Transfer ownership",
+    "transferDescription": "The chosen Member becomes the Owner of the Organization, and you stay in it as an Admin.",
+    "newOwnerLabel": "New Owner",
+    "newOwnerPlaceholder": "Choose a Member",
+    "candidate": "{name} ({role})",
+    "transfer": "Transfer",
+    "transferConfirmTitle": "Transfer ownership to {name}?",
+    "transferConfirmDescription": "{name} becomes the only Owner of the Organization, and you become an Admin. Only {name} can hand the ownership back.",
+    "transferred": "Ownership transferred to {name}.",
+    "noCandidates": "There is no other Member to receive the ownership.",
+    "ownedBy": "{name} is the Owner of this Organization. Only the Owner can transfer the ownership.",
+    "errors": {
+      "invalidInput": "This Member cannot receive the ownership. Refresh the page and try again.",
+      "forbidden": "Only the Owner can transfer the ownership.",
+      "unexpected": "Could not finish. Try again."
+    }
+  }
+}
