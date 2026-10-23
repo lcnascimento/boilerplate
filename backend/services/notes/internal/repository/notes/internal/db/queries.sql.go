@@ -124,11 +124,50 @@ func (q *Queries) ListNotes(ctx context.Context, organizationID uuid.UUID) ([]No
 	return items, nil
 }
 
+const markOrganizationDeleted = `-- name: MarkOrganizationDeleted :exec
+INSERT INTO deleted_organizations (organization_id) VALUES ($1)
+ON CONFLICT (organization_id) DO NOTHING
+`
+
+func (q *Queries) MarkOrganizationDeleted(ctx context.Context, organizationID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, markOrganizationDeleted, organizationID)
+	return err
+}
+
+const organizationDeleted = `-- name: OrganizationDeleted :one
+SELECT EXISTS (SELECT 1 FROM deleted_organizations WHERE organization_id = $1) AS deleted
+`
+
+func (q *Queries) OrganizationDeleted(ctx context.Context, organizationID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, organizationDeleted, organizationID)
+	var deleted bool
+	err := row.Scan(&deleted)
+	return deleted, err
+}
+
 const setOrganization = `-- name: SetOrganization :exec
 SELECT set_config('app.organization_id', $1::text, true)
 `
 
 func (q *Queries) SetOrganization(ctx context.Context, organizationID string) error {
 	_, err := q.db.Exec(ctx, setOrganization, organizationID)
+	return err
+}
+
+const shareOrganizationLock = `-- name: ShareOrganizationLock :exec
+SELECT pg_advisory_xact_lock_shared(hashtextextended($1::text, 0))
+`
+
+func (q *Queries) ShareOrganizationLock(ctx context.Context, organizationID string) error {
+	_, err := q.db.Exec(ctx, shareOrganizationLock, organizationID)
+	return err
+}
+
+const takeOrganizationLock = `-- name: TakeOrganizationLock :exec
+SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))
+`
+
+func (q *Queries) TakeOrganizationLock(ctx context.Context, organizationID string) error {
+	_, err := q.db.Exec(ctx, takeOrganizationLock, organizationID)
 	return err
 }

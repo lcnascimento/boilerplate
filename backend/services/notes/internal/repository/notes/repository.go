@@ -41,7 +41,20 @@ func New(pool *pgxpool.Pool, schemaIDs eventbus.SchemaIDs, opts ...Option) *Repo
 
 func (r *Repository) Create(ctx context.Context, caller *actor.Actor, note *domain.Note) error {
 	return r.inOrganizationTx(ctx, note.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
-		err := queries.CreateNote(ctx, db.CreateNoteParams{
+		if err := queries.ShareOrganizationLock(ctx, note.OrganizationID.UUID().String()); err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		deleted, err := queries.OrganizationDeleted(ctx, note.OrganizationID.UUID())
+		if err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		if deleted {
+			return domain.ErrOrganizationDeleted
+		}
+
+		err = queries.CreateNote(ctx, db.CreateNoteParams{
 			ID:             note.ID.UUID(),
 			OrganizationID: note.OrganizationID.UUID(),
 			CreatedAt:      note.CreatedAt,
@@ -125,6 +138,14 @@ func (r *Repository) DeleteByOrganization(ctx context.Context, orgID iamdomain.O
 	var deleted int64
 
 	err := r.inOrganizationTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
+		if err := queries.TakeOrganizationLock(ctx, orgID.UUID().String()); err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		if err := queries.MarkOrganizationDeleted(ctx, orgID.UUID()); err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
 		var err error
 
 		deleted, err = queries.DeleteOrganizationNotes(ctx, orgID.UUID())

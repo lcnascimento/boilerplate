@@ -24,7 +24,7 @@ info:
     |--------|--------|
     | `400`  | Corpo malformado ou entrada inválida. Os motivos vêm em `details.reasons`. |
     | `401`  | Token de Actor ausente ou inválido (malformado, expirado, de issuer ou audience errados, assinatura inválida, claim faltando ou Role desconhecida). O motivo não vem na resposta. |
-    | `403`  | A Role do Actor não concede a Permission da operação. |
+    | `403`  | A Role do Actor não concede a Permission da operação, ou a Organization do Actor foi excluída (`ORGANIZATION_DELETED`, ao criar uma nota). |
     | `404`  | Nota inexistente. |
     | `500`  | Falha inesperada no servidor. |
   contact:
@@ -375,7 +375,7 @@ components:
                 message: unauthenticated request
                 retryable: false
     Forbidden:
-      description: A Role do Actor não concede a Permission da operação.
+      description: A Role do Actor não concede a Permission da operação, ou a Organization do Actor foi excluída.
       content:
         application/json:
           schema:
