@@ -1,5 +1,6 @@
 import "server-only";
 
+import { runAsActor, type AuditedActor } from "./audit-connection";
 import { getIam, type IamAdapter } from "./auth";
 import { deleteOwnedOrganization } from "./organization-deletion";
 
@@ -76,40 +77,44 @@ async function passwordMatches(
 }
 
 export async function deleteAccount(
-  userId: UserId,
+  actor: AuditedActor,
+  headers: Headers,
   password: string
 ): Promise<AccountDeletionResult> {
+  const { userId } = actor;
   if (!(await passwordMatches(userId, password))) {
     return { kind: "error", code: "invalidPassword" };
   }
 
   const { adapter } = await getIam().auth.$context;
-  return adapter.transaction(async (trx): Promise<AccountDeletionResult> => {
-    const memberships = await membershipsOf(trx, userId);
-    const blockers = await sharedOwnedOrganizations(trx, memberships);
-    if (blockers.length > 0) {
-      return {
-        kind: "error",
-        code: "ownsSharedOrganizations",
-        organizations: blockers,
-      };
-    }
-
-    for (const membership of memberships.filter(
-      ({ soleMember }) => soleMember
-    )) {
-      const deletion = await deleteOwnedOrganization(trx, membership);
-      if (deletion !== "deleted") {
-        throw new Error(
-          `sole-member organization ${membership.organizationId} was not deleted: ${deletion}`
-        );
+  return runAsActor(actor, headers, () =>
+    adapter.transaction(async (trx): Promise<AccountDeletionResult> => {
+      const memberships = await membershipsOf(trx, userId);
+      const blockers = await sharedOwnedOrganizations(trx, memberships);
+      if (blockers.length > 0) {
+        return {
+          kind: "error",
+          code: "ownsSharedOrganizations",
+          organizations: blockers,
+        };
       }
-    }
 
-    await trx.delete({
-      model: "user",
-      where: [{ field: "id", value: userId }],
-    });
-    return { kind: "ok" };
-  });
+      for (const membership of memberships.filter(
+        ({ soleMember }) => soleMember
+      )) {
+        const deletion = await deleteOwnedOrganization(trx, membership);
+        if (deletion !== "deleted") {
+          throw new Error(
+            `sole-member organization ${membership.organizationId} was not deleted: ${deletion}`
+          );
+        }
+      }
+
+      await trx.delete({
+        model: "user",
+        where: [{ field: "id", value: userId }],
+      });
+      return { kind: "ok" };
+    })
+  );
 }

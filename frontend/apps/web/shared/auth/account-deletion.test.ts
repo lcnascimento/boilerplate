@@ -9,7 +9,8 @@ import {
 } from "vitest";
 
 import { deleteAccount, accountDeletionBlockers } from "./account-deletion";
-import { userIdSchema } from "./actor-ids";
+import { organizationIdSchema, userIdSchema } from "./actor-ids";
+import { hashIp } from "./audit-connection";
 import { getIam } from "./auth";
 
 import type { Pool } from "pg";
@@ -29,8 +30,16 @@ const USERS = [ANA, BRUNO];
 const ORGANIZATIONS = [INITECH, ANA_SOLO, BRUNO_SOLO];
 const PASSWORD = "account-deletion-password";
 
-const ana = userIdSchema.parse(ANA);
-const bruno = userIdSchema.parse(BRUNO);
+const fromIp = new Headers({ "x-forwarded-for": "198.51.100.1" });
+
+const ana = {
+  userId: userIdSchema.parse(ANA),
+  organizationId: organizationIdSchema.parse(INITECH),
+};
+const bruno = {
+  userId: userIdSchema.parse(BRUNO),
+  organizationId: organizationIdSchema.parse(BRUNO_SOLO),
+};
 
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
   "account deletion",
@@ -151,14 +160,14 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     };
 
     it("lists the Organizations an Owner shares with other Members", async () => {
-      expect(await accountDeletionBlockers(ana)).toEqual([
+      expect(await accountDeletionBlockers(ana.userId)).toEqual([
         { id: INITECH, name: "Initech" },
       ]);
-      expect(await accountDeletionBlockers(bruno)).toEqual([]);
+      expect(await accountDeletionBlockers(bruno.userId)).toEqual([]);
     });
 
     it("refuses the Owner of an Organization with other Members, and deletes nothing", async () => {
-      expect(await deleteAccount(ana, PASSWORD)).toEqual({
+      expect(await deleteAccount(ana, fromIp, PASSWORD)).toEqual({
         kind: "error",
         code: "ownsSharedOrganizations",
         organizations: [{ id: INITECH, name: "Initech" }],
@@ -168,7 +177,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses a wrong password, and deletes nothing", async () => {
-      expect(await deleteAccount(bruno, "not-the-password")).toEqual({
+      expect(await deleteAccount(bruno, fromIp, "not-the-password")).toEqual({
         kind: "error",
         code: "invalidPassword",
       });
@@ -177,7 +186,9 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("deletes the User with the sole-Member Organizations, and keeps the shared ones", async () => {
-      expect(await deleteAccount(bruno, PASSWORD)).toEqual({ kind: "ok" });
+      expect(await deleteAccount(bruno, fromIp, PASSWORD)).toEqual({
+        kind: "ok",
+      });
 
       expect(await remaining()).toEqual({
         users: ["Ana"],
@@ -187,6 +198,49 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
         members: [ANA_INITECH, ANA_SOLO_OWNER],
         invitations: ["dora@account-deletion.test"],
       });
+    });
+
+    it("records the deleting User, their active Organization and the IP hash on every change", async () => {
+      const ip = `10.${crypto.getRandomValues(new Uint8Array(3)).join(".")}`;
+      const ipHash = hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", ip);
+
+      await deleteAccount(
+        bruno,
+        new Headers({ "x-forwarded-for": ip }),
+        PASSWORD
+      );
+
+      const { rows } = await database.query(
+        `SELECT CASE table_name
+                  WHEN 'user' THEN 'UserDeleted'
+                  WHEN 'organization' THEN 'OrganizationDeleted'
+                  WHEN 'member' THEN 'MemberRemoved'
+                END AS type,
+                actor_id::text AS "actorId",
+                actor_organization_id::text AS "actorOrganizationId"
+         FROM identity_change
+         WHERE operation = 'DELETE'
+           AND table_name IN ('user', 'organization', 'member')
+           AND ip_hash = $1
+         UNION ALL
+         SELECT substring(headers ->> 'ce_type' FROM 20),
+                substring(headers ->> 'ce_actorid' FROM 6),
+                substring(headers ->> 'ce_actororganizationid' FROM 5)
+         FROM watermill_iam_outbox,
+              LATERAL (SELECT payload::jsonb -> 'metadata' AS headers) AS message
+         WHERE headers ->> 'ce_type' IN ('boilerplate.iam.v1.UserDeleted', 'boilerplate.iam.v1.OrganizationDeleted', 'boilerplate.iam.v1.MemberRemoved')
+           AND headers ->> 'ce_iphash' = $1
+         ORDER BY type DESC`,
+        [ipHash]
+      );
+
+      const asBruno = { actorId: BRUNO, actorOrganizationId: BRUNO_SOLO };
+      expect(rows).toEqual([
+        { type: "UserDeleted", ...asBruno },
+        { type: "OrganizationDeleted", ...asBruno },
+        { type: "MemberRemoved", ...asBruno },
+        { type: "MemberRemoved", ...asBruno },
+      ]);
     });
   }
 );

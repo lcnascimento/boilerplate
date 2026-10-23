@@ -15,6 +15,7 @@ import {
 } from "@/shared/auth/account-deletion";
 import { userIdSchema } from "@/shared/auth/actor-ids";
 import { getIam } from "@/shared/auth/auth";
+import { getRequestActor } from "@/shared/auth/request-actor";
 import { SIGN_IN_HREF } from "@/shared/auth/routes";
 import { getRequestSession } from "@/shared/auth/session";
 import { logger } from "@/shared/logging";
@@ -76,11 +77,18 @@ export async function deleteAccount(
 
   const requestHeaders = await headers();
   const { user } = await requireSession();
+  const requestActor = await getRequestActor();
+  const deletingUser = {
+    userId: userIdSchema.parse(user.id),
+    organizationId:
+      requestActor.kind === "actor" ? requestActor.actor.organizationId : null,
+  };
 
   let result: AccountDeletionResult;
   try {
     result = await deleteAccountOf(
-      userIdSchema.parse(user.id),
+      deletingUser,
+      new Headers(requestHeaders),
       parsed.data.password
     );
   } catch (error) {
