@@ -212,7 +212,7 @@ type topicHandler struct {
 func (h topicHandler) handle(msg *message.Message) error {
 	event, err := parseEvent(h.topic, msg)
 	if err != nil {
-		return ErrPermanent.WithCause(err)
+		return onUndeliverable(msg.Context(), ErrPermanent.WithCause(err))
 	}
 
 	return h.s.handler.Handle(msg.Context(), &event)
@@ -241,7 +241,7 @@ func (h topicHandler) attempt(next message.HandlerFunc) message.HandlerFunc {
 		msg.SetContext(ctx)
 
 		produced, err := next(msg)
-		err = classify(err)
+		err = classify(ctx, err)
 		end(err)
 
 		if isPermanent(err) {
@@ -255,10 +255,10 @@ func (h topicHandler) attempt(next message.HandlerFunc) message.HandlerFunc {
 	}
 }
 
-func classify(err error) error {
+func classify(ctx context.Context, err error) error {
 	var panicked middleware.RecoveredPanicError
 	if errors.As(err, &panicked) {
-		return ErrPermanent.WithCause(ErrHandlerPanicked.WithCause(err))
+		return onUndeliverable(ctx, ErrPermanent.WithCause(ErrHandlerPanicked.WithCause(err)))
 	}
 
 	return err
