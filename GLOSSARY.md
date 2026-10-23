@@ -30,6 +30,10 @@ _Avoid_: Perfil, permissão, grupo
 Uma ação sobre um tipo de recurso que uma Role concede ou não (ex.: transferir a propriedade da Organization).
 _Avoid_: Capability, privilégio
 
+**Management Permission**:
+Uma Permission sobre a própria Organization, seus Members ou suas Invitations (ex.: trocar a Role de um Member). Nunca é condicionada a uma Feature Flag.
+_Avoid_: Permission de membership, permissão administrativa
+
 **Owner**:
 O único Member com todos os poderes na Organization, inclusive excluí-la e transferir a propriedade a outro Member.
 _Avoid_: Dono, superadmin

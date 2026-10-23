@@ -42,7 +42,7 @@ func (h *Handler) Handle(ctx context.Context, event *eventbus.Event) error {
 
 	orgID, err := iamdomain.ParseOrganizationID(deleted.GetOrganizationId())
 	if err != nil {
-		return eventbus.ErrPermanent.WithCause(err)
+		return onInvalidEvent(ctx, eventbus.ErrPermanent.WithCause(err))
 	}
 
 	return h.notes.DeleteOrganizationNotes(ctx, orgID)

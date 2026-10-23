@@ -2,14 +2,14 @@
 
 local_resource(
     'iam-db',
-    labels=['iam'],
+    labels=['tooling'],
     cmd='make db.setup -s',
     resource_deps=['postgres'],
 )
 
 local_resource(
     'iam-migrate',
-    labels=['iam'],
+    labels=['tooling'],
     cmd='make db.migrate -s',
     deps=['.env', '../../.env', 'internal/repository/migrations/', 'cmd/migrate/'],
     ignore=['./**/*_test.go'],
@@ -18,7 +18,7 @@ local_resource(
 
 local_resource(
     'iam-topics',
-    labels=['iam'],
+    labels=['tooling'],
     cmd='make kafka.topics -s',
     deps=['Makefile'],
     resource_deps=['schema-registry'],
@@ -26,7 +26,7 @@ local_resource(
 
 local_resource(
     'iam-schemas',
-    labels=['iam'],
+    labels=['tooling'],
     cmd='make schemas.register -s',
     deps=['.env', '../../.env', 'pkg/events/', 'cmd/schemas/', 'bundle/schemas.go'],
     ignore=['./**/*_test.go'],
@@ -35,7 +35,7 @@ local_resource(
 
 local_resource(
     'iam-worker',
-    labels=['iam'],
+    labels=['backend'],
     cmd='make build.worker -s',
     serve_cmd='make run.worker -s',
     deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod'],

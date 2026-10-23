@@ -24,7 +24,7 @@ local_resource(
     env=iam_env,
     deps=['apps/web/scripts/iam-seed/'],
     resource_deps=['frontend-deps', 'iam-migrate'],
-    labels=['iam'],
+    labels=['tooling'],
 )
 
 web_deps = ['frontend-deps', 'iam-seed']
