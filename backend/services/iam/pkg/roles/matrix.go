@@ -5,7 +5,11 @@ type grant struct {
 	roles      []Role
 }
 
-var OrganizationTransfer = Permission{"organization", "transfer"}
+var (
+	OrganizationTransfer = Permission{"organization", "transfer"}
+	InvitationCreate     = Permission{"invitation", "create"}
+	InvitationCancel     = Permission{"invitation", "cancel"}
+)
 
 // example:begin
 var (
@@ -18,6 +22,8 @@ var (
 
 var matrix = []grant{
 	{OrganizationTransfer, []Role{Owner}},
+	{InvitationCreate, []Role{Owner, Admin}},
+	{InvitationCancel, []Role{Owner, Admin}},
 	// example:begin
 	{NoteRead, []Role{Owner, Admin, Viewer}},
 	{NoteCreate, []Role{Owner, Admin}},

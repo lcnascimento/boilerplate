@@ -10,6 +10,7 @@ import {
 export const statement = {
   ...defaultStatements,
   organization: [...defaultStatements.organization, "transfer"],
+  invitation: [...defaultStatements.invitation, "create", "cancel"],
   note: ["read", "create", "delete"],
 } as const;
 
@@ -19,10 +20,12 @@ export const roles = {
   owner: ac.newRole({
     ...ownerAc.statements,
     organization: [...ownerAc.statements.organization, "transfer"],
+    invitation: [...ownerAc.statements.invitation, "create", "cancel"],
     note: ["read", "create", "delete"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,
+    invitation: [...adminAc.statements.invitation, "create", "cancel"],
     note: ["read", "create"],
   }),
   viewer: ac.newRole({
