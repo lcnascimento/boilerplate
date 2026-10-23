@@ -14,26 +14,15 @@ import { ChangePassword } from "./change-password";
 const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-vi.mock("@/providers", () => ({
-  useOrganizations: () => ({
-    active: { id: "org-globex", name: "Globex" },
-    organizations: [],
-  }),
-}));
 vi.mock("@/shared/auth/client", () => ({
-  authClient: {
-    changePassword: vi.fn(),
-    organization: { setActive: vi.fn() },
-  },
+  authClient: { changePassword: vi.fn() },
 }));
 
 const changePasswordMock = vi.mocked(authClient.changePassword);
-const setActive = vi.mocked(authClient.organization.setActive);
 
 beforeEach(() => {
   stubBrowserApis();
   changePasswordMock.mockReset();
-  setActive.mockReset();
   refresh.mockReset();
 });
 
@@ -47,9 +36,8 @@ function field(label: string) {
 }
 
 describe("ChangePassword", () => {
-  it("changes the password ending the other sessions, keeps the active Organization and clears the fields", async () => {
+  it("changes the password ending the other sessions and clears the fields", async () => {
     changePasswordMock.mockResolvedValue({ data: null, error: null });
-    setActive.mockResolvedValue({ data: null, error: null });
     const user = renderWithMessages(<ChangePassword />);
 
     await user.type(field("Senha atual"), "old-password");
@@ -66,7 +54,6 @@ describe("ChangePassword", () => {
         "Senha trocada. As outras sessões foram encerradas."
       )
     ).toBeTruthy();
-    expect(setActive).toHaveBeenCalledWith({ organizationId: "org-globex" });
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(field("Senha atual").value).toBe("");
     expect(field("Nova senha").value).toBe("");
@@ -92,7 +79,6 @@ describe("ChangePassword", () => {
       await screen.findByText("A senha atual está incorreta.")
     ).toBeTruthy();
     expect(field("Senha atual").value).toBe("wrong-password");
-    expect(setActive).not.toHaveBeenCalled();
   });
 
   it("checks both fields before calling the server", async () => {

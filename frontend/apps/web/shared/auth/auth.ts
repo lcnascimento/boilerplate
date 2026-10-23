@@ -70,16 +70,24 @@ function createIam(env: IamEnv) {
       session: {
         create: {
           before: async (session) => {
-            const [oldest] = await listMembersOldestFirst(
+            const replacedActiveOrganizationId: unknown =
+              tryGetCurrentAuthEndpointContext()?.context.session?.session
+                .activeOrganizationId;
+            const members = await listMembersOldestFirst(
               currentConnection(database),
               session.userId
             );
-            if (oldest === undefined) return;
+            const active =
+              members.find(
+                ({ organization }) =>
+                  organization.id === replacedActiveOrganizationId
+              ) ?? members[0];
+            if (active === undefined) return;
 
             return {
               data: {
                 ...session,
-                activeOrganizationId: oldest.organization.id,
+                activeOrganizationId: active.organization.id,
               },
             };
           },
