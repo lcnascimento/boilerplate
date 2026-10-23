@@ -55,13 +55,13 @@ func (r *Repository) Translate(ctx context.Context, limit int32) ([]*idomain.Eve
 		ids := make([]int64, 0, len(rows))
 		translated = make([]*idomain.Event, 0, len(rows))
 
-		for _, row := range rows {
-			event, err := r.emit(ctx, tx, &row)
+		for i := range rows {
+			event, err := r.emit(ctx, tx, &rows[i])
 			if err != nil {
 				return err
 			}
 
-			ids = append(ids, row.ID)
+			ids = append(ids, rows[i].ID)
 			translated = append(translated, event)
 		}
 
@@ -117,6 +117,13 @@ func toChange(row *db.LockChangesRow) (*idomain.Change, error) {
 		OccurredAt:    row.OccurredAt,
 		Table:         row.TableName,
 		Operation:     row.Operation,
+
+		ActorID:             row.ActorID,
+		ActorOrganizationID: row.ActorOrganizationID,
+	}
+
+	if row.IpHash != nil {
+		change.IPHash = *row.IpHash
 	}
 
 	if err := json.Unmarshal(row.Fields, &change.Fields); err != nil {
@@ -147,6 +154,10 @@ func (r *Repository) newMessage(event *idomain.Event) (*message.Message, error) 
 		SpecVersion:     eventbus.SpecVersion,
 		DataContentType: eventbus.ContentType,
 		CorrelationID:   event.CorrelationID,
+
+		ActorID:             event.ActorID,
+		ActorOrganizationID: event.ActorOrganizationID,
+		IPHash:              event.IPHash,
 	}
 
 	msg := message.NewMessage(envelope.ID, value)

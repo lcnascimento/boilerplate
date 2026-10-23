@@ -15,6 +15,7 @@ iam_env = {
     'IAM_DATABASE_URL': 'postgres://iam:iam@localhost:5432/iam?sslmode=disable',
     'BETTER_AUTH_SECRET': 'dev-only-secret-change-me-in-production',
     'BETTER_AUTH_URL': 'http://localhost:3000',
+    'AUDIT_IP_HASH_KEY': 'dev-only-ip-hash-key-change-me-in-production',
 }
 
 local_resource(

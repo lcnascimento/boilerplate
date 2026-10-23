@@ -7,6 +7,7 @@ package db
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -15,31 +16,34 @@ type Account struct {
 	AccountId             string
 	ProviderId            string
 	UserId                pgtype.UUID
-	AccessToken           pgtype.Text
-	RefreshToken          pgtype.Text
-	IdToken               pgtype.Text
+	AccessToken           *string
+	RefreshToken          *string
+	IdToken               *string
 	AccessTokenExpiresAt  pgtype.Timestamptz
 	RefreshTokenExpiresAt pgtype.Timestamptz
-	Scope                 pgtype.Text
-	Password              pgtype.Text
+	Scope                 *string
+	Password              *string
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 }
 
 type IdentityChange struct {
-	ID            int64
-	TransactionID pgtype.Uint64
-	OccurredAt    time.Time
-	TableName     string
-	Operation     string
-	Fields        []byte
+	ID                  int64
+	TransactionID       pgtype.Uint64
+	OccurredAt          time.Time
+	TableName           string
+	Operation           string
+	Fields              []byte
+	ActorID             uuid.NullUUID
+	ActorOrganizationID uuid.NullUUID
+	IpHash              *string
 }
 
 type Invitation struct {
 	ID             pgtype.UUID
 	OrganizationId pgtype.UUID
 	Email          string
-	Role           pgtype.Text
+	Role           *string
 	Status         string
 	ExpiresAt      time.Time
 	CreatedAt      time.Time
@@ -52,8 +56,8 @@ type Jwk struct {
 	PrivateKey string
 	CreatedAt  time.Time
 	ExpiresAt  pgtype.Timestamptz
-	Alg        pgtype.Text
-	Crv        pgtype.Text
+	Alg        *string
+	Crv        *string
 }
 
 type Member struct {
@@ -68,9 +72,9 @@ type Organization struct {
 	ID        pgtype.UUID
 	Name      string
 	Slug      string
-	Logo      pgtype.Text
+	Logo      *string
 	CreatedAt time.Time
-	Metadata  pgtype.Text
+	Metadata  *string
 }
 
 type RateLimit struct {
@@ -86,10 +90,10 @@ type Session struct {
 	Token                string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	IpAddress            pgtype.Text
-	UserAgent            pgtype.Text
+	IpAddress            *string
+	UserAgent            *string
 	UserId               pgtype.UUID
-	ActiveOrganizationId pgtype.Text
+	ActiveOrganizationId *string
 }
 
 type User struct {
@@ -97,7 +101,7 @@ type User struct {
 	Name          string
 	Email         string
 	EmailVerified bool
-	Image         pgtype.Text
+	Image         *string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

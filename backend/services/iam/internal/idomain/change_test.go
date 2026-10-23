@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -67,6 +68,44 @@ func TestChange_EventTranslatesEachUserChange(t *testing.T) {
 			require.Equal(t, "7311", got.CorrelationID)
 		})
 	}
+}
+
+func TestChange_EventCarriesTheActorAndTheIPHash(t *testing.T) {
+	t.Parallel()
+
+	change := idomain.Change{
+		Table:     "account",
+		Operation: "UPDATE",
+		Fields:    map[string]string{"userId": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"},
+		ActorID:   uuid.NullUUID{UUID: uuid.MustParse("9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"), Valid: true},
+		ActorOrganizationID: uuid.NullUUID{
+			UUID:  uuid.MustParse("3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"),
+			Valid: true,
+		},
+		IPHash: "5d1f0c2a",
+	}
+
+	got, err := change.Event()
+
+	require.NoError(t, err)
+	require.Equal(t, "user_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", got.ActorID)
+	require.Equal(t, "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", got.ActorOrganizationID)
+	require.Equal(t, "5d1f0c2a", got.IPHash)
+}
+
+func TestChange_EventWithoutAnActorHasEmptyActorAndIPHash(t *testing.T) {
+	t.Parallel()
+
+	change := idomain.Change{Table: "user", Operation: "INSERT", Fields: map[string]string{
+		"id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+	}}
+
+	got, err := change.Event()
+
+	require.NoError(t, err)
+	require.Empty(t, got.ActorID)
+	require.Empty(t, got.ActorOrganizationID)
+	require.Empty(t, got.IPHash)
 }
 
 func TestChange_EventRefusesAChangeWithoutAnIntegrationEvent(t *testing.T) {

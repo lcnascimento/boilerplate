@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const DEV_ONLY_SECRET = "dev-only-secret-change-me-in-production";
+const DEV_ONLY_IP_HASH_KEY = "dev-only-ip-hash-key-change-me-in-production";
 
 const iamEnvSchema = z
   .object({
@@ -24,11 +25,19 @@ const iamEnvSchema = z
             : "BETTER_AUTH_URL must be an http(s) URL",
       })
       .transform((url) => url.replace(/\/+$/, "")),
+    AUDIT_IP_HASH_KEY: z
+      .string({ error: "AUDIT_IP_HASH_KEY is required" })
+      .min(32, "AUDIT_IP_HASH_KEY must have at least 32 characters"),
   })
   .refine(
     ({ NODE_ENV, BETTER_AUTH_SECRET }) =>
       NODE_ENV !== "production" || BETTER_AUTH_SECRET !== DEV_ONLY_SECRET,
     "BETTER_AUTH_SECRET is the dev-only secret; generate one for production (openssl rand -base64 32)"
+  )
+  .refine(
+    ({ NODE_ENV, AUDIT_IP_HASH_KEY }) =>
+      NODE_ENV !== "production" || AUDIT_IP_HASH_KEY !== DEV_ONLY_IP_HASH_KEY,
+    "AUDIT_IP_HASH_KEY is the dev-only key; generate one for production (openssl rand -base64 32)"
   )
   .transform(({ NODE_ENV: _, ...env }) => env);
 

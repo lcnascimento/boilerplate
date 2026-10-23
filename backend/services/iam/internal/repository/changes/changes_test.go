@@ -69,6 +69,41 @@ func TestComponentRepository_SignUpWritesOneUserCreated(t *testing.T) {
 	}, got[0].message)
 }
 
+func TestComponentRepository_EventsCarryTheActorAndTheIPHashTheConnectionSet(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepository(t)
+	signUp(t, pool, ada)
+	asActor(t, pool, `UPDATE account SET password = 'new-hash' WHERE "userId" = $1`, ada)
+
+	_, err := repo.Translate(t.Context(), batch)
+	require.NoError(t, err)
+
+	got := outboxEvents(t, pool)
+	require.Equal(t, []string{userCreatedType, passwordChangedType}, eventTypes(got))
+	requireEnvelope(t, got[1], map[string]string{
+		"ce_actorid":             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		"ce_actororganizationid": "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		"ce_iphash":              ipHash,
+	})
+}
+
+func TestComponentRepository_EventsWithoutAnActorOmitTheActorAndTheIPHash(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepository(t)
+	signUp(t, pool, ada)
+
+	_, err := repo.Translate(t.Context(), batch)
+	require.NoError(t, err)
+
+	got := outboxEvents(t, pool)
+	require.Len(t, got, 1)
+	require.NotContains(t, got[0].headers, "ce_actorid")
+	require.NotContains(t, got[0].headers, "ce_actororganizationid")
+	require.NotContains(t, got[0].headers, "ce_iphash")
+}
+
 func TestComponentRepository_PasswordUpdateWritesPasswordChanged(t *testing.T) {
 	t.Parallel()
 
@@ -297,6 +332,26 @@ func signUp(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID) transaction {
 		INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
 		SELECT gen_random_uuid(), id::text, 'credential', id, 'hash', now(), now() FROM new_user`,
 		userID, emailOf(userID))
+}
+
+const ipHash = "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7"
+
+func asActor(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
+	t.Helper()
+
+	require.NoError(t, pgx.BeginFunc(t.Context(), pool, func(conn pgx.Tx) error {
+		if _, err := conn.Exec(t.Context(), `
+			SELECT
+				set_config('app.actor_id', '3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b', true),
+				set_config('app.actor_organization_id', '3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d', true),
+				set_config('app.ip_hash', $1, true)`, ipHash); err != nil {
+			return err
+		}
+
+		_, err := conn.Exec(t.Context(), sql, args...)
+
+		return err
+	}))
 }
 
 func emailOf(userID uuid.UUID) string {

@@ -8,6 +8,8 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const deleteChanges = `-- name: DeleteChanges :exec
@@ -21,7 +23,16 @@ func (q *Queries) DeleteChanges(ctx context.Context, ids []int64) error {
 }
 
 const lockChanges = `-- name: LockChanges :many
-SELECT id, transaction_id::text AS transaction_id, occurred_at, table_name, operation, fields
+SELECT
+    id,
+    transaction_id::text AS transaction_id,
+    occurred_at,
+    table_name,
+    operation,
+    fields,
+    actor_id,
+    actor_organization_id,
+    ip_hash
 FROM identity_change
 ORDER BY id
 LIMIT $1
@@ -29,12 +40,15 @@ FOR UPDATE SKIP LOCKED
 `
 
 type LockChangesRow struct {
-	ID            int64
-	TransactionID string
-	OccurredAt    time.Time
-	TableName     string
-	Operation     string
-	Fields        []byte
+	ID                  int64
+	TransactionID       string
+	OccurredAt          time.Time
+	TableName           string
+	Operation           string
+	Fields              []byte
+	ActorID             uuid.NullUUID
+	ActorOrganizationID uuid.NullUUID
+	IpHash              *string
 }
 
 func (q *Queries) LockChanges(ctx context.Context, limit int32) ([]LockChangesRow, error) {
@@ -53,6 +67,9 @@ func (q *Queries) LockChanges(ctx context.Context, limit int32) ([]LockChangesRo
 			&i.TableName,
 			&i.Operation,
 			&i.Fields,
+			&i.ActorID,
+			&i.ActorOrganizationID,
+			&i.IpHash,
 		); err != nil {
 			return nil, err
 		}
