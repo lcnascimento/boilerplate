@@ -52,6 +52,24 @@ func TestAll_ListsRolesFromMostToLeastPrivileged(t *testing.T) {
 	require.Equal(t, []roles.Role{roles.Owner, roles.Admin, roles.Viewer}, roles.All())
 }
 
+func TestRole_GrantsOrganizationUpdateToTheOwnerAndAdmin(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, roles.Owner.Grants(roles.OrganizationUpdate))
+	require.True(t, roles.Admin.Grants(roles.OrganizationUpdate))
+	require.False(t, roles.Viewer.Grants(roles.OrganizationUpdate))
+	require.Equal(t, "organization:update", roles.OrganizationUpdate.String())
+}
+
+func TestRole_GrantsOrganizationDeleteOnlyToTheOwner(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, roles.Owner.Grants(roles.OrganizationDelete))
+	require.False(t, roles.Admin.Grants(roles.OrganizationDelete))
+	require.False(t, roles.Viewer.Grants(roles.OrganizationDelete))
+	require.Equal(t, "organization:delete", roles.OrganizationDelete.String())
+}
+
 func TestRole_GrantsOrganizationTransferOnlyToTheOwner(t *testing.T) {
 	t.Parallel()
 
@@ -59,6 +77,19 @@ func TestRole_GrantsOrganizationTransferOnlyToTheOwner(t *testing.T) {
 	require.False(t, roles.Admin.Grants(roles.OrganizationTransfer))
 	require.False(t, roles.Viewer.Grants(roles.OrganizationTransfer))
 	require.Equal(t, "organization:transfer", roles.OrganizationTransfer.String())
+}
+
+func TestRole_GrantsInvitationsToTheOwnerAndTheAdmin(t *testing.T) {
+	t.Parallel()
+
+	for _, p := range []roles.Permission{roles.InvitationCreate, roles.InvitationCancel} {
+		require.True(t, roles.Owner.Grants(p), p.String())
+		require.True(t, roles.Admin.Grants(p), p.String())
+		require.False(t, roles.Viewer.Grants(p), p.String())
+	}
+
+	require.Equal(t, "invitation:create", roles.InvitationCreate.String())
+	require.Equal(t, "invitation:cancel", roles.InvitationCancel.String())
 }
 
 func TestRole_ZeroValueGrantsNothing(t *testing.T) {

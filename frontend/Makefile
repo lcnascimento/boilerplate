@@ -39,7 +39,7 @@ test.component:
 test.e2e:
 	set -a && . apps/web/.env.local && set +a && \
 		pnpm --filter @boilerplate/web iam:check-schema && \
-		pnpm --filter @boilerplate/web exec vitest run shared/auth/actor-token.test.ts shared/auth/ownership.test.ts shared/auth/request-actor.test.ts
+		pnpm --filter @boilerplate/web exec vitest run shared/auth/accept-invitation.test.ts shared/auth/actor-token.test.ts shared/auth/organization-deletion.test.ts shared/auth/ownership.test.ts shared/auth/request-actor.test.ts
 	pnpm turbo run test:e2e
 
 build:

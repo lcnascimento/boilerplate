@@ -22,14 +22,15 @@ import { leaveOrganization } from "@/actions/members";
 import { useConfirmDialog } from "@/shared/hooks/use-confirm-dialog";
 
 export function LeaveOrganizationDialog() {
-  const t = useTranslations("members");
+  const t = useTranslations("organizationSettings");
+  const tErrors = useTranslations("members.errors");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const { open, setOpen, isPending, handleConfirm } = useConfirmDialog(
     async () => {
       const result = await leaveOrganization();
       if (result.kind === "error") {
-        toast.error(t(`errors.${result.code}`));
+        toast.error(tErrors(result.code));
         return "failed";
       }
       router.push("/");
@@ -48,9 +49,9 @@ export function LeaveOrganizationDialog() {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t("leaveTitle")}</AlertDialogTitle>
+          <AlertDialogTitle>{t("leaveConfirmTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t("leaveDescription")}
+            {t("leaveConfirmDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

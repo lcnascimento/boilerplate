@@ -168,8 +168,13 @@ func TestMiddleware_StartSeedsEveryPermissionARoleLacksSoTheSeriesExistBeforeThe
 	newMiddleware(t, actortest.NewIssuer(t).Config())
 
 	require.ElementsMatch(t, []string{
+		"permission=organization:delete,role=admin",
 		"permission=organization:transfer,role=admin",
+		"permission=organization:update,role=viewer",
+		"permission=organization:delete,role=viewer",
 		"permission=organization:transfer,role=viewer",
+		"permission=invitation:create,role=viewer",
+		"permission=invitation:cancel,role=viewer",
 		"permission=note:delete,role=admin",
 		"permission=note:create,role=viewer",
 		"permission=note:delete,role=viewer",

@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, organization } from "better-auth/plugins";
 import { Pool } from "pg";
@@ -7,7 +8,11 @@ import { listMembersOldestFirst } from "./actor";
 import { authRules, authRulesHook } from "./auth-rules";
 import { parseIamEnv, type IamEnv } from "./env";
 import { loginFailureHook } from "./login-failures";
-import { ORGANIZATION_LIMIT, PASSWORD_LENGTH } from "./policy";
+import {
+  INVITATION_EXPIRES_IN_DAYS,
+  ORGANIZATION_LIMIT,
+  PASSWORD_LENGTH,
+} from "./policy";
 import { roleHooks } from "./role-hooks";
 import { ac, roles } from "./roles.gen";
 
@@ -76,13 +81,25 @@ function createIam(env: IamEnv) {
         roles,
         allowUserToCreateOrganization: true,
         organizationLimit: ORGANIZATION_LIMIT,
-        organizationHooks: roleHooks(async (organizationId) => {
-          const { rowCount } = await database.query(
-            'SELECT 1 FROM member WHERE "organizationId" = $1 LIMIT 1',
-            [organizationId]
-          );
-          return (rowCount ?? 0) > 0;
-        }),
+        disableOrganizationDeletion: true,
+        invitationExpiresIn: INVITATION_EXPIRES_IN_DAYS * DAY_SECONDS,
+        organizationHooks: {
+          ...roleHooks(async (organizationId) => {
+            const { rowCount } = await database.query(
+              'SELECT 1 FROM member WHERE "organizationId" = $1 LIMIT 1',
+              [organizationId]
+            );
+            return (rowCount ?? 0) > 0;
+          }),
+          beforeAcceptInvitation: async ({ user }) => {
+            const memberships = await listMembersOldestFirst(database, user.id);
+            if (memberships.length < ORGANIZATION_LIMIT) return;
+            throw new APIError("FORBIDDEN", {
+              code: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
+              message: "You have reached the maximum number of organizations",
+            });
+          },
+        },
       }),
       nextCookies(),
     ],

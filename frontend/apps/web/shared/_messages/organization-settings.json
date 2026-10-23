@@ -1,6 +1,6 @@
 {
   "pt-BR": {
-    "description": "Como a Organization ativa é gerida e quem é o Owner dela.",
+    "description": "Nome, propriedade e ciclo de vida da Organization ativa.",
     "transferTitle": "Transferir a propriedade",
     "transferDescription": "O Member escolhido vira o Owner da Organization, e você continua nela como Admin.",
     "newOwnerLabel": "Novo Owner",
@@ -16,10 +16,42 @@
       "invalidInput": "Esse Member não pode receber a propriedade. Atualize a página e tente de novo.",
       "forbidden": "Só o Owner pode transferir a propriedade.",
       "unexpected": "Não foi possível concluir. Tente de novo."
+    },
+    "nameTitle": "Nome",
+    "nameDescription": "O nome que os Members veem no menu da Organization.",
+    "nameLabel": "Nome da Organization",
+    "renameNotAllowed": "Só o Owner e os Admins podem renomear a Organization.",
+    "save": "Salvar",
+    "renamed": "Organization renomeada.",
+    "renameErrors": {
+      "invalidInput": "Confira o nome e tente de novo.",
+      "forbidden": "Sua Role não permite renomear a Organization.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
+    },
+    "leaveTitle": "Sair da Organization",
+    "leaveDescription": "Você perde o acesso a tudo o que há nesta Organization.",
+    "leave": "Sair da Organization",
+    "leaveConfirmTitle": "Sair da Organization?",
+    "leaveConfirmDescription": "Para voltar, alguém da Organization precisa convidar você de novo.",
+    "leaveConfirm": "Sair",
+    "ownerMustTransferBeforeLeaving": "Você é o Owner. Transfira a propriedade a outro Member antes de sair.",
+    "deleteTitle": "Excluir a Organization",
+    "deleteDescription": "Apaga a Organization, os Members e os convites dela. Não dá para desfazer.",
+    "delete": "Excluir Organization",
+    "deleteConfirmTitle": "Excluir {name}?",
+    "deleteConfirmDescription": "Todos os Members perdem o acesso e os convites pendentes deixam de valer. Não dá para desfazer.",
+    "deleteConfirmLabel": "Digite {name} para confirmar",
+    "deleteConfirm": "Excluir",
+    "deleted": "Organization {name} excluída.",
+    "deleteErrors": {
+      "invalidInput": "Confira o nome e tente de novo.",
+      "forbidden": "Só o Owner pode excluir a Organization.",
+      "nameMismatch": "O nome digitado não é o da Organization.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
     }
   },
   "en": {
-    "description": "How the active Organization is managed and who its Owner is.",
+    "description": "Name, ownership and lifecycle of the active Organization.",
     "transferTitle": "Transfer ownership",
     "transferDescription": "The chosen Member becomes the Owner of the Organization, and you stay in it as an Admin.",
     "newOwnerLabel": "New Owner",
@@ -34,6 +66,38 @@
     "errors": {
       "invalidInput": "This Member cannot receive the ownership. Refresh the page and try again.",
       "forbidden": "Only the Owner can transfer the ownership.",
+      "unexpected": "Could not finish. Try again."
+    },
+    "nameTitle": "Name",
+    "nameDescription": "The name Members see in the Organization menu.",
+    "nameLabel": "Organization name",
+    "renameNotAllowed": "Only the Owner and the Admins can rename the Organization.",
+    "save": "Save",
+    "renamed": "Organization renamed.",
+    "renameErrors": {
+      "invalidInput": "Check the name and try again.",
+      "forbidden": "Your Role does not allow renaming the Organization.",
+      "unexpected": "Could not finish. Try again."
+    },
+    "leaveTitle": "Leave the Organization",
+    "leaveDescription": "You lose access to everything in this Organization.",
+    "leave": "Leave Organization",
+    "leaveConfirmTitle": "Leave the Organization?",
+    "leaveConfirmDescription": "To come back, someone in the Organization has to invite you again.",
+    "leaveConfirm": "Leave",
+    "ownerMustTransferBeforeLeaving": "You are the Owner. Transfer the ownership to another Member before leaving.",
+    "deleteTitle": "Delete the Organization",
+    "deleteDescription": "Deletes the Organization, its Members and its Invitations. This cannot be undone.",
+    "delete": "Delete Organization",
+    "deleteConfirmTitle": "Delete {name}?",
+    "deleteConfirmDescription": "Every Member loses access and the pending Invitations stop being valid. This cannot be undone.",
+    "deleteConfirmLabel": "Type {name} to confirm",
+    "deleteConfirm": "Delete",
+    "deleted": "Organization {name} deleted.",
+    "deleteErrors": {
+      "invalidInput": "Check the name and try again.",
+      "forbidden": "Only the Owner can delete the Organization.",
+      "nameMismatch": "The name you typed is not the Organization's.",
       "unexpected": "Could not finish. Try again."
     }
   }

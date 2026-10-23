@@ -9,7 +9,7 @@ import { Input } from "@boilerplate/ui/components/input";
 import { Label } from "@boilerplate/ui/components/label";
 
 import { createOrganization } from "@/actions/organizations";
-import { createOrganizationInputSchema } from "@/shared/auth/organizations";
+import { organizationNameInputSchema } from "@/shared/auth/organizations";
 import {
   ORGANIZATION_LIMIT,
   ORGANIZATION_NAME_MAX_LENGTH,
@@ -32,7 +32,7 @@ export function CreateOrganizationForm() {
     event.preventDefault();
     setFormError(undefined);
 
-    const parsed = createOrganizationInputSchema.safeParse({ name });
+    const parsed = organizationNameInputSchema.safeParse({ name });
     if (!parsed.success) {
       setNameError(
         name.trim() === ""

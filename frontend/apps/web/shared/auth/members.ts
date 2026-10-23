@@ -1,17 +1,11 @@
 import { z } from "zod";
 
+import { canManageOrganization } from "./organizations";
 import { roleNames, roles, type Role } from "./roles.gen";
 
 export const memberRoleSchema = z.enum(roleNames);
 
 export type MemberRole = Role;
-
-export const addMemberInputSchema = z.object({
-  email: z.email(),
-  role: memberRoleSchema,
-});
-
-export type AddMemberInput = z.infer<typeof addMemberInputSchema>;
 
 export const updateMemberRoleInputSchema = z.object({
   memberId: z.string().min(1),
@@ -29,8 +23,6 @@ export const transferOwnershipInputSchema = z.object({
 export type MembersErrorCode =
   | "invalidInput"
   | "forbidden"
-  | "userNotFound"
-  | "alreadyMember"
   | "ownerNotAssignable"
   | "ownerMustTransfer"
   | "unexpected";
@@ -52,9 +44,9 @@ export interface MemberRow {
 }
 
 export interface MemberPolicy {
-  canAdd: boolean;
+  canInvite: boolean;
+  canCancelInvitations: boolean;
   assignableRoles: MemberRole[];
-  leave: "allowed" | "ownerMustTransfer";
   rows: MemberRow[];
 }
 
@@ -68,10 +60,6 @@ export function can(role: MemberRole, action: MemberAction): boolean {
   return roles[role].authorize({ member: [action] }).success;
 }
 
-export function canTransferOwnership(role: MemberRole): boolean {
-  return roles[role].authorize({ organization: ["transfer"] }).success;
-}
-
 export const assignableRoles = roleNames.filter((role) => role !== "owner");
 
 export function memberPolicy(
@@ -81,9 +69,11 @@ export function memberPolicy(
   const canActOn = (member: Member) => member.role !== "owner";
 
   return {
-    canAdd: can(actor.role, "create"),
+    canInvite: roles[actor.role].authorize({ invitation: ["create"] }).success,
+    canCancelInvitations: roles[actor.role].authorize({
+      invitation: ["cancel"],
+    }).success,
     assignableRoles: can(actor.role, "update") ? assignableRoles : [],
-    leave: actor.role === "owner" ? "ownerMustTransfer" : "allowed",
     rows: members.map((member) => ({
       member,
       canChangeRole: can(actor.role, "update") && canActOn(member),
@@ -97,7 +87,7 @@ export function ownershipPolicy(
   actor: Pick<Member, "id" | "role">,
   members: readonly Member[]
 ): OwnershipPolicy {
-  if (canTransferOwnership(actor.role)) {
+  if (canManageOrganization(actor.role, "transfer")) {
     return {
       kind: "canTransfer",
       candidates: members.filter(({ id }) => id !== actor.id),
