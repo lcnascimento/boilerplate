@@ -24,7 +24,7 @@ CI is defined in `.github/workflows/` and is the deterministic gate: a pull requ
 | Workflow           | Runs on                                                                                           | Checks                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `quality_gate.yml` | `workflow_call` only                                                                              | jobs `format`, `lint`, `test` and `e2e`, in parallel                               |
-| `pull_request.yml` | every pull request, draft or not                                                                  | `quality_gate / <job>` and `lint.breaking`                                         |
+| `pull_request.yml` | pull requests (opened, synchronize, reopened, ready for review; drafts skip)                      | `quality_gate / <job>` and `lint.breaking`                                         |
 | `release.yml`      | pushes to `main`                                                                                  | `quality_gate / <job>`                                                             |
 | `template.yml`     | pull requests (opened, synchronize, reopened, ready for review; drafts skip) and pushes to `main` | `A / make init`, `A / <job>`, `B / make clean-example + make init` and `B / <job>` |
 
@@ -44,9 +44,20 @@ Concurrency: `pull_request` cancels the previous run of the same pull request on
 
 `template` checks the template itself and runs only in the `lcnascimento/boilerplate` repository. Scenario `A` runs `make init NAME=acme-app`, scenario `B` runs `make clean-example` plus `make init`; each runs structural checks, then calls `quality_gate` with that command as its `bootstrap` input. Each `bootstrap` ends by committing its result, so `format.check` sees a clean tree. After `setup`, the gate passes `bootstrap` to the composite action `.github/actions/bootstrap`, which runs it, then `git clean -fdX`, then `setup` again, so the bootstrapped project is set up like a fresh one. `make init` deletes `template.yml`, so a generated project keeps `quality_gate`, `pull_request` and `release`.
 
+Draft pull requests run no CI: marking one ready for review starts it.
+
 The lefthook `pre-push` hook runs `make format.check` then `make lint`, the same targets as the `format` and `lint` jobs.
 
-A pushed branch with no pull request runs no CI: checks start when a PR opens (`pull_request` at once, `template` once it is not a draft), and `release` and `template` run again after the merge to `main`.
+A pushed branch with no pull request runs no CI: checks start when a PR opens ready, or when a draft PR is marked ready, and `release` and `template` run again after the merge to `main`.
+
+### Local gate
+
+`implement-spec` runs these commands, in order, from the repository root after each merge to its integration branch, in place of the remote CI:
+
+- `make format.check`
+- `make lint`
+- `make test`
+- `make lint.breaking`
 
 ### Waiting for checks
 
