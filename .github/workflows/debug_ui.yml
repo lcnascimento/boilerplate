@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         mode: [backend_turbo]
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +33,7 @@ jobs:
             rm -rf frontend/packages/ui/node_modules/.cache frontend/packages/ui/node_modules/.vite
             {
               if [ "$MODE" = backend_turbo ]; then make -C backend test || true; fi
-              echo "== git status before frontend"; git status --porcelain --ignored=no
+              echo "== testcontainers before frontend: $(docker ps -aq --filter label=org.testcontainers | wc -l)"
               touch /tmp/marker
               (cd frontend && pnpm turbo run test --force --env-mode=loose) || true
               echo "== files changed during frontend"; find . -newer /tmp/marker -type f -not -path '*/node_modules/*' -not -path './.git/*' | head -50
