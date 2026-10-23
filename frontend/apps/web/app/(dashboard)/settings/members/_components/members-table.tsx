@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import {
@@ -19,6 +20,9 @@ import type {
   MemberRole,
   MemberRow,
 } from "@/shared/auth/members";
+import type { Route } from "next";
+
+const ORGANIZATION_SETTINGS_HREF = "/settings/organization" satisfies Route;
 
 interface MembersTableProps {
   actorId: Member["id"];
@@ -87,6 +91,17 @@ function MemberTableRow({
       </TableCell>
       <TableCell className="text-right">
         {canRemove ? <RemoveMemberDialog member={{ id, name }} /> : null}
+        {isSelf && role === "owner" ? (
+          <p className="text-sm text-muted-foreground">
+            {t("ownerMustTransferHint")}{" "}
+            <Link
+              className="text-primary underline-offset-4 hover:underline"
+              href={ORGANIZATION_SETTINGS_HREF}
+            >
+              {t("transferOwnership")}
+            </Link>
+          </p>
+        ) : null}
       </TableCell>
     </TableRow>
   );
