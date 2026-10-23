@@ -1,4 +1,4 @@
-package healthserver_test
+package health_test
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/healthserver"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/health"
 )
 
 func TestServer_HealthRunsEveryCheck(t *testing.T) {
@@ -41,7 +41,7 @@ func TestServer_HealthRunsEveryCheck(t *testing.T) {
 			t.Parallel()
 
 			port := freePort(t)
-			server := healthserver.New(port, func() { t.Error("health server stopped unexpectedly") }, pass, tc.second)
+			server := health.NewServer(port, func() { t.Error("health server stopped unexpectedly") }, pass, tc.second)
 			require.NoError(t, server.Start(t.Context()))
 			t.Cleanup(func() { _ = server.Shutdown(context.WithoutCancel(t.Context())) })
 

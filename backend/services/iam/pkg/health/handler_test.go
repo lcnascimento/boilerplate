@@ -11,7 +11,7 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/handlers/health"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/health"
 )
 
 func TestHealth_Routes(t *testing.T) {

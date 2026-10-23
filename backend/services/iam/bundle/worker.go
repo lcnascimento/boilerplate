@@ -13,9 +13,9 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/config"
 	changesrepo "github.com/lcnascimento/boilerplate/backend/services/iam/internal/repository/changes"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/transport"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/transport/health"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/transport/worker/forwarder"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/transport/worker/translator"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/health"
 )
 
 func NewWorker() *fx.App {

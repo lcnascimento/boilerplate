@@ -7,9 +7,10 @@ import (
 
 	"github.com/lcnascimento/go-kit/http/httpserver"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/health"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend/internal/routes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/handlers/health"
 )
 
 type Server struct {
