@@ -23,6 +23,17 @@ const ADA = {
 };
 const fromIp = new Headers({ "x-forwarded-for": IP });
 
+function randomOctet(): number {
+  return crypto.getRandomValues(new Uint8Array(1))[0] ?? 0;
+}
+
+function cookieOf(headers: Headers): string {
+  return headers
+    .getSetCookie()
+    .map((setCookie) => setCookie.split(";")[0])
+    .join("; ");
+}
+
 describe("hashIp", () => {
   it("is the HMAC-SHA256 of the IP under the key, in hex", () => {
     expect(hashIp(KEY, IP)).toBe(
@@ -113,6 +124,26 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       return rows;
     }
 
+    async function recordedEventsOf(ipHash: string): Promise<string[]> {
+      const { rows } = await database.query<{ type: string }>(
+        `SELECT CASE table_name || ' ' || operation
+                  WHEN 'session INSERT' THEN 'SessionStarted'
+                  WHEN 'session DELETE' THEN 'SessionEnded'
+                  WHEN 'sign_in FAILED' THEN 'SignInFailed'
+                END AS type
+         FROM identity_change
+         WHERE ip_hash = $1 AND table_name IN ('session', 'sign_in')
+         UNION ALL
+         SELECT substring(headers ->> 'ce_type' FROM length('boilerplate.iam.v1.') + 1)
+         FROM watermill_iam_outbox,
+              LATERAL (SELECT payload::jsonb -> 'metadata' AS headers) AS message
+         WHERE headers ->> 'ce_iphash' = $1
+         ORDER BY type`,
+        [ipHash]
+      );
+      return rows.map(({ type }) => type);
+    }
+
     it("records the Actor and the IP hash of an authenticated request", async () => {
       const { auth } = getIam();
       const password = "first-password-1";
@@ -128,10 +159,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
         headers: fromIp,
         returnHeaders: true,
       });
-      const cookie = signedIn.headers
-        .getSetCookie()
-        .map((setCookie) => setCookie.split(";")[0])
-        .join("; ");
+      const cookie = cookieOf(signedIn.headers);
 
       await auth.api.changePassword({
         body: { currentPassword: password, newPassword: "second-password-2" },
@@ -150,6 +178,56 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
         `SELECT (SELECT count(*) FROM identity_change WHERE identity_change::text LIKE $1)
               + (SELECT count(*) FROM watermill_iam_outbox WHERE payload::text LIKE $1) AS leaks`,
         [`%${IP}%`]
+      );
+      expect(Number(rows[0]?.leaks)).toBe(0);
+    });
+
+    it("records the sessions and the failed sign-ins of a request with its IP hash, never the email", async () => {
+      const { auth } = getIam();
+      const password = "hedy-password-1";
+      const ip = `10.${String(randomOctet())}.${String(randomOctet())}.${String(randomOctet())}`;
+      const fromHedysIp = new Headers({ "x-forwarded-for": ip });
+      await auth.api.signUpEmail({
+        body: { name: "Hedy", email: email("hedy"), password },
+      });
+
+      const signedIn = await auth.api.signInEmail({
+        body: { email: email("hedy"), password },
+        headers: fromHedysIp,
+        returnHeaders: true,
+      });
+      await auth.api.signOut({
+        headers: new Headers({
+          cookie: cookieOf(signedIn.headers),
+          "x-forwarded-for": ip,
+        }),
+      });
+      await expect(
+        auth.api.signInEmail({
+          body: { email: email("hedy"), password: "wrong-password" },
+          headers: fromHedysIp,
+        })
+      ).rejects.toThrow();
+      await expect(
+        auth.api.signInEmail({
+          body: { email: email("nobody"), password },
+          headers: fromHedysIp,
+        })
+      ).rejects.toThrow();
+
+      expect(
+        await recordedEventsOf(hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", ip))
+      ).toEqual([
+        "SessionEnded",
+        "SessionStarted",
+        "SignInFailed",
+        "SignInFailed",
+      ]);
+
+      const { rows } = await database.query<{ leaks: number }>(
+        `SELECT (SELECT count(*) FROM identity_change WHERE identity_change::text LIKE $1 OR identity_change::text LIKE $2)
+              + (SELECT count(*) FROM watermill_iam_outbox WHERE payload::text LIKE $1 OR payload::text LIKE $2) AS leaks`,
+        [`%${marker}%`, `%${ip}%`]
       );
       expect(Number(rows[0]?.leaks)).toBe(0);
     });

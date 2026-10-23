@@ -73,6 +73,17 @@ define go_install
 	fi
 endef
 
+define await_testcontainers
+	@for i in $$(seq 60); do \
+		[ -n "$$(docker ps -aq --filter label=org.testcontainers)" ] || exit 0; \
+		[ "$$i" -gt 1 ] || echo "==> Waiting for testcontainers to stop"; \
+		sleep 1; \
+	done; \
+	echo "testcontainers still running after 60s:" >&2; \
+	docker ps -a --filter label=org.testcontainers >&2; \
+	exit 1
+endef
+
 go_test = pkgs=$$($(PACKAGES)); if [ -z "$$pkgs" ]; then echo "no packages"; else go test -timeout $(1) -race -cover $(2) $$pkgs; fi
 
 .PHONY: env
@@ -169,6 +180,7 @@ postgres:
 .PHONY: test
 test: postgres
 	$(call in_modules,test,$(call go_test,3m,-coverprofile=coverage.out))
+	$(await_testcontainers)
 
 .PHONY: test.unit
 test.unit:
@@ -177,6 +189,7 @@ test.unit:
 .PHONY: test.component
 test.component: postgres
 	$(call in_modules,test.component,$(call go_test,3m,-run Component))
+	$(await_testcontainers)
 
 .PHONY: sqlc
 sqlc:

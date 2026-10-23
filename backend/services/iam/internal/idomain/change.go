@@ -51,6 +51,7 @@ type changeKind struct {
 type translation struct {
 	topic     string
 	translate func(f *fields, at *timestamppb.Timestamp) (subject string, message proto.Message)
+	ownActor  func(f *fields) (userID, organizationID string)
 }
 
 var translations = map[changeKind]translation{
@@ -182,9 +183,54 @@ var translations = map[changeKind]translation{
 			}
 		},
 	},
+	{table: "session", operation: "INSERT"}: {
+		topic: events.SessionTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			sessionID := f.sessionID("id")
+
+			return sessionID, &events.SessionStarted{SessionId: sessionID, UserId: f.userID("userId"), StartedAt: at}
+		},
+		ownActor: sessionOwner,
+	},
+	{table: "session", operation: "DELETE"}: {
+		topic: events.SessionTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			sessionID := f.sessionID("id")
+
+			return sessionID, &events.SessionEnded{SessionId: sessionID, UserId: f.userID("userId"), EndedAt: at}
+		},
+		ownActor: sessionOwner,
+	},
+	{table: "sign_in", operation: "FAILED"}: {
+		topic: events.SessionTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			reason, ok := signInFailureReasons[f.values["reason"]]
+			if !ok {
+				f.fail(errUnknownSignInFailureReason.WithAttribute("reason", f.values["reason"]))
+			}
+
+			return "", &events.SignInFailed{Reason: reason, FailedAt: at}
+		},
+	},
 }
 
-var errUnknownInvitationStatus = errors.New("the invitation status has no Integration Event")
+var signInFailureReasons = map[string]events.SignInFailed_Reason{
+	"invalid_credentials": events.SignInFailed_REASON_INVALID_CREDENTIALS,
+	"invalid_input":       events.SignInFailed_REASON_INVALID_INPUT,
+}
+
+func sessionOwner(f *fields) (userID, organizationID string) {
+	if f.values["activeOrganizationId"] == "" {
+		return f.userID("userId"), ""
+	}
+
+	return f.userID("userId"), f.organizationID("activeOrganizationId")
+}
+
+var (
+	errUnknownInvitationStatus    = errors.New("the invitation status has no Integration Event")
+	errUnknownSignInFailureReason = errors.New("the sign-in failure reason has no Integration Event")
+)
 
 type fields struct {
 	values map[string]string
@@ -222,6 +268,10 @@ func (f *fields) invitationID(name string) string {
 	return domain.InvitationIDFromUUID(f.uuid(name)).String()
 }
 
+func (f *fields) sessionID(name string) string {
+	return domain.SessionIDFromUUID(f.uuid(name)).String()
+}
+
 func (c *Change) Event() (*Event, error) {
 	translation, ok := translations[changeKind{table: c.Table, operation: c.Operation}]
 	if !ok {
@@ -231,6 +281,14 @@ func (c *Change) Event() (*Event, error) {
 	f := &fields{values: c.Fields}
 
 	subject, message := translation.translate(f, timestamppb.New(c.OccurredAt))
+
+	actorID := prefixed(c.ActorID, domain.UserIDFromUUID)
+	actorOrganizationID := prefixed(c.ActorOrganizationID, domain.OrganizationIDFromUUID)
+
+	if !c.ActorID.Valid && translation.ownActor != nil {
+		actorID, actorOrganizationID = translation.ownActor(f)
+	}
+
 	if f.err != nil {
 		return nil, c.untranslatable().WithCause(f.err)
 	}
@@ -242,8 +300,8 @@ func (c *Change) Event() (*Event, error) {
 		CorrelationID: c.TransactionID,
 		Message:       message,
 
-		ActorID:             prefixed(c.ActorID, domain.UserIDFromUUID),
-		ActorOrganizationID: prefixed(c.ActorOrganizationID, domain.OrganizationIDFromUUID),
+		ActorID:             actorID,
+		ActorOrganizationID: actorOrganizationID,
 		IPHash:              c.IPHash,
 	}, nil
 }

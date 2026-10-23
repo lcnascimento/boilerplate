@@ -12,7 +12,12 @@ const reasons = [
 
 type LoginFailureReason = (typeof reasons)[number];
 
-const loginPaths = ["/sign-in/", "/sign-up/"];
+const signInFailureReasons = ["invalid_credentials", "invalid_input"] as const;
+
+export type SignInFailureReason = (typeof signInFailureReasons)[number];
+
+const SIGN_IN_PATH = "/sign-in/";
+const loginPaths = [SIGN_IN_PATH, "/sign-up/"];
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -60,13 +65,26 @@ function record(reason: LoginFailureReason | null): void {
   if (reason !== null) loginFailures().add(1, { reason });
 }
 
-export const loginFailureHook = createAuthMiddleware((ctx) => {
-  const returned = ctx.context.returned;
-  if (isLoginPath(ctx.path) && isAPIError(returned)) {
-    record(reasonOf(returned.statusCode, returned.body?.code));
-  }
-  return Promise.resolve();
-});
+function isSignInFailureReason(
+  reason: LoginFailureReason | null
+): reason is SignInFailureReason {
+  return signInFailureReasons.some((known) => known === reason);
+}
+
+export function loginFailureHook(
+  recordSignInFailure: (reason: SignInFailureReason) => Promise<void>
+) {
+  return createAuthMiddleware(async (ctx) => {
+    const returned = ctx.context.returned;
+    if (!isLoginPath(ctx.path) || !isAPIError(returned)) return;
+
+    const reason = reasonOf(returned.statusCode, returned.body?.code);
+    record(reason);
+    if (ctx.path.startsWith(SIGN_IN_PATH) && isSignInFailureReason(reason)) {
+      await recordSignInFailure(reason);
+    }
+  });
+}
 
 // The rate limiter answers before any Better Auth hook runs, so its 429s are counted around the handler.
 export function withLoginFailures(
