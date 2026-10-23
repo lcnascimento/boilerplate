@@ -16,7 +16,14 @@ export default defineProject({
       enabled: true,
       headless: true,
       provider: playwright({
-        launchOptions: { args: ["--enable-logging=stderr", "--v=0"] },
+        launchOptions: {
+          args: [
+            "--enable-logging=stderr",
+            "--v=0",
+            "--log-net-log=/tmp/netlog.json",
+            "--net-log-capture-mode=Everything",
+          ],
+        },
       }),
       viewport: { width: 1280, height: 800 },
       instances: [{ browser: "chromium" }],

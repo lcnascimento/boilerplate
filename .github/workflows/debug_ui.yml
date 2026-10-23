@@ -24,7 +24,7 @@ jobs:
         shell: bash
         env:
           MODE: ${{ matrix.mode }}
-          DEBUG: vite:deps,vite:hmr,pw:browser*
+          DEBUG: vite:deps,vite:hmr,vite:time,pw:browser*
         run: |
           nproc; uname -m
           runs=1
@@ -39,6 +39,7 @@ jobs:
               echo "== files changed during frontend"; find . -newer /tmp/marker -type f -not -path '*/node_modules/*' -not -path './.git/*' | head -50
               echo "== git status after frontend"; git status --porcelain --ignored=no
             } > run-$i.log 2>&1
+            cp /tmp/netlog.json netlog-$i.json 2>/dev/null || true
             if grep -q "Failed to fetch dynamically imported module" run-$i.log; then
               red=$((red+1)); echo "::warning::run $i RED"
               sed 's/\x1b\[[0-9;]*m//g' run-$i.log | grep -E "vite:deps|vitest|FAIL|Caused by|optimiz|reload|504" | cut -c1-300 | head -120
@@ -52,4 +53,6 @@ jobs:
         if: always()
         with:
           name: logs-${{ matrix.mode }}-${{ matrix.shard }}
-          path: run-*.log
+          path: |
+            run-*.log
+            netlog-*.json
