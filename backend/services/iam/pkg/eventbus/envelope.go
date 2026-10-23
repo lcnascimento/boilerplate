@@ -24,6 +24,8 @@ const (
 )
 
 type Envelope struct {
+	Origin
+
 	ID              string
 	Source          string
 	Type            string
@@ -32,11 +34,13 @@ type Envelope struct {
 	PartitionKey    string
 	SpecVersion     string
 	DataContentType string
+	CorrelationID   string
+}
 
+type Origin struct {
 	ActorID             string
 	ActorOrganizationID string
 	IPHash              string
-	CorrelationID       string
 }
 
 func (e *Envelope) Headers() map[string]string {
@@ -83,10 +87,12 @@ func ParseEnvelope(headers map[string]string) (Envelope, error) {
 		SpecVersion:     headers[headerSpecVersion],
 		DataContentType: headers[headerContentType],
 
-		ActorID:             headers[headerActorID],
-		ActorOrganizationID: headers[headerActorOrganizationID],
-		IPHash:              headers[headerIPHash],
-		CorrelationID:       headers[headerCorrelationID],
+		Origin: Origin{
+			ActorID:             headers[headerActorID],
+			ActorOrganizationID: headers[headerActorOrganizationID],
+			IPHash:              headers[headerIPHash],
+		},
+		CorrelationID: headers[headerCorrelationID],
 	}
 
 	if raw := headers[headerTime]; raw != "" {

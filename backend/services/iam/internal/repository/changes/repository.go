@@ -25,7 +25,7 @@ var Outbox = outbox.MustNew("iam")
 
 var (
 	ErrQuery = errors.New("failed to query the identity changes")
-	ErrEmit  = errors.New("failed to write the Integration Event to the outbox").WithCode("OUTBOX_EMIT")
+	ErrEmit  = errors.New("failed to write the Integration Event to the outbox")
 )
 
 type Repository struct {
@@ -42,6 +42,15 @@ func (r *Repository) Translate(ctx context.Context, limit int32) ([]*idomain.Eve
 
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		queries := db.New(tx)
+
+		locked, err := queries.TryLockTranslation(ctx)
+		if err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		if !locked {
+			return nil
+		}
 
 		rows, err := queries.LockChanges(ctx, limit)
 		if err != nil {
@@ -115,8 +124,8 @@ func toChange(row *db.LockChangesRow) (*idomain.Change, error) {
 		ID:            row.ID,
 		TransactionID: row.TransactionID,
 		OccurredAt:    row.OccurredAt,
-		Table:         row.TableName,
-		Operation:     row.Operation,
+		Table:         idomain.Table(row.TableName),
+		Operation:     idomain.Operation(row.Operation),
 
 		ActorID:             row.ActorID,
 		ActorOrganizationID: row.ActorOrganizationID,
@@ -155,9 +164,7 @@ func (r *Repository) newMessage(event *idomain.Event) (*message.Message, error) 
 		DataContentType: eventbus.ContentType,
 		CorrelationID:   event.CorrelationID,
 
-		ActorID:             event.ActorID,
-		ActorOrganizationID: event.ActorOrganizationID,
-		IPHash:              event.IPHash,
+		Origin: event.Origin,
 	}
 
 	msg := message.NewMessage(envelope.ID, value)

@@ -41,7 +41,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     afterAll(async () => {
-      await getIam().database.end();
+      await getIam().database.destroy();
     });
 
     async function verify(token: string) {

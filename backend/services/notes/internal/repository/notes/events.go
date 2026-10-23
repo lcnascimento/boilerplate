@@ -62,8 +62,10 @@ func (r *Repository) newMessage(caller *actor.Actor, id domain.NoteID, at time.T
 		SpecVersion:     eventbus.SpecVersion,
 		DataContentType: eventbus.ContentType,
 
-		ActorID:             caller.UserID.String(),
-		ActorOrganizationID: caller.OrganizationID.String(),
+		Origin: eventbus.Origin{
+			ActorID:             caller.UserID.String(),
+			ActorOrganizationID: caller.OrganizationID.String(),
+		},
 	}
 
 	msg := message.NewMessage(envelope.ID, value)

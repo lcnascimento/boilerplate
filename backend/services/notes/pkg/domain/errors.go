@@ -11,6 +11,10 @@ var (
 			WithCode("NOTE_NOT_FOUND").
 			WithKind(errors.KindNotFound)
 
+	ErrOrganizationDeleted = errors.New("the organization was deleted").
+				WithCode("ORGANIZATION_DELETED").
+				WithKind(errors.KindUnauthorized)
+
 	ErrInvalidNoteID = errors.New("invalid note id").
 				WithCode("INVALID_NOTE_ID").
 				WithKind(errors.KindInvalidInput)

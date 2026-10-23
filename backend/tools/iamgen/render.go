@@ -29,6 +29,26 @@ import {
   defaultStatements,
   ownerAc,
 } from "better-auth/plugins/organization/access";
+
+type Inherited<Defaults, Resource extends string> = Resource extends keyof Defaults
+  ? Defaults[Resource] extends readonly (infer Action extends string)[]
+    ? Action
+    : never
+  : never;
+
+function extend<
+  Defaults extends object,
+  Resource extends string,
+  const Actions extends readonly string[],
+>(defaults: Defaults, resource: Resource, actions: Actions) {
+  const inherited: readonly string[] =
+    (defaults as Record<string, readonly string[] | undefined>)[resource] ?? [];
+
+  return [...new Set([...inherited, ...actions])] as (
+    | Inherited<Defaults, Resource>
+    | Actions[number]
+  )[];
+}
 `
 
 func render(m matrix) []byte {
@@ -71,16 +91,6 @@ func render(m matrix) []byte {
 	return []byte(b.String())
 }
 
-// betterAuthResources are the resources Better Auth's defaults already declare; an entry for one of them
-// extends the default actions, because a plain entry would replace them and break Better Auth's own checks.
-var betterAuthResources = map[string]bool{
-	"organization": true,
-	"member":       true,
-	"invitation":   true,
-	"team":         true,
-	"ac":           true,
-}
-
 func defaultsOf(r role) string {
 	if r.betterAuthDefaults == "" {
 		return ""
@@ -103,11 +113,11 @@ func writeEntries(b *strings.Builder, indent, defaults string, permissions []per
 	}
 
 	for _, resource := range resources {
-		values := actions[resource]
-		if defaults != "" && betterAuthResources[resource] {
-			values = append([]string{"..." + defaults + "." + resource}, values...)
+		values := "[" + strings.Join(actions[resource], ", ") + "]"
+		if defaults != "" {
+			values = fmt.Sprintf("extend(%s, %q, %s)", defaults, resource, values)
 		}
 
-		fmt.Fprintf(b, "%s%s: [%s],\n", indent, resource, strings.Join(values, ", "))
+		fmt.Fprintf(b, "%s%s: %s,\n", indent, resource, values)
 	}
 }

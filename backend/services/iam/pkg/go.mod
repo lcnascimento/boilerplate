@@ -10,6 +10,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/mux v1.8.1
 	github.com/lcnascimento/go-kit/errors v1.9.4
 	github.com/lcnascimento/go-kit/http v1.5.1
 	github.com/lcnascimento/go-kit/o11y v1.8.1

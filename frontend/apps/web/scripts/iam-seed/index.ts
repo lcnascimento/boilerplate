@@ -68,5 +68,5 @@ try {
   }
   console.log("iam seed is up to date");
 } finally {
-  await database.end();
+  await database.destroy();
 }

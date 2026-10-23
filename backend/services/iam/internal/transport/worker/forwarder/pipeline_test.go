@@ -57,14 +57,14 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 
 	created, changed, gone := next(t, received), next(t, received), next(t, received)
 
-	requireEvent(t, created, ada, signedUp, noRequest, &events.UserCreated{
+	requireEvent(t, created, ada, signedUp, origin{ActorID: "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"}, &events.UserCreated{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		CreatedAt: timestamppb.New(signedUp.at),
 	})
 	requireEvent(t, changed, ada, passwordChanged, origin{
-		actorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-		actorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
-		ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
+		ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		ActorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		IPHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
 	}, &events.PasswordChanged{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		ChangedAt: timestamppb.New(passwordChanged.at),
@@ -79,11 +79,7 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 	require.Zero(t, pending)
 }
 
-type origin struct {
-	actorID             string
-	actorOrganizationID string
-	ipHash              string
-}
+type origin = eventbus.Origin
 
 var noRequest = origin{}
 
@@ -97,18 +93,15 @@ var ada = aggregate{topic: "iam.user.v1", subject: "user_3f2a1b4c-5d6e-4f70-8a9b
 func requireEvent(t *testing.T, got *eventbus.Event, of aggregate, tx transaction, from origin, want proto.Message) {
 	t.Helper()
 
-	require.True(t, proto.Equal(want, got.Message), "want %v, got %v", want, got.Message)
+	message, _ := got.Message()
+	require.True(t, proto.Equal(want, message), "want %v, got %v", want, message)
 	require.Equal(t, of.topic, got.Topic)
 	require.Equal(t, "iam", got.Source)
 	require.Equal(t, string(want.ProtoReflect().Descriptor().FullName()), got.Type)
 	require.Equal(t, of.subject, got.Subject)
 	require.Equal(t, tx.id, got.CorrelationID)
 	require.True(t, tx.at.Equal(got.Time), "want %v, got %v", tx.at, got.Time)
-	require.Equal(t, from, origin{
-		actorID:             got.ActorID,
-		actorOrganizationID: got.ActorOrganizationID,
-		ipHash:              got.IPHash,
-	})
+	require.Equal(t, from, got.Origin)
 }
 
 type transaction struct {
@@ -166,7 +159,7 @@ func startWorker(t *testing.T, pool *pgxpool.Pool, schemaIDs eventbus.SchemaIDs,
 	require.NoError(t, worker.Start(t.Context()))
 	t.Cleanup(func() { require.NoError(t, worker.Stop(context.Background())) })
 
-	f, err := forwarder.New(t.Context(), pool, brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
+	f, err := forwarder.New(t.Context(), changesrepo.Outbox, pool, brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
 	require.NoError(t, err)
 	require.NoError(t, f.Start(t.Context()))
 	require.NoError(t, f.Ready(t.Context()))

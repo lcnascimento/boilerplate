@@ -30,8 +30,8 @@ var (
 	}
 	anonymousFromHedysIP = connectionSettings{ipHash: ipHash}
 
-	fromHedyInAcme = origin{actorID: hedyID, actorOrganizationID: acmeID, ipHash: ipHash}
-	fromHedysIP    = origin{ipHash: ipHash}
+	fromHedyInAcme = origin{ActorID: hedyID, ActorOrganizationID: acmeID, IPHash: ipHash}
+	fromHedysIP    = origin{IPHash: ipHash}
 )
 
 func TestComponentPipeline_DeliversTheSessionsAndTheFailedSignInsToTheEventBus(t *testing.T) {

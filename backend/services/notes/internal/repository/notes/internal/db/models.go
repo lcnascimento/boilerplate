@@ -11,6 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type DeletedOrganization struct {
+	OrganizationID uuid.UUID
+	DeletedAt      time.Time
+}
+
 type Note struct {
 	ID             uuid.UUID
 	CreatedAt      time.Time

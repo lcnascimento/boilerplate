@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/idomain"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events"
 )
 
@@ -285,8 +286,8 @@ func TestChange_EventCarriesTheActorAndTheIPHash(t *testing.T) {
 func TestChange_EventWithoutAnActorHasEmptyActorAndIPHash(t *testing.T) {
 	t.Parallel()
 
-	change := idomain.Change{Table: "user", Operation: "INSERT", Fields: map[string]string{
-		"id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+	change := idomain.Change{Table: "account", Operation: "UPDATE", Fields: map[string]string{
+		"userId": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 	}}
 
 	got, err := change.Event()
@@ -295,6 +296,42 @@ func TestChange_EventWithoutAnActorHasEmptyActorAndIPHash(t *testing.T) {
 	require.Empty(t, got.ActorID)
 	require.Empty(t, got.ActorOrganizationID)
 	require.Empty(t, got.IPHash)
+}
+
+func TestChange_EventTranslatesAnInsertedUserWithoutAConnectionActorWithItselfAsTheActor(t *testing.T) {
+	t.Parallel()
+
+	change := idomain.Change{
+		Table:     "user",
+		Operation: "INSERT",
+		Fields:    map[string]string{"id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"},
+		IPHash:    "5d1f0c2a",
+	}
+
+	got, err := change.Event()
+
+	require.NoError(t, err)
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", got.ActorID)
+	require.Empty(t, got.ActorOrganizationID)
+	require.Equal(t, "5d1f0c2a", got.IPHash)
+}
+
+func TestChange_EventTranslatesAnInsertedUserWithTheConnectionActor(t *testing.T) {
+	t.Parallel()
+
+	change := idomain.Change{
+		Table:               "user",
+		Operation:           "INSERT",
+		Fields:              map[string]string{"id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"},
+		ActorID:             uuid.NullUUID{UUID: uuid.MustParse("9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"), Valid: true},
+		ActorOrganizationID: uuid.NullUUID{UUID: uuid.MustParse("3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"), Valid: true},
+	}
+
+	got, err := change.Event()
+
+	require.NoError(t, err)
+	require.Equal(t, "user_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", got.ActorID)
+	require.Equal(t, "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", got.ActorOrganizationID)
 }
 
 func TestChange_EventRefusesAChangeWithoutAnIntegrationEvent(t *testing.T) {
@@ -354,14 +391,16 @@ func TestChange_EventTranslatesAStartedSessionWithItsUserAsTheActor(t *testing.T
 		StartedAt: timestamppb.New(occurredAt),
 	}, got.Message), "got %v", got.Message)
 	require.Equal(t, &idomain.Event{
-		Topic:               "iam.session.v1",
-		Subject:             "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
-		Time:                occurredAt,
-		CorrelationID:       "7311",
-		Message:             got.Message,
-		ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-		ActorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
-		IPHash:              "5d1f0c2a",
+		Topic:         "iam.session.v1",
+		Subject:       "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
+		Time:          occurredAt,
+		CorrelationID: "7311",
+		Message:       got.Message,
+		Origin: eventbus.Origin{
+			ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+			ActorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+			IPHash:              "5d1f0c2a",
+		},
 	}, got)
 }
 
@@ -402,14 +441,16 @@ func TestChange_EventTranslatesAnEndedSessionWithTheConnectionActor(t *testing.T
 		EndedAt:   timestamppb.New(occurredAt),
 	}, got.Message), "got %v", got.Message)
 	require.Equal(t, &idomain.Event{
-		Topic:               "iam.session.v1",
-		Subject:             "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
-		Time:                occurredAt,
-		CorrelationID:       "7312",
-		Message:             got.Message,
-		ActorID:             "user_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
-		ActorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
-		IPHash:              "5d1f0c2a",
+		Topic:         "iam.session.v1",
+		Subject:       "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
+		Time:          occurredAt,
+		CorrelationID: "7312",
+		Message:       got.Message,
+		Origin: eventbus.Origin{
+			ActorID:             "user_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+			ActorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+			IPHash:              "5d1f0c2a",
+		},
 	}, got)
 }
 

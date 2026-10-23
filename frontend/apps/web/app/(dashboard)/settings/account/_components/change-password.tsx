@@ -9,7 +9,6 @@ import { Button } from "@boilerplate/ui/components/button";
 import { Input } from "@boilerplate/ui/components/input";
 import { Label } from "@boilerplate/ui/components/label";
 
-import { useOrganizations } from "@/providers";
 import { changePasswordInputSchema } from "@/shared/auth/account";
 import { authClient } from "@/shared/auth/client";
 import { PASSWORD_LENGTH } from "@/shared/auth/policy";
@@ -25,7 +24,6 @@ export function ChangePassword() {
   const t = useTranslations("accountSettings");
   const tValidation = useTranslations("validation");
   const router = useRouter();
-  const { active } = useOrganizations();
   const [input, setInput] = useState(emptyInput);
   const [currentError, setCurrentError] = useState<string>();
   const [newError, setNewError] = useState<string>();
@@ -61,7 +59,6 @@ export function ChangePassword() {
         );
         return;
       }
-      await authClient.organization.setActive({ organizationId: active.id });
       setInput(emptyInput);
       toast.success(t("passwordChanged"));
       router.refresh();

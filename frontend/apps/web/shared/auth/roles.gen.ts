@@ -7,16 +7,37 @@ import {
   ownerAc,
 } from "better-auth/plugins/organization/access";
 
+type Inherited<
+  Defaults,
+  Resource extends string,
+> = Resource extends keyof Defaults
+  ? Defaults[Resource] extends readonly (infer Action extends string)[]
+    ? Action
+    : never
+  : never;
+
+function extend<
+  Defaults extends object,
+  Resource extends string,
+  const Actions extends readonly string[],
+>(defaults: Defaults, resource: Resource, actions: Actions) {
+  const inherited: readonly string[] =
+    (defaults as Record<string, readonly string[] | undefined>)[resource] ?? [];
+
+  return [...new Set([...inherited, ...actions])] as (
+    Inherited<Defaults, Resource> | Actions[number]
+  )[];
+}
+
 export const statement = {
   ...defaultStatements,
-  organization: [
-    ...defaultStatements.organization,
+  organization: extend(defaultStatements, "organization", [
     "update",
     "delete",
     "transfer",
-  ],
-  invitation: [...defaultStatements.invitation, "create", "cancel"],
-  note: ["read", "create", "delete"],
+  ]),
+  invitation: extend(defaultStatements, "invitation", ["create", "cancel"]),
+  note: extend(defaultStatements, "note", ["read", "create", "delete"]),
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -24,20 +45,19 @@ export const ac = createAccessControl(statement);
 export const roles = {
   owner: ac.newRole({
     ...ownerAc.statements,
-    organization: [
-      ...ownerAc.statements.organization,
+    organization: extend(ownerAc.statements, "organization", [
       "update",
       "delete",
       "transfer",
-    ],
-    invitation: [...ownerAc.statements.invitation, "create", "cancel"],
-    note: ["read", "create", "delete"],
+    ]),
+    invitation: extend(ownerAc.statements, "invitation", ["create", "cancel"]),
+    note: extend(ownerAc.statements, "note", ["read", "create", "delete"]),
   }),
   admin: ac.newRole({
     ...adminAc.statements,
-    organization: [...adminAc.statements.organization, "update"],
-    invitation: [...adminAc.statements.invitation, "create", "cancel"],
-    note: ["read", "create"],
+    organization: extend(adminAc.statements, "organization", ["update"]),
+    invitation: extend(adminAc.statements, "invitation", ["create", "cancel"]),
+    note: extend(adminAc.statements, "note", ["read", "create"]),
   }),
   viewer: ac.newRole({
     note: ["read"],

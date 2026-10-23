@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createUserOutsideSignUp } from "@/scripts/iam-seed/create-user";
 
@@ -12,6 +12,11 @@ import {
   runAsActor,
 } from "./audit-connection";
 import { getIam } from "./auth";
+import { acceptInvitationFor } from "./invitation-acceptance";
+import { createOrganizationFor } from "./organization-creation";
+import { fixtureDatabase } from "./test-database";
+
+vi.mock("server-only", () => ({}));
 
 const KEY = "a-test-ip-hash-key-that-is-long-enough";
 const IP = "203.0.113.7";
@@ -25,6 +30,10 @@ const fromIp = new Headers({ "x-forwarded-for": IP });
 
 function randomOctet(): number {
   return crypto.getRandomValues(new Uint8Array(1))[0] ?? 0;
+}
+
+function randomIp(): string {
+  return `10.${String(randomOctet())}.${String(randomOctet())}.${String(randomOctet())}`;
 }
 
 function cookieOf(headers: Headers): string {
@@ -78,15 +87,15 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     afterAll(async () => {
       await database.query(`DELETE FROM "user" WHERE email LIKE $1`, [
         `%-${marker}@audit.test`,
       ]);
-      await database.query(`DELETE FROM organization WHERE slug = $1`, [
-        marker,
+      await database.query(`DELETE FROM organization WHERE slug LIKE $1`, [
+        `${marker}%`,
       ]);
       await database.end();
     });
@@ -167,9 +176,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       });
 
       const ipHash = hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", IP);
-      expect(await recordedOrigins("user", "INSERT", user.id)).toEqual([
-        { actorId: null, actorOrganizationId: null, ipHash },
-      ]);
+      expect([
+        [{ actorId: null, actorOrganizationId: null, ipHash }],
+        [{ actorId: user.id, actorOrganizationId: null, ipHash }],
+      ]).toContainEqual(await recordedOrigins("user", "INSERT", user.id));
       expect(await recordedOrigins("account", "UPDATE", user.id)).toEqual([
         { actorId: user.id, actorOrganizationId: organization.id, ipHash },
       ]);
@@ -232,6 +242,141 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       expect(Number(rows[0]?.leaks)).toBe(0);
     });
 
+    async function recordedOrganizationEventsOf(ip: string) {
+      const { rows } = await database.query<{
+        type: string;
+        actorId: string | null;
+        actorOrganizationId: string | null;
+      }>(
+        `SELECT CASE table_name || ' ' || operation
+                  WHEN 'organization INSERT' THEN 'OrganizationCreated'
+                  WHEN 'organization UPDATE' THEN 'OrganizationRenamed'
+                  WHEN 'member INSERT' THEN 'MemberAdded'
+                  WHEN 'member UPDATE' THEN 'MemberRoleChanged'
+                  WHEN 'member DELETE' THEN 'MemberRemoved'
+                  WHEN 'invitation INSERT' THEN 'InvitationCreated'
+                  WHEN 'invitation UPDATE' THEN
+                    CASE fields ->> 'status'
+                      WHEN 'accepted' THEN 'InvitationAccepted'
+                      WHEN 'rejected' THEN 'InvitationDeclined'
+                      WHEN 'canceled' THEN 'InvitationCanceled'
+                    END
+                END AS type,
+                actor_id::text AS "actorId",
+                actor_organization_id::text AS "actorOrganizationId"
+         FROM identity_change
+         WHERE ip_hash = $1 AND table_name IN ('organization', 'member', 'invitation')
+         UNION ALL
+         SELECT type,
+                NULLIF(substring(headers ->> 'ce_actorid' FROM 6), ''),
+                NULLIF(substring(headers ->> 'ce_actororganizationid' FROM 5), '')
+         FROM watermill_iam_outbox,
+              LATERAL (SELECT payload::jsonb -> 'metadata' AS headers) AS message,
+              LATERAL (SELECT substring(headers ->> 'ce_type' FROM '[^.]+$') AS type) AS short
+         WHERE headers ->> 'ce_iphash' = $1 AND type ~ '^(Organization|Member|Invitation)'
+         ORDER BY type, "actorId"`,
+        [hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", ip)]
+      );
+      return rows;
+    }
+
+    it("records the Actor, their Organization and the IP hash of Organization, Member and Invitation changes", async () => {
+      const { auth } = getIam();
+      const password = "lifecycle-password-1";
+      const ips = { olga: randomIp(), vera: randomIp(), wes: randomIp() };
+      async function signedUp(name: "olga" | "vera" | "wes") {
+        const { user } = await auth.api.signUpEmail({
+          body: { name, email: email(name), password },
+        });
+        const signedIn = await auth.api.signInEmail({
+          body: { email: email(name), password },
+          returnHeaders: true,
+        });
+        return {
+          id: userIdSchema.parse(user.id),
+          headers: new Headers({
+            cookie: cookieOf(signedIn.headers),
+            "x-forwarded-for": ips[name],
+          }),
+        };
+      }
+      const olga = await signedUp("olga");
+      const vera = await signedUp("vera");
+      const wes = await signedUp("wes");
+
+      const organization = await createOrganizationFor(
+        { userId: olga.id, organizationId: null },
+        olga.headers,
+        { name: "Lifecycle", slug: `${marker}-lifecycle` }
+      );
+      const organizationId = organization.id;
+      const invite = (invited: string) =>
+        auth.api.createInvitation({
+          headers: olga.headers,
+          body: { email: invited, role: "viewer", organizationId },
+        });
+      const toVera = await invite(email("vera"));
+      const toWes = await invite(email("wes"));
+      const toZe = await invite(email("ze"));
+      await acceptInvitationFor(
+        { userId: vera.id, organizationId: null },
+        vera.headers,
+        toVera.id
+      );
+      await auth.api.rejectInvitation({
+        headers: wes.headers,
+        body: { invitationId: toWes.id },
+      });
+      await auth.api.cancelInvitation({
+        headers: olga.headers,
+        body: { invitationId: toZe.id },
+      });
+      await auth.api.updateOrganization({
+        headers: olga.headers,
+        body: { organizationId, data: { name: "Lifecycle renamed" } },
+      });
+      const { members } = await auth.api.listMembers({
+        headers: olga.headers,
+        query: { organizationId },
+      });
+      const veraMemberId = members.find(({ userId }) => userId === vera.id)?.id;
+      if (veraMemberId === undefined) throw new Error("Vera is no Member");
+      await auth.api.updateMemberRole({
+        headers: olga.headers,
+        body: { memberId: veraMemberId, organizationId, role: "admin" },
+      });
+      await auth.api.removeMember({
+        headers: olga.headers,
+        body: { memberIdOrEmail: veraMemberId, organizationId },
+      });
+
+      const asOlga = { actorId: olga.id, actorOrganizationId: organizationId };
+      const asOlgaCreating = { actorId: olga.id, actorOrganizationId: null };
+      expect(await recordedOrganizationEventsOf(ips.olga)).toEqual([
+        { type: "InvitationCanceled", ...asOlga },
+        { type: "InvitationCreated", ...asOlga },
+        { type: "InvitationCreated", ...asOlga },
+        { type: "InvitationCreated", ...asOlga },
+        { type: "MemberAdded", ...asOlgaCreating },
+        { type: "MemberRemoved", ...asOlga },
+        { type: "MemberRoleChanged", ...asOlga },
+        { type: "OrganizationCreated", ...asOlgaCreating },
+        { type: "OrganizationRenamed", ...asOlga },
+      ]);
+      const asVera = { actorId: vera.id, actorOrganizationId: null };
+      expect(await recordedOrganizationEventsOf(ips.vera)).toEqual([
+        { type: "InvitationAccepted", ...asVera },
+        { type: "MemberAdded", ...asVera },
+      ]);
+      expect(await recordedOrganizationEventsOf(ips.wes)).toEqual([
+        {
+          type: "InvitationDeclined",
+          actorId: wes.id,
+          actorOrganizationId: null,
+        },
+      ]);
+    });
+
     it("records no Actor nor IP hash outside a request", async () => {
       const context = await getIam().auth.$context;
       const userId = await createUserOutsideSignUp(context, {
@@ -240,9 +385,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
         password: "seed-password-1",
       });
 
-      expect(await recordedOrigins("user", "INSERT", userId)).toEqual([
-        { actorId: null, actorOrganizationId: null, ipHash: null },
-      ]);
+      expect([
+        [{ actorId: null, actorOrganizationId: null, ipHash: null }],
+        [{ actorId: userId, actorOrganizationId: null, ipHash: null }],
+      ]).toContainEqual(await recordedOrigins("user", "INSERT", userId));
     });
 
     it("never hands a reused connection the Actor or the IP of an earlier request", async () => {

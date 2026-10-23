@@ -92,3 +92,14 @@ func (q *Queries) OldestChangeAge(ctx context.Context) (float64, error) {
 	err := row.Scan(&seconds)
 	return seconds, err
 }
+
+const tryLockTranslation = `-- name: TryLockTranslation :one
+SELECT pg_try_advisory_xact_lock(hashtext('identity_change_translation'))::bool AS locked
+`
+
+func (q *Queries) TryLockTranslation(ctx context.Context) (bool, error) {
+	row := q.db.QueryRow(ctx, tryLockTranslation)
+	var locked bool
+	err := row.Scan(&locked)
+	return locked, err
+}

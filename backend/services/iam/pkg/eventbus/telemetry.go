@@ -118,6 +118,10 @@ func (s *Subscriber) onDeadLettered(topic string, msg *message.Message) {
 		log.String("dlq", DLQTopic(topic, s.group)), log.String("error.type", errType), log.String("message.id", msg.Metadata.Get(headerID)))
 }
 
+func onRouterStopped(ctx context.Context, err error) {
+	logger.Error(ctx, err)
+}
+
 func errorType(err error) string {
 	if code := errors.Code(err); code != errors.CodeUnknown {
 		return string(code)

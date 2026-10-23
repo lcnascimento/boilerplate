@@ -1,13 +1,17 @@
+import { sql, type Kysely } from "kysely";
 import { z } from "zod";
 
-import { organizationIdSchema, userIdSchema, type ActorIds } from "./actor-ids";
+import {
+  memberIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+  type ActorIds,
+} from "./actor-ids";
 import { memberRoleSchema } from "./members";
-
-import type { Pool } from "pg";
 
 const userMemberSchema = z
   .object({
-    memberId: z.uuid().brand<"MemberId">(),
+    memberId: memberIdSchema,
     role: memberRoleSchema,
     organizationId: organizationIdSchema,
     organizationName: z.string(),
@@ -23,17 +27,15 @@ export interface Actor
   extends ActorIds, Pick<UserMember, "memberId" | "role"> {}
 
 export async function listMembersOldestFirst(
-  database: Pool,
+  database: Kysely<unknown>,
   userId: string
 ): Promise<UserMember[]> {
-  const { rows } = await database.query(
-    `SELECT m.id AS "memberId", m.role, o.id AS "organizationId", o.name AS "organizationName"
-       FROM member m
-       JOIN organization o ON o.id = m."organizationId"
-      WHERE m."userId" = $1
-      ORDER BY m."createdAt", o.id`,
-    [userId]
-  );
+  const { rows } = await sql`
+    SELECT m.id AS "memberId", m.role, o.id AS "organizationId", o.name AS "organizationName"
+      FROM member m
+      JOIN organization o ON o.id = m."organizationId"
+     WHERE m."userId" = ${userId}
+     ORDER BY m."createdAt", o.id`.execute(database);
   return z.array(userMemberSchema).parse(rows);
 }
 
@@ -47,7 +49,7 @@ export function actorOf(userId: string, member: UserMember): Actor {
 }
 
 export async function findActor(
-  database: Pool,
+  database: Kysely<unknown>,
   { userId, organizationId }: { userId: string; organizationId: string }
 ): Promise<Actor> {
   const members = await listMembersOldestFirst(database, userId);

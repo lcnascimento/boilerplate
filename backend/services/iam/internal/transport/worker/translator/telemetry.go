@@ -6,14 +6,11 @@ import (
 	"go.opentelemetry.io/otel"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
-
-	"github.com/lcnascimento/go-kit/o11y/log"
 )
 
 var (
-	pkg    = "iam/transport/worker/translator"
-	logger = log.MustNewLogger(pkg)
-	meter  = otel.Meter(pkg)
+	pkg   = "iam/transport/worker/translator"
+	meter = otel.Meter(pkg)
 )
 
 func (t *Translator) registerOldestPendingAge() (otelmetric.Registration, error) {
@@ -25,14 +22,9 @@ func (t *Translator) registerOldestPendingAge() (otelmetric.Registration, error)
 	}
 
 	return meter.RegisterCallback(func(ctx context.Context, observer otelmetric.Observer) error {
-		age, err := t.changes.OldestPendingAge(ctx)
-		if err != nil {
-			logger.ErrorBySeverity(ctx, err)
-
-			return nil
+		if age, err := t.changes.OldestPendingAge(ctx); err == nil {
+			observer.ObserveInt64(gauge, int64(age.Seconds()))
 		}
-
-		observer.ObserveInt64(gauge, int64(age.Seconds()))
 
 		return nil
 	}, gauge)

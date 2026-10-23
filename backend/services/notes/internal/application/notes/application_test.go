@@ -22,6 +22,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/metrictest"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application/notes"
@@ -247,10 +248,13 @@ func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 	s.Require().ErrorIs(err, domain.ErrNoteNotFound)
 }
 
-func (s *ApplicationSuite) TestDeleteOrganizationNotesDeletesThroughTheRepository() {
+func (s *ApplicationSuite) TestDeleteOrganizationNotesCountsEveryDeletedNote() {
 	s.repo.EXPECT().DeleteByOrganization(gomock.Any(), acme).Return(int64(3), nil)
+	before := metrictest.Counter(s.T(), metrics, "notes.notes.deleted")
 
 	s.Require().NoError(s.app.DeleteOrganizationNotes(s.T().Context(), acme))
+
+	s.Require().Equal(int64(3), metrictest.Counter(s.T(), metrics, "notes.notes.deleted")-before)
 }
 
 func (s *ApplicationSuite) TestDeleteOrganizationNotesWrapsRepositoryErrors() {

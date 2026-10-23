@@ -29,9 +29,10 @@ const ana = { email: "ana@acme.test", password: "correct-horse", name: "Ana" };
 
 function refuse(kind: string): AuthRule {
   return (action) => {
-    if (action.kind !== kind) return Promise.resolve();
-    return Promise.reject(
-      new APIError("FORBIDDEN", { code: "BLOCKED", message: "Blocked" })
+    return Promise.resolve(
+      action.kind === kind
+        ? new APIError("FORBIDDEN", { code: "BLOCKED", message: "Blocked" })
+        : undefined
     );
   };
 }
@@ -81,7 +82,8 @@ describe("authRulesHook", () => {
     const seen: unknown[] = [];
     const auth = createAuth([
       (action) => {
-        if (action.kind !== "createInvitation") return Promise.resolve();
+        if (action.kind !== "createInvitation")
+          return Promise.resolve(undefined);
         seen.push(action);
         return refuse("createInvitation")(action);
       },
@@ -112,7 +114,7 @@ describe("authRulesHook", () => {
     const auth = createAuth([
       (action) => {
         seen.push(action);
-        return Promise.resolve();
+        return Promise.resolve(undefined);
       },
     ]);
 

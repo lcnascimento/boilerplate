@@ -12,8 +12,15 @@ type schema struct {
 	text    string
 }
 
-// loadSchemas reads every .proto file under protos, whose paths must match the import paths the generated Go code
-// registered.
+func MustProtos(embedded fs.FS) fs.FS {
+	protos, err := fs.Sub(embedded, "proto")
+	if err != nil {
+		panic(ErrLoadSchemas.WithCause(err))
+	}
+
+	return protos
+}
+
 func loadSchemas(protos fs.FS) ([]schema, error) {
 	var schemas []schema
 

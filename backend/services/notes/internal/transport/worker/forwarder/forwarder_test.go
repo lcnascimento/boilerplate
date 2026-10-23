@@ -94,7 +94,8 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 		Body:           "body of Lista de compras",
 		CreatedAt:      timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
 	}
-	require.True(t, proto.Equal(wantCreated, created.Message), "want %v, got %v", wantCreated, created.Message)
+	createdMessage, _ := created.Message()
+	require.True(t, proto.Equal(wantCreated, createdMessage), "want %v, got %v", wantCreated, createdMessage)
 	require.Equal(t, noteCreatedType, created.Type)
 	require.Equal(t, "notes", created.Source)
 	require.Equal(t, note.ID.String(), created.Subject)
@@ -105,7 +106,8 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", created.ActorOrganizationID)
 
 	wantDeleted := &events.NoteDeleted{Id: note.ID.String(), OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"}
-	require.True(t, proto.Equal(wantDeleted, deleted.Message), "want %v, got %v", wantDeleted, deleted.Message)
+	deletedMessage, _ := deleted.Message()
+	require.True(t, proto.Equal(wantDeleted, deletedMessage), "want %v, got %v", wantDeleted, deletedMessage)
 	require.Equal(t, noteDeletedType, deleted.Type)
 	require.True(t, deletedAt.Equal(deleted.Time), "want %v, got %v", deletedAt, deleted.Time)
 	require.NotEqual(t, created.ID, deleted.ID)
@@ -427,7 +429,7 @@ func newEnv(t *testing.T) *env {
 func (e *env) startForwarder(t *testing.T) *outbox.Forwarder {
 	t.Helper()
 
-	f, err := forwarder.New(t.Context(), e.pool, e.brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
+	f, err := forwarder.New(t.Context(), notes.Outbox, e.pool, e.brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
 	require.NoError(t, err)
 
 	require.NoError(t, f.Start(t.Context()))

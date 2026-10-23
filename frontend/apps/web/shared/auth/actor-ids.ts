@@ -6,6 +6,12 @@ export type UserId = z.infer<typeof userIdSchema>;
 
 export const organizationIdSchema = z.uuid().brand<"OrganizationId">();
 
+export type OrganizationId = z.infer<typeof organizationIdSchema>;
+
+export const memberIdSchema = z.uuid().brand<"MemberId">();
+
+export type MemberId = z.infer<typeof memberIdSchema>;
+
 const actorIdsSchema = z.object({
   userId: userIdSchema,
   organizationId: organizationIdSchema,

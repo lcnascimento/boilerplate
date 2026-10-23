@@ -57,7 +57,7 @@ func TestComponentConsumer_OrganizationDeletedDeletesOnlyThatOrganizationsNotesO
 	v, err := validator.New(validator.WithJSONFieldNames())
 	require.NoError(t, err)
 
-	c := consumer.New(notesapp.New(repo, v), env.Brokers, consumer.WithShutdown(func() { t.Error("consumer stopped unexpectedly") }))
+	c := consumer.New(notesapp.New(repo, v), env.Brokers, eventbus.WithShutdown(func() { t.Error("consumer stopped unexpectedly") }))
 	require.NoError(t, c.Start(t.Context()))
 	t.Cleanup(func() { _ = c.Stop(context.WithoutCancel(t.Context())) })
 

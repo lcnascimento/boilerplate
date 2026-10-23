@@ -34,7 +34,7 @@ func (a *Application) Translate(ctx context.Context) (int, error) {
 func (a *Application) OldestPendingAge(ctx context.Context) (time.Duration, error) {
 	age, err := a.repo.OldestPendingAge(ctx)
 	if err != nil {
-		return 0, ErrOldestPendingAge.WithCause(err)
+		return 0, a.onError(ctx, ErrOldestPendingAge.WithCause(err))
 	}
 
 	return age, nil

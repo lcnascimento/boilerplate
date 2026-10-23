@@ -7,12 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/mock/gomock"
 
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/metrictest"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application/audit"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application/internal/mocks"
@@ -66,7 +67,7 @@ func TestRecord_CountsTheRecordedEntriesByEventType(t *testing.T) {
 	repo.EXPECT().Insert(gomock.Any(), gomock.Any()).Return(nil).Times(3)
 
 	app := audit.New(repo, newValidator(t))
-	before := recordedByType(t)
+	before := metrictest.CounterBy(t, metrics, "audit.entries.recorded", "cloudevents.event_type")
 
 	for _, eventType := range []string{"boilerplate.iam.v1.MemberAdded", "boilerplate.iam.v1.MemberAdded", "boilerplate.iam.v1.UserCreated"} {
 		entry := validEntry()
@@ -74,34 +75,7 @@ func TestRecord_CountsTheRecordedEntriesByEventType(t *testing.T) {
 		require.NoError(t, app.Record(t.Context(), entry))
 	}
 
-	after := recordedByType(t)
+	after := metrictest.CounterBy(t, metrics, "audit.entries.recorded", "cloudevents.event_type")
 	require.Equal(t, int64(2), after["boilerplate.iam.v1.MemberAdded"]-before["boilerplate.iam.v1.MemberAdded"])
 	require.Equal(t, int64(1), after["boilerplate.iam.v1.UserCreated"]-before["boilerplate.iam.v1.UserCreated"])
-}
-
-func recordedByType(t *testing.T) map[string]int64 {
-	t.Helper()
-
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, metrics.Collect(t.Context(), &rm))
-
-	counts := map[string]int64{}
-
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name != "audit.entries.recorded" {
-				continue
-			}
-
-			sum, ok := m.Data.(metricdata.Sum[int64])
-			require.True(t, ok, "audit.entries.recorded is a %T", m.Data)
-
-			for _, dp := range sum.DataPoints {
-				eventType, _ := dp.Attributes.Value("cloudevents.event_type")
-				counts[eventType.AsString()] = dp.Value
-			}
-		}
-	}
-
-	return counts
 }

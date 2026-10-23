@@ -20,6 +20,8 @@
     "removeDescription": "{name} perde o acesso à Organization em até 5 minutos.",
     "remove": "Remover",
     "removed": "Member removido.",
+    "ownerMustTransferHint": "Para mudar de Role ou sair, transfira a propriedade.",
+    "transferOwnership": "Transferir a propriedade",
     "errors": {
       "invalidInput": "Confira os dados e tente de novo.",
       "forbidden": "Sua Role não permite essa ação.",
@@ -49,6 +51,8 @@
     "removeDescription": "{name} loses access to the Organization within 5 minutes.",
     "remove": "Remove",
     "removed": "Member removed.",
+    "ownerMustTransferHint": "To change your Role or leave, transfer the ownership.",
+    "transferOwnership": "Transfer the ownership",
     "errors": {
       "invalidInput": "Check the details and try again.",
       "forbidden": "Your Role does not allow this action.",

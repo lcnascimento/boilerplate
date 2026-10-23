@@ -27,7 +27,7 @@ func TestHandle_OrganizationDeletedDeletesTheOrganizationsNotes(t *testing.T) {
 	service := mocks.NewMockOrganizationNotesService(gomock.NewController(t))
 	service.EXPECT().DeleteOrganizationNotes(gomock.Any(), iamdomain.MustParseOrganizationID(acmeID)).Return(nil)
 
-	err := consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), eventOf(&iamevents.OrganizationDeleted{
+	err := consumer.NewHandler(service).Handle(t.Context(), eventOf(&iamevents.OrganizationDeleted{
 		OrganizationId: acmeID,
 		DeletedAt:      timestamppb.Now(),
 	}))
@@ -52,7 +52,7 @@ func TestHandle_IgnoresTheOtherOrganizationEvents(t *testing.T) {
 
 			service := mocks.NewMockOrganizationNotesService(gomock.NewController(t))
 
-			require.NoError(t, consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), eventOf(msg)))
+			require.NoError(t, consumer.NewHandler(service).Handle(t.Context(), eventOf(msg)))
 		})
 	}
 }
@@ -62,7 +62,7 @@ func TestHandle_IgnoresAnEventOfAnUnlinkedType(t *testing.T) {
 
 	service := mocks.NewMockOrganizationNotesService(gomock.NewController(t))
 
-	require.NoError(t, consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), eventOf(nil)))
+	require.NoError(t, consumer.NewHandler(service).Handle(t.Context(), eventOf(nil)))
 }
 
 func TestHandle_SendsAnOrganizationDeletedWithAnInvalidIDToTheDLQ(t *testing.T) {
@@ -70,7 +70,7 @@ func TestHandle_SendsAnOrganizationDeletedWithAnInvalidIDToTheDLQ(t *testing.T) 
 
 	service := mocks.NewMockOrganizationNotesService(gomock.NewController(t))
 
-	err := consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), eventOf(&iamevents.OrganizationDeleted{
+	err := consumer.NewHandler(service).Handle(t.Context(), eventOf(&iamevents.OrganizationDeleted{
 		OrganizationId: "user_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
 	}))
 
@@ -84,7 +84,7 @@ func TestHandle_PassesTheServiceErrorThroughToBeRetried(t *testing.T) {
 	service := mocks.NewMockOrganizationNotesService(gomock.NewController(t))
 	service.EXPECT().DeleteOrganizationNotes(gomock.Any(), gomock.Any()).Return(errors.ErrMock)
 
-	err := consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), eventOf(&iamevents.OrganizationDeleted{
+	err := consumer.NewHandler(service).Handle(t.Context(), eventOf(&iamevents.OrganizationDeleted{
 		OrganizationId: acmeID,
 	}))
 
@@ -92,14 +92,6 @@ func TestHandle_PassesTheServiceErrorThroughToBeRetried(t *testing.T) {
 	require.False(t, errors.Is(err, eventbus.ErrPermanent))
 }
 
-func TestReady_FailsBeforeStart(t *testing.T) {
-	t.Parallel()
-
-	service := mocks.NewMockOrganizationNotesService(gomock.NewController(t))
-
-	require.ErrorIs(t, consumer.New(service, []string{"localhost:9092"}).Ready(t.Context()), consumer.ErrNotConsuming)
-}
-
 func eventOf(msg proto.Message) *eventbus.Event {
-	return &eventbus.Event{Topic: iamevents.OrganizationTopic, Message: msg}
+	return (&eventbus.Event{Topic: iamevents.OrganizationTopic}).WithMessage(msg)
 }

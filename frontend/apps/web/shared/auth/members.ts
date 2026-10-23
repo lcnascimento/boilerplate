@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { memberIdSchema } from "./actor-ids";
 import { canManageOrganization } from "./organizations";
 import { roleNames, roles, type Role } from "./roles.gen";
 
@@ -8,16 +9,16 @@ export const memberRoleSchema = z.enum(roleNames);
 export type MemberRole = Role;
 
 export const updateMemberRoleInputSchema = z.object({
-  memberId: z.string().min(1),
+  memberId: memberIdSchema,
   role: memberRoleSchema,
 });
 
 export const removeMemberInputSchema = z.object({
-  memberId: z.string().min(1),
+  memberId: memberIdSchema,
 });
 
 export const transferOwnershipInputSchema = z.object({
-  memberId: z.uuid(),
+  memberId: memberIdSchema,
 });
 
 export type MembersErrorCode =

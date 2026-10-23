@@ -8,10 +8,11 @@ import {
   vi,
 } from "vitest";
 
-import { deleteAccount, accountDeletionBlockers } from "./account-deletion";
+import { accountDeletionBlockers, deleteAccountFor } from "./account-deletion";
 import { organizationIdSchema, userIdSchema } from "./actor-ids";
 import { hashIp } from "./audit-connection";
 import { getIam } from "./auth";
+import { fixtureDatabase } from "./test-database";
 
 import type { Pool } from "pg";
 
@@ -26,6 +27,7 @@ const ANA_INITECH = "7a1d0c3e-0000-4000-8000-0000000007b1";
 const BRUNO_INITECH = "7a1d0c3e-0000-4000-8000-0000000007b2";
 const ANA_SOLO_OWNER = "7a1d0c3e-0000-4000-8000-0000000007b3";
 const BRUNO_SOLO_OWNER = "7a1d0c3e-0000-4000-8000-0000000007b4";
+const ANA_IN_BRUNO_SOLO = "7a1d0c3e-0000-4000-8000-0000000007b5";
 const USERS = [ANA, BRUNO];
 const ORGANIZATIONS = [INITECH, ANA_SOLO, BRUNO_SOLO];
 const PASSWORD = "account-deletion-password";
@@ -47,7 +49,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     async function removeFixtures() {
@@ -59,6 +61,9 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     beforeEach(async () => {
       await removeFixtures();
+      await database.query(`DELETE FROM "rateLimit" WHERE key = ANY($1)`, [
+        USERS.map((id) => `delete-account:${id}`),
+      ]);
       const { password } = await getIam().auth.$context;
       const hash = await password.hash(PASSWORD);
       await database.query(
@@ -167,7 +172,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses the Owner of an Organization with other Members, and deletes nothing", async () => {
-      expect(await deleteAccount(ana, fromIp, PASSWORD)).toEqual({
+      expect(await deleteAccountFor(ana, fromIp, PASSWORD)).toEqual({
         kind: "error",
         code: "ownsSharedOrganizations",
         organizations: [{ id: INITECH, name: "Initech" }],
@@ -177,16 +182,18 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses a wrong password, and deletes nothing", async () => {
-      expect(await deleteAccount(bruno, fromIp, "not-the-password")).toEqual({
-        kind: "error",
-        code: "invalidPassword",
-      });
+      expect(await deleteAccountFor(bruno, fromIp, "not-the-password")).toEqual(
+        {
+          kind: "error",
+          code: "invalidPassword",
+        }
+      );
 
       expect(await remaining()).toEqual(untouched);
     });
 
     it("deletes the User with the sole-Member Organizations, and keeps the shared ones", async () => {
-      expect(await deleteAccount(bruno, fromIp, PASSWORD)).toEqual({
+      expect(await deleteAccountFor(bruno, fromIp, PASSWORD)).toEqual({
         kind: "ok",
       });
 
@@ -200,17 +207,12 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       });
     });
 
-    it("records the deleting User, their active Organization and the IP hash on every change", async () => {
-      const ip = `10.${crypto.getRandomValues(new Uint8Array(3)).join(".")}`;
-      const ipHash = hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", ip);
-
-      await deleteAccount(
-        bruno,
-        new Headers({ "x-forwarded-for": ip }),
-        PASSWORD
-      );
-
-      const { rows } = await database.query(
+    async function recordedChanges(ipHash: string) {
+      const { rows } = await database.query<{
+        type: string;
+        actorId: string | null;
+        actorOrganizationId: string | null;
+      }>(
         `SELECT CASE table_name || ' ' || operation
                   WHEN 'user DELETE' THEN 'UserDeleted'
                   WHEN 'session DELETE' THEN 'SessionEnded'
@@ -223,7 +225,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
          FROM identity_change
          WHERE ip_hash = $1
          UNION ALL
-         SELECT substring(headers ->> 'ce_type' FROM 20),
+         SELECT substring(headers ->> 'ce_type' FROM '[^.]+$'),
                 substring(headers ->> 'ce_actorid' FROM 6),
                 substring(headers ->> 'ce_actororganizationid' FROM 5)
          FROM watermill_iam_outbox,
@@ -232,14 +234,100 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
          ORDER BY type DESC`,
         [ipHash]
       );
+      return rows;
+    }
+
+    function randomIp() {
+      const ip = `10.${crypto.getRandomValues(new Uint8Array(3)).join(".")}`;
+      return {
+        headers: new Headers({ "x-forwarded-for": ip }),
+        hash: hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", ip),
+      };
+    }
+
+    it("records the deleting User, their active Organization and the IP hash on every change", async () => {
+      const ip = randomIp();
+
+      await deleteAccountFor(bruno, ip.headers, PASSWORD);
 
       const asBruno = { actorId: BRUNO, actorOrganizationId: BRUNO_SOLO };
-      expect(rows).toEqual([
+      expect(await recordedChanges(ip.hash)).toEqual([
         { type: "UserDeleted", ...asBruno },
         { type: "SessionEnded", ...asBruno },
         { type: "OrganizationDeleted", ...asBruno },
         { type: "MemberRemoved", ...asBruno },
         { type: "MemberRemoved", ...asBruno },
+      ]);
+    });
+
+    it("records no Actor Organization when the deleting User has no active one", async () => {
+      const ip = randomIp();
+
+      await deleteAccountFor(
+        { userId: bruno.userId, organizationId: null },
+        ip.headers,
+        PASSWORD
+      );
+
+      const asBruno = { actorId: BRUNO, actorOrganizationId: null };
+      expect(await recordedChanges(ip.hash)).toEqual([
+        { type: "UserDeleted", ...asBruno },
+        { type: "SessionEnded", ...asBruno },
+        { type: "OrganizationDeleted", ...asBruno },
+        { type: "MemberRemoved", ...asBruno },
+        { type: "MemberRemoved", ...asBruno },
+      ]);
+    });
+
+    it("refuses more than three password attempts a minute, even with the right password", async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        expect(
+          await deleteAccountFor(bruno, fromIp, "not-the-password")
+        ).toEqual({
+          kind: "error",
+          code: "invalidPassword",
+        });
+      }
+
+      expect(await deleteAccountFor(bruno, fromIp, PASSWORD)).toEqual({
+        kind: "error",
+        code: "tooManyAttempts",
+      });
+      expect(await remaining()).toEqual(untouched);
+      expect(await deleteAccountFor(ana, fromIp, "not-the-password")).toEqual({
+        kind: "error",
+        code: "invalidPassword",
+      });
+    });
+
+    it("keeps a sole-Member Organization that a Member joins while the account is being deleted", async () => {
+      const joining = await database.connect();
+      try {
+        await joining.query("BEGIN");
+        await joining.query(
+          `INSERT INTO member (id, "organizationId", "userId", role, "createdAt")
+           VALUES ($1, $2, $3, 'viewer', now())`,
+          [ANA_IN_BRUNO_SOLO, BRUNO_SOLO, ANA]
+        );
+
+        const deletion = deleteAccountFor(bruno, fromIp, PASSWORD);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await joining.query("COMMIT");
+
+        expect(await deletion).toEqual({
+          kind: "error",
+          code: "ownsSharedOrganizations",
+          organizations: [{ id: BRUNO_SOLO, name: "Bruno Solo" }],
+        });
+      } finally {
+        joining.release();
+      }
+      expect((await remaining()).members).toEqual([
+        ANA_INITECH,
+        BRUNO_INITECH,
+        ANA_SOLO_OWNER,
+        BRUNO_SOLO_OWNER,
+        ANA_IN_BRUNO_SOLO,
       ]);
     });
   }

@@ -49,11 +49,11 @@ var (
 		ipHash:  ipHash,
 	}
 
-	fromAda         = origin{actorID: adaID, ipHash: ipHash}
-	fromAdaInAcme   = origin{actorID: adaID, actorOrganizationID: acmeID, ipHash: ipHash}
-	fromGrace       = origin{actorID: graceID, ipHash: ipHash}
-	fromGraceInAcme = origin{actorID: graceID, actorOrganizationID: acmeID, ipHash: ipHash}
-	fromLinus       = origin{actorID: "user_5e6f7081-92a3-4b4c-9d5e-6f708192a3b4", ipHash: ipHash}
+	fromAda         = origin{ActorID: adaID, IPHash: ipHash}
+	fromAdaInAcme   = origin{ActorID: adaID, ActorOrganizationID: acmeID, IPHash: ipHash}
+	fromGrace       = origin{ActorID: graceID, IPHash: ipHash}
+	fromGraceInAcme = origin{ActorID: graceID, ActorOrganizationID: acmeID, IPHash: ipHash}
+	fromLinus       = origin{ActorID: "user_5e6f7081-92a3-4b4c-9d5e-6f708192a3b4", IPHash: ipHash}
 )
 
 func TestComponentPipeline_DeliversTheOrganizationLifecycleToTheEventBus(t *testing.T) {

@@ -1,4 +1,4 @@
-import { createAuthMiddleware } from "better-auth/api";
+import { createAuthMiddleware, type APIError } from "better-auth/api";
 import { z } from "zod";
 
 export type AuthAction =
@@ -7,8 +7,7 @@ export type AuthAction =
   | { kind: "createOrganization"; name: string }
   | { kind: "createInvitation"; email: string };
 
-// A rule refuses an action by throwing a Better Auth APIError, which the caller receives as is.
-export type AuthRule = (action: AuthAction) => Promise<void>;
+export type AuthRule = (action: AuthAction) => Promise<APIError | undefined>;
 
 export const authRules: readonly AuthRule[] = [];
 
@@ -50,6 +49,9 @@ export function authRulesHook(rules: readonly AuthRule[]) {
   return createAuthMiddleware(async (ctx) => {
     const action = actionOf(ctx.path, ctx.body);
     if (action === null) return;
-    for (const rule of rules) await rule(action);
+    for (const rule of rules) {
+      const refusal = await rule(action);
+      if (refusal !== undefined) throw refusal;
+    }
   });
 }

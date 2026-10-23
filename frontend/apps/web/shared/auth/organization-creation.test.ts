@@ -4,6 +4,7 @@ import { userIdSchema } from "./actor-ids";
 import { hashIp } from "./audit-connection";
 import { getIam } from "./auth";
 import { createOrganizationFor } from "./organization-creation";
+import { fixtureDatabase } from "./test-database";
 
 import type { Pool } from "pg";
 
@@ -27,7 +28,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     afterAll(async () => {

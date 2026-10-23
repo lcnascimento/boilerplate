@@ -45,9 +45,9 @@ export interface ReceivedInvitation {
 }
 
 export function pendingInvitations<
-  T extends { status: string; expiresAt: Date },
+  T extends { status: string; createdAt: Date; expiresAt: Date },
 >(invitations: readonly T[], now: Date): T[] {
-  return invitations.filter(
-    ({ status, expiresAt }) => status === "pending" && expiresAt > now
-  );
+  return invitations
+    .filter(({ status, expiresAt }) => status === "pending" && expiresAt > now)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 }

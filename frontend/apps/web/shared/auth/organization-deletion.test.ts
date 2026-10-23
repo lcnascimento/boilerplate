@@ -8,9 +8,13 @@ import {
   vi,
 } from "vitest";
 
-import { organizationIdSchema, userIdSchema } from "./actor-ids";
-import { getIam } from "./auth";
-import { deleteOrganization } from "./organization-deletion";
+import {
+  memberIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+} from "./actor-ids";
+import { deleteOrganizationFor } from "./organization-deletion";
+import { fixtureDatabase } from "./test-database";
 
 import type { Actor } from "./actor";
 import type { Pool } from "pg";
@@ -31,7 +35,7 @@ function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
   return {
     userId: userIdSchema.parse(userId),
     organizationId: organizationIdSchema.parse(INITECH),
-    memberId: memberId as Actor["memberId"],
+    memberId: memberIdSchema.parse(memberId),
     role,
   };
 }
@@ -39,12 +43,12 @@ function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
 const anaAsOwner = actor(ANA, ANA_MEMBER, "owner");
 
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
-  "deleteOrganization",
+  "deleteOrganizationFor",
   () => {
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     async function removeFixtures() {
@@ -134,8 +138,33 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       users: ["Ana", "Bruno", "Carla"],
     };
 
+    it("refuses an Owner whose ownership transfer commits while the deletion waits", async () => {
+      const transfer = await database.connect();
+      try {
+        await transfer.query("BEGIN");
+        await transfer.query(
+          "SELECT id FROM organization WHERE id = $1 FOR UPDATE",
+          [INITECH]
+        );
+        await transfer.query(
+          `UPDATE member SET role = CASE id WHEN $1 THEN 'owner' ELSE 'admin' END
+           WHERE id = ANY($2)`,
+          [BRUNO_MEMBER, [BRUNO_MEMBER, ANA_MEMBER]]
+        );
+
+        const deletion = deleteOrganizationFor(anaAsOwner, "Initech");
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await transfer.query("COMMIT");
+
+        expect(await deletion).toEqual({ kind: "error", code: "forbidden" });
+      } finally {
+        transfer.release();
+      }
+      expect((await remaining()).organizations).toEqual(["Hooli", "Initech"]);
+    });
+
     it("deletes the Organization with its Members and Invitations, and nothing else", async () => {
-      expect(await deleteOrganization(anaAsOwner, "Initech")).toEqual({
+      expect(await deleteOrganizationFor(anaAsOwner, "Initech")).toEqual({
         kind: "ok",
       });
 
@@ -149,7 +178,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses a confirmation that is not exactly the name", async () => {
       for (const confirmation of ["initech", "Initech ", "Hooli", ""]) {
-        expect(await deleteOrganization(anaAsOwner, confirmation)).toEqual({
+        expect(await deleteOrganizationFor(anaAsOwner, confirmation)).toEqual({
           kind: "error",
           code: "nameMismatch",
         });
@@ -160,7 +189,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses an Admin", async () => {
       expect(
-        await deleteOrganization(actor(BRUNO, BRUNO_MEMBER, "admin"), "Initech")
+        await deleteOrganizationFor(
+          actor(BRUNO, BRUNO_MEMBER, "admin"),
+          "Initech"
+        )
       ).toEqual({ kind: "error", code: "forbidden" });
 
       expect(await remaining()).toEqual(untouched);
@@ -168,7 +200,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses an Actor who is no longer the Owner", async () => {
       expect(
-        await deleteOrganization(actor(BRUNO, BRUNO_MEMBER, "owner"), "Initech")
+        await deleteOrganizationFor(
+          actor(BRUNO, BRUNO_MEMBER, "owner"),
+          "Initech"
+        )
       ).toEqual({ kind: "error", code: "forbidden" });
 
       expect(await remaining()).toEqual(untouched);

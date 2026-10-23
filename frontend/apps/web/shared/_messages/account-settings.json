@@ -36,6 +36,7 @@
     "deleteErrors": {
       "invalidInput": "Digite a sua senha.",
       "invalidPassword": "A senha está incorreta.",
+      "tooManyAttempts": "Muitas tentativas. Aguarde um minuto e tente de novo.",
       "ownsSharedOrganizations": "Transfira a propriedade das suas Organizations com outros Members antes de excluir a conta.",
       "unexpected": "Não foi possível concluir. Tente de novo."
     }
@@ -77,6 +78,7 @@
     "deleteErrors": {
       "invalidInput": "Type your password.",
       "invalidPassword": "The password is incorrect.",
+      "tooManyAttempts": "Too many attempts. Wait a minute and try again.",
       "ownsSharedOrganizations": "Transfer the ownership of your Organizations with other Members before deleting the account.",
       "unexpected": "Could not finish. Try again."
     }

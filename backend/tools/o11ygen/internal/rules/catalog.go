@@ -227,7 +227,8 @@ var processAlerts = []inheritedAlert{
 					catalog.IAMIdentityChangeOldestPendingAge, p.job(), int(IdentityChangeBacklogThreshold.Seconds())),
 				severity: critical,
 				summary:  p.Name() + " com a mudança de identidade mais antiga há {{ $value | humanizeDuration }} sem tradução",
-				description: "A mudança de identidade pendente mais antiga de " + p.Name() + " passou de 5 minutos sem virar " +
+				description: "A mudança de identidade pendente mais antiga de " + p.Name() + " passou de " +
+					strconv.Itoa(int(IdentityChangeBacklogThreshold.Minutes())) + " minutos sem virar " +
 					"Integration Event: a tradução parou, ou travou numa mudança que ela não sabe traduzir, e o Audit Log " +
 					"deixa de receber as mudanças de identidade. Veja primeiro os logs de " + p.Name() +
 					" (UNTRANSLATABLE_CHANGE) e a idade da mudança pendente mais antiga no dashboard do serviço.",

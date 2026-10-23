@@ -8,13 +8,14 @@ import (
 
 	"github.com/lcnascimento/go-kit/outbox"
 
-	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/repository/changes"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events"
 )
 
-func New(ctx context.Context, pool *pgxpool.Pool, brokers []string, shutdown func()) (*outbox.Forwarder, error) {
-	return outbox.NewForwarder(ctx, changes.Outbox, pool,
+func New(
+	ctx context.Context, o outbox.Outbox, pool *pgxpool.Pool, brokers []string, shutdown func(),
+) (*outbox.Forwarder, error) {
+	return outbox.NewForwarder(ctx, o, pool,
 		outbox.KafkaTarget{Brokers: brokers, Topics: events.Topics},
 		outbox.WithShutdown(shutdown),
 		outbox.WithValidation(validEnvelope),

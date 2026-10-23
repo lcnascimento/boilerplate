@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.uber.org/mock/gomock"
 
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -18,6 +17,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/application/internal/mocks"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/idomain"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/metrictest"
 )
 
 var metrics = sdkmetric.NewManualReader()
@@ -51,12 +51,12 @@ func TestTranslate_CountsTheTranslatedChangesByEventType(t *testing.T) {
 		{Message: &events.UserDeleted{}},
 	}, nil)
 
-	before := translatedByType(t)
+	before := metrictest.CounterBy(t, metrics, "iam.identity_change.translated", "cloudevents.event_type")
 
 	_, err := changes.New(repo).Translate(t.Context())
 	require.NoError(t, err)
 
-	after := translatedByType(t)
+	after := metrictest.CounterBy(t, metrics, "iam.identity_change.translated", "cloudevents.event_type")
 	require.Equal(t, int64(2), after["boilerplate.iam.v1.PasswordChanged"]-before["boilerplate.iam.v1.PasswordChanged"])
 	require.Equal(t, int64(1), after["boilerplate.iam.v1.UserDeleted"]-before["boilerplate.iam.v1.UserDeleted"])
 }
@@ -95,31 +95,4 @@ func TestOldestPendingAge_WrapsRepositoryErrors(t *testing.T) {
 
 	require.ErrorIs(t, err, changes.ErrOldestPendingAge)
 	require.ErrorIs(t, err, errors.ErrMock)
-}
-
-func translatedByType(t *testing.T) map[string]int64 {
-	t.Helper()
-
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, metrics.Collect(t.Context(), &rm))
-
-	counts := map[string]int64{}
-
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name != "iam.identity_change.translated" {
-				continue
-			}
-
-			sum, ok := m.Data.(metricdata.Sum[int64])
-			require.True(t, ok, "iam.identity_change.translated is a %T", m.Data)
-
-			for _, dp := range sum.DataPoints {
-				eventType, _ := dp.Attributes.Value("cloudevents.event_type")
-				counts[eventType.AsString()] = dp.Value
-			}
-		}
-	}
-
-	return counts
 }
