@@ -74,7 +74,7 @@ func TestMiddleware_PutsTheActorIDsOnTheRequestSpanAndLogs(t *testing.T) {
 
 	span := inRequestSpan(t, func(ctx context.Context) {
 		serve(ctx, mw, bearer(issuer.Mint(a)), func(r *http.Request) {
-			requestLogger.Info(r.Context(), "listing notes")
+			requestLogger.Info(r.Context(), "listing items")
 		})
 	})
 

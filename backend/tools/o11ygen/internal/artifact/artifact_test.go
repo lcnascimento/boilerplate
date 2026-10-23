@@ -22,14 +22,14 @@ func TestGenerate_RefusesContentCarryingAnExampleFence(t *testing.T) {
 	root := t.TempDir()
 	content := []byte("groups:\n# example" + ":begin\n")
 
-	err := artifact.Generate(root, nil, kindOf(artifact.File{Name: "notes.yaml", Content: content}))
+	err := artifact.Generate(root, nil, kindOf(artifact.File{Name: "items.yaml", Content: content}))
 
 	require.Error(t, err)
-	assert.NoFileExists(t, root+"/rules/notes.yaml")
+	assert.NoFileExists(t, root+"/rules/items.yaml")
 }
 
 func TestGenerate_RefusesAFileItsKindWouldNotCleanUp(t *testing.T) {
-	err := artifact.Generate(t.TempDir(), nil, kindOf(artifact.File{Name: "notes.json", Content: []byte("{}")}))
+	err := artifact.Generate(t.TempDir(), nil, kindOf(artifact.File{Name: "items.json", Content: []byte("{}")}))
 
 	require.Error(t, err)
 }

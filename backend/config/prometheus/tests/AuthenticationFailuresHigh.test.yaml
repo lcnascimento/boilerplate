@@ -8,9 +8,9 @@ tests:
   - name: fires when a fifth of the Go requests answer 401 for five minutes
     interval: 1m
     input_series:
-      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="200"}
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/items", http_request_method="GET", http_response_status_code="200"}
         values: 0+80x15
-      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="401"}
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/items", http_request_method="GET", http_response_status_code="401"}
         values: 0+20x15
     alert_rule_test:
       - eval_time: 4m
@@ -31,13 +31,13 @@ tests:
   - name: stays quiet with 5% of the Go requests answering 401, probes and other jobs aside
     interval: 1m
     input_series:
-      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="200"}
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/items", http_request_method="GET", http_response_status_code="200"}
         values: 0+95x15
-      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="401"}
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/items", http_request_method="GET", http_response_status_code="401"}
         values: 0+5x15
       - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_request_method="GET", http_response_status_code="401"}
         values: 0+100x15
-      - series: http_server_request_total{job="boilerplate/other-api", http_route="/notes", http_request_method="GET", http_response_status_code="401"}
+      - series: http_server_request_total{job="boilerplate/other-api", http_route="/items", http_request_method="GET", http_response_status_code="401"}
         values: 0+100x15
     alert_rule_test:
       - eval_time: 15m

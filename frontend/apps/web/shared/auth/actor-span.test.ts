@@ -9,7 +9,7 @@ const telemetry = startTestTelemetry();
 
 describe("annotateActorSpan", () => {
   it("puts the prefixed user and organization ids on the active span", async () => {
-    trace.getTracer("test").startActiveSpan("POST /notes", (span) => {
+    trace.getTracer("test").startActiveSpan("POST /items", (span) => {
       annotateActorSpan(
         parseActorIds({
           userId: "5d2a7c10-3e4f-4b6a-8c9d-0e1f2a3b4c5d",

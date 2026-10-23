@@ -14,7 +14,7 @@ Violation:
 test:
 ```
 
-Fix: delete both lines. Encode the postgres requirement as a target prerequisite; if humans need the usage notes, write them as a document with `foundation:documentation`.
+Fix: delete both lines. Encode the postgres requirement as a target prerequisite; if humans need the usage instructions, write them as a document with `foundation:documentation`.
 
 Source: `earn-every-comment`.
 
