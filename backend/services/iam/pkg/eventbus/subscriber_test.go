@@ -226,7 +226,7 @@ func TestComponentSubscriber_PermanentErrorGoesToTheDLQ(t *testing.T) {
 	}{
 		{
 			name:       "ErrPermanent",
-			handle:     func() error { return eventbus.ErrPermanent.WithCause(errors.New("note is corrupt")) },
+			handle:     func() error { return eventbus.ErrPermanent.WithCause(errors.New("payload is corrupt")) },
 			wantReason: "message cannot be processed and goes to the DLQ",
 		},
 		{

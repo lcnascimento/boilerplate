@@ -80,7 +80,7 @@ func TestCheck_RejectsQueriesOutsideTheCatalog(t *testing.T) {
 			err:   `metric "http_server_requests_total" is not in the catalog`,
 		},
 		"matcher on a label the metric does not allow": {
-			query: artifact.Query{Language: artifact.PromQL, Expr: `rate(http_server_request_total{url_path="/notes/1"}[5m])`},
+			query: artifact.Query{Language: artifact.PromQL, Expr: `rate(http_server_request_total{url_path="/items/1"}[5m])`},
 			err:   `label "url_path" is not allowed on metric "http_server_request_total"`,
 		},
 		"route on a client metric": {
@@ -108,7 +108,7 @@ func TestCheck_RejectsQueriesOutsideTheCatalog(t *testing.T) {
 			err:   `parsing PromQL`,
 		},
 		"log label outside the catalog": {
-			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="notes-api-frontend"} | user_id="42"`},
+			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="items-api"} | user_id="42"`},
 			err:   `label "user_id" is not a log label in the catalog`,
 		},
 		"grouping by a log label outside the catalog": {
@@ -120,11 +120,11 @@ func TestCheck_RejectsQueriesOutsideTheCatalog(t *testing.T) {
 			err:   `label "container" is not a log label in the catalog`,
 		},
 		"parser that extracts unbounded labels": {
-			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="notes-api-frontend"} | json`},
+			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="items-api"} | json`},
 			err:   `extracts labels the catalog cannot bound`,
 		},
 		"invalid LogQL": {
-			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="notes-api-frontend"`},
+			query: artifact.Query{Language: artifact.LogQL, Expr: `{service_name="items-api"`},
 			err:   `parsing LogQL`,
 		},
 		"unknown language": {

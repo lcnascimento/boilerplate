@@ -11,12 +11,12 @@ func TestRender_MergesDomainPermissionsWithBetterAuthDefaults(t *testing.T) {
 
 	m := matrix{
 		statement: []permission{
-			{"note", "read"}, {"note", "create"}, {"tag", "read"}, {"note", "delete"},
+			{"item", "read"}, {"item", "create"}, {"tag", "read"}, {"item", "delete"},
 		},
 		roles: []role{
-			{"owner", "ownerAc", []permission{{"note", "read"}, {"note", "create"}, {"tag", "read"}, {"note", "delete"}}},
-			{"admin", "adminAc", []permission{{"note", "read"}, {"note", "create"}}},
-			{"viewer", "", []permission{{"note", "read"}}},
+			{"owner", "ownerAc", []permission{{"item", "read"}, {"item", "create"}, {"tag", "read"}, {"item", "delete"}}},
+			{"admin", "adminAc", []permission{{"item", "read"}, {"item", "create"}}},
+			{"viewer", "", []permission{{"item", "read"}}},
 		},
 	}
 
@@ -31,7 +31,7 @@ import {
 
 export const statement = {
   ...defaultStatements,
-  note: ["read", "create", "delete"],
+  item: ["read", "create", "delete"],
   tag: ["read"],
 } as const;
 
@@ -40,15 +40,15 @@ export const ac = createAccessControl(statement);
 export const roles = {
   owner: ac.newRole({
     ...ownerAc.statements,
-    note: ["read", "create", "delete"],
+    item: ["read", "create", "delete"],
     tag: ["read"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,
-    note: ["read", "create"],
+    item: ["read", "create"],
   }),
   viewer: ac.newRole({
-    note: ["read"],
+    item: ["read"],
   }),
 } as const;
 
@@ -62,10 +62,10 @@ func TestRender_ExtendsBetterAuthDefaultResourcesInsteadOfReplacingThem(t *testi
 	t.Parallel()
 
 	m := matrix{
-		statement: []permission{{"organization", "transfer"}, {"note", "read"}},
+		statement: []permission{{"organization", "transfer"}, {"item", "read"}},
 		roles: []role{
-			{"owner", "ownerAc", []permission{{"organization", "transfer"}, {"note", "read"}}},
-			{"admin", "adminAc", []permission{{"note", "read"}}},
+			{"owner", "ownerAc", []permission{{"organization", "transfer"}, {"item", "read"}}},
+			{"admin", "adminAc", []permission{{"item", "read"}}},
 			{"viewer", "", []permission{{"organization", "transfer"}}},
 		},
 	}
@@ -82,7 +82,7 @@ import {
 export const statement = {
   ...defaultStatements,
   organization: [...defaultStatements.organization, "transfer"],
-  note: ["read"],
+  item: ["read"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -91,11 +91,11 @@ export const roles = {
   owner: ac.newRole({
     ...ownerAc.statements,
     organization: [...ownerAc.statements.organization, "transfer"],
-    note: ["read"],
+    item: ["read"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,
-    note: ["read"],
+    item: ["read"],
   }),
   viewer: ac.newRole({
     organization: ["transfer"],

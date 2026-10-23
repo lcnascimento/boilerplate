@@ -115,7 +115,7 @@ func newMiddleware(t *testing.T, cfg actor.Config, opts ...actor.Option) func(ht
 }
 
 func serve(ctx context.Context, mw func(http.Handler) http.Handler, authorization string, next func(*http.Request)) *httptest.ResponseRecorder {
-	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/notes/v1/notes", http.NoBody)
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/items/v1/items", http.NoBody)
 	if authorization != "" {
 		req.Header.Set("Authorization", authorization)
 	}

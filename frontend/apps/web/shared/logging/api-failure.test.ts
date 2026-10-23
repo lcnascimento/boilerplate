@@ -26,12 +26,12 @@ describe("logAPIFailure", () => {
     };
 
     await expect(
-      logAPIFailure("notes.list", Promise.resolve(result))
+      logAPIFailure("items.list", Promise.resolve(result))
     ).resolves.toBe(result);
 
     expect(error).toHaveBeenCalledExactlyOnceWith(
       {
-        operation: "notes.list",
+        operation: "items.list",
         status: 503,
         code: "UNAVAILABLE",
         message: "service unavailable",
@@ -43,7 +43,7 @@ describe("logAPIFailure", () => {
 
   it("logs a 5xx error the service returned", async () => {
     await logAPIFailure(
-      "notes.get",
+      "items.get",
       Promise.resolve({
         kind: "error",
         error: {
@@ -57,7 +57,7 @@ describe("logAPIFailure", () => {
 
     expect(error).toHaveBeenCalledExactlyOnceWith(
       {
-        operation: "notes.get",
+        operation: "items.get",
         status: 500,
         code: "ERR_DB_DOWN",
         message: "database unavailable",
@@ -68,14 +68,14 @@ describe("logAPIFailure", () => {
   });
 
   it.each<[string, Result<string>]>([
-    ["a success", { kind: "ok", data: "note" }],
+    ["a success", { kind: "ok", data: "item" }],
     [
       "a 4xx the caller handles",
       {
         kind: "error",
         error: {
           code: "ERR_NOT_FOUND",
-          message: "note not found",
+          message: "item not found",
           retryable: false,
           status: 404,
         },
@@ -83,7 +83,7 @@ describe("logAPIFailure", () => {
     ],
   ])("does not log %s", async (_name, result) => {
     await expect(
-      logAPIFailure("notes.get", Promise.resolve(result))
+      logAPIFailure("items.get", Promise.resolve(result))
     ).resolves.toBe(result);
 
     expect(error).not.toHaveBeenCalled();

@@ -16,11 +16,11 @@ func TestEnvelope_Headers(t *testing.T) {
 
 	envelope := eventbus.Envelope{
 		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		Source:              "notes",
-		Type:                "acme.notes.v1.NoteCreated",
+		Source:              "iam",
+		Type:                "acme.iam.v1.UserCreated",
 		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
-		Subject:             "note_0199f1a2-0000-7000-8000-000000000001",
-		PartitionKey:        "note_0199f1a2-0000-7000-8000-000000000001",
+		Subject:             "user_0199f1a2-0000-7000-8000-000000000001",
+		PartitionKey:        "user_0199f1a2-0000-7000-8000-000000000001",
 		SpecVersion:         eventbus.SpecVersion,
 		DataContentType:     eventbus.ContentType,
 		ActorID:             "user_0199f1a2-0000-7000-8000-0000000000a1",
@@ -31,11 +31,11 @@ func TestEnvelope_Headers(t *testing.T) {
 
 	require.Equal(t, map[string]string{
 		"ce_id":                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		"ce_source":              "notes",
-		"ce_type":                "acme.notes.v1.NoteCreated",
+		"ce_source":              "iam",
+		"ce_type":                "acme.iam.v1.UserCreated",
 		"ce_time":                "2026-10-17T12:30:45.123456789Z",
-		"ce_subject":             "note_0199f1a2-0000-7000-8000-000000000001",
-		"ce_partitionkey":        "note_0199f1a2-0000-7000-8000-000000000001",
+		"ce_subject":             "user_0199f1a2-0000-7000-8000-000000000001",
+		"ce_partitionkey":        "user_0199f1a2-0000-7000-8000-000000000001",
 		"ce_specversion":         "1.0",
 		"content-type":           "application/protobuf",
 		"ce_actorid":             "user_0199f1a2-0000-7000-8000-0000000000a1",
@@ -50,11 +50,11 @@ func TestParseEnvelope(t *testing.T) {
 
 	full := map[string]string{
 		"ce_id":                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		"ce_source":              "notes",
-		"ce_type":                "acme.notes.v1.NoteDeleted",
+		"ce_source":              "iam",
+		"ce_type":                "acme.iam.v1.UserDeleted",
 		"ce_time":                "2026-10-17T12:30:45.5-03:00",
-		"ce_subject":             "note_1",
-		"ce_partitionkey":        "note_1",
+		"ce_subject":             "user_1",
+		"ce_partitionkey":        "user_1",
 		"ce_specversion":         "1.0",
 		"content-type":           "application/protobuf",
 		"traceparent":            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
@@ -87,11 +87,11 @@ func TestParseEnvelope(t *testing.T) {
 			headers: full,
 			want: eventbus.Envelope{
 				ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-				Source:              "notes",
-				Type:                "acme.notes.v1.NoteDeleted",
+				Source:              "iam",
+				Type:                "acme.iam.v1.UserDeleted",
 				Time:                time.Date(2026, 10, 17, 15, 30, 45, 500000000, time.UTC),
-				Subject:             "note_1",
-				PartitionKey:        "note_1",
+				Subject:             "user_1",
+				PartitionKey:        "user_1",
 				SpecVersion:         "1.0",
 				DataContentType:     "application/protobuf",
 				ActorID:             "user_1",
@@ -104,11 +104,11 @@ func TestParseEnvelope(t *testing.T) {
 			name: "only required headers",
 			headers: map[string]string{
 				"ce_id":          "1",
-				"ce_source":      "notes",
-				"ce_type":        "acme.notes.v1.NoteDeleted",
+				"ce_source":      "iam",
+				"ce_type":        "acme.iam.v1.UserDeleted",
 				"ce_specversion": "1.0",
 			},
-			want: eventbus.Envelope{ID: "1", Source: "notes", Type: "acme.notes.v1.NoteDeleted", SpecVersion: "1.0"},
+			want: eventbus.Envelope{ID: "1", Source: "iam", Type: "acme.iam.v1.UserDeleted", SpecVersion: "1.0"},
 		},
 		{name: "missing ce_id", headers: without("ce_id"), wantErr: eventbus.ErrMissingHeader},
 		{name: "missing ce_source", headers: without("ce_source"), wantErr: eventbus.ErrMissingHeader},
@@ -116,12 +116,12 @@ func TestParseEnvelope(t *testing.T) {
 		{name: "missing ce_specversion", headers: without("ce_specversion"), wantErr: eventbus.ErrMissingHeader},
 		{
 			name:    "empty ce_id",
-			headers: map[string]string{"ce_id": "", "ce_source": "notes", "ce_type": "t", "ce_specversion": "1.0"},
+			headers: map[string]string{"ce_id": "", "ce_source": "iam", "ce_type": "t", "ce_specversion": "1.0"},
 			wantErr: eventbus.ErrMissingHeader,
 		},
 		{
 			name:    "malformed ce_time",
-			headers: map[string]string{"ce_id": "1", "ce_source": "notes", "ce_type": "t", "ce_specversion": "1.0", "ce_time": "yesterday"},
+			headers: map[string]string{"ce_id": "1", "ce_source": "iam", "ce_type": "t", "ce_specversion": "1.0", "ce_time": "yesterday"},
 			wantErr: eventbus.ErrInvalidHeader,
 		},
 	}
@@ -150,7 +150,7 @@ func TestParseEnvelope(t *testing.T) {
 func TestParseEnvelope_NamesTheMissingHeader(t *testing.T) {
 	t.Parallel()
 
-	_, err := eventbus.ParseEnvelope(map[string]string{"ce_id": "1", "ce_source": "notes", "ce_specversion": "1.0"})
+	_, err := eventbus.ParseEnvelope(map[string]string{"ce_id": "1", "ce_source": "iam", "ce_specversion": "1.0"})
 
 	require.Equal(t, "ce_type", errors.Attributes(err)["header"])
 }
@@ -160,11 +160,11 @@ func TestEnvelope_RoundTrip(t *testing.T) {
 
 	envelope := eventbus.Envelope{
 		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		Source:              "notes",
-		Type:                "acme.notes.v1.NoteCreated",
+		Source:              "iam",
+		Type:                "acme.iam.v1.UserCreated",
 		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
-		Subject:             "note_1",
-		PartitionKey:        "note_1",
+		Subject:             "user_1",
+		PartitionKey:        "user_1",
 		SpecVersion:         eventbus.SpecVersion,
 		DataContentType:     eventbus.ContentType,
 		ActorID:             "user_1",

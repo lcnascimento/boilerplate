@@ -17,10 +17,10 @@ describe("parseCallbackUrl", () => {
   it.each([
     [null],
     [""],
-    ["https://evil.test/notes"],
-    ["//evil.test/notes"],
+    ["https://evil.test/items"],
+    ["//evil.test/items"],
     ["/\\evil.test"],
-    ["notes"],
+    ["items"],
   ])("sends %j to the signed-in home", (raw) => {
     expect(parseCallbackUrl(raw)).toBe(SIGNED_IN_HOME);
   });
@@ -39,7 +39,7 @@ describe("isAuthPath", () => {
     ["/sign-in", true],
     ["/sign-up", true],
     ["/sign-up/extra", false],
-    ["/notes", false],
+    ["/items", false],
   ])("says whether %j is an auth page", (pathname, expected) => {
     expect(isAuthPath(pathname)).toBe(expected);
   });
