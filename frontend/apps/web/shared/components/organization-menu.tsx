@@ -1,6 +1,7 @@
 "use client";
 
-import { Boxes, ChevronsUpDown } from "lucide-react";
+import { ArrowLeftRight, Boxes, ChevronsUpDown } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
@@ -9,9 +10,14 @@ import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
+  DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@boilerplate/ui/components/dropdown-menu";
 import {
@@ -23,11 +29,13 @@ import {
 
 import { useOrganizations } from "@/providers";
 import { authClient } from "@/shared/auth/client";
+import { routesIn } from "@/shared/navigation";
 
 const APP_NAME = "Boilerplate";
 
-export function OrganizationSwitcher() {
+export function OrganizationMenu() {
   const { active, organizations } = useOrganizations();
+  const tAll = useTranslations();
   const t = useTranslations("organizations");
   const { isMobile } = useSidebar();
   const router = useRouter();
@@ -55,7 +63,7 @@ export function OrganizationSwitcher() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               aria-busy={isSwitching}
-              aria-label={t("switcherLabel")}
+              aria-label={t("menuLabel")}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               size="lg"
             >
@@ -76,23 +84,42 @@ export function OrganizationSwitcher() {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {t("listLabel")}
-            </DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={active.id}
-              onValueChange={handleSwitch}
-            >
-              {organizations.map(({ id, name }) => (
-                <DropdownMenuRadioItem
-                  key={id}
-                  disabled={isSwitching}
-                  value={id}
+            <DropdownMenuGroup>
+              {routesIn("organization").map(
+                ({ href, labelKey, icon: Icon }) => (
+                  <DropdownMenuItem key={href} asChild>
+                    <Link href={href}>
+                      <Icon aria-hidden />
+                      {tAll(labelKey)}
+                    </Link>
+                  </DropdownMenuItem>
+                )
+              )}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <ArrowLeftRight aria-hidden />
+                {t("switch")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="min-w-48">
+                <DropdownMenuRadioGroup
+                  value={active.id}
+                  onValueChange={handleSwitch}
                 >
-                  {name}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
+                  {organizations.map(({ id, name }) => (
+                    <DropdownMenuRadioItem
+                      key={id}
+                      disabled={isSwitching}
+                      value={id}
+                    >
+                      {name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

@@ -1,14 +1,14 @@
 {
   "pt-BR": {
-    "switcherLabel": "Trocar de Organization",
-    "listLabel": "Organizations",
+    "menuLabel": "Abrir menu da Organization",
+    "switch": "Trocar Organization",
     "switchFailed": "Não foi possível trocar de Organization. Tente de novo.",
     "noOrganizationTitle": "Você não faz parte de nenhuma Organization",
     "noOrganizationDescription": "Você foi removido das Organizations de que era Member, ou saiu delas. Peça a um Owner ou Admin que adicione você de novo, ou saia e entre com outra conta."
   },
   "en": {
-    "switcherLabel": "Switch Organization",
-    "listLabel": "Organizations",
+    "menuLabel": "Open Organization menu",
+    "switch": "Switch Organization",
     "switchFailed": "Could not switch Organization. Try again.",
     "noOrganizationTitle": "You are not part of any Organization",
     "noOrganizationDescription": "You were removed from the Organizations you were a Member of, or you left them. Ask an Owner or Admin to add you again, or sign out and sign in with another account."

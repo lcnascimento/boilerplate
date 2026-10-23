@@ -10,6 +10,11 @@ import { getIam } from "../shared/auth/auth";
 
 import { signedOut } from "./auth-state";
 import { expect, test } from "./fixtures";
+import {
+  openOrganizationSwitch,
+  organizationMenu,
+  switchOrganization,
+} from "./organization-menu";
 
 import type { Page } from "@playwright/test";
 
@@ -23,16 +28,6 @@ async function signIn(page: Page, email: string, password: string) {
     data: { email, password },
   });
   expect(response.status()).toBe(200);
-}
-
-function switcher(page: Page) {
-  return page.getByRole("button", { name: "Trocar de Organization" });
-}
-
-async function switchTo(page: Page, organization: string) {
-  await switcher(page).click();
-  await page.getByRole("menuitemradio", { name: organization }).click();
-  await expect(switcher(page)).toContainText(organization);
 }
 
 function memberRow(page: Page, email: string) {
@@ -100,18 +95,18 @@ test("a Member of two Organizations switches the active one and sees its Members
   await signIn(page, MULTI_ORGANIZATION_ADMIN.email, SEED_PASSWORD);
 
   await page.goto(MEMBERS_HREF);
-  await expect(switcher(page)).toContainText("Acme");
+  await expect(organizationMenu(page)).toContainText("Acme");
   await expect(memberRow(page, ACME_OWNER.email)).toBeVisible();
 
-  await switchTo(page, "Globex");
+  await switchOrganization(page, "Globex");
   await expect(memberRow(page, GLOBEX_OWNER_EMAIL)).toBeVisible();
   await expect(memberRow(page, ACME_OWNER.email)).toHaveCount(0);
 
   await page.reload();
-  await expect(switcher(page)).toContainText("Globex");
+  await expect(organizationMenu(page)).toContainText("Globex");
   await expect(memberRow(page, GLOBEX_OWNER_EMAIL)).toBeVisible();
 
-  await switchTo(page, "Acme");
+  await switchOrganization(page, "Acme");
   await expect(memberRow(page, ACME_OWNER.email)).toBeVisible();
   await expect(memberRow(page, GLOBEX_OWNER_EMAIL)).toHaveCount(0);
 });
@@ -121,18 +116,18 @@ test("a User removed from the active Organization lands on another membership", 
 }) => {
   await asThrowawayViewerOf(page, ["acme", "globex"], async (userId) => {
     await page.goto(MEMBERS_HREF);
-    await expect(switcher(page)).toContainText("Acme");
+    await expect(organizationMenu(page)).toContainText("Acme");
 
     await removeMembership(userId, "acme");
     await page.reload();
 
-    await expect(switcher(page)).toContainText("Globex");
+    await expect(organizationMenu(page)).toContainText("Globex");
     await expect(memberRow(page, GLOBEX_OWNER_EMAIL)).toBeVisible();
     // Next's route announcer is an empty alert; a failed page load would be one with text.
     await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toHaveCount(
       0
     );
-    await switcher(page).click();
+    await openOrganizationSwitch(page);
     await expect(page.getByRole("menuitemradio")).toHaveText(["Globex"]);
   });
 });
@@ -142,7 +137,7 @@ test("a User who lost every membership is told so and can sign out", async ({
 }) => {
   await asThrowawayViewerOf(page, ["globex"], async (userId) => {
     await page.goto(MEMBERS_HREF);
-    await expect(switcher(page)).toContainText("Globex");
+    await expect(organizationMenu(page)).toContainText("Globex");
 
     await removeMembership(userId, "globex");
     await page.reload();
@@ -152,7 +147,7 @@ test("a User who lost every membership is told so and can sign out", async ({
         name: "Você não faz parte de nenhuma Organization",
       })
     ).toBeVisible();
-    await expect(switcher(page)).toHaveCount(0);
+    await expect(organizationMenu(page)).toHaveCount(0);
 
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page).toHaveURL("/sign-in");
