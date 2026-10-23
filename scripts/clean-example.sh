@@ -6,6 +6,7 @@ self=scripts/clean-example.sh
 example_paths=(
 	backend/services/notes
 	backend/services/audit
+	backend/services/iam/pkg/roles/notes_test.go
 	backend/config/bruno/collections/Notes
 	openapi/notes.yaml
 	frontend/apps/web/app/\(dashboard\)/notes
@@ -69,6 +70,7 @@ git grep -lzE "$marker_re" -- ":!$self" | xargs -0 perl -0777 -i -ne '
 
 gofmt -w backend
 make -C backend o11y.generate
+make -C backend iam.generate
 
 drop_section() {
 	HEADING=$2 perl -0pi -e 's/^\Q$ENV{HEADING}\E\n.*?(?=^## |\z)//ms; s/\n+\z/\n/' "$1"

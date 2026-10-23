@@ -1,6 +1,7 @@
 package events_test
 
 import (
+	"io/fs"
 	"net/http"
 	"os"
 	"testing"
@@ -104,4 +105,42 @@ func TestComponentRegistry_RejectsIncompatibleChange(t *testing.T) {
 
 	require.True(t, errors.As(err, &responseErr), "want a registry rejection, got %v", err)
 	require.Equal(t, http.StatusConflict, responseErr.StatusCode)
+}
+
+func TestComponentRegistry_AcceptsTheSchemasOverTheirFirstVersion(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	t.Parallel()
+
+	client := eventstest.New(t).Registry(t)
+
+	testdata := os.DirFS("testdata/first")
+	firstVersions := map[string]string{
+		fullName(&events.NoteCreated{}): "note_created.proto",
+		fullName(&events.NoteDeleted{}): "note_deleted.proto",
+	}
+
+	for subject, name := range firstVersions {
+		text, err := fs.ReadFile(testdata, name)
+		require.NoError(t, err)
+
+		_, err = client.CreateSchema(
+			sr.WithParams(t.Context(), sr.Normalize),
+			subject,
+			sr.Schema{Schema: string(text), Type: sr.TypeProtobuf},
+		)
+		require.NoError(t, err)
+	}
+
+	_, err := events.RegisterSchemas(t.Context(), client)
+
+	require.NoError(t, err)
+
+	for subject := range firstVersions {
+		versions, err := client.SubjectVersions(t.Context(), subject)
+		require.NoError(t, err)
+		require.Len(t, versions, 2, subject)
+	}
 }

@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/lcnascimento/go-kit/errors"
@@ -22,7 +24,7 @@ func main() {
 	flag.Parse()
 
 	if err := generate(*root, services); err != nil {
-		fmt.Fprintln(os.Stderr, "o11ygen:", strings.Join(append([]string{err.Error()}, errors.Reasons(err)...), ": "))
+		fmt.Fprintln(os.Stderr, "o11ygen:", errorReport(err))
 		os.Exit(1)
 	}
 }
@@ -37,4 +39,15 @@ func generate(root string, declared []service.Service) error {
 
 func loadedKinds() []artifact.Kind {
 	return []artifact.Kind{dashboards.Kind(), rules.Kind(), logrules.Kind(), slo.SpecKind(), slo.RuleKind()}
+}
+
+func errorReport(err error) string {
+	parts := append([]string{err.Error()}, errors.Reasons(err)...)
+
+	attributes := errors.Attributes(err)
+	for _, key := range slices.Sorted(maps.Keys(attributes)) {
+		parts = append(parts, key+"="+attributes[key])
+	}
+
+	return strings.Join(parts, ": ")
 }

@@ -13,18 +13,20 @@ import (
 )
 
 type Server struct {
-	notes    transport.NotesService
-	db       transport.Database
-	server   *httpserver.Server
-	shutdown func()
+	notes         transport.NotesService
+	db            transport.Database
+	authenticator transport.Authenticator
+	server        *httpserver.Server
+	shutdown      func()
 }
 
-func New(notes transport.NotesService, db transport.Database, opts ...Option) *Server {
+func New(notes transport.NotesService, db transport.Database, authenticator transport.Authenticator, opts ...Option) *Server {
 	server := &Server{
-		notes:    notes,
-		db:       db,
-		server:   httpserver.NewServer(),
-		shutdown: func() {},
+		notes:         notes,
+		db:            db,
+		authenticator: authenticator,
+		server:        httpserver.NewServer(),
+		shutdown:      func() {},
 	}
 
 	for _, opt := range opts {
@@ -51,7 +53,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) register(router *mux.Router) error {
 	health.Register(router, s.db.Ping)
-	routes.RegisterNotes(router, s.notes)
+	routes.RegisterNotes(router, s.notes, s.authenticator.Handler)
 
 	return nil
 }

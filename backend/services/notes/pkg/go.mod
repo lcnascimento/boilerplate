@@ -8,11 +8,13 @@ require (
 	github.com/ThreeDotsLabs/watermill-kafka/v3 v3.1.4
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/google/uuid v1.6.0
+	github.com/lcnascimento/boilerplate/backend/services/iam/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/errors v1.9.4
 	github.com/lcnascimento/go-kit/o11y v1.8.1
 	github.com/lcnascimento/go-kit/util v1.4.6
 	github.com/lcnascimento/go-kit/validator v1.11.1
 	github.com/stretchr/testify v1.12.1
+	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.44.0
 	github.com/twmb/franz-go/pkg/sr v1.8.0
 	go.opentelemetry.io/otel v1.47.0
@@ -83,7 +85,6 @@ require (
 	github.com/shirou/gopsutil/v4 v4.26.7 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.44.0 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/twmb/franz-go v1.20.7 // indirect
@@ -112,3 +113,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8 // indirect
 	google.golang.org/grpc v1.84.0 // indirect
 )
+
+replace github.com/lcnascimento/boilerplate/backend/services/iam/pkg => ../../iam/pkg

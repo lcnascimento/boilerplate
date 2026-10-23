@@ -1,64 +1,65 @@
 /** @vitest-environment jsdom */
 import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { createTranslator, NextIntlClientProvider } from "next-intl";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NextIntlClientProvider } from "next-intl";
+import { Suspense } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { messages } from "@boilerplate/i18n";
 
-import { listNotes } from "@/actions/notes";
 import { appMessages } from "@/shared/_messages";
 
-import NotesPage from "./page";
+import { Notes } from "./notes";
 
-const allMessages = { ...messages["pt-BR"], ...appMessages("pt-BR") };
+import type { Result } from "@boilerplate/api/core";
+import type { Note } from "@boilerplate/api/notes/schemas";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("next-intl/server", () => ({
-  getTranslations: (namespace: "notes") =>
-    Promise.resolve(
-      createTranslator({ locale: "pt-BR", messages: allMessages, namespace })
-    ),
-}));
-vi.mock("@/actions/notes", () => ({ listNotes: vi.fn() }));
 
-const listNotesMock = vi.mocked(listNotes);
-
-// Awaiting the page yields sync components; the awaited act lets Suspense settle.
-async function renderPage() {
+async function renderNotes(canCreate: boolean, result: Result<Note[]>) {
+  const notes = Promise.resolve(result);
   await act(async () => {
-    const page = await NotesPage();
     render(
       <NextIntlClientProvider
         locale="pt-BR"
-        messages={allMessages}
+        messages={{ ...messages["pt-BR"], ...appMessages("pt-BR") }}
         timeZone="America/Sao_Paulo"
       >
-        {page}
+        <Suspense>
+          <Notes canCreate={canCreate} notes={notes} />
+        </Suspense>
       </NextIntlClientProvider>
     );
+    await notes;
   });
 }
 
-beforeEach(() => {
-  listNotesMock.mockReset();
-});
-
 afterEach(cleanup);
 
-describe("NotesPage", () => {
-  it("shows the empty state when there are no notes", async () => {
-    listNotesMock.mockResolvedValue({ kind: "ok", data: [] });
-
-    await renderPage();
+describe("Notes", () => {
+  it("points who can create to the New note button when there are no notes", async () => {
+    await renderNotes(true, { kind: "ok", data: [] });
 
     expect(
       await screen.findByRole("heading", { name: "Nenhuma nota ainda" })
     ).toBeTruthy();
+    expect(
+      screen.getByText("Crie a primeira pelo botão Nova nota.")
+    ).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("tells who cannot create that Owners and Admins add the notes", async () => {
+    await renderNotes(false, { kind: "ok", data: [] });
+
+    expect(
+      await screen.findByText(
+        "As notas que Owners e Admins criarem aparecem aqui."
+      )
+    ).toBeTruthy();
+  });
+
   it("shows the error state with a retry when the service is unavailable", async () => {
-    listNotesMock.mockResolvedValue({
+    await renderNotes(true, {
       kind: "error",
       error: {
         code: "UNAVAILABLE",
@@ -67,8 +68,6 @@ describe("NotesPage", () => {
         status: 503,
       },
     });
-
-    await renderPage();
 
     const alert = await screen.findByRole("alert");
     expect(

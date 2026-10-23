@@ -6,6 +6,9 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
@@ -33,25 +36,30 @@ func New(notes application.NotesRepository, v application.Validator, opts ...Opt
 	return app
 }
 
-func (a *Application) Create(ctx context.Context, req *models.CreateNoteRequest) (*domain.Note, error) {
+func (a *Application) Create(ctx context.Context, caller *actor.Actor, req *models.CreateNoteRequest) (*domain.Note, error) {
 	ctx, span := a.onCreateStart(ctx)
 	defer span.End()
+
+	if err := caller.Authorize(ctx, roles.NoteCreate); err != nil {
+		return nil, a.onError(ctx, ErrCreateNote.WithCause(err))
+	}
 
 	if req == nil {
 		return nil, a.onError(ctx, domain.ErrInvalidInput.WithCause(errors.New("request body is required")))
 	}
 
 	note := &domain.Note{
-		ID:          domain.NewNoteID(),
-		NoteContent: req.NoteContent,
-		CreatedAt:   a.now(),
+		ID:             domain.NewNoteID(),
+		OrganizationID: caller.OrganizationID,
+		NoteContent:    req.NoteContent,
+		CreatedAt:      a.now(),
 	}
 
 	if err := a.validate(note); err != nil {
 		return nil, a.onError(ctx, err)
 	}
 
-	if err := a.notes.Create(ctx, note); err != nil {
+	if err := a.notes.Create(ctx, caller, note); err != nil {
 		return nil, a.onError(ctx, ErrCreateNote.WithCause(err))
 	}
 
@@ -60,11 +68,15 @@ func (a *Application) Create(ctx context.Context, req *models.CreateNoteRequest)
 	return note, nil
 }
 
-func (a *Application) List(ctx context.Context) ([]*domain.Note, error) {
+func (a *Application) List(ctx context.Context, caller *actor.Actor) ([]*domain.Note, error) {
 	ctx, span := a.onListStart(ctx)
 	defer span.End()
 
-	notes, err := a.notes.List(ctx)
+	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
+		return []*domain.Note{}, a.onError(ctx, ErrListNotes.WithCause(err))
+	}
+
+	notes, err := a.notes.List(ctx, caller.OrganizationID)
 	if err != nil {
 		return []*domain.Note{}, a.onError(ctx, ErrListNotes.WithCause(err))
 	}
@@ -72,11 +84,15 @@ func (a *Application) List(ctx context.Context) ([]*domain.Note, error) {
 	return notes, nil
 }
 
-func (a *Application) Get(ctx context.Context, id domain.NoteID) (*domain.Note, error) {
+func (a *Application) Get(ctx context.Context, caller *actor.Actor, id domain.NoteID) (*domain.Note, error) {
 	ctx, span := a.onGetStart(ctx, id)
 	defer span.End()
 
-	note, err := a.notes.Get(ctx, id)
+	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
+		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
+	}
+
+	note, err := a.notes.Get(ctx, caller.OrganizationID, id)
 	if err != nil {
 		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
 	}
@@ -84,11 +100,15 @@ func (a *Application) Get(ctx context.Context, id domain.NoteID) (*domain.Note, 
 	return note, nil
 }
 
-func (a *Application) Delete(ctx context.Context, id domain.NoteID) error {
+func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
 	ctx, span := a.onDeleteStart(ctx, id)
 	defer span.End()
 
-	if err := a.notes.Delete(ctx, id); err != nil {
+	if err := caller.Authorize(ctx, roles.NoteDelete); err != nil {
+		return a.onError(ctx, ErrDeleteNote.WithCause(err))
+	}
+
+	if err := a.notes.Delete(ctx, caller, id); err != nil {
 		return a.onError(ctx, ErrDeleteNote.WithCause(err))
 	}
 

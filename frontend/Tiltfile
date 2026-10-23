@@ -9,9 +9,27 @@ local_resource(
 
 MINIMAL_STACK = os.getenv('TILT_STACK', '') == 'minimal'
 
-web_deps = ['frontend-deps']
+local('make -s env')
 
-web_env = {
+iam_env = {
+    'IAM_DATABASE_URL': 'postgres://iam:iam@localhost:5432/iam?sslmode=disable',
+    'BETTER_AUTH_SECRET': 'dev-only-secret-change-me-in-production',
+    'BETTER_AUTH_URL': 'http://localhost:3000',
+}
+
+local_resource(
+    'iam-seed',
+    cmd='pnpm --filter @boilerplate/web iam:seed',
+    env=iam_env,
+    deps=['apps/web/scripts/iam-seed/'],
+    resource_deps=['frontend-deps', 'iam-migrate'],
+    labels=['iam'],
+)
+
+web_deps = ['frontend-deps', 'iam-seed']
+
+web_env = dict(iam_env)
+web_env.update({
     'OTEL_SERVICE_NAME': 'web',
     'OTEL_RESOURCE_ATTRIBUTES': 'service.version=v0.1.0,service.namespace=boilerplate,deployment.environment=local',
     # Otherwise Next opens a second client span beside undici's on every fetch.
@@ -19,7 +37,7 @@ web_env = {
     # example:begin
     'NOTES_API_URL': 'http://localhost:8080',
     # example:end
-}
+})
 
 if not MINIMAL_STACK:
     web_env['NEXT_PUBLIC_FARO_URL'] = 'http://localhost:12347/collect'

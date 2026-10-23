@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { invalidInputError, request, type Result } from "../core";
+import {
+  invalidInputError,
+  request,
+  type GetToken,
+  type RequestOptions,
+  type Result,
+} from "../core";
 
 import {
   createNoteInputSchema,
@@ -13,6 +19,7 @@ import {
 
 interface NotesClientOptions {
   baseUrl: string;
+  getToken: GetToken;
 }
 
 export interface NotesClient {
@@ -28,9 +35,12 @@ function toWireCreateNote({ title, body }: CreateNoteInput) {
 
 export function createNotesClient({
   baseUrl,
+  getToken,
 }: NotesClientOptions): NotesClient {
   const notesUrl = `${baseUrl}/notes/v1/notes`;
   const noteUrl = (id: NoteId) => `${notesUrl}/${encodeURIComponent(id)}`;
+  const send = async <T>(options: Omit<RequestOptions<T>, "token">) =>
+    request({ ...options, token: await getToken() });
 
   return {
     create: async (input) => {
@@ -38,16 +48,16 @@ export function createNotesClient({
       if (!parsed.success) {
         return { kind: "error", error: invalidInputError(parsed.error) };
       }
-      return request({
+      return send({
         url: notesUrl,
         method: "POST",
         body: toWireCreateNote(parsed.data),
         schema: noteSchema,
       });
     },
-    list: () => request({ url: notesUrl, schema: noteListSchema }),
-    get: (id) => request({ url: noteUrl(id), schema: noteSchema }),
+    list: () => send({ url: notesUrl, schema: noteListSchema }),
+    get: (id) => send({ url: noteUrl(id), schema: noteSchema }),
     delete: (id) =>
-      request({ url: noteUrl(id), method: "DELETE", schema: z.undefined() }),
+      send({ url: noteUrl(id), method: "DELETE", schema: z.undefined() }),
   };
 }

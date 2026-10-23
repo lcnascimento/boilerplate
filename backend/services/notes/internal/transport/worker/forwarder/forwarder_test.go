@@ -19,10 +19,14 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
@@ -40,6 +44,12 @@ var (
 )
 
 const waitFor = 30 * time.Second
+
+var author = &actor.Actor{
+	UserID:         mustParseUserID("user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"),
+	OrganizationID: iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"),
+	Role:           roles.Admin,
+}
 
 var (
 	spans   = tracetest.NewSpanRecorder()
@@ -67,18 +77,19 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC))
 
 	env.startForwarder(t)
-	require.NoError(t, repo.Create(t.Context(), note))
-	require.NoError(t, repo.Delete(t.Context(), note.ID))
+	require.NoError(t, repo.Create(t.Context(), author, note))
+	require.NoError(t, repo.Delete(t.Context(), author, note.ID))
 
 	observer := env.subscribe(t, note.ID)
 	created := observer.next(t)
 	deleted := observer.next(t)
 
 	wantCreated := &events.NoteCreated{
-		Id:        note.ID.String(),
-		Title:     "Lista de compras",
-		Body:      "body of Lista de compras",
-		CreatedAt: timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
+		Id:             note.ID.String(),
+		OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+		Title:          "Lista de compras",
+		Body:           "body of Lista de compras",
+		CreatedAt:      timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
 	}
 	require.True(t, proto.Equal(wantCreated, created.Message), "want %v, got %v", wantCreated, created.Message)
 	require.Equal(t, noteCreatedType, created.Type)
@@ -87,12 +98,16 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 	require.Equal(t, events.Topic, created.Topic)
 	require.True(t, note.CreatedAt.Equal(created.Time), "want %v, got %v", note.CreatedAt, created.Time)
 	require.Equal(t, created.ID, created.Headers["_watermill_message_uuid"])
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", created.ActorID)
+	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", created.ActorOrganizationID)
 
-	wantDeleted := &events.NoteDeleted{Id: note.ID.String()}
+	wantDeleted := &events.NoteDeleted{Id: note.ID.String(), OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"}
 	require.True(t, proto.Equal(wantDeleted, deleted.Message), "want %v, got %v", wantDeleted, deleted.Message)
 	require.Equal(t, noteDeletedType, deleted.Type)
 	require.True(t, deletedAt.Equal(deleted.Time), "want %v, got %v", deletedAt, deleted.Time)
 	require.NotEqual(t, created.ID, deleted.ID)
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", deleted.ActorID)
+	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", deleted.ActorOrganizationID)
 }
 
 func TestComponentForwarder_KeepsTheOrderOfANoteUnderItsIDAsKey(t *testing.T) {
@@ -107,8 +122,8 @@ func TestComponentForwarder_KeepsTheOrderOfANoteUnderItsIDAsKey(t *testing.T) {
 	note := newNote("recreated", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
 	for range 3 {
-		require.NoError(t, repo.Create(t.Context(), note))
-		require.NoError(t, repo.Delete(t.Context(), note.ID))
+		require.NoError(t, repo.Create(t.Context(), author, note))
+		require.NoError(t, repo.Delete(t.Context(), author, note.ID))
 	}
 
 	env.startForwarder(t)
@@ -146,7 +161,7 @@ func TestComponentForwarder_RestartLeavesNoGap(t *testing.T) {
 		for range n {
 			note := newNote("restart", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 			observer.want(note.ID)
-			require.NoError(t, repo.Create(t.Context(), note))
+			require.NoError(t, repo.Create(t.Context(), author, note))
 		}
 	}
 
@@ -173,7 +188,7 @@ func TestComponentForwarder_SendSpanIsARootLinkedToTheCreateSpan(t *testing.T) {
 	repo := notes.New(env.pool, env.schemaIDs)
 	note := newNote("traced", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 	env.startForwarder(t)
 
 	messageID := env.subscribe(t, note.ID).next(t).ID
@@ -208,7 +223,7 @@ func TestComponentForwarder_RecordsSendAndProcessDurationsInSeconds(t *testing.T
 	repo := notes.New(env.pool, env.schemaIDs)
 	note := newNote("timed", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 	env.startForwarder(t)
 	env.subscribe(t, note.ID).next(t)
 
@@ -232,7 +247,7 @@ func TestComponentForwarder_MessagingMetricsOmitTheDeliveryAttempt(t *testing.T)
 	repo := notes.New(env.pool, env.schemaIDs)
 	note := newNote("unbounded", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 	env.startForwarder(t)
 	env.subscribe(t, note.ID).next(t)
 
@@ -562,8 +577,18 @@ func header(record *sarama.ConsumerMessage, key string) string {
 
 func newNote(title string, createdAt time.Time) *domain.Note {
 	return &domain.Note{
-		ID:          domain.NewNoteID(),
-		NoteContent: domain.NoteContent{Title: title, Body: "body of " + title},
-		CreatedAt:   createdAt,
+		ID:             domain.NewNoteID(),
+		OrganizationID: author.OrganizationID,
+		NoteContent:    domain.NoteContent{Title: title, Body: "body of " + title},
+		CreatedAt:      createdAt,
 	}
+}
+
+func mustParseUserID(s string) iamdomain.UserID {
+	id, err := iamdomain.ParseUserID(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return id
 }

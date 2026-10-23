@@ -17,6 +17,7 @@ type Emitter func(svc *service.Service, process service.Process) bool
 var (
 	everyProcess Emitter = func(_ *service.Service, process service.Process) bool { return process.LongRunning() }
 	dbPool       Emitter = func(_ *service.Service, process service.Process) bool { return process.DBPool() }
+	actorAuth    Emitter = func(_ *service.Service, process service.Process) bool { return process.ActorAuth() }
 )
 
 func runs(components ...service.Component) Emitter {

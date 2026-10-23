@@ -6,4 +6,5 @@ option go_package = "github.com/lcnascimento/boilerplate/backend/services/notes/
 
 message NoteDeleted {
   string id = 1;
+  string organization_id = 2;
 }

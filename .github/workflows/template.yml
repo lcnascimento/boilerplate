@@ -47,7 +47,7 @@ jobs:
           ! grep -q '^## Como instanciar' README.md || exit 1
           test "$(grep '^## ' CLAUDE.md)" = "## Language"
           test "$(head -1 README.md)" = "# Acme App"
-          grep -q 'APP_NAME = "Acme App"' frontend/apps/web/shared/components/nav-sidebar.tsx
+          grep -q 'APP_NAME = "Acme App"' frontend/apps/web/shared/components/organization-switcher.tsx
 
       - name: clean-example still runs after init
         run: make clean-example
@@ -81,12 +81,19 @@ jobs:
           ! git grep -ni boilerplate || exit 1
           ! git ls-files -co --exclude-standard | grep -i boilerplate || exit 1
 
-      - name: Zero services
+      - name: Only the core services
         run: |
-          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./tools')"
+          test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./services/iam\nuse./services/iam/pkg\nuse./tools')"
           ! grep -qE '^(init|clean-example):' Makefile || exit 1
           test ! -e scripts
           test "$(ls .github/workflows | xargs)" = "$GENERATED_WORKFLOWS"
+
+      - name: Identity stays, without a trace of Notes
+        run: |
+          grep -q "include('./services/iam/Tiltfile')" backend/Tiltfile
+          grep -q "'iam-seed'" frontend/Tiltfile
+          ! grep -niw note frontend/apps/web/shared/auth/roles.gen.ts || exit 1
+          ! git grep -nIiwE 'notes?' -- backend/services/iam/pkg/roles frontend/apps/web/app frontend/apps/web/e2e frontend/apps/web/shared/_messages || exit 1
 
   clean-init-quality_gate:
     name: B

@@ -14,13 +14,13 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/api/frontend"
 )
 
-func Run(app *fx.App) {
-	if code := run(app); code != 0 {
+func Run(newAppAfterO11yStarts func() *fx.App) {
+	if code := run(newAppAfterO11yStarts); code != 0 {
 		os.Exit(code)
 	}
 }
 
-func run(app *fx.App) int {
+func run(newAppAfterO11yStarts func() *fx.App) int {
 	ctx := context.Background()
 
 	o11y.MustStart(ctx)
@@ -30,6 +30,8 @@ func run(app *fx.App) int {
 			onO11yShutdownFailed(ctx, err)
 		}
 	}()
+
+	app := newAppAfterO11yStarts()
 
 	// fx only listens for signals from app.Wait on.
 	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
@@ -65,8 +67,14 @@ func frontendServerOptions() []fx.Option {
 		Database(),
 		Repositories(),
 		NotesService(),
-		fx.Provide(func(notes transport.NotesService, db transport.Database, shutdowner fx.Shutdowner) *frontend.Server {
-			return frontend.New(notes, db, frontend.WithShutdown(func() {
+		ActorMiddleware(),
+		fx.Provide(func(
+			notes transport.NotesService,
+			db transport.Database,
+			authenticator transport.Authenticator,
+			shutdowner fx.Shutdowner,
+		) *frontend.Server {
+			return frontend.New(notes, db, authenticator, frontend.WithShutdown(func() {
 				_ = shutdowner.Shutdown(fx.ExitCode(1))
 			}))
 		}),

@@ -16,13 +16,13 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/health"
 )
 
-func Run(app *fx.App) {
-	if code := run(app); code != 0 {
+func Run(newAppAfterO11yStarts func() *fx.App) {
+	if code := run(newAppAfterO11yStarts); code != 0 {
 		os.Exit(code)
 	}
 }
 
-func run(app *fx.App) int {
+func run(newAppAfterO11yStarts func() *fx.App) int {
 	ctx := context.Background()
 
 	o11y.MustStart(ctx)
@@ -32,6 +32,8 @@ func run(app *fx.App) int {
 			onO11yShutdownFailed(ctx, err)
 		}
 	}()
+
+	app := newAppAfterO11yStarts()
 
 	// fx only listens for signals from app.Wait on.
 	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)

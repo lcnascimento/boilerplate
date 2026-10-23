@@ -11,9 +11,11 @@ package mocks
 
 import (
 	context "context"
+	http "net/http"
 	reflect "reflect"
 	time "time"
 
+	actor "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	domain "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	models "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 	gomock "go.uber.org/mock/gomock"
@@ -44,62 +46,62 @@ func (m *MockNotesService) EXPECT() *MockNotesServiceMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockNotesService) Create(ctx context.Context, req *models.CreateNoteRequest) (*domain.Note, error) {
+func (m *MockNotesService) Create(ctx context.Context, caller *actor.Actor, req *models.CreateNoteRequest) (*domain.Note, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, req)
+	ret := m.ctrl.Call(m, "Create", ctx, caller, req)
 	ret0, _ := ret[0].(*domain.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockNotesServiceMockRecorder) Create(ctx, req any) *gomock.Call {
+func (mr *MockNotesServiceMockRecorder) Create(ctx, caller, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNotesService)(nil).Create), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNotesService)(nil).Create), ctx, caller, req)
 }
 
 // Delete mocks base method.
-func (m *MockNotesService) Delete(ctx context.Context, id domain.NoteID) error {
+func (m *MockNotesService) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret := m.ctrl.Call(m, "Delete", ctx, caller, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockNotesServiceMockRecorder) Delete(ctx, id any) *gomock.Call {
+func (mr *MockNotesServiceMockRecorder) Delete(ctx, caller, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesService)(nil).Delete), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesService)(nil).Delete), ctx, caller, id)
 }
 
 // Get mocks base method.
-func (m *MockNotesService) Get(ctx context.Context, id domain.NoteID) (*domain.Note, error) {
+func (m *MockNotesService) Get(ctx context.Context, caller *actor.Actor, id domain.NoteID) (*domain.Note, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, id)
+	ret := m.ctrl.Call(m, "Get", ctx, caller, id)
 	ret0, _ := ret[0].(*domain.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockNotesServiceMockRecorder) Get(ctx, id any) *gomock.Call {
+func (mr *MockNotesServiceMockRecorder) Get(ctx, caller, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNotesService)(nil).Get), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNotesService)(nil).Get), ctx, caller, id)
 }
 
 // List mocks base method.
-func (m *MockNotesService) List(ctx context.Context) ([]*domain.Note, error) {
+func (m *MockNotesService) List(ctx context.Context, caller *actor.Actor) ([]*domain.Note, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx)
+	ret := m.ctrl.Call(m, "List", ctx, caller)
 	ret0, _ := ret[0].([]*domain.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockNotesServiceMockRecorder) List(ctx any) *gomock.Call {
+func (mr *MockNotesServiceMockRecorder) List(ctx, caller any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesService)(nil).List), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesService)(nil).List), ctx, caller)
 }
 
 // MockOutboxService is a mock of OutboxService interface.
@@ -153,6 +155,44 @@ func (m *MockOutboxService) Purge(ctx context.Context) error {
 func (mr *MockOutboxServiceMockRecorder) Purge(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Purge", reflect.TypeOf((*MockOutboxService)(nil).Purge), ctx)
+}
+
+// MockAuthenticator is a mock of Authenticator interface.
+type MockAuthenticator struct {
+	ctrl     *gomock.Controller
+	recorder *MockAuthenticatorMockRecorder
+	isgomock struct{}
+}
+
+// MockAuthenticatorMockRecorder is the mock recorder for MockAuthenticator.
+type MockAuthenticatorMockRecorder struct {
+	mock *MockAuthenticator
+}
+
+// NewMockAuthenticator creates a new mock instance.
+func NewMockAuthenticator(ctrl *gomock.Controller) *MockAuthenticator {
+	mock := &MockAuthenticator{ctrl: ctrl}
+	mock.recorder = &MockAuthenticatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAuthenticator) EXPECT() *MockAuthenticatorMockRecorder {
+	return m.recorder
+}
+
+// Handler mocks base method.
+func (m *MockAuthenticator) Handler(next http.Handler) http.Handler {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Handler", next)
+	ret0, _ := ret[0].(http.Handler)
+	return ret0
+}
+
+// Handler indicates an expected call of Handler.
+func (mr *MockAuthenticatorMockRecorder) Handler(next any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handler", reflect.TypeOf((*MockAuthenticator)(nil).Handler), next)
 }
 
 // MockDatabase is a mock of Database interface.

@@ -27,6 +27,8 @@ import { Textarea } from "@boilerplate/ui/components/textarea";
 
 import { createNote } from "@/actions/notes";
 
+import type { APIError } from "@boilerplate/api/core";
+
 type FieldErrors = Partial<Record<keyof CreateNoteInput, string>>;
 
 const fieldSchema = createNoteInputSchema.keyof();
@@ -55,6 +57,13 @@ export function CreateNoteDialog() {
     setOpen(next);
   }
 
+  function failureMessage(error: Pick<APIError, "code" | "status">) {
+    if (error.status === 403) return t("createForbidden");
+    if (error.code === ErrorCode.Unavailable)
+      return t("unavailableDescription");
+    return t("createFailed");
+  }
+
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(undefined);
@@ -81,11 +90,7 @@ export function CreateNoteDialog() {
     startTransition(async () => {
       const result = await createNote(parsed.data);
       if (result.kind === "error") {
-        setFormError(
-          result.error.code === ErrorCode.Unavailable
-            ? t("unavailableDescription")
-            : t("createFailed")
-        );
+        setFormError(failureMessage(result.error));
         return;
       }
       handleOpenChange(false);
