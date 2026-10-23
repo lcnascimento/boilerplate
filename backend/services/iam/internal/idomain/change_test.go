@@ -90,3 +90,11 @@ func TestChange_EventRefusesAMalformedUserID(t *testing.T) {
 
 	require.ErrorIs(t, err, idomain.ErrUntranslatableChange)
 }
+
+func TestEvent_TypeIsTheFullNameOfTheMessage(t *testing.T) {
+	t.Parallel()
+
+	event := idomain.Event{Message: &events.PasswordChanged{}}
+
+	require.Equal(t, "boilerplate.iam.v1.PasswordChanged", event.Type())
+}

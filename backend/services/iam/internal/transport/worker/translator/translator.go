@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	otelmetric "go.opentelemetry.io/otel/metric"
+
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/transport"
 )
 
@@ -13,8 +15,9 @@ type Translator struct {
 	changes      transport.ChangesService
 	pollInterval time.Duration
 
-	cancel context.CancelFunc
-	done   chan struct{}
+	cancel       context.CancelFunc
+	done         chan struct{}
+	registration otelmetric.Registration
 }
 
 func New(changes transport.ChangesService, opts ...Option) *Translator {
@@ -28,6 +31,13 @@ func New(changes transport.ChangesService, opts ...Option) *Translator {
 }
 
 func (t *Translator) Start(ctx context.Context) error {
+	registration, err := t.registerOldestPendingAge()
+	if err != nil {
+		return ErrStart.WithCause(err)
+	}
+
+	t.registration = registration
+
 	ctx, t.cancel = context.WithCancel(context.WithoutCancel(ctx))
 	t.done = make(chan struct{})
 
@@ -39,12 +49,19 @@ func (t *Translator) Start(ctx context.Context) error {
 func (t *Translator) Stop(ctx context.Context) error {
 	t.cancel()
 
+	unregisterErr := t.registration.Unregister()
+
 	select {
 	case <-t.done:
-		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+
+	if unregisterErr != nil {
+		return ErrStop.WithCause(unregisterErr)
+	}
+
+	return nil
 }
 
 func (t *Translator) run(ctx context.Context) {
