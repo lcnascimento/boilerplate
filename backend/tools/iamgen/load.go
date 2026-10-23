@@ -3,15 +3,15 @@ package main
 import (
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 )
 
 var ErrUnmappedRole = errors.New("role has no Better Auth membership defaults mapping")
 
 func load() (matrix, error) {
-	m := matrix{statement: convert(roles.Permissions())}
+	m := matrix{statement: convert(authz.Permissions())}
 
-	for _, r := range roles.All() {
+	for _, r := range authz.AllRoles() {
 		defaults, err := betterAuthDefaults(r)
 		if err != nil {
 			return matrix{}, err
@@ -23,13 +23,13 @@ func load() (matrix, error) {
 	return m, nil
 }
 
-var betterAuthDefaultsByRole = map[roles.Role]string{
-	roles.Owner:  "ownerAc",
-	roles.Admin:  "adminAc",
-	roles.Viewer: "",
+var betterAuthDefaultsByRole = map[authz.Role]string{
+	authz.RoleOwner:  "ownerAc",
+	authz.RoleAdmin:  "adminAc",
+	authz.RoleViewer: "",
 }
 
-func betterAuthDefaults(r roles.Role) (string, error) {
+func betterAuthDefaults(r authz.Role) (string, error) {
 	defaults, ok := betterAuthDefaultsByRole[r]
 	if !ok {
 		return "", ErrUnmappedRole.WithAttribute("role", r.String())
@@ -38,7 +38,7 @@ func betterAuthDefaults(r roles.Role) (string, error) {
 	return defaults, nil
 }
 
-func convert(permissions []roles.Permission) []permission {
+func convert(permissions []authz.Permission) []permission {
 	converted := make([]permission, 0, len(permissions))
 
 	for _, p := range permissions {

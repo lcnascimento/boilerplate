@@ -1,4 +1,4 @@
-import { roles } from "@/shared/auth/roles.gen";
+import { roles } from "@/shared/auth/authz.gen";
 
 import type { MemberRole } from "@/shared/auth/members";
 

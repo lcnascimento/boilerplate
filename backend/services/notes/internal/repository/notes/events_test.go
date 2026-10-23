@@ -17,8 +17,8 @@ import (
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
@@ -35,7 +35,7 @@ var (
 var author = &actor.Actor{
 	UserID:         mustParseUserID("user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"),
 	OrganizationID: acme,
-	Role:           roles.Admin,
+	Role:           authz.RoleAdmin,
 }
 
 var schemaIDs = eventbus.SchemaIDs{

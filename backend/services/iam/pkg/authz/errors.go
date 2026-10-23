@@ -1,4 +1,4 @@
-package roles
+package authz
 
 import "github.com/lcnascimento/go-kit/errors"
 

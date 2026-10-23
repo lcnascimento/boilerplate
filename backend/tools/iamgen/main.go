@@ -23,7 +23,7 @@ var (
 )
 
 func main() {
-	out := flag.String("out", "", "path of the generated roles.gen.ts")
+	out := flag.String("out", "", "path of the generated authz.gen.ts")
 
 	flag.Parse()
 

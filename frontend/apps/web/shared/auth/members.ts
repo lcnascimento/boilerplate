@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import { memberIdSchema } from "./actor-ids";
+import { roleNames, roles, type Role } from "./authz.gen";
 import { canManageOrganization } from "./organizations";
-import { roleNames, roles, type Role } from "./roles.gen";
 
 export const memberRoleSchema = z.enum(roleNames);
 

@@ -1,4 +1,4 @@
-package roles
+package authz
 
 type Permission struct {
 	resource string

@@ -9,7 +9,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -42,7 +42,7 @@ func (a *Application) Create(ctx context.Context, caller *actor.Actor, req *mode
 	ctx, span := a.onCreateStart(ctx)
 	defer span.End()
 
-	if err := caller.Authorize(ctx, roles.NoteCreate); err != nil {
+	if err := caller.Authorize(ctx, authz.PermissionNoteCreate); err != nil {
 		return nil, a.onError(ctx, ErrCreateNote.WithCause(err))
 	}
 
@@ -74,7 +74,7 @@ func (a *Application) List(ctx context.Context, caller *actor.Actor) ([]*domain.
 	ctx, span := a.onListStart(ctx)
 	defer span.End()
 
-	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
+	if err := caller.Authorize(ctx, authz.PermissionNoteRead); err != nil {
 		return []*domain.Note{}, a.onError(ctx, ErrListNotes.WithCause(err))
 	}
 
@@ -90,7 +90,7 @@ func (a *Application) Get(ctx context.Context, caller *actor.Actor, id domain.No
 	ctx, span := a.onGetStart(ctx, id)
 	defer span.End()
 
-	if err := caller.Authorize(ctx, roles.NoteRead); err != nil {
+	if err := caller.Authorize(ctx, authz.PermissionNoteRead); err != nil {
 		return nil, a.onError(ctx, ErrGetNote.WithCause(err))
 	}
 
@@ -106,7 +106,7 @@ func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain
 	ctx, span := a.onDeleteStart(ctx, id)
 	defer span.End()
 
-	if err := caller.Authorize(ctx, roles.NoteDelete); err != nil {
+	if err := caller.Authorize(ctx, authz.PermissionNoteDelete); err != nil {
 		return a.onError(ctx, ErrDeleteNote.WithCause(err))
 	}
 

@@ -6,7 +6,7 @@ self=scripts/clean-example.sh
 example_paths=(
 	backend/services/notes
 	backend/services/audit/internal/transport/consumer/notes.go
-	backend/services/iam/pkg/roles/notes_test.go
+	backend/services/iam/pkg/authz/notes_test.go
 	backend/config/bruno/collections/Notes
 	openapi/notes.yaml
 	frontend/apps/web/app/\(dashboard\)/notes

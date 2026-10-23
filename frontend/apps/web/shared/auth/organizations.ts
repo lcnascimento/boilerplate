@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { roles, type Role } from "./authz.gen";
 import { ORGANIZATION_NAME_MAX_LENGTH } from "./policy";
-import { roles, type Role } from "./roles.gen";
 
 export interface Organization {
   id: string;
