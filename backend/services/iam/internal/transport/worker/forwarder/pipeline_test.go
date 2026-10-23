@@ -52,7 +52,7 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 		)
 		INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
 		SELECT gen_random_uuid(), id::text, 'credential', id, 'hash', now(), now() FROM new_user`, userID)
-	passwordChanged := inTx(t, pool,
+	passwordChanged := inRequest(t, pool, adaInAcme,
 		`UPDATE account SET password = 'new-hash', "updatedAt" = now() WHERE "userId" = $1`, userID)
 	deleted := inTx(t, pool, `DELETE FROM "user" WHERE id = $1`, userID)
 
@@ -61,15 +61,19 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 
 	created, changed, gone := next(t, received), next(t, received), next(t, received)
 
-	requireEvent(t, created, signedUp, &events.UserCreated{
+	requireEvent(t, created, signedUp, noRequest, &events.UserCreated{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		CreatedAt: timestamppb.New(signedUp.at),
 	})
-	requireEvent(t, changed, passwordChanged, &events.PasswordChanged{
+	requireEvent(t, changed, passwordChanged, origin{
+		actorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		actorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
+	}, &events.PasswordChanged{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		ChangedAt: timestamppb.New(passwordChanged.at),
 	})
-	requireEvent(t, gone, deleted, &events.UserDeleted{
+	requireEvent(t, gone, deleted, noRequest, &events.UserDeleted{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		DeletedAt: timestamppb.New(deleted.at),
 	})
@@ -79,7 +83,15 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 	require.Zero(t, pending)
 }
 
-func requireEvent(t *testing.T, got *eventbus.Event, tx transaction, want proto.Message) {
+type origin struct {
+	actorID             string
+	actorOrganizationID string
+	ipHash              string
+}
+
+var noRequest = origin{}
+
+func requireEvent(t *testing.T, got *eventbus.Event, tx transaction, from origin, want proto.Message) {
 	t.Helper()
 
 	require.True(t, proto.Equal(want, got.Message), "want %v, got %v", want, got.Message)
@@ -89,9 +101,11 @@ func requireEvent(t *testing.T, got *eventbus.Event, tx transaction, want proto.
 	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", got.Subject)
 	require.Equal(t, tx.id, got.CorrelationID)
 	require.True(t, tx.at.Equal(got.Time), "want %v, got %v", tx.at, got.Time)
-	require.Empty(t, got.ActorID)
-	require.Empty(t, got.ActorOrganizationID)
-	require.Empty(t, got.IPHash)
+	require.Equal(t, from, origin{
+		actorID:             got.ActorID,
+		actorOrganizationID: got.ActorOrganizationID,
+		ipHash:              got.IPHash,
+	})
 }
 
 type transaction struct {
@@ -99,12 +113,39 @@ type transaction struct {
 	at time.Time
 }
 
+type connectionSettings struct {
+	actorID             string
+	actorOrganizationID string
+	ipHash              string
+}
+
+var adaInAcme = connectionSettings{
+	actorID:             "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+	actorOrganizationID: "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+	ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
+}
+
 func inTx(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) transaction {
+	t.Helper()
+
+	return inRequest(t, pool, connectionSettings{}, sql, args...)
+}
+
+func inRequest(t *testing.T, pool *pgxpool.Pool, settings connectionSettings, sql string, args ...any) transaction {
 	t.Helper()
 
 	var tx transaction
 
 	require.NoError(t, pgx.BeginFunc(t.Context(), pool, func(conn pgx.Tx) error {
+		if _, err := conn.Exec(t.Context(), `
+			SELECT
+				set_config('app.actor_id', $1, true),
+				set_config('app.actor_organization_id', $2, true),
+				set_config('app.ip_hash', $3, true)`,
+			settings.actorID, settings.actorOrganizationID, settings.ipHash); err != nil {
+			return err
+		}
+
 		if _, err := conn.Exec(t.Context(), sql, args...); err != nil {
 			return err
 		}

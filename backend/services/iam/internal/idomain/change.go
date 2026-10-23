@@ -1,6 +1,7 @@
 package idomain
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,6 +25,10 @@ type Change struct {
 	Table         string
 	Operation     string
 	Fields        map[string]string
+
+	ActorID             uuid.NullUUID
+	ActorOrganizationID uuid.NullUUID
+	IPHash              string
 }
 
 type Event struct {
@@ -32,6 +37,10 @@ type Event struct {
 	Time          time.Time
 	CorrelationID string
 	Message       proto.Message
+
+	ActorID             string
+	ActorOrganizationID string
+	IPHash              string
 }
 
 type changeKind struct {
@@ -84,7 +93,19 @@ func (c *Change) Event() (*Event, error) {
 		Time:          c.OccurredAt,
 		CorrelationID: c.TransactionID,
 		Message:       translation.message(userID, timestamppb.New(c.OccurredAt)),
+
+		ActorID:             prefixed(c.ActorID, domain.UserIDFromUUID),
+		ActorOrganizationID: prefixed(c.ActorOrganizationID, domain.OrganizationIDFromUUID),
+		IPHash:              c.IPHash,
 	}, nil
+}
+
+func prefixed[ID fmt.Stringer](id uuid.NullUUID, fromUUID func(uuid.UUID) ID) string {
+	if !id.Valid {
+		return ""
+	}
+
+	return fromUUID(id.UUID).String()
 }
 
 func (c *Change) untranslatable() errors.CustomError {
