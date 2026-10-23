@@ -119,6 +119,11 @@ function createIam(env: IamEnv) {
 
 type Iam = ReturnType<typeof createIam>;
 
+export type IamAdapter = Omit<
+  Awaited<Iam["auth"]["$context"]>["adapter"],
+  "transaction"
+>;
+
 let iam: Iam | undefined;
 
 // Lazy: `next build` loads the routes without the runtime environment.

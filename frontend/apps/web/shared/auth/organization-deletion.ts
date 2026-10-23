@@ -1,18 +1,39 @@
 import "server-only";
 
-import { getIam } from "./auth";
-import {
-  canManageOrganization,
-  type DeletionErrorCode,
-  type DeletionResult,
-} from "./organizations";
+import { getIam, type IamAdapter } from "./auth";
+import { canManageOrganization, type DeletionResult } from "./organizations";
 
 import type { Actor } from "./actor";
+import type { Where } from "better-auth";
 
-class DeletionRefused extends Error {
-  constructor(readonly code: DeletionErrorCode) {
-    super(`organization deletion refused: ${code}`);
+interface OrganizationOwner {
+  memberId: string;
+  organizationId: string;
+}
+
+type OwnedOrganizationDeletion = "deleted" | "notOwner" | "notMatched";
+
+export async function deleteOwnedOrganization(
+  trx: IamAdapter,
+  { memberId, organizationId }: OrganizationOwner,
+  confirmation?: { name: string }
+): Promise<OwnedOrganizationDeletion> {
+  const owner = await trx.findOne({
+    model: "member",
+    where: [
+      { field: "id", value: memberId },
+      { field: "organizationId", value: organizationId },
+      { field: "role", value: "owner" },
+    ],
+  });
+  if (owner === null) return "notOwner";
+
+  const where: Where[] = [{ field: "id", value: organizationId }];
+  if (confirmation !== undefined) {
+    where.push({ field: "name", value: confirmation.name });
   }
+  const deleted = await trx.deleteMany({ model: "organization", where });
+  return deleted === 1 ? "deleted" : "notMatched";
 }
 
 export async function deleteOrganization(
@@ -24,33 +45,15 @@ export async function deleteOrganization(
   }
 
   const { adapter } = await getIam().auth.$context;
-  try {
-    await adapter.transaction(async (trx) => {
-      const owner = await trx.findOne({
-        model: "member",
-        where: [
-          { field: "id", value: actor.memberId },
-          { field: "organizationId", value: actor.organizationId },
-          { field: "role", value: "owner" },
-        ],
-      });
-      if (owner === null) throw new DeletionRefused("forbidden");
-
-      const deleted = await trx.deleteMany({
-        model: "organization",
-        where: [
-          { field: "id", value: actor.organizationId },
-          { field: "name", value: confirmation },
-        ],
-      });
-      if (deleted !== 1) throw new DeletionRefused("nameMismatch");
-    });
-  } catch (error) {
-    if (error instanceof DeletionRefused) {
-      return { kind: "error", code: error.code };
-    }
-    throw error;
+  const deletion = await adapter.transaction((trx) =>
+    deleteOwnedOrganization(trx, actor, { name: confirmation })
+  );
+  switch (deletion) {
+    case "deleted":
+      return { kind: "ok" };
+    case "notOwner":
+      return { kind: "error", code: "forbidden" };
+    case "notMatched":
+      return { kind: "error", code: "nameMismatch" };
   }
-
-  return { kind: "ok" };
 }
