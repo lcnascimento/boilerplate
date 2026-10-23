@@ -302,7 +302,7 @@
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{service=~\"notes-api-frontend|notes-worker-forwarder\"}",
+        "alertInstanceLabelFilter": "{service=~\"notes-api-frontend|notes-worker-forwarder|notes-consumer\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],
@@ -1088,7 +1088,7 @@
     {
       "type": "row",
       "collapsed": false,
-      "title": "worker",
+      "title": "consumer",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1099,8 +1099,462 @@
       "panels": []
     },
     {
-      "type": "stat",
+      "type": "timeseries",
       "id": 17,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (messaging_destination_name) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(notes-consumer)\", error_type=\"\"}[$__rate_interval]))",
+          "legendFormat": "sucesso {{messaging_destination_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (error_type) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(notes-consumer)\", error_type!=\"\"}[$__rate_interval]))",
+          "legendFormat": "falha {{error_type}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Mensagens/s",
+      "description": "Mensagens processadas por segundo: com sucesso por tópico, e com falha por error_type.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 18,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(notes-consumer)\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p50",
+      "description": "Percentil 50 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 60
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "axisSoftMax": 1,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 19,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
+          "expr": "histogram_quantile(0.9, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(notes-consumer)\"}[$__rate_interval])))",
+          "legendFormat": "p90",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p90",
+      "description": "Percentil 90 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 60
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "axisSoftMax": 1,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 20,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(notes-consumer)\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "refId": "A"
+        }
+      ],
+      "title": "Duração do processamento p99",
+      "description": "Percentil 99 da duração de uma tentativa de processamento; a linha é o limite do SLO consumer-latency. Os pontos são exemplars: abrem o trace.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 60
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "thresholdsStyle": {
+              "mode": "line"
+            },
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "axisSoftMax": 1,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 21,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (error_type) (rate(messaging_process_duration_seconds_count{job=~\"boilerplate/(notes-consumer)\", error_type!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Retentativas",
+      "description": "Tentativas de processamento que falharam por segundo, por error_type; cada uma é retentada.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 22,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (consumergroup, topic) (kafka_consumergroup_uncommitted_offsets{consumergroup=~\"notes\"})",
+          "legendFormat": "{{consumergroup}} {{topic}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Lag do group",
+      "description": "Mensagens ainda não confirmadas pelo consumer group, por tópico; o alerta passa de 100.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 68
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 23,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (error_type) (increase(messaging_dlq_sent_messages_total{job=~\"boilerplate/(notes-consumer)\"}[$__rate_interval]))",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Envios à DLQ por causa",
+      "description": "Mensagens mandadas à DLQ no intervalo, por error_type: falharam de forma permanente.",
+      "transparent": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 68
+      },
+      "repeatDirection": "h",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "collapsed": false,
+      "title": "worker",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "id": 24,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 25,
       "targets": [
         {
           "datasource": {
@@ -1123,7 +1577,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 52
+        "y": 77
       },
       "repeatDirection": "h",
       "options": {
@@ -1166,7 +1620,7 @@
     },
     {
       "type": "stat",
-      "id": 18,
+      "id": 26,
       "targets": [
         {
           "datasource": {
@@ -1189,7 +1643,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 52
+        "y": 77
       },
       "repeatDirection": "h",
       "options": {
@@ -1232,7 +1686,7 @@
     },
     {
       "type": "timeseries",
-      "id": 19,
+      "id": 27,
       "targets": [
         {
           "datasource": {
@@ -1255,7 +1709,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 82
       },
       "repeatDirection": "h",
       "options": {
@@ -1303,7 +1757,7 @@
     },
     {
       "type": "timeseries",
-      "id": 20,
+      "id": 28,
       "targets": [
         {
           "datasource": {
@@ -1335,7 +1789,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 82
       },
       "repeatDirection": "h",
       "options": {
@@ -1366,7 +1820,7 @@
     },
     {
       "type": "timeseries",
-      "id": 21,
+      "id": 29,
       "targets": [
         {
           "datasource": {
@@ -1390,7 +1844,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 65
+        "y": 90
       },
       "repeatDirection": "h",
       "options": {
@@ -1421,7 +1875,7 @@
     },
     {
       "type": "timeseries",
-      "id": 22,
+      "id": 30,
       "targets": [
         {
           "datasource": {
@@ -1445,7 +1899,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 65
+        "y": 90
       },
       "repeatDirection": "h",
       "options": {
@@ -1476,7 +1930,7 @@
     },
     {
       "type": "timeseries",
-      "id": 23,
+      "id": 31,
       "targets": [
         {
           "datasource": {
@@ -1500,7 +1954,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 65
+        "y": 90
       },
       "repeatDirection": "h",
       "options": {
@@ -1531,7 +1985,7 @@
     },
     {
       "type": "timeseries",
-      "id": 24,
+      "id": 32,
       "targets": [
         {
           "datasource": {
@@ -1563,7 +2017,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 98
       },
       "repeatDirection": "h",
       "options": {
@@ -1600,14 +2054,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 81
+        "y": 106
       },
-      "id": 25,
+      "id": 33,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 26,
+      "id": 34,
       "targets": [
         {
           "datasource": {
@@ -1630,7 +2084,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 82
+        "y": 107
       },
       "repeatDirection": "h",
       "options": {
@@ -1661,7 +2115,7 @@
     },
     {
       "type": "timeseries",
-      "id": 27,
+      "id": 35,
       "targets": [
         {
           "datasource": {
@@ -1684,7 +2138,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 82
+        "y": 107
       },
       "repeatDirection": "h",
       "options": {
@@ -1715,7 +2169,7 @@
     },
     {
       "type": "timeseries",
-      "id": 28,
+      "id": 36,
       "targets": [
         {
           "datasource": {
@@ -1738,7 +2192,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 82
+        "y": 107
       },
       "repeatDirection": "h",
       "options": {
@@ -1775,13 +2229,13 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 115
       },
-      "id": 29,
+      "id": 37,
       "panels": [
         {
           "type": "timeseries",
-          "id": 30,
+          "id": 38,
           "targets": [
             {
               "datasource": {
@@ -1804,7 +2258,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 91
+            "y": 116
           },
           "repeatDirection": "h",
           "options": {
@@ -1835,7 +2289,7 @@
         },
         {
           "type": "timeseries",
-          "id": 31,
+          "id": 39,
           "targets": [
             {
               "datasource": {
@@ -1858,7 +2312,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 91
+            "y": 116
           },
           "repeatDirection": "h",
           "options": {
@@ -1889,7 +2343,7 @@
         },
         {
           "type": "timeseries",
-          "id": 32,
+          "id": 40,
           "targets": [
             {
               "datasource": {
@@ -1912,7 +2366,7 @@
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 99
+            "y": 124
           },
           "repeatDirection": "h",
           "options": {
@@ -1943,7 +2397,7 @@
         },
         {
           "type": "timeseries",
-          "id": 33,
+          "id": 41,
           "targets": [
             {
               "datasource": {
@@ -1966,7 +2420,7 @@
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 99
+            "y": 124
           },
           "repeatDirection": "h",
           "options": {
@@ -1997,7 +2451,7 @@
         },
         {
           "type": "timeseries",
-          "id": 34,
+          "id": 42,
           "targets": [
             {
               "datasource": {
@@ -2029,7 +2483,7 @@
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 99
+            "y": 124
           },
           "repeatDirection": "h",
           "options": {
@@ -2068,13 +2522,13 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 107
+        "y": 132
       },
-      "id": 35,
+      "id": 43,
       "panels": [
         {
           "type": "timeseries",
-          "id": 36,
+          "id": 44,
           "targets": [
             {
               "datasource": {
@@ -2106,7 +2560,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 108
+            "y": 133
           },
           "repeatDirection": "h",
           "options": {
@@ -2137,7 +2591,7 @@
         },
         {
           "type": "timeseries",
-          "id": 37,
+          "id": 45,
           "targets": [
             {
               "datasource": {
@@ -2160,7 +2614,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 108
+            "y": 133
           },
           "repeatDirection": "h",
           "options": {
@@ -2199,14 +2653,14 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 116
+        "y": 141
       },
-      "id": 38,
+      "id": 46,
       "panels": []
     },
     {
       "type": "timeseries",
-      "id": 39,
+      "id": 47,
       "targets": [
         {
           "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
@@ -2229,7 +2683,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 117
+        "y": 142
       },
       "repeatDirection": "h",
       "options": {
@@ -2260,7 +2714,7 @@
     },
     {
       "type": "logs",
-      "id": 40,
+      "id": 48,
       "targets": [
         {
           "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
@@ -2282,7 +2736,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 125
+        "y": 150
       },
       "repeatDirection": "h",
       "options": {
@@ -2305,7 +2759,7 @@
         "name": "process",
         "label": "Processo",
         "skipUrlSync": false,
-        "query": "notes-api-frontend,notes-worker-forwarder",
+        "query": "notes-api-frontend,notes-worker-forwarder,notes-consumer",
         "current": {
           "selected": true,
           "text": [
@@ -2347,7 +2801,7 @@
       "type": "link",
       "icon": "external link",
       "tooltip": "Traces de notes no Traces Drilldown",
-      "url": "/a/grafana-exploretraces-app/explore?var-ds=tempo\u0026var-filters=resource.service.name%7C%3D~%7Cnotes-api-frontend__gfp__notes-worker-forwarder\u0026var-groupBy=resource.service.name",
+      "url": "/a/grafana-exploretraces-app/explore?var-ds=tempo\u0026var-filters=resource.service.name%7C%3D~%7Cnotes-api-frontend__gfp__notes-worker-forwarder__gfp__notes-consumer\u0026var-groupBy=resource.service.name",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",
@@ -2382,6 +2836,19 @@
       "keepTime": true
     },
     {
+      "title": "Logs notes-consumer",
+      "type": "link",
+      "icon": "external link",
+      "tooltip": "Logs de notes-consumer no Logs Drilldown",
+      "url": "/a/grafana-lokiexplore-app/explore/service_name/notes-consumer/logs?var-ds=loki\u0026var-filters=service_name%7C%3D%7Cnotes-consumer",
+      "tags": [],
+      "asDropdown": false,
+      "placement": "inControlsMenu",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
       "title": "Profiles notes-api-frontend",
       "type": "link",
       "icon": "external link",
@@ -2400,6 +2867,19 @@
       "icon": "external link",
       "tooltip": "Profile de CPU de notes-worker-forwarder no Profiles Drilldown",
       "url": "/a/grafana-pyroscope-app/explore?explorationType=flame-graph\u0026var-serviceName=notes-worker-forwarder\u0026var-profileMetricId=process_cpu%3Acpu%3Ananoseconds%3Acpu%3Ananoseconds",
+      "tags": [],
+      "asDropdown": false,
+      "placement": "inControlsMenu",
+      "targetBlank": false,
+      "includeVars": false,
+      "keepTime": true
+    },
+    {
+      "title": "Profiles notes-consumer",
+      "type": "link",
+      "icon": "external link",
+      "tooltip": "Profile de CPU de notes-consumer no Profiles Drilldown",
+      "url": "/a/grafana-pyroscope-app/explore?explorationType=flame-graph\u0026var-serviceName=notes-consumer\u0026var-profileMetricId=process_cpu%3Acpu%3Ananoseconds%3Acpu%3Ananoseconds",
       "tags": [],
       "asDropdown": false,
       "placement": "inControlsMenu",

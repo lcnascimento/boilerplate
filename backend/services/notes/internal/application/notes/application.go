@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
@@ -113,6 +115,20 @@ func (a *Application) Delete(ctx context.Context, caller *actor.Actor, id domain
 	}
 
 	a.onDeleted(ctx)
+
+	return nil
+}
+
+func (a *Application) DeleteOrganizationNotes(ctx context.Context, orgID iamdomain.OrganizationID) error {
+	ctx, span := a.onDeleteOrganizationNotesStart(ctx, orgID)
+	defer span.End()
+
+	deleted, err := a.notes.DeleteByOrganization(ctx, orgID)
+	if err != nil {
+		return a.onError(ctx, ErrDeleteOrganizationNotes.WithCause(err))
+	}
+
+	a.onOrganizationNotesDeleted(ctx, deleted)
 
 	return nil
 }

@@ -247,6 +247,21 @@ func (s *ApplicationSuite) TestDeleteUnknownNoteIsNotFound() {
 	s.Require().ErrorIs(err, domain.ErrNoteNotFound)
 }
 
+func (s *ApplicationSuite) TestDeleteOrganizationNotesDeletesThroughTheRepository() {
+	s.repo.EXPECT().DeleteByOrganization(gomock.Any(), acme).Return(int64(3), nil)
+
+	s.Require().NoError(s.app.DeleteOrganizationNotes(s.T().Context(), acme))
+}
+
+func (s *ApplicationSuite) TestDeleteOrganizationNotesWrapsRepositoryErrors() {
+	s.repo.EXPECT().DeleteByOrganization(gomock.Any(), acme).Return(int64(0), errors.ErrMock)
+
+	err := s.app.DeleteOrganizationNotes(s.T().Context(), acme)
+
+	s.Require().ErrorIs(err, notes.ErrDeleteOrganizationNotes)
+	s.Require().ErrorIs(err, errors.ErrMock)
+}
+
 func (s *ApplicationSuite) TestDeniesWhatTheRoleLacksBeforeTheRepositoryEvenForAMissingNote() {
 	viewer, admin := actortest.Viewer(acme), actortest.Admin(acme)
 	missing := domain.NewNoteID()

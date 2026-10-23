@@ -19,3 +19,7 @@ ORDER BY created_at DESC, id DESC;
 -- name: DeleteNote :execrows
 DELETE FROM notes
 WHERE organization_id = $1 AND id = $2;
+
+-- name: DeleteOrganizationNotes :execrows
+DELETE FROM notes
+WHERE organization_id = $1;

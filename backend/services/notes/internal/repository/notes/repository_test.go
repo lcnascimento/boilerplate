@@ -211,6 +211,40 @@ func TestComponentRepository_TransactionWithoutOrganizationSeesNoNotes(t *testin
 	require.Zero(t, count)
 }
 
+func TestComponentRepository_DeleteByOrganizationRemovesOnlyThatOrganizationsNotes(t *testing.T) {
+	t.Parallel()
+
+	repo := newRepository(t)
+	at := time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC)
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, newNote("da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, newNote("outra da Acme", at)))
+	require.NoError(t, repo.Create(t.Context(), globexOwner, newGlobexNote(at)))
+
+	deleted, err := repo.DeleteByOrganization(t.Context(), acme)
+	require.NoError(t, err)
+	require.Equal(t, int64(2), deleted)
+
+	acmeNotes, err := repo.List(t.Context(), acme)
+	require.NoError(t, err)
+
+	globexNotes, err := repo.List(t.Context(), globex)
+	require.NoError(t, err)
+
+	require.Empty(t, acmeNotes)
+	require.Equal(t, []string{"da Globex"}, titles(globexNotes))
+}
+
+func TestComponentRepository_DeleteByOrganizationWithoutNotesDeletesNothing(t *testing.T) {
+	t.Parallel()
+
+	repo := newRepository(t)
+
+	deleted, err := repo.DeleteByOrganization(t.Context(), acme)
+
+	require.NoError(t, err)
+	require.Zero(t, deleted)
+}
+
 func newRepository(t *testing.T) *notes.Repository {
 	t.Helper()
 

@@ -11,6 +11,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/healthserver"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 )
 
@@ -23,7 +24,7 @@ func workerForwarderOptions() []fx.Option {
 		Logger(logger),
 		Database(),
 		fx.Provide(newForwarder, newForwarderHealthServer, newJanitor),
-		fx.Invoke(func(lifecycle fx.Lifecycle, f *outbox.Forwarder, janitor *outbox.Janitor, health *forwarder.HealthServer) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, f *outbox.Forwarder, janitor *outbox.Janitor, health *healthserver.Server) {
 			lifecycle.Append(fx.Hook{OnStart: f.Start, OnStop: f.Stop})
 			lifecycle.Append(fx.Hook{OnStart: janitor.Start, OnStop: janitor.Stop})
 			lifecycle.Append(fx.Hook{OnStart: health.Start, OnStop: health.Shutdown})
@@ -46,13 +47,13 @@ func newJanitor(pool *pgxpool.Pool) (*outbox.Janitor, error) {
 
 func newForwarderHealthServer(
 	db transport.Database, f *outbox.Forwarder, shutdowner fx.Shutdowner,
-) (*forwarder.HealthServer, error) {
+) (*healthserver.Server, error) {
 	port, err := config.HealthPort()
 	if err != nil {
 		return nil, err
 	}
 
-	return forwarder.NewHealthServer(port, db, f, exitWithFailure(shutdowner)), nil
+	return healthserver.New(port, exitWithFailure(shutdowner), db.Ping, f.Ready), nil
 }
 
 func exitWithFailure(shutdowner fx.Shutdowner) func() {

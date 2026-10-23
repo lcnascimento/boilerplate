@@ -71,6 +71,21 @@ func (mr *MockNotesRepositoryMockRecorder) Delete(ctx, caller, id any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNotesRepository)(nil).Delete), ctx, caller, id)
 }
 
+// DeleteByOrganization mocks base method.
+func (m *MockNotesRepository) DeleteByOrganization(ctx context.Context, orgID domain.OrganizationID) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByOrganization", ctx, orgID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteByOrganization indicates an expected call of DeleteByOrganization.
+func (mr *MockNotesRepositoryMockRecorder) DeleteByOrganization(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByOrganization", reflect.TypeOf((*MockNotesRepository)(nil).DeleteByOrganization), ctx, orgID)
+}
+
 // Get mocks base method.
 func (m *MockNotesRepository) Get(ctx context.Context, orgID domain.OrganizationID, id domain0.NoteID) (*domain0.Note, error) {
 	m.ctrl.T.Helper()

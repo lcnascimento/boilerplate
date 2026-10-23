@@ -15,7 +15,8 @@ import (
 	reflect "reflect"
 
 	actor "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
-	domain "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
+	domain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+	domain0 "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	models "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -45,10 +46,10 @@ func (m *MockNotesService) EXPECT() *MockNotesServiceMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockNotesService) Create(ctx context.Context, caller *actor.Actor, req *models.CreateNoteRequest) (*domain.Note, error) {
+func (m *MockNotesService) Create(ctx context.Context, caller *actor.Actor, req *models.CreateNoteRequest) (*domain0.Note, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, caller, req)
-	ret0, _ := ret[0].(*domain.Note)
+	ret0, _ := ret[0].(*domain0.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -60,7 +61,7 @@ func (mr *MockNotesServiceMockRecorder) Create(ctx, caller, req any) *gomock.Cal
 }
 
 // Delete mocks base method.
-func (m *MockNotesService) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
+func (m *MockNotesService) Delete(ctx context.Context, caller *actor.Actor, id domain0.NoteID) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, caller, id)
 	ret0, _ := ret[0].(error)
@@ -74,10 +75,10 @@ func (mr *MockNotesServiceMockRecorder) Delete(ctx, caller, id any) *gomock.Call
 }
 
 // Get mocks base method.
-func (m *MockNotesService) Get(ctx context.Context, caller *actor.Actor, id domain.NoteID) (*domain.Note, error) {
+func (m *MockNotesService) Get(ctx context.Context, caller *actor.Actor, id domain0.NoteID) (*domain0.Note, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, caller, id)
-	ret0, _ := ret[0].(*domain.Note)
+	ret0, _ := ret[0].(*domain0.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -89,10 +90,10 @@ func (mr *MockNotesServiceMockRecorder) Get(ctx, caller, id any) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockNotesService) List(ctx context.Context, caller *actor.Actor) ([]*domain.Note, error) {
+func (m *MockNotesService) List(ctx context.Context, caller *actor.Actor) ([]*domain0.Note, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, caller)
-	ret0, _ := ret[0].([]*domain.Note)
+	ret0, _ := ret[0].([]*domain0.Note)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -101,6 +102,44 @@ func (m *MockNotesService) List(ctx context.Context, caller *actor.Actor) ([]*do
 func (mr *MockNotesServiceMockRecorder) List(ctx, caller any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesService)(nil).List), ctx, caller)
+}
+
+// MockOrganizationNotesService is a mock of OrganizationNotesService interface.
+type MockOrganizationNotesService struct {
+	ctrl     *gomock.Controller
+	recorder *MockOrganizationNotesServiceMockRecorder
+	isgomock struct{}
+}
+
+// MockOrganizationNotesServiceMockRecorder is the mock recorder for MockOrganizationNotesService.
+type MockOrganizationNotesServiceMockRecorder struct {
+	mock *MockOrganizationNotesService
+}
+
+// NewMockOrganizationNotesService creates a new mock instance.
+func NewMockOrganizationNotesService(ctrl *gomock.Controller) *MockOrganizationNotesService {
+	mock := &MockOrganizationNotesService{ctrl: ctrl}
+	mock.recorder = &MockOrganizationNotesServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOrganizationNotesService) EXPECT() *MockOrganizationNotesServiceMockRecorder {
+	return m.recorder
+}
+
+// DeleteOrganizationNotes mocks base method.
+func (m *MockOrganizationNotesService) DeleteOrganizationNotes(ctx context.Context, orgID domain.OrganizationID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOrganizationNotes", ctx, orgID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOrganizationNotes indicates an expected call of DeleteOrganizationNotes.
+func (mr *MockOrganizationNotesServiceMockRecorder) DeleteOrganizationNotes(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOrganizationNotes", reflect.TypeOf((*MockOrganizationNotesService)(nil).DeleteOrganizationNotes), ctx, orgID)
 }
 
 // MockAuthenticator is a mock of Authenticator interface.
