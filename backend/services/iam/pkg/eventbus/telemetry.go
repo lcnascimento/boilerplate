@@ -9,6 +9,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -79,6 +80,8 @@ func (s *Subscriber) onAttemptStart(topic string, msg *message.Message, attempt 
 	if link := trace.LinkFromContext(producer); link.SpanContext.IsValid() {
 		opts = append(opts, trace.WithLinks(link))
 	}
+
+	ctx = baggage.ContextWithBaggage(ctx, baggage.FromContext(producer))
 
 	ctx, span := tracer.Start(ctx, operationProcess+" "+topic, opts...)
 

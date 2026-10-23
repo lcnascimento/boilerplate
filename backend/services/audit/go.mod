@@ -17,8 +17,8 @@ require (
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/env v1.2.3
 	github.com/lcnascimento/go-kit/errors v1.9.4
-	github.com/lcnascimento/go-kit/http v1.5.1
-	github.com/lcnascimento/go-kit/o11y v1.8.1
+	github.com/lcnascimento/go-kit/http v1.6.0
+	github.com/lcnascimento/go-kit/o11y v1.9.1
 	github.com/lcnascimento/go-kit/postgres v1.0.0
 	github.com/lcnascimento/go-kit/validator v1.11.1
 	github.com/stretchr/testify v1.12.1
@@ -35,6 +35,7 @@ require (
 	github.com/IBM/sarama v1.61.1 // indirect
 	github.com/ThreeDotsLabs/watermill v1.5.3 // indirect
 	github.com/ThreeDotsLabs/watermill-kafka/v3 v3.1.4 // indirect
+	github.com/andybalholm/brotli v1.2.6 // indirect
 	github.com/caarlos0/env/v10 v10.0.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -50,6 +51,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.28.0 // indirect
+	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grafana/otel-profiling-go v0.7.0 // indirect
 	github.com/grafana/pyroscope-go v1.4.3 // indirect
@@ -58,6 +60,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.3 // indirect
@@ -78,6 +81,7 @@ require (
 	github.com/peterldowns/pgtestdb v0.1.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/posthog/posthog-go v1.36.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/pressly/goose/v3 v3.29.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect

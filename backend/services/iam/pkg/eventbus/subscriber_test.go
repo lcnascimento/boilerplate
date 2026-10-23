@@ -3,6 +3,7 @@ package eventbus_test
 import (
 	"context"
 	"errors"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -14,12 +15,16 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/logtest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	kiterrors "github.com/lcnascimento/go-kit/errors"
+	otelbaggage "go.opentelemetry.io/otel/baggage"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/lcnascimento/go-kit/o11y/baggage"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/eventbustest"
@@ -34,6 +39,12 @@ var (
 )
 
 const waitFor = 30 * time.Second
+
+func TestMain(m *testing.M) {
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+
+	os.Exit(m.Run())
+}
 
 func TestDLQTopic(t *testing.T) {
 	t.Parallel()
@@ -120,6 +131,32 @@ func TestComponentSubscriber_DeliversTheDecodedEvent(t *testing.T) {
 	require.Positive(t, event.SchemaID)
 	require.Equal(t, schemaID, event.SchemaID)
 	require.True(t, proto.Equal(sent, decoded))
+}
+
+func TestComponentSubscriber_HandlesTheEventWithTheProducerBaggage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	t.Parallel()
+
+	env := eventbustest.New(t, testevents.Protos)
+	producer := baggage.ContextWithMembers(t.Context(),
+		baggage.NewMember("user.id", "user_1"),
+		baggage.NewMember("organization.id", "org_1"),
+	)
+	env.PublishFrom(producer, t, "thing_1", &testevents.ThingCreated{Id: "thing_1"})
+
+	handler := baggageRecorder(make(chan otelbaggage.Baggage, 1))
+	startSubscriber(t, env, handler)
+
+	select {
+	case bag := <-handler:
+		require.Equal(t, "user_1", bag.Member("user.id").Value())
+		require.Equal(t, "org_1", bag.Member("organization.id").Value())
+	case <-time.After(waitFor):
+		t.Fatal("handler was not called")
+	}
 }
 
 func TestComponentSubscriber_DeliversEveryTopicOfTheGroup(t *testing.T) {
@@ -508,6 +545,14 @@ func validHeaders(eventType string) map[string]string {
 	}
 
 	return envelope.Headers()
+}
+
+type baggageRecorder chan otelbaggage.Baggage
+
+func (r baggageRecorder) Handle(ctx context.Context, _ *eventbus.Event) error {
+	r <- otelbaggage.FromContext(ctx)
+
+	return nil
 }
 
 type recorder struct {

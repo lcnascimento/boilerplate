@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/twmb/franz-go/pkg/sr"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
@@ -135,6 +137,24 @@ func (e *Env) Publish(t *testing.T, key string, m proto.Message) eventbus.Envelo
 func (e *Env) PublishTo(t *testing.T, topic, key string, m proto.Message) eventbus.Envelope {
 	t.Helper()
 
+	return e.publishEvent(t.Context(), t, topic, key, m)
+}
+
+func (e *Env) PublishFrom(ctx context.Context, t *testing.T, key string, m proto.Message) eventbus.Envelope {
+	t.Helper()
+
+	return e.publishEvent(ctx, t, e.Topic, key, m)
+}
+
+func (e *Env) PublishRaw(t *testing.T, messageID string, headers map[string]string, value []byte) {
+	t.Helper()
+
+	e.publish(t, e.Topic, messageID, headers, value)
+}
+
+func (e *Env) publishEvent(ctx context.Context, t *testing.T, topic, key string, m proto.Message) eventbus.Envelope {
+	t.Helper()
+
 	value, err := e.schemaIDs.Encode(m)
 	require.NoError(t, err)
 
@@ -149,15 +169,12 @@ func (e *Env) PublishTo(t *testing.T, topic, key string, m proto.Message) eventb
 		DataContentType: eventbus.ContentType,
 	}
 
-	e.publish(t, topic, envelope.ID, envelope.Headers(), value)
+	headers := envelope.Headers()
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(headers))
+
+	e.publish(t, topic, envelope.ID, headers, value)
 
 	return envelope
-}
-
-func (e *Env) PublishRaw(t *testing.T, messageID string, headers map[string]string, value []byte) {
-	t.Helper()
-
-	e.publish(t, e.Topic, messageID, headers, value)
 }
 
 func (e *Env) publish(t *testing.T, topic, messageID string, headers map[string]string, value []byte) {
