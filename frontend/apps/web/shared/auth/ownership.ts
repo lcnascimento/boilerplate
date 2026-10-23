@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getIam } from "./auth";
-import { canTransferOwnership } from "./members";
+import { canManageOrganization } from "./organizations";
 
 import type { Actor } from "./actor";
 
@@ -21,7 +21,7 @@ export async function transferOwnership(
   actor: Actor,
   memberId: string
 ): Promise<OwnershipResult> {
-  if (!canTransferOwnership(actor.role)) {
+  if (!canManageOrganization(actor.role, "transfer")) {
     return { kind: "error", code: "forbidden" };
   }
 

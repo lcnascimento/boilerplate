@@ -95,19 +95,14 @@ test.describe("as the Acme Owner", () => {
     );
   });
 
-  test("cannot leave or lose the Owner Role before transferring it", async ({
+  test("cannot lose the Owner Role before transferring it", async ({
     page,
   }) => {
     await page.goto(MEMBERS_HREF);
 
-    const leave = page.getByRole("button", { name: "Sair da Organization" });
-    await expect(leave).toBeDisabled();
-    await expect(leave).toHaveAccessibleDescription(
-      "Você é o Owner. Transfira a propriedade a outro Member antes de sair."
-    );
     await expect(
-      page.getByRole("link", { name: "Transferir a propriedade" })
-    ).toHaveAttribute("href", "/settings/organization");
+      page.getByRole("button", { name: "Sair da Organization" })
+    ).toHaveCount(0);
     await expect(rowOf(page, "Ana Owner").getByRole("combobox")).toHaveCount(0);
     await expect(rowOf(page, "Ana Owner").getByRole("button")).toHaveCount(0);
     expect(await openOptions(page, "Role de Carla Viewer")).toEqual([
@@ -188,8 +183,5 @@ test.describe("as the Acme Viewer", () => {
     ).toHaveCount(0);
     await expect(table.getByRole("combobox")).toHaveCount(0);
     await expect(table.getByRole("button")).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "Sair da Organization" })
-    ).toBeEnabled();
   });
 });

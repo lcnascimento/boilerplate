@@ -29,12 +29,11 @@ function actions(policy: ReturnType<typeof memberPolicy>) {
 }
 
 describe("memberPolicy", () => {
-  it("lets the Owner manage everyone else but not leave before transferring", () => {
+  it("lets the Owner manage everyone else", () => {
     const policy = memberPolicy(ana, [ana, bruno, carla]);
 
     expect(policy.canAdd).toBe(true);
     expect(policy.assignableRoles).toEqual(["admin", "viewer"]);
-    expect(policy.leave).toBe("ownerMustTransfer");
     expect(actions(policy)).toEqual([
       ["owner@acme.test", { canChangeRole: false, canRemove: false }],
       ["admin@acme.test", { canChangeRole: true, canRemove: true }],
@@ -47,7 +46,6 @@ describe("memberPolicy", () => {
 
     expect(policy.canAdd).toBe(true);
     expect(policy.assignableRoles).toEqual(["admin", "viewer"]);
-    expect(policy.leave).toBe("allowed");
     expect(actions(policy)).toEqual([
       ["owner@acme.test", { canChangeRole: false, canRemove: false }],
       ["admin@acme.test", { canChangeRole: true, canRemove: false }],
@@ -55,12 +53,11 @@ describe("memberPolicy", () => {
     ]);
   });
 
-  it("gives a Viewer the list and the way out only", () => {
+  it("gives a Viewer the list only", () => {
     const policy = memberPolicy(carla, [ana, bruno, carla]);
 
     expect(policy.canAdd).toBe(false);
     expect(policy.assignableRoles).toEqual([]);
-    expect(policy.leave).toBe("allowed");
     expect(actions(policy)).toEqual([
       ["owner@acme.test", { canChangeRole: false, canRemove: false }],
       ["admin@acme.test", { canChangeRole: false, canRemove: false }],
