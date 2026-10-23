@@ -3,8 +3,7 @@ SET LOCAL lock_timeout = '1s';
 SET LOCAL statement_timeout = '5s';
 
 ALTER TABLE member
-    -- Deferred so a transfer can promote the new Owner before demoting the old one in the same transaction.
-    -- An EXCLUDE constraint cannot be NOT VALID, and member holds a few rows per Organization.
+    -- An EXCLUDE constraint cannot be NOT VALID.
     -- squawk-ignore constraint-missing-not-valid
     ADD CONSTRAINT member_one_owner_per_organization
     EXCLUDE USING btree ("organizationId" WITH =) WHERE (role = 'owner')
