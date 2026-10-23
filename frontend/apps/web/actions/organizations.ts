@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { getIam } from "@/shared/auth/auth";
 import { organizationSlug } from "@/shared/auth/organization-slug";
 import {
-  createOrganizationInputSchema,
+  organizationNameInputSchema,
   type OrganizationsErrorCode,
   type OrganizationsResult,
 } from "@/shared/auth/organizations";
@@ -24,7 +24,7 @@ const errorCodes: Record<string, OrganizationsErrorCode> = {
 export async function createOrganization(
   input: unknown
 ): Promise<OrganizationsResult> {
-  const parsed = createOrganizationInputSchema.safeParse(input);
+  const parsed = organizationNameInputSchema.safeParse(input);
   if (!parsed.success) return { kind: "error", code: "invalidInput" };
 
   const requestHeaders = await headers();

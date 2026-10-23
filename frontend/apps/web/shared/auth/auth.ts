@@ -76,6 +76,7 @@ function createIam(env: IamEnv) {
         roles,
         allowUserToCreateOrganization: true,
         organizationLimit: ORGANIZATION_LIMIT,
+        disableOrganizationDeletion: true,
         organizationHooks: roleHooks(async (organizationId) => {
           const { rowCount } = await database.query(
             'SELECT 1 FROM member WHERE "organizationId" = $1 LIMIT 1',
