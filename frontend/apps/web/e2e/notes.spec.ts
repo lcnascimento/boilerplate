@@ -7,6 +7,7 @@ import {
 
 import { signedOut, storageStateOf } from "./auth-state";
 import { expect, test } from "./fixtures";
+import { organizationMenu, switchOrganization } from "./organization-menu";
 import { WEB_URL } from "./stack";
 
 import type { Page } from "@playwright/test";
@@ -149,24 +150,12 @@ for (const [name, id] of [
     await expect(
       page.getByRole("heading", { name: "Página não encontrada." })
     ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Trocar de Organization" })
-    ).toBeVisible();
+    await expect(organizationMenu(page)).toBeVisible();
   });
 }
 
 test.describe("as a Member of two Organizations", () => {
   test.use({ storageState: signedOut });
-
-  function switcher(page: Page) {
-    return page.getByRole("button", { name: "Trocar de Organization" });
-  }
-
-  async function switchTo(page: Page, organization: string) {
-    await switcher(page).click();
-    await page.getByRole("menuitemradio", { name: organization }).click();
-    await expect(switcher(page)).toContainText(organization);
-  }
 
   test("sees only the active Organization's notes, also after a reload", async ({
     page,
@@ -180,20 +169,20 @@ test.describe("as a Member of two Organizations", () => {
     expect(response.status()).toBe(200);
 
     await createNote(page, acmeNote, "nota da Acme");
-    await expect(switcher(page)).toContainText("Acme");
+    await expect(organizationMenu(page)).toContainText("Acme");
     await expect(noteLink(page, acmeNote)).toBeVisible();
 
-    await switchTo(page, "Globex");
+    await switchOrganization(page, "Globex");
     await expect(noteLink(page, acmeNote)).toHaveCount(0);
     await createNote(page, globexNote, "nota da Globex");
     await expect(noteLink(page, globexNote)).toBeVisible();
 
     await page.reload();
-    await expect(switcher(page)).toContainText("Globex");
+    await expect(organizationMenu(page)).toContainText("Globex");
     await expect(noteLink(page, globexNote)).toBeVisible();
     await expect(noteLink(page, acmeNote)).toHaveCount(0);
 
-    await switchTo(page, "Acme");
+    await switchOrganization(page, "Acme");
     await expect(noteLink(page, acmeNote)).toBeVisible();
     await expect(noteLink(page, globexNote)).toHaveCount(0);
   });

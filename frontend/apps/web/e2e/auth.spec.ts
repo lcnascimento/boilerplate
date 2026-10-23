@@ -6,7 +6,7 @@ import { SIGNED_IN_HOME } from "../shared/auth/routes";
 import { signedOut } from "./auth-state";
 
 const protectedPages = [
-  "/profile/preferences",
+  "/settings/preferences",
   // example:begin
   "/notes",
   // example:end
@@ -72,7 +72,7 @@ test.describe("signed out", () => {
     await page.getByRole("menuitem", { name: "Sair" }).click();
 
     await expect(page).toHaveURL("/sign-in");
-    await page.goto("/profile/preferences");
+    await page.goto("/settings/preferences");
     await expect(page).toHaveURL(/\/sign-in\?callbackUrl=/);
   });
 

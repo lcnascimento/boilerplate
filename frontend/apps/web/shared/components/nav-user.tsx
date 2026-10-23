@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, Languages, LogOut, Palette } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
@@ -16,9 +16,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@boilerplate/ui/components/dropdown-menu";
 import {
@@ -31,8 +28,6 @@ import { getInitials } from "@boilerplate/utils";
 
 import { useSignOut } from "@/shared/hooks/use-sign-out";
 import { routesIn } from "@/shared/navigation";
-
-import { LocaleRadioItems, ThemeRadioItems } from "./menu-radio-items";
 
 import type { User } from "@boilerplate/types";
 
@@ -64,7 +59,6 @@ function UserIdentity({ user }: NavUserProps) {
 export function NavUser({ user }: NavUserProps) {
   const t = useTranslations();
   const tNav = useTranslations("nav");
-  const tProfile = useTranslations("profile");
   const tAuth = useTranslations("auth");
   const { isMobile } = useSidebar();
   const { signOut, isSigningOut } = useSignOut();
@@ -96,7 +90,7 @@ export function NavUser({ user }: NavUserProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              {routesIn("userMenu").map(({ href, labelKey, icon: Icon }) => (
+              {routesIn("account").map(({ href, labelKey, icon: Icon }) => (
                 <DropdownMenuItem key={href} asChild>
                   <Link href={href}>
                     <Icon aria-hidden />
@@ -104,28 +98,6 @@ export function NavUser({ user }: NavUserProps) {
                   </Link>
                 </DropdownMenuItem>
               ))}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Palette aria-hidden />
-                  {tProfile("theme")}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <ThemeRadioItems />
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Languages aria-hidden />
-                  {tProfile("language")}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <LocaleRadioItems />
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
 
