@@ -15,7 +15,9 @@ export default defineProject({
     browser: {
       enabled: true,
       headless: true,
-      provider: playwright(),
+      provider: playwright({
+        launchOptions: { args: ["--enable-logging=stderr", "--v=0"] },
+      }),
       viewport: { width: 1280, height: 800 },
       instances: [{ browser: "chromium" }],
     },

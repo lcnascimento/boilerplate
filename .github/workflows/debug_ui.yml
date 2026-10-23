@@ -10,8 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
-        mode: [backend_turbo, turbo]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        mode: [backend_turbo]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,10 +24,10 @@ jobs:
         shell: bash
         env:
           MODE: ${{ matrix.mode }}
-          DEBUG: vite:deps
+          DEBUG: vite:deps,vite:time,pw:browser*
         run: |
           nproc; uname -m
-          runs=3
+          runs=1
           red=0
           for i in $(seq 1 $runs); do
             rm -rf frontend/packages/ui/node_modules/.cache frontend/packages/ui/node_modules/.vite
