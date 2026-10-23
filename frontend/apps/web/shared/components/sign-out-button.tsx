@@ -12,7 +12,13 @@ export function SignOutButton() {
   const { signOut, isSigningOut } = useSignOut();
 
   return (
-    <Button aria-busy={isSigningOut} disabled={isSigningOut} onClick={signOut}>
+    <Button
+      aria-busy={isSigningOut}
+      disabled={isSigningOut}
+      size="sm"
+      variant="ghost"
+      onClick={signOut}
+    >
       <LogOut aria-hidden />
       {t("signOut")}
     </Button>

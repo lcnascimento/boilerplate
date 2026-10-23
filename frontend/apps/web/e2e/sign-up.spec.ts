@@ -1,25 +1,17 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  expect,
-  test,
-  type APIRequestContext,
-  type Page,
-} from "@playwright/test";
-import { Client } from "pg";
-import { z } from "zod";
+import { expect, test, type Page } from "@playwright/test";
 
 import { ACME_OWNER } from "../scripts/iam-seed/users";
 import { SIGNED_IN_HOME } from "../shared/auth/routes";
 
 import { signedOut } from "./auth-state";
-import { IAM_DATABASE_URL } from "./stack";
+import { organizationMenu } from "./organization-menu";
 
 interface Visitor {
   name: string;
   email: string;
   password: string;
-  organizationName: string;
 }
 
 function newVisitor(): Visitor {
@@ -28,7 +20,6 @@ function newVisitor(): Visitor {
     name: `Ada ${id}`,
     email: `e2e-sign-up-${id}@example.test`,
     password: "e2e-password",
-    organizationName: `Analytical ${id}`,
   };
 }
 
@@ -36,105 +27,59 @@ async function fillSignUp(page: Page, visitor: Visitor) {
   await page.getByLabel("Nome", { exact: true }).fill(visitor.name);
   await page.getByLabel("Email").fill(visitor.email);
   await page.getByLabel("Senha").fill(visitor.password);
-  await page.getByLabel("Nome da Organization").fill(visitor.organizationName);
   await page.getByRole("button", { name: "Criar conta" }).click();
-}
-
-const signedUpSchema = z.object({ user: z.object({ id: z.string() }) });
-
-const organizationsSchema = z.array(
-  z.object({ id: z.string(), name: z.string() })
-);
-
-async function signUpThroughApi(
-  request: APIRequestContext,
-  visitor: Visitor
-): Promise<string> {
-  const response = await request.post("/api/auth/sign-up/email", {
-    data: visitor,
-  });
-  expect(response.status()).toBe(200);
-  const { user } = signedUpSchema.parse(await response.json());
-  return user.id;
-}
-
-async function organizationsOf(
-  request: APIRequestContext
-): Promise<{ id: string; name: string }[]> {
-  const response = await request.get("/api/auth/organization/list");
-  expect(response.status()).toBe(200);
-  return organizationsSchema.parse(await response.json());
-}
-
-async function inIamDatabase(
-  run: (client: Client) => Promise<unknown>
-): Promise<void> {
-  const client = new Client({ connectionString: IAM_DATABASE_URL });
-  await client.connect();
-  try {
-    await run(client);
-  } finally {
-    await client.end();
-  }
-}
-
-async function undoSignUpOrganization(
-  userId: string,
-  organizationName: string
-): Promise<void> {
-  await inIamDatabase(async (client) => {
-    await client.query(
-      `DELETE FROM organization WHERE id IN (SELECT "organizationId" FROM member WHERE "userId" = $1)`,
-      [userId]
-    );
-    await client.query(
-      `UPDATE session SET "activeOrganizationId" = NULL WHERE "userId" = $1`,
-      [userId]
-    );
-    await client.query(
-      `UPDATE "user" SET "pendingOrganizationName" = $2 WHERE id = $1`,
-      [userId, organizationName]
-    );
-  });
 }
 
 test.use({ storageState: signedOut });
 
-test("a sign-up through the API without an organization name is refused", async ({
-  request,
-}) => {
-  const { organizationName: _, ...withoutOrganization } = newVisitor();
-
-  const response = await request.post("/api/auth/sign-up/email", {
-    data: withoutOrganization,
-  });
-
-  expect(response.status()).toBe(400);
-  expect(await response.json()).toMatchObject({
-    code: "INVALID_ORGANIZATION_NAME",
-  });
-});
-
-test("a visitor signs up and lands on the home as Owner of the new organization", async ({
+test("a visitor signs up without an Organization, creates one in Criar ou entrar and is its Owner", async ({
   page,
 }) => {
   const visitor = newVisitor();
+  const organizationName = `Analytical ${randomUUID().slice(0, 8)}`;
   await page.goto("/sign-in");
   await page.getByRole("link", { name: "Cadastre-se" }).click();
   await expect(page).toHaveURL("/sign-up");
+  await expect(page.getByLabel("Nome da Organization")).toHaveCount(0);
 
   await fillSignUp(page, visitor);
 
+  await expect(page).toHaveURL("/organizations/new");
+  await expect(
+    page.getByRole("heading", { name: "Criar ou entrar" })
+  ).toBeVisible();
+  const before = await page.request.get("/api/auth/organization/list");
+  expect(await before.json()).toEqual([]);
+
+  await page.getByLabel("Nome da Organization").fill(organizationName);
+  await page.getByRole("button", { name: "Criar Organization" }).click();
+
   await expect(page).toHaveURL(SIGNED_IN_HOME);
+  await expect(organizationMenu(page)).toContainText(organizationName);
   const active = await page.request.get(
     "/api/auth/organization/get-full-organization"
   );
   expect(active.status()).toBe(200);
   expect(await active.json()).toMatchObject({
-    name: visitor.organizationName,
+    name: organizationName,
     slug: expect.stringMatching(/^analytical-[a-z0-9]+-[a-z0-9]{6}$/),
     members: [{ role: "owner", user: { email: visitor.email } }],
   });
+});
+
+test("a User without an Organization is sent to Criar ou entrar from any signed-in page", async ({
+  page,
+}) => {
+  const response = await page.request.post("/api/auth/sign-up/email", {
+    data: newVisitor(),
+  });
+  expect(response.status()).toBe(200);
+
+  await page.goto("/settings/preferences");
+
+  await expect(page).toHaveURL("/organizations/new");
+  await expect(organizationMenu(page)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Voltar para/ })).toHaveCount(0);
 });
 
 test("an email already in use is flagged on its field", async ({ page }) => {
@@ -164,42 +109,4 @@ test("a short password is flagged on its field", async ({ page }) => {
   await expect(
     page.getByText("A senha precisa ter entre 8 e 128 caracteres.")
   ).toBeVisible();
-});
-
-test("the signed-in layout creates a missing sign-up organization once", async ({
-  page,
-}) => {
-  const visitor = newVisitor();
-  const userId = await signUpThroughApi(page.request, visitor);
-  await undoSignUpOrganization(userId, visitor.organizationName);
-  expect(await organizationsOf(page.request)).toEqual([]);
-
-  await page.goto("/settings/preferences");
-  const [created] = await organizationsOf(page.request);
-  expect(created).toMatchObject({ name: visitor.organizationName });
-
-  await page.reload();
-  expect(await organizationsOf(page.request)).toEqual([created]);
-  const active = await page.request.get(
-    "/api/auth/organization/get-full-organization"
-  );
-  expect(await active.json()).toMatchObject({
-    id: created?.id,
-    members: [{ role: "owner", user: { email: visitor.email } }],
-  });
-});
-
-test("a user who lost every membership does not get a new organization", async ({
-  page,
-}) => {
-  const userId = await signUpThroughApi(page.request, newVisitor());
-  expect(await organizationsOf(page.request)).toHaveLength(1);
-  await inIamDatabase((client) =>
-    client.query(`DELETE FROM member WHERE "userId" = $1`, [userId])
-  );
-
-  await page.goto("/settings/preferences");
-  await page.reload();
-
-  expect(await organizationsOf(page.request)).toEqual([]);
 });

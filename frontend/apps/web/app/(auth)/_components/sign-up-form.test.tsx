@@ -8,7 +8,6 @@ import { messages } from "@boilerplate/i18n";
 
 import { appMessages } from "@/shared/_messages";
 import { authClient } from "@/shared/auth/client";
-import { SIGNED_IN_HOME } from "@/shared/auth/routes";
 
 import { SignUpForm } from "./sign-up-form";
 
@@ -53,10 +52,6 @@ async function fillForm(
   await user.type(screen.getByLabelText("Nome"), " Ada Lovelace ");
   await user.type(screen.getByLabelText("Email"), "ada@example.test");
   await user.type(screen.getByLabelText("Senha"), password);
-  await user.type(
-    screen.getByLabelText("Nome da Organization"),
-    " Analytical "
-  );
   await user.click(screen.getByRole("button", { name: "Criar conta" }));
 }
 
@@ -83,7 +78,7 @@ describe("SignUpForm", () => {
 
     await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-    for (const label of ["Nome", "Email", "Senha", "Nome da Organization"]) {
+    for (const label of ["Nome", "Email", "Senha"]) {
       expect(fieldError(label)).toBe("Campo obrigatório");
     }
     expect(signUpMock).not.toHaveBeenCalled();
@@ -138,7 +133,17 @@ describe("SignUpForm", () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("signs up with the trimmed fields and goes to the signed-in home", async () => {
+  it("asks only for name, email and password", () => {
+    renderForm();
+
+    expect(screen.getAllByRole("textbox").map((field) => field.id)).toEqual([
+      "sign-up-name",
+      "sign-up-email",
+    ]);
+    expect(screen.getByLabelText("Senha")).toBeTruthy();
+  });
+
+  it("signs up with the trimmed fields and goes to create or join an Organization", async () => {
     signUpMock.mockResolvedValue({ data: {}, error: null } as SignUpResult);
     const user = renderForm();
 
@@ -148,9 +153,8 @@ describe("SignUpForm", () => {
       name: "Ada Lovelace",
       email: "ada@example.test",
       password: "s3cret-pass",
-      organizationName: "Analytical",
     });
-    expect(replace).toHaveBeenCalledWith(SIGNED_IN_HOME);
+    expect(replace).toHaveBeenCalledWith("/organizations/new");
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 });

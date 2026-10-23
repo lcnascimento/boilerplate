@@ -4,4 +4,5 @@ export { NavBreadcrumb } from "./nav-breadcrumb";
 export { NavHeader } from "./nav-header";
 export { NavSidebar } from "./nav-sidebar";
 export { NavUser } from "./nav-user";
+export { SignOutButton } from "./sign-out-button";
 export { ThemeSwitcher } from "./theme-switcher";

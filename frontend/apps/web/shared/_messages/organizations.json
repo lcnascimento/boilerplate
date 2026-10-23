@@ -3,14 +3,36 @@
     "menuLabel": "Abrir menu da Organization",
     "switch": "Trocar Organization",
     "switchFailed": "Não foi possível trocar de Organization. Tente de novo.",
-    "noOrganizationTitle": "Você não faz parte de nenhuma Organization",
-    "noOrganizationDescription": "Você foi removido das Organizations de que era Member, ou saiu delas. Peça a um Owner ou Admin que adicione você de novo, ou saia e entre com outra conta."
+    "createOrJoin": "Criar ou entrar",
+    "createOrJoinDescription": "Crie uma Organization para começar a usar o Boilerplate.",
+    "createTitle": "Criar uma Organization",
+    "createDescription": "Você será o Owner dela, e ela passa a ser a sua Organization ativa.",
+    "nameLabel": "Nome da Organization",
+    "create": "Criar Organization",
+    "backTo": "Voltar para {organization}",
+    "signedInAs": "Conectado como {email}",
+    "errors": {
+      "invalidInput": "Informe um nome de Organization válido.",
+      "organizationLimit": "Você já participa de {limit} Organizations, o máximo por User. Saia de uma delas para criar outra.",
+      "unexpected": "Não foi possível criar a Organization. Tente de novo."
+    }
   },
   "en": {
     "menuLabel": "Open Organization menu",
     "switch": "Switch Organization",
     "switchFailed": "Could not switch Organization. Try again.",
-    "noOrganizationTitle": "You are not part of any Organization",
-    "noOrganizationDescription": "You were removed from the Organizations you were a Member of, or you left them. Ask an Owner or Admin to add you again, or sign out and sign in with another account."
+    "createOrJoin": "Create or join",
+    "createOrJoinDescription": "Create an Organization to start using Boilerplate.",
+    "createTitle": "Create an Organization",
+    "createDescription": "You will be its Owner, and it becomes your active Organization.",
+    "nameLabel": "Organization name",
+    "create": "Create Organization",
+    "backTo": "Back to {organization}",
+    "signedInAs": "Signed in as {email}",
+    "errors": {
+      "invalidInput": "Enter a valid Organization name.",
+      "organizationLimit": "You are already in {limit} Organizations, the most a User can join. Leave one of them to create another.",
+      "unexpected": "Could not create the Organization. Try again."
+    }
   }
 }
