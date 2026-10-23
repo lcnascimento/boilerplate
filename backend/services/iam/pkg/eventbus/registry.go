@@ -1,13 +1,14 @@
-package events
+package eventbus
 
 import (
 	"context"
+	"io/fs"
 
 	"github.com/twmb/franz-go/pkg/sr"
 )
 
-func RegisterSchemas(ctx context.Context, client *sr.Client) (SchemaIDs, error) {
-	schemas, err := loadSchemas()
+func RegisterSchemas(ctx context.Context, client *sr.Client, protos fs.FS) (SchemaIDs, error) {
+	schemas, err := loadSchemas(protos)
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +34,8 @@ func RegisterSchemas(ctx context.Context, client *sr.Client) (SchemaIDs, error) 
 	return ids, nil
 }
 
-func LookupSchemaIDs(ctx context.Context, client *sr.Client) (SchemaIDs, error) {
-	schemas, err := loadSchemas()
+func LookupSchemaIDs(ctx context.Context, client *sr.Client, protos fs.FS) (SchemaIDs, error) {
+	schemas, err := loadSchemas(protos)
 	if err != nil {
 		return nil, err
 	}

@@ -3,32 +3,26 @@ module github.com/lcnascimento/boilerplate/backend/services/notes/pkg
 go 1.27.3
 
 require (
-	github.com/IBM/sarama v1.61.1
-	github.com/ThreeDotsLabs/watermill v1.5.3
-	github.com/ThreeDotsLabs/watermill-kafka/v3 v3.1.4
-	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/google/uuid v1.6.0
 	github.com/lcnascimento/boilerplate/backend/services/iam/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/errors v1.9.4
-	github.com/lcnascimento/go-kit/o11y v1.8.1
 	github.com/lcnascimento/go-kit/util v1.4.6
 	github.com/lcnascimento/go-kit/validator v1.11.1
 	github.com/stretchr/testify v1.12.1
-	github.com/testcontainers/testcontainers-go v0.44.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.44.0
 	github.com/twmb/franz-go/pkg/sr v1.8.0
-	go.opentelemetry.io/otel v1.47.0
-	go.opentelemetry.io/otel/metric v1.47.0
-	go.opentelemetry.io/otel/trace v1.47.0
 	google.golang.org/protobuf v1.36.12
 )
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20261006220739-8c912ac31dd4 // indirect
+	github.com/IBM/sarama v1.61.1 // indirect
 	github.com/Microsoft/go-winio v0.6.3 // indirect
+	github.com/ThreeDotsLabs/watermill v1.5.3 // indirect
+	github.com/ThreeDotsLabs/watermill-kafka/v3 v3.1.4 // indirect
 	github.com/caarlos0/env/v10 v10.0.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -62,6 +56,7 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/lcnascimento/go-kit/env v1.2.3 // indirect
+	github.com/lcnascimento/go-kit/o11y v1.8.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
@@ -85,6 +80,8 @@ require (
 	github.com/shirou/gopsutil/v4 v4.26.7 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
+	github.com/testcontainers/testcontainers-go v0.44.0 // indirect
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.44.0 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/twmb/franz-go v1.20.7 // indirect
@@ -94,11 +91,14 @@ require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.20.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
 	go.opentelemetry.io/contrib/processors/minsev v0.16.2 // indirect
+	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.23.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.23.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect

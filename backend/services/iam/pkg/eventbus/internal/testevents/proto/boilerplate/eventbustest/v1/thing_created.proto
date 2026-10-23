@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package boilerplate.eventbustest.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/internal/testevents;testevents";
+
+message ThingCreated {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp created_at = 3;
+}

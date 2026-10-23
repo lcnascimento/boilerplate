@@ -2,12 +2,18 @@ module github.com/lcnascimento/boilerplate/backend/services/audit
 
 go 1.27.3
 
+replace github.com/lcnascimento/boilerplate/backend/services/iam/pkg => ../iam/pkg
+
+// example:begin
 replace github.com/lcnascimento/boilerplate/backend/services/notes/pkg => ../notes/pkg
+
+// example:end
 
 require (
 	github.com/exaring/otelpgx v0.13.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgx/v5 v5.11.0
+	github.com/lcnascimento/boilerplate/backend/services/iam/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/boilerplate/backend/services/notes/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/env v1.2.3
 	github.com/lcnascimento/go-kit/errors v1.9.4

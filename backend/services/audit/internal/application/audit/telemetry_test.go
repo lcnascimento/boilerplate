@@ -46,8 +46,8 @@ func TestRecord_SpanCarriesTheCloudEventsAttributes(t *testing.T) {
 		source, _ := attrs.Value("cloudevents.event_source")
 		eventType, _ := attrs.Value("cloudevents.event_type")
 
-		require.Equal(t, "notes", source.AsString())
-		require.Equal(t, "boilerplate.notes.v1.NoteDeleted", eventType.AsString())
+		require.Equal(t, "iam", source.AsString())
+		require.Equal(t, "boilerplate.iam.v1.UserDeleted", eventType.AsString())
 
 		return
 	}

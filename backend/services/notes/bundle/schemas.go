@@ -14,6 +14,8 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/o11y"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
@@ -61,29 +63,29 @@ func registerSchemas() int {
 	return 0
 }
 
-func register(ctx context.Context) (events.SchemaIDs, error) {
+func register(ctx context.Context) (eventbus.SchemaIDs, error) {
 	client, err := newRegistryClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return events.RegisterSchemas(ctx, client)
+	return eventbus.RegisterSchemas(ctx, client, events.Protos)
 }
 
-func newSchemaIDs(lifecycle fx.Lifecycle) (events.SchemaIDs, error) {
+func newSchemaIDs(lifecycle fx.Lifecycle) (eventbus.SchemaIDs, error) {
 	client, err := newRegistryClient()
 	if err != nil {
 		return nil, err
 	}
 
-	ids := events.SchemaIDs{}
+	ids := eventbus.SchemaIDs{}
 
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, schemaLookupTimeout)
 			defer cancel()
 
-			found, err := events.LookupSchemaIDs(ctx, client)
+			found, err := eventbus.LookupSchemaIDs(ctx, client, events.Protos)
 			if err != nil {
 				return err
 			}

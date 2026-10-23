@@ -15,3 +15,11 @@ local_resource(
     ignore=['./**/*_test.go'],
     resource_deps=['iam-db'],
 )
+
+local_resource(
+    'iam-topics',
+    labels=['iam'],
+    cmd='make kafka.topics -s',
+    deps=['Makefile'],
+    resource_deps=['schema-registry'],
+)
