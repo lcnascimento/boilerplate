@@ -12,6 +12,7 @@ import {
   runAsActor,
 } from "./audit-connection";
 import { getIam } from "./auth";
+import { fixtureDatabase } from "./test-database";
 
 const KEY = "a-test-ip-hash-key-that-is-long-enough";
 const IP = "203.0.113.7";
@@ -78,7 +79,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     afterAll(async () => {

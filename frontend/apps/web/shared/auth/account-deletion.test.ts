@@ -12,6 +12,7 @@ import { deleteAccount, accountDeletionBlockers } from "./account-deletion";
 import { organizationIdSchema, userIdSchema } from "./actor-ids";
 import { hashIp } from "./audit-connection";
 import { getIam } from "./auth";
+import { fixtureDatabase } from "./test-database";
 
 import type { Pool } from "pg";
 
@@ -47,7 +48,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     async function removeFixtures() {

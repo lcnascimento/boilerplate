@@ -3,7 +3,14 @@ import { createHmac } from "node:crypto";
 
 import { tryGetCurrentAuthEndpointContext } from "@better-auth/core/context";
 import { getIP } from "better-auth/api";
-import { CompiledQuery, Kysely, PostgresDialect, sql } from "kysely";
+import {
+  CompiledQuery,
+  Kysely,
+  PostgresDialect,
+  sql,
+  type Transaction,
+  type TransactionBuilder,
+} from "kysely";
 
 import type { ActorIds } from "./actor-ids";
 import type { SignInFailureReason } from "./login-failures";
@@ -76,11 +83,27 @@ const applySettings = `SELECT
   set_config('app.actor_organization_id', $2, false),
   set_config('app.ip_hash', $3, false)`;
 
+const openTransactions = new AsyncLocalStorage<Transaction<unknown>>();
+
+class TransactionTrackingKysely extends Kysely<unknown> {
+  override transaction(): TransactionBuilder<unknown> {
+    const builder = super.transaction();
+    const execute = builder.execute.bind(builder);
+    builder.execute = (run) =>
+      execute((trx) => openTransactions.run(trx, () => run(trx)));
+    return builder;
+  }
+}
+
+export function currentConnection(database: Kysely<unknown>): Kysely<unknown> {
+  return openTransactions.getStore() ?? database;
+}
+
 export function createAuditedDatabase(
   pool: Pool,
   settings: () => ConnectionSettings
 ): Kysely<unknown> {
-  return new Kysely({
+  return new TransactionTrackingKysely({
     dialect: new PostgresDialect({
       pool,
       onReserveConnection: async (connection) => {

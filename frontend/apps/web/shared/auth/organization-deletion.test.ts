@@ -9,8 +9,8 @@ import {
 } from "vitest";
 
 import { organizationIdSchema, userIdSchema } from "./actor-ids";
-import { getIam } from "./auth";
 import { deleteOrganization } from "./organization-deletion";
+import { fixtureDatabase } from "./test-database";
 
 import type { Actor } from "./actor";
 import type { Pool } from "pg";
@@ -44,7 +44,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     async function removeFixtures() {

@@ -10,6 +10,7 @@ import {
 
 import { getIam } from "./auth";
 import { ORGANIZATION_LIMIT } from "./policy";
+import { fixtureDatabase } from "./test-database";
 
 import type { Pool } from "pg";
 
@@ -103,7 +104,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     }
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     beforeEach(async () => {
