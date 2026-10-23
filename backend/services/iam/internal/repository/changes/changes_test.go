@@ -1,7 +1,9 @@
 package changes_test
 
 import (
+	"context"
 	"encoding/json"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -63,6 +66,7 @@ func TestComponentRepository_SignUpWritesOneUserCreated(t *testing.T) {
 		"ce_specversion":   "1.0",
 		"content-type":     "application/protobuf",
 		"ce_correlationid": tx.id,
+		"ce_actorid":       "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 	})
 	require.Equal(t, 11, got[0].schemaID)
 	requireProtoEqual(t, &events.UserCreated{
@@ -95,15 +99,16 @@ func TestComponentRepository_EventsWithoutAnActorOmitTheActorAndTheIPHash(t *tes
 
 	repo, pool := newRepository(t)
 	signUp(t, pool, ada)
+	inTx(t, pool, `UPDATE account SET password = 'new-hash' WHERE "userId" = $1`, ada)
 
 	_, err := repo.Translate(t.Context(), batch)
 	require.NoError(t, err)
 
 	got := outboxEvents(t, pool)
-	require.Len(t, got, 1)
-	require.NotContains(t, got[0].headers, "ce_actorid")
-	require.NotContains(t, got[0].headers, "ce_actororganizationid")
-	require.NotContains(t, got[0].headers, "ce_iphash")
+	require.Equal(t, []string{userCreatedType, passwordChangedType}, eventTypes(got))
+	require.NotContains(t, got[1].headers, "ce_actorid")
+	require.NotContains(t, got[1].headers, "ce_actororganizationid")
+	require.NotContains(t, got[1].headers, "ce_iphash")
 }
 
 func TestComponentRepository_PasswordUpdateWritesPasswordChanged(t *testing.T) {
@@ -312,18 +317,22 @@ func TestComponentRepository_OldestPendingAgeIsTheAgeOfTheOldestChange(t *testin
 	require.InDelta(t, (10 * time.Minute).Seconds(), age.Seconds(), 5)
 }
 
-func TestComponentRepository_ConcurrentStepsTranslateEachChangeOnce(t *testing.T) {
+func TestComponentRepository_ConcurrentStepsPublishTheChangesInTheirOrder(t *testing.T) {
 	t.Parallel()
 
 	repo, pool := newRepository(t)
 
-	const users = 20
+	const users = 40
+
+	inOrder := make([]string, 0, users)
 
 	for range users {
-		signUp(t, pool, uuid.New())
+		userID := uuid.New()
+		signUp(t, pool, userID)
+		inOrder = append(inOrder, "user_"+userID.String())
 	}
 
-	const steps = 4
+	const steps = 8
 
 	var wg sync.WaitGroup
 
@@ -333,9 +342,13 @@ func TestComponentRepository_ConcurrentStepsTranslateEachChangeOnce(t *testing.T
 		wg.Go(func() {
 			for {
 				translated, err := repo.Translate(t.Context(), 3)
-				if err != nil || len(translated) == 0 {
+				if err != nil {
 					errs[i] = err
 
+					return
+				}
+
+				if len(translated) == 0 && pendingChanges(t, pool) == 0 {
 					return
 				}
 			}
@@ -348,16 +361,51 @@ func TestComponentRepository_ConcurrentStepsTranslateEachChangeOnce(t *testing.T
 		require.NoError(t, err)
 	}
 
-	subjects := map[string]int{}
+	published := make([]string, 0, users)
 	for _, event := range outboxEvents(t, pool) {
-		subjects[event.headers["ce_subject"]]++
+		published = append(published, event.headers["ce_subject"])
 	}
 
-	require.Len(t, subjects, users)
+	require.Equal(t, inOrder, published)
+}
 
-	for subject, count := range subjects {
-		require.Equal(t, 1, count, subject)
+func TestComponentRepository_AStepTranslatesNothingWhileAnotherStepIsInFlight(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepository(t)
+	first, second := uuid.New(), uuid.New()
+	signUp(t, pool, first)
+	signUp(t, pool, second)
+
+	paused, release := make(chan struct{}), make(chan struct{})
+	inFlight := changes.New(pausingPool(t, pool, paused, release), schemaIDs)
+
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		_, err := inFlight.Translate(t.Context(), 1)
+		assert.NoError(t, err)
+	})
+
+	<-paused
+
+	translated, err := repo.Translate(t.Context(), batch)
+
+	close(release)
+	wg.Wait()
+
+	require.NoError(t, err)
+	require.Empty(t, translated)
+
+	_, err = repo.Translate(t.Context(), batch)
+	require.NoError(t, err)
+
+	published := make([]string, 0, 2)
+	for _, event := range outboxEvents(t, pool) {
+		published = append(published, event.headers["ce_subject"])
 	}
+
+	require.Equal(t, []string{"user_" + first.String(), "user_" + second.String()}, published)
 }
 
 type transaction struct {
@@ -511,6 +559,35 @@ func requireProtoEqual(t *testing.T, want, got proto.Message) {
 	t.Helper()
 
 	require.True(t, proto.Equal(want, got), "want %v, got %v", want, got)
+}
+
+type pauseBeforeDelete struct {
+	paused  chan<- struct{}
+	release <-chan struct{}
+}
+
+func (p pauseBeforeDelete) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	if strings.Contains(data.SQL, "DELETE FROM identity_change") {
+		close(p.paused)
+		<-p.release
+	}
+
+	return ctx
+}
+
+func (pauseBeforeDelete) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+
+func pausingPool(t *testing.T, pool *pgxpool.Pool, paused chan<- struct{}, release <-chan struct{}) *pgxpool.Pool {
+	t.Helper()
+
+	cfg := pool.Config()
+	cfg.ConnConfig.Tracer = pauseBeforeDelete{paused: paused, release: release}
+
+	pausing, err := pgxpool.NewWithConfig(t.Context(), cfg)
+	require.NoError(t, err)
+	t.Cleanup(pausing.Close)
+
+	return pausing
 }
 
 func newRepository(t *testing.T) (*changes.Repository, *pgxpool.Pool) {

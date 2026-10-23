@@ -43,6 +43,15 @@ func (r *Repository) Translate(ctx context.Context, limit int32) ([]*idomain.Eve
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		queries := db.New(tx)
 
+		locked, err := queries.TryLockTranslation(ctx)
+		if err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		if !locked {
+			return nil
+		}
+
 		rows, err := queries.LockChanges(ctx, limit)
 		if err != nil {
 			return ErrQuery.WithCause(err)

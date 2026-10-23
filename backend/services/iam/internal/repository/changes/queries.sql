@@ -1,3 +1,6 @@
+-- name: TryLockTranslation :one
+SELECT pg_try_advisory_xact_lock(hashtext('identity_change_translation'))::bool AS locked;
+
 -- name: LockChanges :many
 SELECT
     id,
