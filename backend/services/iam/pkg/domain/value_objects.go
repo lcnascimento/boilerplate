@@ -24,6 +24,10 @@ func ParseUserID(s string) (UserID, error) {
 	return UserID{id}, nil
 }
 
+func UserIDFromUUID(u uuid.UUID) UserID {
+	return UserID{util.CanonicalIDFromUUID(userIDPrefix, u)}
+}
+
 type OrganizationID struct {
 	util.CanonicalID
 }
