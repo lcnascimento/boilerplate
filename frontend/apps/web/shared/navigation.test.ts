@@ -21,6 +21,7 @@ describe("routesIn", () => {
 
   it("puts the account settings in the User menu", () => {
     expect(routesIn("account").map(({ href }) => href)).toEqual([
+      "/settings/account",
       "/settings/preferences",
     ]);
   });
@@ -81,6 +82,17 @@ describe("breadcrumbTrail", () => {
     expect(breadcrumbTrail("/settings/members")).toEqual([
       { href: "/", labelKey: "nav.home", current: false },
       { href: "/settings/members", labelKey: "members.title", current: true },
+    ]);
+  });
+
+  it("names the account settings page", () => {
+    expect(breadcrumbTrail("/settings/account")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      {
+        href: "/settings/account",
+        labelKey: "nav.accountSettings",
+        current: true,
+      },
     ]);
   });
 

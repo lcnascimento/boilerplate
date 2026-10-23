@@ -1,0 +1,84 @@
+{
+  "pt-BR": {
+    "description": "Nome, senha e exclusão da sua conta.",
+    "nameTitle": "Nome",
+    "nameDescription": "O nome que os outros Members veem.",
+    "nameLabel": "Seu nome",
+    "save": "Salvar",
+    "renamed": "Nome atualizado.",
+    "renameErrors": {
+      "invalidInput": "Confira o nome e tente de novo.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
+    },
+    "passwordTitle": "Senha",
+    "passwordDescription": "Trocar a senha encerra as suas outras sessões. Esta continua aberta.",
+    "currentPasswordLabel": "Senha atual",
+    "newPasswordLabel": "Nova senha",
+    "passwordPolicy": "A senha precisa ter entre {min} e {max} caracteres.",
+    "changePassword": "Trocar senha",
+    "passwordChanged": "Senha trocada. As outras sessões foram encerradas.",
+    "passwordErrors": {
+      "invalidPassword": "A senha atual está incorreta.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
+    },
+    "deleteTitle": "Excluir a conta",
+    "deleteDescription": "Apaga a sua conta e as Organizations em que você é o único Member. Não dá para desfazer.",
+    "blockedDescription": "Você é o Owner de Organizations com outros Members. Transfira a propriedade de cada uma antes de excluir a conta.",
+    "blockersLabel": "Organizations que impedem a exclusão",
+    "transferOwnership": "Transferir a propriedade de {name}",
+    "switchFailed": "Não foi possível abrir {name}. Tente de novo.",
+    "delete": "Excluir conta",
+    "deleteConfirmTitle": "Excluir a sua conta?",
+    "deleteConfirmDescription": "Você sai de todas as Organizations, e as Organizations em que você é o único Member são excluídas. Não dá para desfazer.",
+    "deleteConfirmLabel": "Digite a sua senha para confirmar",
+    "deleteConfirm": "Excluir",
+    "deleted": "Conta excluída.",
+    "deleteErrors": {
+      "invalidInput": "Digite a sua senha.",
+      "invalidPassword": "A senha está incorreta.",
+      "ownsSharedOrganizations": "Transfira a propriedade das suas Organizations com outros Members antes de excluir a conta.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
+    }
+  },
+  "en": {
+    "description": "Name, password and deletion of your account.",
+    "nameTitle": "Name",
+    "nameDescription": "The name the other Members see.",
+    "nameLabel": "Your name",
+    "save": "Save",
+    "renamed": "Name updated.",
+    "renameErrors": {
+      "invalidInput": "Check the name and try again.",
+      "unexpected": "Could not finish. Try again."
+    },
+    "passwordTitle": "Password",
+    "passwordDescription": "Changing the password ends your other sessions. This one stays open.",
+    "currentPasswordLabel": "Current password",
+    "newPasswordLabel": "New password",
+    "passwordPolicy": "The password must have between {min} and {max} characters.",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed. Your other sessions were ended.",
+    "passwordErrors": {
+      "invalidPassword": "The current password is incorrect.",
+      "unexpected": "Could not finish. Try again."
+    },
+    "deleteTitle": "Delete the account",
+    "deleteDescription": "Deletes your account and the Organizations where you are the only Member. This cannot be undone.",
+    "blockedDescription": "You are the Owner of Organizations with other Members. Transfer the ownership of each one before deleting the account.",
+    "blockersLabel": "Organizations that block the deletion",
+    "transferOwnership": "Transfer the ownership of {name}",
+    "switchFailed": "Could not open {name}. Try again.",
+    "delete": "Delete account",
+    "deleteConfirmTitle": "Delete your account?",
+    "deleteConfirmDescription": "You leave every Organization, and the Organizations where you are the only Member are deleted. This cannot be undone.",
+    "deleteConfirmLabel": "Type your password to confirm",
+    "deleteConfirm": "Delete",
+    "deleted": "Account deleted.",
+    "deleteErrors": {
+      "invalidInput": "Type your password.",
+      "invalidPassword": "The password is incorrect.",
+      "ownsSharedOrganizations": "Transfer the ownership of your Organizations with other Members before deleting the account.",
+      "unexpected": "Could not finish. Try again."
+    }
+  }
+}
