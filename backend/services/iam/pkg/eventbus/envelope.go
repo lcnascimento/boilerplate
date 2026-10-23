@@ -1,4 +1,4 @@
-package events
+package eventbus
 
 import "time"
 
@@ -19,6 +19,8 @@ const (
 
 	headerActorID             = "ce_actorid"
 	headerActorOrganizationID = "ce_actororganizationid"
+	headerIPHash              = "ce_iphash"
+	headerCorrelationID       = "ce_correlationid"
 )
 
 type Envelope struct {
@@ -33,6 +35,8 @@ type Envelope struct {
 
 	ActorID             string
 	ActorOrganizationID string
+	IPHash              string
+	CorrelationID       string
 }
 
 func (e *Envelope) Headers() map[string]string {
@@ -53,6 +57,8 @@ func (e *Envelope) Headers() map[string]string {
 	set(headerContentType, e.DataContentType)
 	set(headerActorID, e.ActorID)
 	set(headerActorOrganizationID, e.ActorOrganizationID)
+	set(headerIPHash, e.IPHash)
+	set(headerCorrelationID, e.CorrelationID)
 
 	if !e.Time.IsZero() {
 		headers[headerTime] = e.Time.Format(time.RFC3339Nano)
@@ -79,6 +85,8 @@ func ParseEnvelope(headers map[string]string) (Envelope, error) {
 
 		ActorID:             headers[headerActorID],
 		ActorOrganizationID: headers[headerActorOrganizationID],
+		IPHash:              headers[headerIPHash],
+		CorrelationID:       headers[headerCorrelationID],
 	}
 
 	if raw := headers[headerTime]; raw != "" {

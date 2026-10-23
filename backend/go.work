@@ -2,6 +2,8 @@ go 1.27.3
 
 use ./quality
 
+use ./services/audit
+
 use ./services/iam
 
 use ./services/iam/pkg
@@ -10,7 +12,6 @@ use ./tools
 
 // example:begin
 use (
-	./services/audit
 	./services/notes
 	./services/notes/pkg
 )

@@ -10,7 +10,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application/audit"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application/internal/mocks"
@@ -36,7 +36,7 @@ func TestRecord_RepositoryErrorIsTransient(t *testing.T) {
 
 	require.ErrorIs(t, err, audit.ErrRecordEntry)
 	require.ErrorIs(t, err, errors.ErrMock)
-	require.NotErrorIs(t, err, events.ErrPermanent)
+	require.NotErrorIs(t, err, eventbus.ErrPermanent)
 }
 
 func TestRecord_InvalidEnvelopeIsPermanentAndNotInserted(t *testing.T) {
@@ -64,7 +64,7 @@ func TestRecord_InvalidEnvelopeIsPermanentAndNotInserted(t *testing.T) {
 
 			err := audit.New(repo, newValidator(t)).Record(t.Context(), entry)
 
-			require.ErrorIs(t, err, events.ErrPermanent)
+			require.ErrorIs(t, err, eventbus.ErrPermanent)
 			require.ErrorIs(t, err, audit.ErrInvalidEnvelope)
 			require.Contains(t, errors.SafeReasons(err), tc.reason)
 		})
@@ -94,16 +94,16 @@ func newValidator(t *testing.T) *validator.Validator {
 
 func validEntry() *idomain.Entry {
 	return &idomain.Entry{
-		Source:          "notes",
+		Source:          "iam",
 		ID:              "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-		Type:            "boilerplate.notes.v1.NoteDeleted",
+		Type:            "boilerplate.iam.v1.UserDeleted",
 		SpecVersion:     "1.0",
-		Subject:         "note_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
+		Subject:         "user_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
 		Time:            time.Date(2026, 10, 17, 12, 30, 0, 0, time.UTC),
 		DataContentType: "application/protobuf",
 		Headers:         map[string]string{"ce_id": "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e"},
 		Payload:         []byte{0x00, 0x00, 0x00, 0x00, 0x02, 0x00},
-		KafkaTopic:      "notes.note.v1",
+		KafkaTopic:      "iam.user.v1",
 		KafkaPartition:  1,
 		KafkaOffset:     7,
 	}

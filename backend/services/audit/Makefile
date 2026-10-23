@@ -42,4 +42,10 @@ db.reset:
 
 .PHONY: kafka.topics
 kafka.topics:
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.user.v1.audit.dlq --partitions 1 --replication-factor 1 --config retention.ms=-1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.session.v1.audit.dlq --partitions 1 --replication-factor 1 --config retention.ms=-1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.organization.v1.audit.dlq --partitions 1 --replication-factor 1 --config retention.ms=-1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.invitation.v1.audit.dlq --partitions 1 --replication-factor 1 --config retention.ms=-1
+# example:begin
 	@$(KAFKA_TOPICS) --create --if-not-exists --topic notes.note.v1.audit.dlq --partitions 1 --replication-factor 1 --config retention.ms=-1
+# example:end

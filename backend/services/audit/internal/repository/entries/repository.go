@@ -38,6 +38,8 @@ func (r *Repository) Insert(ctx context.Context, entry *idomain.Entry) error {
 
 		ActorID:             nullable(entry.ActorID),
 		ActorOrganizationID: nullable(entry.ActorOrganizationID),
+		IpHash:              nullable(entry.IPHash),
+		CorrelationID:       nullable(entry.CorrelationID),
 	})
 	if err != nil {
 		return ErrQuery.WithCause(err)

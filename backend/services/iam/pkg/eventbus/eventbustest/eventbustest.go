@@ -1,7 +1,9 @@
-package eventstest
+package eventbustest
 
 import (
 	"context"
+	"io/fs"
+	"maps"
 	"sync"
 	"testing"
 	"time"
@@ -16,20 +18,23 @@ import (
 	"github.com/twmb/franz-go/pkg/sr"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 )
 
 const (
 	Image      = "redpandadata/redpanda:v26.2.5"
 	partitions = 3
-	source     = "eventstest"
+	source     = "eventbustest"
 )
 
 type cluster struct {
 	brokers     []string
 	registryURL string
-	schemaIDs   events.SchemaIDs
+	registry    *sr.Client
 }
+
+// Concurrent first registrations of one schema race into several IDs.
+var registering sync.Mutex
 
 var startCluster = sync.OnceValues(func() (cluster, error) {
 	ctx := context.Background()
@@ -54,13 +59,7 @@ var startCluster = sync.OnceValues(func() (cluster, error) {
 		return cluster{}, err
 	}
 
-	// Concurrent first registrations of one schema race into several IDs, so register before any test runs.
-	schemaIDs, err := events.RegisterSchemas(ctx, registry)
-	if err != nil {
-		return cluster{}, err
-	}
-
-	return cluster{brokers: []string{broker}, registryURL: registryURL, schemaIDs: schemaIDs}, nil
+	return cluster{brokers: []string{broker}, registryURL: registryURL, registry: registry}, nil
 })
 
 type Env struct {
@@ -70,10 +69,10 @@ type Env struct {
 	Group       string
 
 	publisher message.Publisher
-	schemaIDs events.SchemaIDs
+	schemaIDs eventbus.SchemaIDs
 }
 
-func New(t *testing.T) *Env {
+func New(t *testing.T, protos ...fs.FS) *Env {
 	t.Helper()
 
 	c, err := startCluster()
@@ -84,7 +83,17 @@ func New(t *testing.T) *Env {
 		RegistryURL: c.registryURL,
 		Topic:       RandomName(),
 		Group:       RandomName(),
-		schemaIDs:   c.schemaIDs,
+		schemaIDs:   eventbus.SchemaIDs{},
+	}
+
+	registering.Lock()
+	defer registering.Unlock()
+
+	for _, p := range protos {
+		ids, err := eventbus.RegisterSchemas(t.Context(), c.registry, p)
+		require.NoError(t, err, "register schemas")
+
+		maps.Copy(env.schemaIDs, ids)
 	}
 
 	env.CreateTopic(t, env.Topic, partitions)
@@ -117,24 +126,30 @@ func (e *Env) Registry(t *testing.T) *sr.Client {
 	return client
 }
 
-func (e *Env) Publish(t *testing.T, key string, m proto.Message) events.Envelope {
+func (e *Env) Publish(t *testing.T, key string, m proto.Message) eventbus.Envelope {
+	t.Helper()
+
+	return e.PublishTo(t, e.Topic, key, m)
+}
+
+func (e *Env) PublishTo(t *testing.T, topic, key string, m proto.Message) eventbus.Envelope {
 	t.Helper()
 
 	value, err := e.schemaIDs.Encode(m)
 	require.NoError(t, err)
 
-	envelope := events.Envelope{
+	envelope := eventbus.Envelope{
 		ID:              uuid.Must(uuid.NewV7()).String(),
 		Source:          source,
 		Type:            string(m.ProtoReflect().Descriptor().FullName()),
 		Time:            time.Now().UTC(),
 		Subject:         key,
 		PartitionKey:    key,
-		SpecVersion:     events.SpecVersion,
-		DataContentType: events.ContentType,
+		SpecVersion:     eventbus.SpecVersion,
+		DataContentType: eventbus.ContentType,
 	}
 
-	e.PublishRaw(t, envelope.ID, envelope.Headers(), value)
+	e.publish(t, topic, envelope.ID, envelope.Headers(), value)
 
 	return envelope
 }
@@ -142,12 +157,18 @@ func (e *Env) Publish(t *testing.T, key string, m proto.Message) events.Envelope
 func (e *Env) PublishRaw(t *testing.T, messageID string, headers map[string]string, value []byte) {
 	t.Helper()
 
+	e.publish(t, e.Topic, messageID, headers, value)
+}
+
+func (e *Env) publish(t *testing.T, topic, messageID string, headers map[string]string, value []byte) {
+	t.Helper()
+
 	msg := message.NewMessage(messageID, value)
 	for k, v := range headers {
 		msg.Metadata.Set(k, v)
 	}
 
-	require.NoError(t, e.getPublisher(t).Publish(e.Topic, msg))
+	require.NoError(t, e.getPublisher(t).Publish(topic, msg))
 }
 
 func (e *Env) getPublisher(t *testing.T) message.Publisher {

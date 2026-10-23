@@ -17,6 +17,7 @@ import (
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
@@ -37,7 +38,7 @@ var author = &actor.Actor{
 	Role:           roles.Admin,
 }
 
-var schemaIDs = events.SchemaIDs{
+var schemaIDs = eventbus.SchemaIDs{
 	noteCreatedType: 7,
 	noteDeletedType: 8,
 }
@@ -187,12 +188,12 @@ func TestComponentRepository_UnregisteredSchemaLeavesNoNote(t *testing.T) {
 		t.Skip("component test: needs Postgres")
 	}
 
-	repo := notes.New(testdb.New(t, migrations.FS), events.SchemaIDs{})
+	repo := notes.New(testdb.New(t, migrations.FS), eventbus.SchemaIDs{})
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
 	err := repo.Create(t.Context(), acmeOwner, note)
 
-	require.ErrorIs(t, err, events.ErrUnknownSchema)
+	require.ErrorIs(t, err, eventbus.ErrUnknownSchema)
 
 	_, err = repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
@@ -228,7 +229,7 @@ func outboxEvents(t *testing.T, pool *pgxpool.Pool) []outboxEvent {
 		}
 		require.NoError(t, json.Unmarshal(raw, &envelope))
 
-		schemaID, message, err := events.Decode(envelope.Metadata["ce_type"], envelope.Payload)
+		schemaID, message, err := eventbus.Decode(envelope.Metadata["ce_type"], envelope.Payload)
 		require.NoError(t, err)
 
 		out = append(out, outboxEvent{

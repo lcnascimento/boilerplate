@@ -14,6 +14,13 @@ var services = []service.Service{
 		Name:      "iam",
 		Processes: []service.Process{service.OneShot("iam-migrate")},
 	},
+	{
+		Name: "audit",
+		Processes: []service.Process{
+			service.Daemon("audit-consumer", service.Consumer).WithConsumerGroup("audit").WithDBPool(),
+			service.OneShot("audit-migrate"),
+		},
+	},
 	// example:begin
 	{
 		Name: "notes",
@@ -22,13 +29,6 @@ var services = []service.Service{
 			service.Daemon("notes-worker-forwarder", service.Worker).WithDBPool(),
 			service.OneShot("notes-migrate"),
 			service.OneShot("notes-schemas"),
-		},
-	},
-	{
-		Name: "audit",
-		Processes: []service.Process{
-			service.Daemon("audit-consumer", service.Consumer).WithConsumerGroup("audit").WithDBPool(),
-			service.OneShot("audit-migrate"),
 		},
 	},
 	// example:end

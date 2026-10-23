@@ -78,13 +78,13 @@ func TestGenerate_WritesTheDashboardsTitledByTheirLowercaseName(t *testing.T) {
 	}
 
 	assert.Equal(t, map[string]string{
+		"audit.json":    "audit boilerplate-audit",
 		"iam.json":      "iam boilerplate-iam",
 		"kafka.json":    "kafka boilerplate-kafka",
 		"overview.json": "overview boilerplate-overview",
 		"postgres.json": "postgres boilerplate-postgres",
 		"web.json":      "web boilerplate-web",
 		// example:begin
-		"audit.json": "audit boilerplate-audit",
 		"notes.json": "notes boilerplate-notes",
 		// example:end
 	}, boards)

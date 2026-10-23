@@ -1,4 +1,4 @@
-package events
+package eventbus
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 const operationProcess = "process"
 
 var (
-	pkg    = "notes/pkg/events"
+	pkg    = "iam/pkg/eventbus"
 	logger = log.MustNewLogger(pkg)
 	meter  = otel.Meter(pkg)
 	tracer = otel.Tracer(pkg)
@@ -40,21 +40,21 @@ func deliveryAttempt(n int) attribute.KeyValue {
 	return attribute.Int("messaging.delivery.attempt", n)
 }
 
-func (s *Subscriber) commonAttributes() []attribute.KeyValue {
+func (s *Subscriber) commonAttributes(topic string) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		semconv.MessagingSystemKafka,
-		semconv.MessagingDestinationName(s.topic),
+		semconv.MessagingDestinationName(topic),
 		semconv.MessagingConsumerGroupName(s.group),
 		semconv.MessagingOperationName(operationProcess),
 		semconv.MessagingOperationTypeProcess,
 	}
 }
 
-func (s *Subscriber) onAttemptStart(msg *message.Message, attempt int) (context.Context, func(error)) {
+func (s *Subscriber) onAttemptStart(topic string, msg *message.Message, attempt int) (context.Context, func(error)) {
 	ctx := msg.Context()
 	started := time.Now()
 
-	attributes := append(s.commonAttributes(), deliveryAttempt(attempt), semconv.MessagingMessageID(msg.Metadata.Get(headerID)))
+	attributes := append(s.commonAttributes(topic), deliveryAttempt(attempt), semconv.MessagingMessageID(msg.Metadata.Get(headerID)))
 
 	if key, ok := kafka.MessageKeyFromCtx(ctx); ok {
 		attributes = append(attributes, semconv.MessagingKafkaMessageKey(string(key)))
@@ -79,12 +79,12 @@ func (s *Subscriber) onAttemptStart(msg *message.Message, attempt int) (context.
 		opts = append(opts, trace.WithLinks(link))
 	}
 
-	ctx, span := tracer.Start(ctx, operationProcess+" "+s.topic, opts...)
+	ctx, span := tracer.Start(ctx, operationProcess+" "+topic, opts...)
 
 	return ctx, func(err error) {
 		defer span.End()
 
-		metricAttributes := s.commonAttributes()
+		metricAttributes := s.commonAttributes(topic)
 
 		if err != nil {
 			errType := semconv.ErrorTypeKey.String(errorType(err))
@@ -98,8 +98,8 @@ func (s *Subscriber) onAttemptStart(msg *message.Message, attempt int) (context.
 	}
 }
 
-func (s *Subscriber) onConsumed(msg *message.Message, err error) {
-	attributes := s.commonAttributes()
+func (s *Subscriber) onConsumed(topic string, msg *message.Message, err error) {
+	attributes := s.commonAttributes(topic)
 	if err != nil {
 		attributes = append(attributes, semconv.ErrorTypeKey.String(errorType(err)))
 	}
@@ -107,15 +107,15 @@ func (s *Subscriber) onConsumed(msg *message.Message, err error) {
 	consumedMessages.Add(msg.Context(), 1, otelmetric.WithAttributes(attributes...))
 }
 
-func (s *Subscriber) onDeadLettered(msg *message.Message) {
+func (s *Subscriber) onDeadLettered(topic string, msg *message.Message) {
 	ctx := msg.Context()
 	errType := deliveryFrom(ctx).errorType
 
-	attributes := append(s.commonAttributes(), semconv.ErrorTypeKey.String(errType))
+	attributes := append(s.commonAttributes(topic), semconv.ErrorTypeKey.String(errType))
 	dlqSentMessages.Add(ctx, 1, otelmetric.WithAttributes(attributes...))
 
 	logger.Warn(ctx, "message sent to the DLQ",
-		log.String("dlq", s.dlqTopic()), log.String("error.type", errType), log.String("message.id", msg.Metadata.Get(headerID)))
+		log.String("dlq", DLQTopic(topic, s.group)), log.String("error.type", errType), log.String("message.id", msg.Metadata.Get(headerID)))
 }
 
 func errorType(err error) string {
