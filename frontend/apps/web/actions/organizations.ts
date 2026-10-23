@@ -4,7 +4,8 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getIam } from "@/shared/auth/auth";
+import { organizationIdSchema, userIdSchema } from "@/shared/auth/actor-ids";
+import { createOrganizationFor } from "@/shared/auth/organization-creation";
 import { organizationSlug } from "@/shared/auth/organization-slug";
 import {
   organizationNameInputSchema,
@@ -27,17 +28,24 @@ export async function createOrganization(
   const parsed = organizationNameInputSchema.safeParse(input);
   if (!parsed.success) return { kind: "error", code: "invalidInput" };
 
-  const requestHeaders = await headers();
-  if ((await getRequestSession()) === null) redirect(SIGN_IN_HREF);
+  const session = await getRequestSession();
+  if (session === null) redirect(SIGN_IN_HREF);
 
   try {
-    await getIam().auth.api.createOrganization({
-      headers: requestHeaders,
-      body: {
+    await createOrganizationFor(
+      {
+        userId: userIdSchema.parse(session.user.id),
+        organizationId:
+          session.session.activeOrganizationId == null
+            ? null
+            : organizationIdSchema.parse(session.session.activeOrganizationId),
+      },
+      new Headers(await headers()),
+      {
         name: parsed.data.name,
         slug: organizationSlug(parsed.data.name),
-      },
-    });
+      }
+    );
     return { kind: "ok" };
   } catch (error) {
     const code =
