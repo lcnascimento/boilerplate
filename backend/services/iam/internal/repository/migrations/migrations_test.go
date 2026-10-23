@@ -14,7 +14,10 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/repository/migrations"
 )
 
-const checkViolation = "23514"
+const (
+	checkViolation     = "23514"
+	exclusionViolation = "23P01"
+)
 
 var betterAuthTables = []string{
 	"account",
@@ -60,6 +63,49 @@ func TestComponentMigrations_AcceptsOnlyTheKnownRoles(t *testing.T) {
 		requireCheckViolation(t, insertMember(t, db, role), role)
 		requireCheckViolation(t, insertInvitation(t, db, role), role)
 	}
+}
+
+func TestComponentMigrations_AllowsOneOwnerPerOrganization(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	_, err := db.ExecContext(t.Context(), `
+		INSERT INTO "user" (id, name, email, "emailVerified") VALUES
+			('00000000-0000-4000-8000-000000000001', 'Ada', 'ada@acme.test', false),
+			('00000000-0000-4000-8000-000000000003', 'Grace', 'grace@acme.test', false);
+		INSERT INTO organization (id, name, slug, "createdAt") VALUES
+			('00000000-0000-4000-8000-000000000002', 'Acme', 'acme', now()),
+			('00000000-0000-4000-8000-000000000004', 'Globex', 'globex', now());
+		INSERT INTO member (id, "organizationId", "userId", role, "createdAt") VALUES
+			('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000002',
+				'00000000-0000-4000-8000-000000000001', 'owner', now()),
+			('00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000002',
+				'00000000-0000-4000-8000-000000000003', 'admin', now()),
+			('00000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000004',
+				'00000000-0000-4000-8000-000000000003', 'owner', now())`)
+	require.NoError(t, err)
+
+	_, err = db.ExecContext(t.Context(),
+		`UPDATE member SET role = 'owner' WHERE id = '00000000-0000-4000-8000-000000000012'`)
+	requireExclusionViolation(t, err)
+
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	_, err = tx.ExecContext(t.Context(),
+		`UPDATE member SET role = 'owner' WHERE id = '00000000-0000-4000-8000-000000000012'`)
+	require.NoError(t, err)
+	_, err = tx.ExecContext(t.Context(),
+		`UPDATE member SET role = 'admin' WHERE id = '00000000-0000-4000-8000-000000000011'`)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	var owner string
+	require.NoError(t, db.QueryRowContext(t.Context(), `
+		SELECT "userId" FROM member
+		WHERE "organizationId" = '00000000-0000-4000-8000-000000000002' AND role = 'owner'`).Scan(&owner))
+	require.Equal(t, "00000000-0000-4000-8000-000000000003", owner)
 }
 
 func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
@@ -114,6 +160,15 @@ func requireCheckViolation(t *testing.T, err error, role string) {
 	var pgErr *pgconn.PgError
 	require.ErrorAs(t, err, &pgErr, role)
 	require.Equal(t, checkViolation, pgErr.Code, role)
+}
+
+func requireExclusionViolation(t *testing.T, err error) {
+	t.Helper()
+
+	var pgErr *pgconn.PgError
+	require.ErrorAs(t, err, &pgErr)
+	require.Equal(t, exclusionViolation, pgErr.Code)
+	require.Equal(t, "member_one_owner_per_organization", pgErr.ConstraintName)
 }
 
 func publicTables(t *testing.T, db *sql.DB) []string {
