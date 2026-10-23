@@ -44,25 +44,17 @@ afterEach(() => {
 });
 
 describe("AddMemberDialog", () => {
-  it("offers an Owner every Role", async () => {
-    const { user, dialog } = await openDialog(ana);
+  for (const actor of [ana, bruno]) {
+    it(`offers ${actor.name} no Owner Role`, async () => {
+      const { user, dialog } = await openDialog(actor);
 
-    await user.click(dialog.getByRole("combobox", { name: "Role" }));
+      await user.click(dialog.getByRole("combobox", { name: "Role" }));
 
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
-    ).toEqual(["Owner", "Admin", "Viewer"]);
-  });
-
-  it("offers an Admin no Owner Role", async () => {
-    const { user, dialog } = await openDialog(bruno);
-
-    await user.click(dialog.getByRole("combobox", { name: "Role" }));
-
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
-    ).toEqual(["Admin", "Viewer"]);
-  });
+      expect(
+        screen.getAllByRole("option").map((option) => option.textContent)
+      ).toEqual(["Admin", "Viewer"]);
+    });
+  }
 
   it("asks for a valid email before sending anything", async () => {
     const { user, dialog } = await openDialog(ana);

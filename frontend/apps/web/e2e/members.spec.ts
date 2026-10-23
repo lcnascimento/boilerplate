@@ -95,15 +95,55 @@ test.describe("as the Acme Owner", () => {
     );
   });
 
-  test("cannot leave as the only Owner and is told why", async ({ page }) => {
+  test("cannot leave or lose the Owner Role before transferring it", async ({
+    page,
+  }) => {
     await page.goto(MEMBERS_HREF);
 
     const leave = page.getByRole("button", { name: "Sair da Organization" });
     await expect(leave).toBeDisabled();
     await expect(leave).toHaveAccessibleDescription(
-      "Você é o único Owner. Promova outro Member a Owner antes de sair."
+      "Você é o Owner. Transfira a propriedade a outro Member antes de sair."
     );
+    await expect(
+      page.getByRole("link", { name: "Transferir a propriedade" })
+    ).toHaveAttribute("href", "/settings/organization");
     await expect(rowOf(page, "Ana Owner").getByRole("combobox")).toHaveCount(0);
+    await expect(rowOf(page, "Ana Owner").getByRole("button")).toHaveCount(0);
+    expect(await openOptions(page, "Role de Carla Viewer")).toEqual([
+      "Admin",
+      "Viewer",
+    ]);
+
+    await page.getByRole("button", { name: "Adicionar Member" }).click();
+    expect(await openOptions(page, "Role")).toEqual(["Admin", "Viewer"]);
+  });
+
+  test("is refused a second Owner by the API", async ({ page }) => {
+    await page.goto(MEMBERS_HREF);
+    const members = await page.request.get(
+      "/api/auth/organization/list-members"
+    );
+    const { members: list } = (await members.json()) as {
+      members: { id: string; role: string }[];
+    };
+    const admin = list.find(({ role }) => role === "admin");
+    const owner = list.find(({ role }) => role === "owner");
+    if (admin === undefined || owner === undefined) {
+      throw new Error("the Acme seed has no Admin or no Owner");
+    }
+
+    for (const [memberId, role, code] of [
+      [admin.id, "owner", "OWNER_NOT_ASSIGNABLE"],
+      [owner.id, "admin", "YOU_CANNOT_LEAVE_THE_ORGANIZATION_WITHOUT_AN_OWNER"],
+    ] as const) {
+      const response = await page.request.post(
+        "/api/auth/organization/update-member-role",
+        { data: { memberId, role }, headers: { origin: WEB_URL } }
+      );
+      expect(response.status()).toBe(400);
+      expect(((await response.json()) as { code: string }).code).toBe(code);
+    }
   });
 });
 

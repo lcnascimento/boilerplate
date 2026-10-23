@@ -28,8 +28,8 @@ afterEach(() => {
 });
 
 describe("LeaveOrganization", () => {
-  it("tells the last Owner why they cannot leave", () => {
-    renderWithMessages(<LeaveOrganization leave="lastOwner" />);
+  it("tells the Owner to transfer the ownership before leaving", () => {
+    renderWithMessages(<LeaveOrganization leave="ownerMustTransfer" />);
 
     const button = screen.getByRole("button", {
       name: "Sair da Organization",
@@ -37,9 +37,14 @@ describe("LeaveOrganization", () => {
     expect(button.hasAttribute("disabled")).toBe(true);
     expect(
       screen.getByText(
-        "Você é o único Owner. Promova outro Member a Owner antes de sair."
+        "Você é o Owner. Transfira a propriedade a outro Member antes de sair."
       ).id
     ).toBe(button.getAttribute("aria-describedby"));
+    expect(
+      screen
+        .getByRole("link", { name: "Transferir a propriedade" })
+        .getAttribute("href")
+    ).toBe("/settings/organization");
   });
 
   it("leaves after confirmation and goes home", async () => {
@@ -59,10 +64,10 @@ describe("LeaveOrganization", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("explains a refusal from the last-Owner rule", async () => {
+  it("explains a refusal from the Owner rule", async () => {
     leaveOrganizationMock.mockResolvedValue({
       kind: "error",
-      code: "lastOwner",
+      code: "ownerMustTransfer",
     });
     const user = renderWithMessages(<LeaveOrganization leave="allowed" />);
 
@@ -72,7 +77,7 @@ describe("LeaveOrganization", () => {
     await user.click(screen.getByRole("button", { name: "Sair" }));
 
     expect(
-      await screen.findByText("A Organization precisa de pelo menos um Owner.")
+      await screen.findByText("O Owner precisa transferir a propriedade antes.")
     ).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
   });

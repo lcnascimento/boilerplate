@@ -14,6 +14,7 @@ describe("routesIn", () => {
 
   it("puts the Organization settings in the Organization menu", () => {
     expect(routesIn("organization").map(({ href }) => href)).toEqual([
+      "/settings/organization",
       "/settings/members",
     ]);
   });
@@ -61,6 +62,17 @@ describe("breadcrumbTrail", () => {
         href: "/settings/preferences",
         labelKey: "nav.preferences",
         current: false,
+      },
+    ]);
+  });
+
+  it("names the Organization settings page", () => {
+    expect(breadcrumbTrail("/settings/organization")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      {
+        href: "/settings/organization",
+        labelKey: "nav.organizationSettings",
+        current: true,
       },
     ]);
   });

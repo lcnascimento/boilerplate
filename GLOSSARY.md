@@ -27,11 +27,11 @@ Uma ação sobre um tipo de recurso que uma Role concede ou não (ex.: apagar No
 _Avoid_: Capability, privilégio, ability
 
 **Owner**:
-Role com todos os poderes na Organization, inclusive apagar Notes.
+O único Member com todos os poderes na Organization, inclusive apagar Notes e transferir a propriedade a outro Member.
 _Avoid_: Dono, superadmin
 
 **Admin**:
-Role que lê e cria Notes e gere Members, mas não apaga Notes nem promove a Owner.
+Role que lê e cria Notes e gere Members, mas não apaga Notes nem transfere a propriedade.
 _Avoid_: Editor, moderador
 
 **Viewer**:

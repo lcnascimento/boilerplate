@@ -83,9 +83,9 @@ test("the Organization menu shows the active Organization and opens its Members"
     page.getByRole("heading", { level: 1, name: "Members" })
   ).toBeVisible();
   const settings = page.getByRole("navigation", { name: "Configurações" });
-  await expect(settings.getByRole("list", { name: "Organization" })).toHaveText(
-    "Members"
-  );
+  await expect(
+    settings.getByRole("list", { name: "Organization" }).getByRole("listitem")
+  ).toHaveText(["Configurações", "Members"]);
   await expect(settings.getByRole("list", { name: "Conta" })).toHaveText(
     "Preferências"
   );
