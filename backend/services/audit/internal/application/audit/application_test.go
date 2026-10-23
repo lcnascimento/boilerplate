@@ -94,16 +94,16 @@ func newValidator(t *testing.T) *validator.Validator {
 
 func validEntry() *idomain.Entry {
 	return &idomain.Entry{
-		Source:          "notes",
+		Source:          "iam",
 		ID:              "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-		Type:            "boilerplate.notes.v1.NoteDeleted",
+		Type:            "boilerplate.iam.v1.UserDeleted",
 		SpecVersion:     "1.0",
-		Subject:         "note_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
+		Subject:         "user_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
 		Time:            time.Date(2026, 10, 17, 12, 30, 0, 0, time.UTC),
 		DataContentType: "application/protobuf",
 		Headers:         map[string]string{"ce_id": "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e"},
 		Payload:         []byte{0x00, 0x00, 0x00, 0x00, 0x02, 0x00},
-		KafkaTopic:      "notes.note.v1",
+		KafkaTopic:      "iam.user.v1",
 		KafkaPartition:  1,
 		KafkaOffset:     7,
 	}
