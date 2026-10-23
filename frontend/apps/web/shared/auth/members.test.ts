@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { memberPolicy, type Member } from "./members";
+import { memberPolicy, ownershipPolicy, type Member } from "./members";
 
 const ana: Member = {
   id: "m-ana",
@@ -20,12 +20,6 @@ const carla: Member = {
   email: "viewer@acme.test",
   role: "viewer",
 };
-const diego: Member = {
-  id: "m-diego",
-  name: "Diego Owner",
-  email: "owner@globex.test",
-  role: "owner",
-};
 
 function actions(policy: ReturnType<typeof memberPolicy>) {
   return policy.rows.map(({ member, canChangeRole, canRemove }) => [
@@ -35,12 +29,12 @@ function actions(policy: ReturnType<typeof memberPolicy>) {
 }
 
 describe("memberPolicy", () => {
-  it("lets the sole Owner manage everyone else but not leave", () => {
+  it("lets the Owner manage everyone else but not leave before transferring", () => {
     const policy = memberPolicy(ana, [ana, bruno, carla]);
 
     expect(policy.canAdd).toBe(true);
-    expect(policy.assignableRoles).toEqual(["owner", "admin", "viewer"]);
-    expect(policy.leave).toBe("lastOwner");
+    expect(policy.assignableRoles).toEqual(["admin", "viewer"]);
+    expect(policy.leave).toBe("ownerMustTransfer");
     expect(actions(policy)).toEqual([
       ["owner@acme.test", { canChangeRole: false, canRemove: false }],
       ["admin@acme.test", { canChangeRole: true, canRemove: true }],
@@ -48,18 +42,7 @@ describe("memberPolicy", () => {
     ]);
   });
 
-  it("lets an Owner demote themselves and leave while another Owner remains", () => {
-    const policy = memberPolicy(ana, [ana, diego, carla]);
-
-    expect(policy.leave).toBe("allowed");
-    expect(actions(policy)).toEqual([
-      ["owner@acme.test", { canChangeRole: true, canRemove: false }],
-      ["owner@globex.test", { canChangeRole: true, canRemove: true }],
-      ["viewer@acme.test", { canChangeRole: true, canRemove: true }],
-    ]);
-  });
-
-  it("keeps an Admin away from Owners and from the Owner Role", () => {
+  it("keeps an Admin away from the Owner and from the Owner Role", () => {
     const policy = memberPolicy(bruno, [ana, bruno, carla]);
 
     expect(policy.canAdd).toBe(true);
@@ -83,5 +66,25 @@ describe("memberPolicy", () => {
       ["admin@acme.test", { canChangeRole: false, canRemove: false }],
       ["viewer@acme.test", { canChangeRole: false, canRemove: false }],
     ]);
+  });
+});
+
+describe("ownershipPolicy", () => {
+  it("lets the Owner hand the Organization to any other Member", () => {
+    expect(ownershipPolicy(ana, [ana, bruno, carla])).toEqual({
+      kind: "canTransfer",
+      candidates: [bruno, carla],
+    });
+  });
+
+  it("names the Owner to everyone else", () => {
+    expect(ownershipPolicy(bruno, [ana, bruno, carla])).toEqual({
+      kind: "ownedBy",
+      owner: ana,
+    });
+    expect(ownershipPolicy(carla, [ana, bruno, carla])).toEqual({
+      kind: "ownedBy",
+      owner: ana,
+    });
   });
 });

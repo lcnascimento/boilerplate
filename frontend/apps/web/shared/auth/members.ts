@@ -22,12 +22,17 @@ export const removeMemberInputSchema = z.object({
   memberId: z.string().min(1),
 });
 
+export const transferOwnershipInputSchema = z.object({
+  memberId: z.uuid(),
+});
+
 export type MembersErrorCode =
   | "invalidInput"
   | "forbidden"
   | "userNotFound"
   | "alreadyMember"
-  | "lastOwner"
+  | "ownerNotAssignable"
+  | "ownerMustTransfer"
   | "unexpected";
 
 export type MembersResult =
@@ -49,9 +54,13 @@ export interface MemberRow {
 export interface MemberPolicy {
   canAdd: boolean;
   assignableRoles: MemberRole[];
-  leave: "allowed" | "lastOwner";
+  leave: "allowed" | "ownerMustTransfer";
   rows: MemberRow[];
 }
+
+export type OwnershipPolicy =
+  | { kind: "canTransfer"; candidates: Member[] }
+  | { kind: "ownedBy"; owner: Member };
 
 type MemberAction = "create" | "update" | "delete";
 
@@ -59,30 +68,22 @@ export function can(role: MemberRole, action: MemberAction): boolean {
   return roles[role].authorize({ member: [action] }).success;
 }
 
-export function canAssign(actorRole: MemberRole, role: MemberRole): boolean {
-  return role !== "owner" || actorRole === "owner";
+export function canTransferOwnership(role: MemberRole): boolean {
+  return roles[role].authorize({ organization: ["transfer"] }).success;
 }
+
+export const assignableRoles = roleNames.filter((role) => role !== "owner");
 
 export function memberPolicy(
   actor: Pick<Member, "id" | "role">,
   members: readonly Member[]
 ): MemberPolicy {
-  const isLastOwner = (member: Member) =>
-    member.role === "owner" &&
-    members.filter(({ role }) => role === "owner").length === 1;
-  const canActOn = (member: Member) =>
-    canAssign(actor.role, member.role) && !isLastOwner(member);
+  const canActOn = (member: Member) => member.role !== "owner";
 
   return {
     canAdd: can(actor.role, "create"),
-    assignableRoles: can(actor.role, "update")
-      ? roleNames.filter((role) => canAssign(actor.role, role))
-      : [],
-    leave: members.some(
-      (member) => member.id === actor.id && isLastOwner(member)
-    )
-      ? "lastOwner"
-      : "allowed",
+    assignableRoles: can(actor.role, "update") ? assignableRoles : [],
+    leave: actor.role === "owner" ? "ownerMustTransfer" : "allowed",
     rows: members.map((member) => ({
       member,
       canChangeRole: can(actor.role, "update") && canActOn(member),
@@ -90,4 +91,20 @@ export function memberPolicy(
         can(actor.role, "delete") && member.id !== actor.id && canActOn(member),
     })),
   };
+}
+
+export function ownershipPolicy(
+  actor: Pick<Member, "id" | "role">,
+  members: readonly Member[]
+): OwnershipPolicy {
+  if (canTransferOwnership(actor.role)) {
+    return {
+      kind: "canTransfer",
+      candidates: members.filter(({ id }) => id !== actor.id),
+    };
+  }
+
+  const owner = members.find(({ role }) => role === "owner");
+  if (owner === undefined) throw new Error("the Organization has no Owner");
+  return { kind: "ownedBy", owner };
 }

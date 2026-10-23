@@ -1,5 +1,4 @@
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, organization } from "better-auth/plugins";
 import { Pool } from "pg";
@@ -9,8 +8,8 @@ import { logger } from "@/shared/logging";
 import { listMembersOldestFirst } from "./actor";
 import { parseIamEnv, type IamEnv } from "./env";
 import { loginFailureHook } from "./login-failures";
-import { memberRoleSchema } from "./members";
 import { PASSWORD_LENGTH } from "./policy";
+import { roleHooks } from "./role-hooks";
 import { ac, roles } from "./roles.gen";
 import { signUpOrganizationName } from "./sign-up-body";
 import { ensureSignUpOrganization as ensureOrganization } from "./sign-up-organization";
@@ -18,20 +17,6 @@ import { ensureSignUpOrganization as ensureOrganization } from "./sign-up-organi
 const DAY_SECONDS = 60 * 60 * 24;
 
 export const ACTOR_TOKEN_AUDIENCE = "boilerplate-api";
-
-// Better Auth stores a Member's Roles comma-separated.
-function rejectUnknownRoles(role: string): Promise<void> {
-  const unknown = role
-    .split(",")
-    .filter((name) => !memberRoleSchema.safeParse(name).success);
-  if (unknown.length === 0) return Promise.resolve();
-  return Promise.reject(
-    new APIError("BAD_REQUEST", {
-      code: "UNKNOWN_ROLE",
-      message: `Unknown role: ${unknown.join(", ")}`,
-    })
-  );
-}
 
 function createIam(env: IamEnv) {
   const database = new Pool({ connectionString: env.IAM_DATABASE_URL });
@@ -124,12 +109,13 @@ function createIam(env: IamEnv) {
         ac,
         roles,
         allowUserToCreateOrganization: false,
-        organizationHooks: {
-          beforeAddMember: ({ member }) => rejectUnknownRoles(member.role),
-          beforeUpdateMemberRole: ({ newRole }) => rejectUnknownRoles(newRole),
-          beforeCreateInvitation: ({ invitation }) =>
-            rejectUnknownRoles(invitation.role),
-        },
+        organizationHooks: roleHooks(async (organizationId) => {
+          const { rowCount } = await database.query(
+            'SELECT 1 FROM member WHERE "organizationId" = $1 LIMIT 1',
+            [organizationId]
+          );
+          return (rowCount ?? 0) > 0;
+        }),
       }),
       nextCookies(),
     ],

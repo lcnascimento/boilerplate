@@ -8,7 +8,6 @@ import { getIam } from "@/shared/auth/auth";
 import {
   addMemberInputSchema,
   can,
-  canAssign,
   memberRoleSchema,
   removeMemberInputSchema,
   updateMemberRoleInputSchema,
@@ -33,8 +32,10 @@ async function requireActor(): Promise<Actor | null> {
 const errorCodes: Record<string, MembersErrorCode> = {
   USER_NOT_FOUND: "userNotFound",
   USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "alreadyMember",
-  YOU_CANNOT_LEAVE_THE_ORGANIZATION_AS_THE_ONLY_OWNER: "lastOwner",
-  YOU_CANNOT_LEAVE_THE_ORGANIZATION_WITHOUT_AN_OWNER: "lastOwner",
+  OWNER_NOT_ASSIGNABLE: "ownerNotAssignable",
+  OWNER_MUST_TRANSFER: "ownerMustTransfer",
+  YOU_CANNOT_LEAVE_THE_ORGANIZATION_AS_THE_ONLY_OWNER: "ownerMustTransfer",
+  YOU_CANNOT_LEAVE_THE_ORGANIZATION_WITHOUT_AN_OWNER: "ownerMustTransfer",
   YOU_ARE_NOT_ALLOWED_TO_UPDATE_THIS_MEMBER: "forbidden",
   YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_MEMBER: "forbidden",
   YOU_ARE_NOT_A_MEMBER_OF_THIS_ORGANIZATION: "forbidden",
@@ -99,13 +100,7 @@ export async function addMember(input: unknown): Promise<MembersResult> {
 
   const actor = await requireActor();
   // auth.api.addMember checks no Permission at all: this action is the only gate.
-  if (
-    actor === null ||
-    !can(actor.role, "create") ||
-    !canAssign(actor.role, parsed.data.role)
-  ) {
-    return forbidden;
-  }
+  if (actor === null || !can(actor.role, "create")) return forbidden;
 
   const { auth } = getIam();
   const context = await auth.$context;
