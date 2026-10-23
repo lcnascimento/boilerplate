@@ -131,11 +131,13 @@ test("the User opens the account settings from the User menu and renames themsel
   });
 });
 
-test("changing the password refuses a wrong current one, then ends the other session and keeps this one", async ({
+test("changing the password refuses a wrong current one, then ends the other session and keeps this one in its Organization", async ({
   browser,
   page,
 }) => {
-  await withThrowaways(async ({ viewer }) => {
+  await withThrowaways(async ({ viewer, shared, createOrganizationFor }) => {
+    const ownName = `Own ${shared.name}`;
+    const own = await createOrganizationFor(viewer, ownName);
     const otherContext = await browser.newContext({ storageState: signedOut });
     try {
       const otherPage = await otherContext.newPage();
@@ -144,7 +146,13 @@ test("changing the password refuses a wrong current one, then ends the other ses
       await expect(otherPage).toHaveURL(ACCOUNT_HREF);
 
       await signInOk(page.request, viewer);
+      const switched = await page.request.post(
+        "/api/auth/organization/set-active",
+        { data: { organizationId: own }, headers: { origin: WEB_URL } }
+      );
+      expect(switched.status()).toBe(200);
       await page.goto(ACCOUNT_HREF);
+      await expect(organizationMenu(page)).toContainText(ownName);
       const current = page.getByLabel("Senha atual");
       const next = page.getByLabel("Nova senha");
       const submit = page.getByRole("button", { name: "Trocar senha" });
@@ -164,6 +172,7 @@ test("changing the password refuses a wrong current one, then ends the other ses
 
       await page.reload();
       await expect(page).toHaveURL(ACCOUNT_HREF);
+      await expect(organizationMenu(page)).toContainText(ownName);
       await otherPage.reload();
       await expect(otherPage).toHaveURL(/\/sign-in/);
       expect((await signIn(page.request, viewer)).status()).toBe(401);

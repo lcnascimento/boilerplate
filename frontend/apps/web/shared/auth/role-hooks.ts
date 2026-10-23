@@ -39,20 +39,13 @@ function settle(error: APIError | undefined): Promise<void> {
   return error === undefined ? Promise.resolve() : Promise.reject(error);
 }
 
-export function roleHooks(
-  hasMembers: (organizationId: string) => Promise<boolean>
-) {
+export function roleHooks(isOrganizationCreation: () => boolean) {
   return {
-    async beforeAddMember({
-      member,
-    }: {
-      member: { organizationId: string; role: string };
-    }): Promise<void> {
+    beforeAddMember({ member }: { member: { role: string } }): Promise<void> {
       const roles = parseRoles(member.role);
-      // Creating an Organization adds its creator as the Owner of an Organization without Members.
-      const isCreation = !(await hasMembers(member.organizationId));
       return settle(
-        unknownRole(roles) ?? (isCreation ? undefined : ownerAssigned(roles))
+        unknownRole(roles) ??
+          (isOrganizationCreation() ? undefined : ownerAssigned(roles))
       );
     },
     beforeUpdateMemberRole({

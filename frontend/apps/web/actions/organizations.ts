@@ -1,60 +1,35 @@
 "use server";
 
-import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
-import { organizationIdSchema, userIdSchema } from "@/shared/auth/actor-ids";
 import { createOrganizationFor } from "@/shared/auth/organization-creation";
 import { organizationSlug } from "@/shared/auth/organization-slug";
 import {
   organizationNameInputSchema,
-  type OrganizationsErrorCode,
   type OrganizationsResult,
 } from "@/shared/auth/organizations";
-import { SIGN_IN_HREF } from "@/shared/auth/routes";
-import { getRequestSession } from "@/shared/auth/session";
-import { logger } from "@/shared/logging";
 
-// Next exposes every Server Action as a public endpoint, so arguments arrive as `unknown`.
+import {
+  requireAuditedActor,
+  runOperation,
+  serverAction,
+} from "./server-action";
 
-const errorCodes: Record<string, OrganizationsErrorCode> = {
+const refusals = {
   YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS: "organizationLimit",
-};
+} as const;
 
-export async function createOrganization(
-  input: unknown
-): Promise<OrganizationsResult> {
-  const parsed = organizationNameInputSchema.safeParse(input);
-  if (!parsed.success) return { kind: "error", code: "invalidInput" };
+export const createOrganization = serverAction(
+  organizationNameInputSchema,
+  async ({ name }): Promise<OrganizationsResult> => {
+    const creator = await requireAuditedActor();
+    const requestHeaders = new Headers(await headers());
 
-  const session = await getRequestSession();
-  if (session === null) redirect(SIGN_IN_HREF);
-
-  try {
-    await createOrganizationFor(
-      {
-        userId: userIdSchema.parse(session.user.id),
-        organizationId:
-          session.session.activeOrganizationId == null
-            ? null
-            : organizationIdSchema.parse(session.session.activeOrganizationId),
-      },
-      new Headers(await headers()),
-      {
-        name: parsed.data.name,
-        slug: organizationSlug(parsed.data.name),
-      }
+    return runOperation("organizations.create", refusals, () =>
+      createOrganizationFor(creator, requestHeaders, {
+        name,
+        slug: organizationSlug(name),
+      })
     );
-    return { kind: "ok" };
-  } catch (error) {
-    const code =
-      error instanceof APIError && typeof error.body?.code === "string"
-        ? errorCodes[error.body.code]
-        : undefined;
-    if (code !== undefined) return { kind: "error", code };
-
-    logger.error({ err: error }, "creating an organization failed");
-    return { kind: "error", code: "unexpected" };
   }
-}
+);

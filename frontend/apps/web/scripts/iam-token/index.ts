@@ -70,5 +70,5 @@ try {
     console.log(`wrote IAM_TOKEN to ${path.relative(process.cwd(), envFile)}`);
   }
 } finally {
-  await database.end();
+  await database.destroy();
 }

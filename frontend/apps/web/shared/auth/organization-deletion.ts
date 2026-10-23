@@ -1,42 +1,45 @@
 import "server-only";
 
-import { getIam, type IamAdapter } from "./auth";
+import { sql, type Kysely } from "kysely";
+
+import { getIam } from "./auth";
+import { lockOrganization } from "./organization-lock";
 import { canManageOrganization, type DeletionResult } from "./organizations";
 
 import type { Actor } from "./actor";
-import type { Where } from "better-auth";
+import type { MemberId, OrganizationId } from "./actor-ids";
 
 interface OrganizationOwner {
-  memberId: string;
-  organizationId: string;
+  memberId: MemberId;
+  organizationId: OrganizationId;
 }
 
 type OwnedOrganizationDeletion = "deleted" | "notOwner" | "notMatched";
 
 export async function deleteOwnedOrganization(
-  trx: IamAdapter,
+  connection: Kysely<unknown>,
   { memberId, organizationId }: OrganizationOwner,
   confirmation?: { name: string }
 ): Promise<OwnedOrganizationDeletion> {
-  const owner = await trx.findOne({
-    model: "member",
-    where: [
-      { field: "id", value: memberId },
-      { field: "organizationId", value: organizationId },
-      { field: "role", value: "owner" },
-    ],
-  });
-  if (owner === null) return "notOwner";
+  await lockOrganization(connection, organizationId);
 
-  const where: Where[] = [{ field: "id", value: organizationId }];
-  if (confirmation !== undefined) {
-    where.push({ field: "name", value: confirmation.name });
-  }
-  const deleted = await trx.deleteMany({ model: "organization", where });
-  return deleted === 1 ? "deleted" : "notMatched";
+  const { rows: owners } = await sql`
+    SELECT 1 FROM member
+     WHERE id = ${memberId} AND "organizationId" = ${organizationId} AND role = 'owner'`.execute(
+    connection
+  );
+  if (owners.length === 0) return "notOwner";
+
+  const nameMatches =
+    confirmation === undefined ? sql`true` : sql`name = ${confirmation.name}`;
+  const { numAffectedRows } = await sql`
+    DELETE FROM organization WHERE id = ${organizationId} AND ${nameMatches}`.execute(
+    connection
+  );
+  return numAffectedRows === 1n ? "deleted" : "notMatched";
 }
 
-export async function deleteOrganization(
+export async function deleteOrganizationFor(
   actor: Actor,
   confirmation: string
 ): Promise<DeletionResult> {
@@ -44,10 +47,11 @@ export async function deleteOrganization(
     return { kind: "error", code: "forbidden" };
   }
 
-  const { adapter } = await getIam().auth.$context;
-  const deletion = await adapter.transaction((trx) =>
-    deleteOwnedOrganization(trx, actor, { name: confirmation })
-  );
+  const deletion = await getIam()
+    .database.transaction()
+    .execute((trx) =>
+      deleteOwnedOrganization(trx, actor, { name: confirmation })
+    );
   switch (deletion) {
     case "deleted":
       return { kind: "ok" };
@@ -55,5 +59,7 @@ export async function deleteOrganization(
       return { kind: "error", code: "forbidden" };
     case "notMatched":
       return { kind: "error", code: "nameMismatch" };
+    default:
+      return deletion satisfies never;
   }
 }

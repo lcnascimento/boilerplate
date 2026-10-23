@@ -1,9 +1,14 @@
 import "server-only";
 
+import { sql } from "kysely";
+
 import { getIam } from "./auth";
+import { assignableRoles } from "./members";
+import { lockOrganization } from "./organization-lock";
 import { canManageOrganization } from "./organizations";
 
 import type { Actor } from "./actor";
+import type { MemberId } from "./actor-ids";
 
 export type OwnershipErrorCode = "invalidInput" | "forbidden" | "unexpected";
 
@@ -16,40 +21,36 @@ class TransferRefused extends Error {
   }
 }
 
-// One transaction: the deferred one-Owner constraint lets the new Owner exist before the old one steps down.
-export async function transferOwnership(
+export async function transferOwnershipFor(
   actor: Actor,
-  memberId: string
+  memberId: MemberId
 ): Promise<OwnershipResult> {
   if (!canManageOrganization(actor.role, "transfer")) {
     return { kind: "error", code: "forbidden" };
   }
 
-  const { adapter } = await getIam().auth.$context;
   try {
-    await adapter.transaction(async (trx) => {
-      const promoted = await trx.updateMany({
-        model: "member",
-        where: [
-          { field: "id", value: memberId },
-          { field: "organizationId", value: actor.organizationId },
-          { field: "role", operator: "in", value: ["admin", "viewer"] },
-        ],
-        update: { role: "owner" },
-      });
-      if (promoted !== 1) throw new TransferRefused("invalidInput");
+    await getIam()
+      .database.transaction()
+      .execute(async (trx) => {
+        await lockOrganization(trx, actor.organizationId);
 
-      const demoted = await trx.updateMany({
-        model: "member",
-        where: [
-          { field: "id", value: actor.memberId },
-          { field: "organizationId", value: actor.organizationId },
-          { field: "role", value: "owner" },
-        ],
-        update: { role: "admin" },
+        const promoted = await sql`
+          UPDATE member SET role = 'owner'
+           WHERE id = ${memberId} AND "organizationId" = ${actor.organizationId}
+             AND role = ANY(${assignableRoles}::text[])`.execute(trx);
+        if (promoted.numAffectedRows !== 1n) {
+          throw new TransferRefused("invalidInput");
+        }
+
+        const demoted = await sql`
+          UPDATE member SET role = 'admin'
+           WHERE id = ${actor.memberId} AND "organizationId" = ${actor.organizationId}
+             AND role = 'owner'`.execute(trx);
+        if (demoted.numAffectedRows !== 1n) {
+          throw new TransferRefused("forbidden");
+        }
       });
-      if (demoted !== 1) throw new TransferRefused("forbidden");
-    });
   } catch (error) {
     if (error instanceof TransferRefused) {
       return { kind: "error", code: error.code };

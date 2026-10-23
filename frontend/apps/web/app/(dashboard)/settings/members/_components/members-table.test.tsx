@@ -70,6 +70,21 @@ describe("MembersTable", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("tells the Owner to transfer the ownership before leaving their Role", () => {
+    renderTable(ana);
+
+    const owner = rowOf("Ana Owner");
+    expect(
+      owner.getByText("Para mudar de Role ou sair, transfira a propriedade.")
+    ).toBeTruthy();
+    expect(
+      owner
+        .getByRole("link", { name: "Transferir a propriedade" })
+        .getAttribute("href")
+    ).toBe("/settings/organization");
+    expect(rowOf("Bruno Admin").queryByRole("link")).toBeNull();
+  });
+
   it("lets an Admin manage the Viewer but not the Owner", () => {
     renderTable(bruno);
 

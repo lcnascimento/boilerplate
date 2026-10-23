@@ -22,7 +22,11 @@ export type RenameUserResult =
 
 export type AccountDeletionResult =
   | { kind: "ok" }
-  | { kind: "error"; code: "invalidInput" | "invalidPassword" | "unexpected" }
+  | {
+      kind: "error";
+      code:
+        "invalidInput" | "invalidPassword" | "tooManyAttempts" | "unexpected";
+    }
   | {
       kind: "error";
       code: "ownsSharedOrganizations";

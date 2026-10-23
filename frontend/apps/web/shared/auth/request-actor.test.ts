@@ -8,8 +8,8 @@ import {
   vi,
 } from "vitest";
 
-import { getIam } from "./auth";
 import { resolveRequestActor } from "./request-actor";
+import { fixtureDatabase } from "./test-database";
 
 import type { Pool } from "pg";
 
@@ -33,7 +33,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     async function removeFixtures() {

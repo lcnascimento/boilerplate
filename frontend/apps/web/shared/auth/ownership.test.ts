@@ -8,9 +8,13 @@ import {
   vi,
 } from "vitest";
 
-import { organizationIdSchema, userIdSchema } from "./actor-ids";
-import { getIam } from "./auth";
-import { transferOwnership } from "./ownership";
+import {
+  memberIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+} from "./actor-ids";
+import { transferOwnershipFor } from "./ownership";
+import { fixtureDatabase } from "./test-database";
 
 import type { Actor } from "./actor";
 import type { Pool } from "pg";
@@ -22,16 +26,22 @@ const BRUNO = "7a1d0c3e-0000-4000-8000-000000000102";
 const CARLA = "7a1d0c3e-0000-4000-8000-000000000103";
 const INITECH = "7a1d0c3e-0000-4000-8000-0000000001a1";
 const HOOLI = "7a1d0c3e-0000-4000-8000-0000000001a2";
-const ANA_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b1";
-const BRUNO_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b2";
-const CARLA_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b3";
-const CARLA_HOOLI_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b4";
+const ANA_MEMBER = memberIdSchema.parse("7a1d0c3e-0000-4000-8000-0000000001b1");
+const BRUNO_MEMBER = memberIdSchema.parse(
+  "7a1d0c3e-0000-4000-8000-0000000001b2"
+);
+const CARLA_MEMBER = memberIdSchema.parse(
+  "7a1d0c3e-0000-4000-8000-0000000001b3"
+);
+const CARLA_HOOLI_MEMBER = memberIdSchema.parse(
+  "7a1d0c3e-0000-4000-8000-0000000001b4"
+);
 
 function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
   return {
     userId: userIdSchema.parse(userId),
     organizationId: organizationIdSchema.parse(INITECH),
-    memberId: memberId as Actor["memberId"],
+    memberId: memberIdSchema.parse(memberId),
     role,
   };
 }
@@ -39,12 +49,12 @@ function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
 const anaAsOwner = actor(ANA, ANA_MEMBER, "owner");
 
 describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
-  "transferOwnership",
+  "transferOwnershipFor",
   () => {
     let database: Pool;
 
     beforeAll(() => {
-      database = getIam().database;
+      database = fixtureDatabase();
     });
 
     async function removeFixtures() {
@@ -112,7 +122,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     ];
 
     it("hands the Organization to a Viewer and keeps the Owner as Admin", async () => {
-      expect(await transferOwnership(anaAsOwner, CARLA_MEMBER)).toEqual({
+      expect(await transferOwnershipFor(anaAsOwner, CARLA_MEMBER)).toEqual({
         kind: "ok",
       });
 
@@ -124,7 +134,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("hands the Organization to an Admin", async () => {
-      expect(await transferOwnership(anaAsOwner, BRUNO_MEMBER)).toEqual({
+      expect(await transferOwnershipFor(anaAsOwner, BRUNO_MEMBER)).toEqual({
         kind: "ok",
       });
 
@@ -137,7 +147,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("refuses an Admin", async () => {
       expect(
-        await transferOwnership(
+        await transferOwnershipFor(
           actor(BRUNO, BRUNO_MEMBER, "admin"),
           CARLA_MEMBER
         )
@@ -148,7 +158,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
 
     it("promotes nobody when the Actor is no longer the Owner", async () => {
       expect(
-        await transferOwnership(
+        await transferOwnershipFor(
           actor(BRUNO, BRUNO_MEMBER, "owner"),
           CARLA_MEMBER
         )
@@ -158,7 +168,9 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses a Member of another Organization", async () => {
-      expect(await transferOwnership(anaAsOwner, CARLA_HOOLI_MEMBER)).toEqual({
+      expect(
+        await transferOwnershipFor(anaAsOwner, CARLA_HOOLI_MEMBER)
+      ).toEqual({
         kind: "error",
         code: "invalidInput",
       });
@@ -167,7 +179,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
     });
 
     it("refuses the Owner themselves", async () => {
-      expect(await transferOwnership(anaAsOwner, ANA_MEMBER)).toEqual({
+      expect(await transferOwnershipFor(anaAsOwner, ANA_MEMBER)).toEqual({
         kind: "error",
         code: "invalidInput",
       });

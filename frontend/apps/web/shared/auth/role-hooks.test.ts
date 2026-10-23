@@ -3,12 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { roleHooks } from "./role-hooks";
 
-const organizationWithMembers = "org-acme";
-const newOrganization = "org-new";
-
-const hooks = roleHooks((organizationId) =>
-  Promise.resolve(organizationId === organizationWithMembers)
-);
+const creating = roleHooks(() => true);
+const hooks = roleHooks(() => false);
 
 async function codeOf(attempt: Promise<unknown>): Promise<string | undefined> {
   try {
@@ -20,46 +16,42 @@ async function codeOf(attempt: Promise<unknown>): Promise<string | undefined> {
   }
 }
 
-function member(organizationId: string, role: string) {
-  return { member: { userId: "user-ana", organizationId, role } };
+function member(role: string) {
+  return { member: { userId: "user-ana", organizationId: "org-acme", role } };
 }
 
 describe("roleHooks.beforeAddMember", () => {
-  it("makes the creator of a new Organization its Owner", async () => {
-    expect(
-      await codeOf(hooks.beforeAddMember(member(newOrganization, "owner")))
-    ).toBeUndefined();
+  it("makes the creator of an Organization its Owner, and nobody else", async () => {
+    expect(await codeOf(creating.beforeAddMember(member("owner")))).toBe(
+      undefined
+    );
+    expect(await codeOf(hooks.beforeAddMember(member("owner")))).toBe(
+      "OWNER_NOT_ASSIGNABLE"
+    );
+  });
+
+  it("refuses an unknown Role while creating an Organization", async () => {
+    expect(await codeOf(creating.beforeAddMember(member("member")))).toBe(
+      "UNKNOWN_ROLE"
+    );
   });
 
   it("adds Admins and Viewers to an existing Organization", async () => {
     for (const role of ["admin", "viewer"]) {
-      expect(
-        await codeOf(
-          hooks.beforeAddMember(member(organizationWithMembers, role))
-        )
-      ).toBeUndefined();
+      expect(await codeOf(hooks.beforeAddMember(member(role)))).toBeUndefined();
     }
   });
 
   it("refuses a second Owner", async () => {
-    expect(
-      await codeOf(
-        hooks.beforeAddMember(member(organizationWithMembers, "owner"))
-      )
-    ).toBe("OWNER_NOT_ASSIGNABLE");
-    expect(
-      await codeOf(
-        hooks.beforeAddMember(member(organizationWithMembers, "admin,owner"))
-      )
-    ).toBe("OWNER_NOT_ASSIGNABLE");
+    expect(await codeOf(hooks.beforeAddMember(member("admin,owner")))).toBe(
+      "OWNER_NOT_ASSIGNABLE"
+    );
   });
 
   it("refuses an unknown Role", async () => {
-    expect(
-      await codeOf(
-        hooks.beforeAddMember(member(organizationWithMembers, "member"))
-      )
-    ).toBe("UNKNOWN_ROLE");
+    expect(await codeOf(hooks.beforeAddMember(member("member")))).toBe(
+      "UNKNOWN_ROLE"
+    );
   });
 });
 
