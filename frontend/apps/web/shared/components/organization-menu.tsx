@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, Boxes, ChevronsUpDown } from "lucide-react";
+import { ArrowLeftRight, Boxes, ChevronsUpDown, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -29,6 +29,7 @@ import {
 
 import { useOrganizations } from "@/providers";
 import { authClient } from "@/shared/auth/client";
+import { CREATE_OR_JOIN_HREF } from "@/shared/auth/routes";
 import { routesIn } from "@/shared/navigation";
 
 const APP_NAME = "Boilerplate";
@@ -118,6 +119,13 @@ export function OrganizationMenu() {
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={CREATE_OR_JOIN_HREF}>
+                    <Plus aria-hidden />
+                    {t("createOrJoin")}
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           </DropdownMenuContent>

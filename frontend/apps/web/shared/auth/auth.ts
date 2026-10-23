@@ -4,16 +4,13 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt, organization } from "better-auth/plugins";
 import { Pool } from "pg";
 
-import { logger } from "@/shared/logging";
-
 import { listMembersOldestFirst } from "./actor";
+import { authRules, authRulesHook } from "./auth-rules";
 import { parseIamEnv, type IamEnv } from "./env";
 import { loginFailureHook } from "./login-failures";
 import { memberRoleSchema } from "./members";
-import { PASSWORD_LENGTH } from "./policy";
+import { ORGANIZATION_LIMIT, PASSWORD_LENGTH } from "./policy";
 import { ac, roles } from "./roles.gen";
-import { signUpOrganizationName } from "./sign-up-body";
-import { ensureSignUpOrganization as ensureOrganization } from "./sign-up-organization";
 
 const DAY_SECONDS = 60 * 60 * 24;
 
@@ -44,20 +41,10 @@ function createIam(env: IamEnv) {
       minPasswordLength: PASSWORD_LENGTH.min,
       maxPasswordLength: PASSWORD_LENGTH.max,
     },
-    user: {
-      additionalFields: {
-        pendingOrganizationName: {
-          type: "string",
-          required: false,
-          input: false,
-          returned: false,
-        },
-      },
-    },
     session: { expiresIn: 7 * DAY_SECONDS, updateAge: DAY_SECONDS },
     rateLimit: { storage: "database" },
     disabledPaths: ["/token"],
-    hooks: { after: loginFailureHook },
+    hooks: { before: authRulesHook(authRules), after: loginFailureHook },
     advanced: {
       defaultCookieAttributes: {
         httpOnly: true,
@@ -67,27 +54,6 @@ function createIam(env: IamEnv) {
       database: { generateId: "uuid" },
     },
     databaseHooks: {
-      user: {
-        create: {
-          before: (user, context) =>
-            Promise.resolve({
-              data: {
-                ...user,
-                pendingOrganizationName: signUpOrganizationName(context),
-              },
-            }),
-          after: async (user) => {
-            try {
-              await ensureSignUpOrganization(user.id);
-            } catch (error) {
-              logger.error(
-                { err: error, userId: user.id },
-                "creating the sign-up organization failed"
-              );
-            }
-          },
-        },
-      },
       session: {
         create: {
           before: async (session) => {
@@ -123,7 +89,8 @@ function createIam(env: IamEnv) {
       organization({
         ac,
         roles,
-        allowUserToCreateOrganization: false,
+        allowUserToCreateOrganization: true,
+        organizationLimit: ORGANIZATION_LIMIT,
         organizationHooks: {
           beforeAddMember: ({ member }) => rejectUnknownRoles(member.role),
           beforeUpdateMemberRole: ({ newRole }) => rejectUnknownRoles(newRole),
@@ -135,15 +102,7 @@ function createIam(env: IamEnv) {
     ],
   });
 
-  function ensureSignUpOrganization(userId: string): Promise<void> {
-    return ensureOrganization(
-      database,
-      (body) => auth.api.createOrganization({ body }),
-      userId
-    );
-  }
-
-  return { auth, database, ensureSignUpOrganization };
+  return { auth, database };
 }
 
 type Iam = ReturnType<typeof createIam>;

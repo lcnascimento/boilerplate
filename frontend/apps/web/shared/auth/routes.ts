@@ -8,6 +8,8 @@ export const SIGN_IN_HREF = "/sign-in" satisfies Route;
 
 export const SIGN_UP_HREF = "/sign-up" satisfies Route;
 
+export const CREATE_OR_JOIN_HREF = "/organizations/new" satisfies Route;
+
 export const CALLBACK_URL_PARAM = "callbackUrl";
 
 const signedInHomes: readonly Route[] = [

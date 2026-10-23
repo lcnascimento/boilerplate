@@ -113,6 +113,24 @@ describe("OrganizationMenu", () => {
     ]);
   });
 
+  it("ends the switch with a link to create or join an Organization", async () => {
+    const user = renderMenu(acmeActive);
+
+    await openSwitch(user);
+
+    const submenu = screen.getAllByRole("menu").at(-1);
+    const items = Array.from(
+      submenu?.querySelectorAll("[role^=menuitem]") ?? [],
+      (item) => item.textContent
+    );
+    expect(items).toEqual(["Acme", "Globex", "Criar ou entrar"]);
+    expect(
+      screen
+        .getByRole("menuitem", { name: "Criar ou entrar" })
+        .getAttribute("href")
+    ).toBe("/organizations/new");
+  });
+
   it("makes the chosen Organization active and refreshes the page", async () => {
     setActive.mockResolvedValue({ data: null, error: null });
     const user = renderMenu(acmeActive);

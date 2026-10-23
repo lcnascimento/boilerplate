@@ -7,6 +7,9 @@ import {
   SEED_PASSWORD,
 } from "../scripts/iam-seed/users";
 import { getIam } from "../shared/auth/auth";
+import { organizationSlug } from "../shared/auth/organization-slug";
+import { ORGANIZATION_LIMIT } from "../shared/auth/policy";
+import { CREATE_OR_JOIN_HREF } from "../shared/auth/routes";
 
 import { signedOut } from "./auth-state";
 import { expect, test } from "./fixtures";
@@ -78,6 +81,23 @@ async function asThrowawayViewerOf(
   }
 }
 
+async function deleteOrganizationsOwnedBy(userId: string) {
+  const { adapter } = await getIam().auth.$context;
+  const owned = await adapter.findMany<{ organizationId: string }>({
+    model: "member",
+    where: [
+      { field: "userId", value: userId },
+      { field: "role", value: "owner" },
+    ],
+  });
+  for (const { organizationId } of owned) {
+    await adapter.delete({
+      model: "organization",
+      where: [{ field: "id", value: organizationId }],
+    });
+  }
+}
+
 async function removeMembership(userId: string, slug: string) {
   const { adapter } = await getIam().auth.$context;
   await adapter.delete({
@@ -132,7 +152,7 @@ test("a User removed from the active Organization lands on another membership", 
   });
 });
 
-test("a User who lost every membership is told so and can sign out", async ({
+test("a User who lost every membership is sent to Criar ou entrar and can sign out", async ({
   page,
 }) => {
   await asThrowawayViewerOf(page, ["globex"], async (userId) => {
@@ -142,14 +162,74 @@ test("a User who lost every membership is told so and can sign out", async ({
     await removeMembership(userId, "globex");
     await page.reload();
 
+    await expect(page).toHaveURL(CREATE_OR_JOIN_HREF);
     await expect(
-      page.getByRole("heading", {
-        name: "Você não faz parte de nenhuma Organization",
-      })
+      page.getByRole("heading", { name: "Criar ou entrar" })
     ).toBeVisible();
     await expect(organizationMenu(page)).toHaveCount(0);
 
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page).toHaveURL("/sign-in");
+  });
+});
+
+test("a Member opens Criar ou entrar from the switch and creates another Organization, which becomes active", async ({
+  page,
+}) => {
+  const name = `Initech ${randomUUID().slice(0, 8)}`;
+  await asThrowawayViewerOf(page, ["globex"], async (userId) => {
+    try {
+      await page.goto(MEMBERS_HREF);
+      await openOrganizationSwitch(page);
+      await page.getByRole("menuitem", { name: "Criar ou entrar" }).click();
+
+      await expect(page).toHaveURL(CREATE_OR_JOIN_HREF);
+      await expect(
+        page.getByRole("link", { name: "Voltar para Globex" })
+      ).toBeVisible();
+      await page.getByLabel("Nome da Organization").fill(name);
+      await page.getByRole("button", { name: "Criar Organization" }).click();
+
+      await expect(organizationMenu(page)).toContainText(name);
+      await openOrganizationSwitch(page);
+      await expect(page.getByRole("menuitemradio")).toHaveText([
+        "Globex",
+        name,
+      ]);
+      await expect(
+        page.getByRole("menuitemradio", { name, checked: true })
+      ).toBeVisible();
+    } finally {
+      await deleteOrganizationsOwnedBy(userId);
+    }
+  });
+});
+
+test("a User with 10 Organizations is told about the limit when creating one more", async ({
+  page,
+}) => {
+  await asThrowawayViewerOf(page, ["globex"], async (userId) => {
+    try {
+      const { auth } = getIam();
+      for (let index = 2; index <= ORGANIZATION_LIMIT; index++) {
+        const name = `Limit ${index} ${randomUUID().slice(0, 8)}`;
+        await auth.api.createOrganization({
+          body: { name, slug: organizationSlug(name), userId },
+        });
+      }
+
+      await page.goto(CREATE_OR_JOIN_HREF);
+      await page.getByLabel("Nome da Organization").fill("Limit 11");
+      await page.getByRole("button", { name: "Criar Organization" }).click();
+
+      await expect(
+        page.getByRole("alert").filter({ hasText: /\S/ })
+      ).toHaveText(
+        "Você já participa de 10 Organizations, o máximo por User. Saia de uma delas para criar outra."
+      );
+      await expect(page).toHaveURL(CREATE_OR_JOIN_HREF);
+    } finally {
+      await deleteOrganizationsOwnedBy(userId);
+    }
   });
 });

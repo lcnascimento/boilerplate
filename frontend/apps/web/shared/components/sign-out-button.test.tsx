@@ -10,7 +10,7 @@ import { Toaster } from "@boilerplate/ui/components/sonner";
 import { appMessages } from "@/shared/_messages";
 import { authClient } from "@/shared/auth/client";
 
-import { NoOrganization } from "./no-organization";
+import { SignOutButton } from "./sign-out-button";
 
 const replace = vi.fn();
 const refresh = vi.fn();
@@ -31,7 +31,7 @@ function renderScreen() {
       messages={{ ...messages["pt-BR"], ...appMessages("pt-BR") }}
       timeZone="America/Sao_Paulo"
     >
-      <NoOrganization />
+      <SignOutButton />
       <Toaster />
     </NextIntlClientProvider>
   );
@@ -54,17 +54,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("NoOrganization", () => {
-  it("explains that the User has no Organization", () => {
-    renderScreen();
-
-    expect(
-      screen.getByRole("heading", {
-        name: "Você não faz parte de nenhuma Organization",
-      })
-    ).toBeTruthy();
-  });
-
+describe("SignOutButton", () => {
   it("signs out to the sign-in page", async () => {
     signOut.mockResolvedValue({ data: { success: true }, error: null });
     const user = renderScreen();

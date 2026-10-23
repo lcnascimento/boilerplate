@@ -10,11 +10,8 @@ import { Input } from "@boilerplate/ui/components/input";
 import { Label } from "@boilerplate/ui/components/label";
 
 import { authClient } from "@/shared/auth/client";
-import {
-  ORGANIZATION_NAME_MAX_LENGTH,
-  PASSWORD_LENGTH,
-} from "@/shared/auth/policy";
-import { SIGNED_IN_HOME } from "@/shared/auth/routes";
+import { PASSWORD_LENGTH } from "@/shared/auth/policy";
+import { CREATE_OR_JOIN_HREF } from "@/shared/auth/routes";
 
 import { firstErrorPerField, type FieldErrors } from "./field-errors";
 
@@ -22,7 +19,6 @@ const signUpSchema = z.object({
   name: z.string().trim().min(1),
   email: z.email(),
   password: z.string().min(PASSWORD_LENGTH.min).max(PASSWORD_LENGTH.max),
-  organizationName: z.string().trim().min(1).max(ORGANIZATION_NAME_MAX_LENGTH),
 });
 
 type SignUpInput = z.infer<typeof signUpSchema>;
@@ -35,7 +31,6 @@ const fields: readonly { field: Field; type: string; autoComplete: string }[] =
     { field: "name", type: "text", autoComplete: "name" },
     { field: "email", type: "email", autoComplete: "email" },
     { field: "password", type: "password", autoComplete: "new-password" },
-    { field: "organizationName", type: "text", autoComplete: "organization" },
   ];
 
 const serverFieldErrors: Readonly<Record<string, Field>> = {
@@ -49,7 +44,6 @@ const emptyInput: Record<Field, string> = {
   name: "",
   email: "",
   password: "",
-  organizationName: "",
 };
 
 export function SignUpForm() {
@@ -65,7 +59,6 @@ export function SignUpForm() {
     name: t("nameLabel"),
     email: t("emailLabel"),
     password: t("passwordLabel"),
-    organizationName: t("organizationNameLabel"),
   };
 
   function invalidMessage(field: Field, code: string): string {
@@ -76,9 +69,6 @@ export function SignUpForm() {
         : t("invalidEmail");
     }
     if (field === "password") return t("passwordPolicy", PASSWORD_LENGTH);
-    if (field === "organizationName") {
-      return tValidation("maxLength", { max: ORGANIZATION_NAME_MAX_LENGTH });
-    }
     return tValidation("required");
   }
 
@@ -104,7 +94,7 @@ export function SignUpForm() {
         else setFieldErrors({ [field]: invalidMessage(field, code) });
         return;
       }
-      router.replace(SIGNED_IN_HOME);
+      router.replace(CREATE_OR_JOIN_HREF);
       router.refresh();
     });
   }

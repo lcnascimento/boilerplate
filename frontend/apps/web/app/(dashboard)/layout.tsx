@@ -1,13 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getIam } from "@/shared/auth/auth";
 import { getRequestActor } from "@/shared/auth/request-actor";
-import { SIGN_IN_HREF } from "@/shared/auth/routes";
+import { CREATE_OR_JOIN_HREF, SIGN_IN_HREF } from "@/shared/auth/routes";
 import { getRequestSession } from "@/shared/auth/session";
 import { parseSidebarOpen, SIDEBAR_COOKIE_NAME } from "@/shared/cookies";
 
-import { DashboardShell, NoOrganization } from "./_components";
+import { DashboardShell } from "./_components";
 
 import type { ReactNode } from "react";
 
@@ -26,10 +25,9 @@ export default async function DashboardLayout({
   if (session === null) redirect(SIGN_IN_HREF);
 
   const { id, name, email, image } = session.user;
-  await getIam().ensureSignUpOrganization(id);
   const requestActor = await getRequestActor();
   if (requestActor.kind === "signed-out") redirect(SIGN_IN_HREF);
-  if (requestActor.kind === "no-organization") return <NoOrganization />;
+  if (requestActor.kind === "no-organization") redirect(CREATE_OR_JOIN_HREF);
 
   return (
     <DashboardShell
