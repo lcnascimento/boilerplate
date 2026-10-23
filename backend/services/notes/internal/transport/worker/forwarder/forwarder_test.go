@@ -427,7 +427,7 @@ func newEnv(t *testing.T) *env {
 func (e *env) startForwarder(t *testing.T) *outbox.Forwarder {
 	t.Helper()
 
-	f, err := forwarder.New(t.Context(), e.pool, e.brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
+	f, err := forwarder.New(t.Context(), notes.Outbox, e.pool, e.brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
 	require.NoError(t, err)
 
 	require.NoError(t, f.Start(t.Context()))

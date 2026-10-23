@@ -38,7 +38,7 @@ func newForwarder(pool *pgxpool.Pool, shutdowner fx.Shutdowner) (*outbox.Forward
 		return nil, err
 	}
 
-	return forwarder.New(context.Background(), pool, brokers, exitWithFailure(shutdowner))
+	return forwarder.New(context.Background(), notes.Outbox, pool, brokers, exitWithFailure(shutdowner))
 }
 
 func newJanitor(pool *pgxpool.Pool) (*outbox.Janitor, error) {

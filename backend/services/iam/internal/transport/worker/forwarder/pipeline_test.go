@@ -166,7 +166,7 @@ func startWorker(t *testing.T, pool *pgxpool.Pool, schemaIDs eventbus.SchemaIDs,
 	require.NoError(t, worker.Start(t.Context()))
 	t.Cleanup(func() { require.NoError(t, worker.Stop(context.Background())) })
 
-	f, err := forwarder.New(t.Context(), pool, brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
+	f, err := forwarder.New(t.Context(), changesrepo.Outbox, pool, brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
 	require.NoError(t, err)
 	require.NoError(t, f.Start(t.Context()))
 	require.NoError(t, f.Ready(t.Context()))
