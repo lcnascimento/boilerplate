@@ -11,8 +11,12 @@ var services = []service.Service{
 		Processes: []service.Process{service.Daemon("web", service.API, service.Browser).WithActorAuth()},
 	},
 	{
-		Name:      "iam",
-		Processes: []service.Process{service.OneShot("iam-migrate")},
+		Name: "iam",
+		Processes: []service.Process{
+			service.Daemon("iam-worker", service.Worker).WithDBPool(),
+			service.OneShot("iam-migrate"),
+			service.OneShot("iam-schemas"),
+		},
 	},
 	{
 		Name: "audit",
