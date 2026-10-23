@@ -16,7 +16,11 @@ const (
 	Browser  Component = "browser"
 )
 
-var ErrActorAuthWithoutAPI = errors.New("process declares actor auth but serves no api")
+var (
+	ErrActorAuthWithoutAPI          = errors.New("process declares actor auth but serves no api")
+	ErrIdentityChangesWithoutWorker = errors.New("process translates identity changes but runs no worker")
+	ErrAuditLogWithoutConsumer      = errors.New("process records the Audit Log but runs no consumer")
+)
 
 var components = []Component{API, Consumer, Worker, Browser}
 
@@ -68,10 +72,12 @@ type Process struct {
 }
 
 type processOptions struct {
-	dbPool        bool
-	actorAuth     bool
-	consumerGroup string
-	logAlerts     []LogAlert
+	dbPool          bool
+	actorAuth       bool
+	identityChanges bool
+	auditLog        bool
+	consumerGroup   string
+	logAlerts       []LogAlert
 }
 
 func Daemon(name string, component Component, more ...Component) Process {
@@ -99,6 +105,18 @@ func (p Process) WithActorAuth() Process {
 }
 
 func (p Process) ActorAuth() bool { return p.opts().actorAuth }
+
+func (p Process) WithIdentityChanges() Process {
+	return p.with(func(o *processOptions) { o.identityChanges = true })
+}
+
+func (p Process) IdentityChanges() bool { return p.opts().identityChanges }
+
+func (p Process) WithAuditLog() Process {
+	return p.with(func(o *processOptions) { o.auditLog = true })
+}
+
+func (p Process) AuditLog() bool { return p.opts().auditLog }
 
 func (p Process) WithConsumerGroup(group string) Process {
 	return p.with(func(o *processOptions) { o.consumerGroup = group })
@@ -267,6 +285,14 @@ func validateProcess(svc string, process Process, seen map[string]bool) error {
 
 	if process.DBPool() && !process.LongRunning() {
 		return errors.New("one-shot process %q cannot declare a database pool", process.name)
+	}
+
+	if process.IdentityChanges() && !process.Runs(Worker) {
+		return ErrIdentityChangesWithoutWorker.WithAttribute("process", process.name)
+	}
+
+	if process.AuditLog() && !process.Runs(Consumer) {
+		return ErrAuditLogWithoutConsumer.WithAttribute("process", process.name)
 	}
 
 	return nil

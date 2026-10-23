@@ -29,7 +29,7 @@ var fixture = service.Service{
 	Processes: []service.Process{
 		service.Daemon("fixture-api", service.API).WithDBPool().WithActorAuth(),
 		service.Daemon("fixture-consumer", service.Consumer).WithConsumerGroup("fixture"),
-		service.Daemon("fixture-worker", service.Worker),
+		service.Daemon("fixture-worker", service.Worker).WithIdentityChanges(),
 		service.OneShot("fixture-migrate"),
 	},
 }

@@ -161,6 +161,16 @@ groups:
           description: 'fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele.'
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
           summary: fixture-worker não reporta a idade do outbox há 5 minutos
+      - alert: IdentityChangeBacklogHigh
+        expr: max(iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}) > 300
+        labels:
+          service: fixture-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-fixture
+          description: 'A mudança de identidade pendente mais antiga de fixture-worker passou de 5 minutos sem virar Integration Event: a tradução parou, ou travou numa mudança que ela não sabe traduzir, e o Audit Log deixa de receber as mudanças de identidade. Veja primeiro os logs de fixture-worker (UNTRANSLATABLE_CHANGE) e a idade da mudança pendente mais antiga no dashboard do serviço.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/IdentityChangeBacklogHigh.md
+          summary: fixture-worker com a mudança de identidade mais antiga há {{ $value | humanizeDuration }} sem tradução
       - alert: SeriesBudgetExceeded
         expr: job:series:count{job="boilerplate/fixture-worker"} > 5
         for: 15m

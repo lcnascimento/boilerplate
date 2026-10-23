@@ -113,6 +113,11 @@ const (
 	IAMActorAuthenticationFailures = "iam_actor_authentication_failures_total"
 	IAMActorAuthorizationDenials   = "iam_actor_authorization_denials_total"
 	IAMLoginFailures               = "iam_login_failures_total"
+
+	IAMIdentityChangeTranslated       = "iam_identity_change_translated_total"
+	IAMIdentityChangeOldestPendingAge = "iam_identity_change_oldest_pending_age_seconds"
+
+	AuditEntriesRecorded = "audit_entries_recorded_total"
 )
 
 const (
@@ -285,6 +290,17 @@ var metrics = map[string]Metric{
 		Type: Counter, Source: OTLP, Labels: []string{"permission", "role"}, EmittedBy: on(service.Go, actorAuth),
 	},
 	IAMLoginFailures: {Type: Counter, Source: OTLP, Labels: []string{"reason"}, EmittedBy: on(service.Node, actorAuth)},
+
+	IAMIdentityChangeTranslated: {
+		Type: Counter, Source: OTLP, Labels: []string{"cloudevents_event_type"}, Presence: PresenceOnEvent,
+		EmittedBy: identityChanges,
+	},
+	IAMIdentityChangeOldestPendingAge: {Type: Gauge, Source: OTLP, EmittedBy: identityChanges},
+
+	AuditEntriesRecorded: {
+		Type: Counter, Source: OTLP, Labels: []string{"cloudevents_event_type"}, Presence: PresenceOnEvent,
+		EmittedBy: auditLog,
+	},
 }
 
 const (
