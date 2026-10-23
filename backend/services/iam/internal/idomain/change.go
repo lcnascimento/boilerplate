@@ -12,18 +12,40 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events"
 )
 
 var ErrUntranslatableChange = errors.New("the identity change has no Integration Event").
 	WithCode("UNTRANSLATABLE_CHANGE")
 
+type Table string
+
+const (
+	TableUser         Table = "user"
+	TableAccount      Table = "account"
+	TableSession      Table = "session"
+	TableOrganization Table = "organization"
+	TableMember       Table = "member"
+	TableInvitation   Table = "invitation"
+	TableSignIn       Table = "sign_in"
+)
+
+type Operation string
+
+const (
+	OperationInsert Operation = "INSERT"
+	OperationUpdate Operation = "UPDATE"
+	OperationDelete Operation = "DELETE"
+	OperationFailed Operation = "FAILED"
+)
+
 type Change struct {
 	ID            int64
 	TransactionID string
 	OccurredAt    time.Time
-	Table         string
-	Operation     string
+	Table         Table
+	Operation     Operation
 	Fields        map[string]string
 
 	ActorID             uuid.NullUUID
@@ -32,20 +54,18 @@ type Change struct {
 }
 
 type Event struct {
+	eventbus.Origin
+
 	Topic         string
 	Subject       string
 	Time          time.Time
 	CorrelationID string
 	Message       proto.Message
-
-	ActorID             string
-	ActorOrganizationID string
-	IPHash              string
 }
 
 type changeKind struct {
-	table     string
-	operation string
+	table     Table
+	operation Operation
 }
 
 type translation struct {
@@ -55,7 +75,7 @@ type translation struct {
 }
 
 var translations = map[changeKind]translation{
-	{table: "user", operation: "INSERT"}: {
+	{table: TableUser, operation: OperationInsert}: {
 		topic: events.UserTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			userID := f.userID("id")
@@ -64,7 +84,7 @@ var translations = map[changeKind]translation{
 		},
 		ownActor: func(f *fields) (userID, organizationID string) { return f.userID("id"), "" },
 	},
-	{table: "user", operation: "DELETE"}: {
+	{table: TableUser, operation: OperationDelete}: {
 		topic: events.UserTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			userID := f.userID("id")
@@ -72,7 +92,7 @@ var translations = map[changeKind]translation{
 			return userID, &events.UserDeleted{UserId: userID, DeletedAt: at}
 		},
 	},
-	{table: "account", operation: "UPDATE"}: {
+	{table: TableAccount, operation: OperationUpdate}: {
 		topic: events.UserTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			userID := f.userID("userId")
@@ -80,7 +100,7 @@ var translations = map[changeKind]translation{
 			return userID, &events.PasswordChanged{UserId: userID, ChangedAt: at}
 		},
 	},
-	{table: "organization", operation: "INSERT"}: {
+	{table: TableOrganization, operation: OperationInsert}: {
 		topic: events.OrganizationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			organizationID := f.organizationID("id")
@@ -88,7 +108,7 @@ var translations = map[changeKind]translation{
 			return organizationID, &events.OrganizationCreated{OrganizationId: organizationID, CreatedAt: at}
 		},
 	},
-	{table: "organization", operation: "UPDATE"}: {
+	{table: TableOrganization, operation: OperationUpdate}: {
 		topic: events.OrganizationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			organizationID := f.organizationID("id")
@@ -96,7 +116,7 @@ var translations = map[changeKind]translation{
 			return organizationID, &events.OrganizationRenamed{OrganizationId: organizationID, RenamedAt: at}
 		},
 	},
-	{table: "organization", operation: "DELETE"}: {
+	{table: TableOrganization, operation: OperationDelete}: {
 		topic: events.OrganizationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			organizationID := f.organizationID("id")
@@ -104,7 +124,7 @@ var translations = map[changeKind]translation{
 			return organizationID, &events.OrganizationDeleted{OrganizationId: organizationID, DeletedAt: at}
 		},
 	},
-	{table: "member", operation: "INSERT"}: {
+	{table: TableMember, operation: OperationInsert}: {
 		topic: events.OrganizationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			organizationID := f.organizationID("organizationId")
@@ -118,7 +138,7 @@ var translations = map[changeKind]translation{
 			}
 		},
 	},
-	{table: "member", operation: "UPDATE"}: {
+	{table: TableMember, operation: OperationUpdate}: {
 		topic: events.OrganizationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			organizationID := f.organizationID("organizationId")
@@ -132,7 +152,7 @@ var translations = map[changeKind]translation{
 			}
 		},
 	},
-	{table: "member", operation: "DELETE"}: {
+	{table: TableMember, operation: OperationDelete}: {
 		topic: events.OrganizationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			organizationID := f.organizationID("organizationId")
@@ -145,7 +165,7 @@ var translations = map[changeKind]translation{
 			}
 		},
 	},
-	{table: "invitation", operation: "INSERT"}: {
+	{table: TableInvitation, operation: OperationInsert}: {
 		topic: events.InvitationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			invitationID := f.invitationID("id")
@@ -159,7 +179,7 @@ var translations = map[changeKind]translation{
 			}
 		},
 	},
-	{table: "invitation", operation: "UPDATE"}: {
+	{table: TableInvitation, operation: OperationUpdate}: {
 		topic: events.InvitationTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			invitationID, organizationID := f.invitationID("id"), f.organizationID("organizationId")
@@ -184,7 +204,7 @@ var translations = map[changeKind]translation{
 			}
 		},
 	},
-	{table: "session", operation: "INSERT"}: {
+	{table: TableSession, operation: OperationInsert}: {
 		topic: events.SessionTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			sessionID := f.sessionID("id")
@@ -193,7 +213,7 @@ var translations = map[changeKind]translation{
 		},
 		ownActor: sessionOwner,
 	},
-	{table: "session", operation: "DELETE"}: {
+	{table: TableSession, operation: OperationDelete}: {
 		topic: events.SessionTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			sessionID := f.sessionID("id")
@@ -202,7 +222,7 @@ var translations = map[changeKind]translation{
 		},
 		ownActor: sessionOwner,
 	},
-	{table: "sign_in", operation: "FAILED"}: {
+	{table: TableSignIn, operation: OperationFailed}: {
 		topic: events.SessionTopic,
 		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
 			reason, ok := signInFailureReasons[f.values["reason"]]
@@ -301,9 +321,11 @@ func (c *Change) Event() (*Event, error) {
 		CorrelationID: c.TransactionID,
 		Message:       message,
 
-		ActorID:             actorID,
-		ActorOrganizationID: actorOrganizationID,
-		IPHash:              c.IPHash,
+		Origin: eventbus.Origin{
+			ActorID:             actorID,
+			ActorOrganizationID: actorOrganizationID,
+			IPHash:              c.IPHash,
+		},
 	}, nil
 }
 
@@ -322,6 +344,6 @@ func prefixed[ID fmt.Stringer](id uuid.NullUUID, fromUUID func(uuid.UUID) ID) st
 func (c *Change) untranslatable() errors.CustomError {
 	return ErrUntranslatableChange.
 		WithAttribute("change_id", strconv.FormatInt(c.ID, 10)).
-		WithAttribute("table", c.Table).
-		WithAttribute("operation", c.Operation)
+		WithAttribute("table", string(c.Table)).
+		WithAttribute("operation", string(c.Operation))
 }

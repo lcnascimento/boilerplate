@@ -124,8 +124,8 @@ func toChange(row *db.LockChangesRow) (*idomain.Change, error) {
 		ID:            row.ID,
 		TransactionID: row.TransactionID,
 		OccurredAt:    row.OccurredAt,
-		Table:         row.TableName,
-		Operation:     row.Operation,
+		Table:         idomain.Table(row.TableName),
+		Operation:     idomain.Operation(row.Operation),
 
 		ActorID:             row.ActorID,
 		ActorOrganizationID: row.ActorOrganizationID,
@@ -164,9 +164,7 @@ func (r *Repository) newMessage(event *idomain.Event) (*message.Message, error) 
 		DataContentType: eventbus.ContentType,
 		CorrelationID:   event.CorrelationID,
 
-		ActorID:             event.ActorID,
-		ActorOrganizationID: event.ActorOrganizationID,
-		IPHash:              event.IPHash,
+		Origin: event.Origin,
 	}
 
 	msg := message.NewMessage(envelope.ID, value)

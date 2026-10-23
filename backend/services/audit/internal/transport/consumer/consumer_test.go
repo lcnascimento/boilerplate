@@ -109,18 +109,20 @@ func TestHandle_PassesTheServiceErrorThrough(t *testing.T) {
 func memberRoleChangedEvent() *eventbus.Event {
 	return &eventbus.Event{
 		Envelope: eventbus.Envelope{
-			ID:                  "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-			Source:              "iam",
-			Type:                "boilerplate.iam.v1.MemberRoleChanged",
-			Time:                time.Date(2026, 10, 17, 12, 30, 0, 0, time.UTC),
-			Subject:             "member_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
-			PartitionKey:        "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
-			SpecVersion:         "1.0",
-			DataContentType:     "application/protobuf",
-			ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-			ActorOrganizationID: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
-			IPHash:              "5d41402abc4b2a76b9719d911017c592ae0b6a0f7d5b3e1c2a4f6e8d0b1c3a5f",
-			CorrelationID:       "784512",
+			ID:              "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
+			Source:          "iam",
+			Type:            "boilerplate.iam.v1.MemberRoleChanged",
+			Time:            time.Date(2026, 10, 17, 12, 30, 0, 0, time.UTC),
+			Subject:         "member_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
+			PartitionKey:    "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+			SpecVersion:     "1.0",
+			DataContentType: "application/protobuf",
+			Origin: eventbus.Origin{
+				ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+				ActorOrganizationID: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+				IPHash:              "5d41402abc4b2a76b9719d911017c592ae0b6a0f7d5b3e1c2a4f6e8d0b1c3a5f",
+			},
+			CorrelationID: "784512",
 		},
 		Headers: map[string]string{
 			"ce_id":     "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",

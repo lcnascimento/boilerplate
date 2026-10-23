@@ -15,18 +15,20 @@ func TestEnvelope_Headers(t *testing.T) {
 	t.Parallel()
 
 	envelope := eventbus.Envelope{
-		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		Source:              "iam",
-		Type:                "acme.iam.v1.UserCreated",
-		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
-		Subject:             "user_0199f1a2-0000-7000-8000-000000000001",
-		PartitionKey:        "user_0199f1a2-0000-7000-8000-000000000001",
-		SpecVersion:         eventbus.SpecVersion,
-		DataContentType:     eventbus.ContentType,
-		ActorID:             "user_0199f1a2-0000-7000-8000-0000000000a1",
-		ActorOrganizationID: "org_0199f1a2-0000-7000-8000-0000000000b2",
-		IPHash:              "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-		CorrelationID:       "784512",
+		ID:              "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+		Source:          "iam",
+		Type:            "acme.iam.v1.UserCreated",
+		Time:            time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
+		Subject:         "user_0199f1a2-0000-7000-8000-000000000001",
+		PartitionKey:    "user_0199f1a2-0000-7000-8000-000000000001",
+		SpecVersion:     eventbus.SpecVersion,
+		DataContentType: eventbus.ContentType,
+		Origin: eventbus.Origin{
+			ActorID:             "user_0199f1a2-0000-7000-8000-0000000000a1",
+			ActorOrganizationID: "org_0199f1a2-0000-7000-8000-0000000000b2",
+			IPHash:              "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+		},
+		CorrelationID: "784512",
 	}
 
 	require.Equal(t, map[string]string{
@@ -86,18 +88,20 @@ func TestParseEnvelope(t *testing.T) {
 			name:    "all headers",
 			headers: full,
 			want: eventbus.Envelope{
-				ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-				Source:              "iam",
-				Type:                "acme.iam.v1.UserDeleted",
-				Time:                time.Date(2026, 10, 17, 15, 30, 45, 500000000, time.UTC),
-				Subject:             "user_1",
-				PartitionKey:        "user_1",
-				SpecVersion:         "1.0",
-				DataContentType:     "application/protobuf",
-				ActorID:             "user_1",
-				ActorOrganizationID: "org_1",
-				IPHash:              "ip_1",
-				CorrelationID:       "42",
+				ID:              "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+				Source:          "iam",
+				Type:            "acme.iam.v1.UserDeleted",
+				Time:            time.Date(2026, 10, 17, 15, 30, 45, 500000000, time.UTC),
+				Subject:         "user_1",
+				PartitionKey:    "user_1",
+				SpecVersion:     "1.0",
+				DataContentType: "application/protobuf",
+				Origin: eventbus.Origin{
+					ActorID:             "user_1",
+					ActorOrganizationID: "org_1",
+					IPHash:              "ip_1",
+				},
+				CorrelationID: "42",
 			},
 		},
 		{
@@ -159,18 +163,20 @@ func TestEnvelope_RoundTrip(t *testing.T) {
 	t.Parallel()
 
 	envelope := eventbus.Envelope{
-		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
-		Source:              "iam",
-		Type:                "acme.iam.v1.UserCreated",
-		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
-		Subject:             "user_1",
-		PartitionKey:        "user_1",
-		SpecVersion:         eventbus.SpecVersion,
-		DataContentType:     eventbus.ContentType,
-		ActorID:             "user_1",
-		ActorOrganizationID: "org_1",
-		IPHash:              "ip_1",
-		CorrelationID:       "42",
+		ID:              "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
+		Source:          "iam",
+		Type:            "acme.iam.v1.UserCreated",
+		Time:            time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
+		Subject:         "user_1",
+		PartitionKey:    "user_1",
+		SpecVersion:     eventbus.SpecVersion,
+		DataContentType: eventbus.ContentType,
+		Origin: eventbus.Origin{
+			ActorID:             "user_1",
+			ActorOrganizationID: "org_1",
+			IPHash:              "ip_1",
+		},
+		CorrelationID: "42",
 	}
 
 	got, err := eventbus.ParseEnvelope(envelope.Headers())
