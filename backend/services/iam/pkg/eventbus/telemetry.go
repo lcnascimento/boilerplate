@@ -9,6 +9,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
@@ -91,7 +92,7 @@ func (s *Subscriber) onAttemptStart(topic string, msg *message.Message, attempt 
 			metricAttributes = append(metricAttributes, errType)
 
 			span.SetAttributes(errType)
-			logger.ErrorBySeverity(ctx, err)
+			span.SetStatus(codes.Error, err.Error())
 		}
 
 		processDuration.Record(ctx, time.Since(started).Seconds(), otelmetric.WithAttributes(metricAttributes...))
@@ -116,6 +117,12 @@ func (s *Subscriber) onDeadLettered(topic string, msg *message.Message) {
 
 	logger.Warn(ctx, "message sent to the DLQ",
 		log.String("dlq", DLQTopic(topic, s.group)), log.String("error.type", errType), log.String("message.id", msg.Metadata.Get(headerID)))
+}
+
+func onUndeliverable(ctx context.Context, err error) error {
+	logger.ErrorBySeverity(ctx, err)
+
+	return err
 }
 
 func onRouterStopped(ctx context.Context, err error) {

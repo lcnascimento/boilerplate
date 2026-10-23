@@ -39,3 +39,55 @@ var components = []Component{API, Consumer, Worker, Browser}
 and range over `components` at each use. A test that enumerates the set on purpose, to pin it, is not a copy.
 
 Source: `model-the-domain`.
+
+## Log an error once, where it is handled
+
+The code that handles an error logs it once: the application, or the port when the error originates there. Code that only passes an error on records it on the span and in the metrics (`error.type`) and does not log it, so one failure is one log line and one tracked exception.
+
+Violation:
+
+```go
+func (a *Application) onError(ctx context.Context, err error) error {
+	logger.ErrorBySeverity(ctx, err)
+
+	return err
+}
+
+// ...and the event bus that called the application logs the same error again
+end := func(err error) {
+	span.SetAttributes(semconv.ErrorTypeKey.String(errorType(err)))
+	logger.ErrorBySeverity(ctx, err)
+}
+```
+
+Fix:
+
+```go
+end := func(err error) {
+	span.SetAttributes(semconv.ErrorTypeKey.String(errorType(err)))
+	span.SetStatus(codes.Error, err.Error())
+}
+```
+
+and log in the event bus only the errors it originates, such as a message that does not decode.
+
+Source: `boundary-discipline`.
+
+## Keep PII out of baggage
+
+Baggage carries only pseudonymous and technical identifiers (`user.id`, `organization.id`, `note_id`, `cloudevents.*`), never an email, a name or user content: it is copied into every span, every log line and every tracked exception downstream.
+
+Violation:
+
+```go
+ctx = baggage.ContextWithMembers(ctx,
+	baggage.NewMember("user.id", user.ID.String()),
+	baggage.NewMember("user.email", user.Email),
+)
+```
+
+Fix:
+
+```go
+ctx = baggage.ContextWithMembers(ctx, baggage.NewMember("user.id", user.ID.String()))
+```

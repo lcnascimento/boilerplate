@@ -11,10 +11,15 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/logtest"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	kiterrors "github.com/lcnascimento/go-kit/errors"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/eventbustest"
@@ -343,6 +348,110 @@ func TestComponentSubscriber_MalformedMessageGoesToTheDLQWithoutCallingTheHandle
 			handler.requireNoMoreCalls(t)
 		})
 	}
+}
+
+func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+
+	const (
+		dlqSent       = "message sent to the DLQ"
+		undeliverable = "message cannot be processed and goes to the DLQ"
+	)
+
+	tests := []struct {
+		name     string
+		publish  func(t *testing.T, env *eventbustest.Env) string
+		handle   func(attempt int32) error
+		wantLogs []logged
+	}{
+		{
+			name:    "transient handler error",
+			publish: publishThing,
+			handle: func(attempt int32) error {
+				if attempt == 1 {
+					return errors.New("database is down")
+				}
+
+				return nil
+			},
+			wantLogs: []logged{},
+		},
+		{
+			name:     "permanent handler error",
+			publish:  publishThing,
+			handle:   func(int32) error { return eventbus.ErrPermanent.WithCause(errors.New("payload is corrupt")) },
+			wantLogs: []logged{{log.SeverityWarn, dlqSent, false}},
+		},
+		{
+			name:     "handler panic",
+			publish:  publishThing,
+			handle:   func(int32) error { panic("handler bug") },
+			wantLogs: []logged{{log.SeverityError, undeliverable, true}, {log.SeverityWarn, dlqSent, false}},
+		},
+		{
+			name: "malformed message",
+			publish: func(t *testing.T, env *eventbustest.Env) string {
+				t.Helper()
+
+				headers := validHeaders(thingDeletedType)
+				env.PublishRaw(t, "thing_1", headers, []byte{0x01})
+
+				return headers["ce_id"]
+			},
+			wantLogs: []logged{{log.SeverityWarn, undeliverable, true}, {log.SeverityWarn, dlqSent, false}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logs := eventbus.RecordLogs(t)
+
+			env := eventbustest.New(t, testevents.Protos)
+			poisoned := tt.publish(t, env)
+			next := env.Publish(t, "thing_1", &testevents.ThingDeleted{Id: "thing_1"})
+
+			var attempts atomic.Int32
+
+			handler := newRecorder()
+			handler.onHandle = func(event *eventbus.Event) error {
+				if event.ID != poisoned || tt.handle == nil {
+					return nil
+				}
+
+				return tt.handle(attempts.Add(1))
+			}
+			startSubscriber(t, env, handler)
+
+			for handler.next(t).ID != next.ID {
+			}
+
+			records := logs.Result()[logtest.Scope{Name: "iam/pkg/eventbus"}]
+			got := make([]logged, 0, len(records))
+
+			for _, record := range records {
+				traced := trace.SpanContextFromContext(record.Context).IsValid()
+				got = append(got, logged{record.Severity, record.Body.AsString(), traced})
+			}
+
+			require.Equal(t, tt.wantLogs, got)
+		})
+	}
+}
+
+type logged struct {
+	severity log.Severity
+	body     string
+	traced   bool
+}
+
+func publishThing(t *testing.T, env *eventbustest.Env) string {
+	t.Helper()
+
+	return env.Publish(t, "thing_1", &testevents.ThingDeleted{Id: "thing_1"}).ID
 }
 
 func TestComponentSubscriber_StartFailsWhenATopicIsMissing(t *testing.T) {
