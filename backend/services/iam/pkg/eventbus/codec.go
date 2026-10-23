@@ -1,10 +1,14 @@
-package events
+package eventbus
 
 import (
 	"slices"
 
 	"github.com/twmb/franz-go/pkg/sr"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
+
+	"github.com/lcnascimento/go-kit/errors"
 )
 
 // firstMessage is the Confluent message index of the only message in each .proto file.
@@ -52,17 +56,16 @@ func Decode(eventType string, value []byte) (schemaID int, message proto.Message
 		return 0, nil, ErrInvalidFraming.WithAttribute("subject", eventType)
 	}
 
-	schemas, err := loadSchemas()
-	if err != nil {
-		return 0, nil, err
-	}
-
-	i := slices.IndexFunc(schemas, func(s schema) bool { return s.subject == eventType })
-	if i < 0 {
+	messageType, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(eventType))
+	if errors.Is(err, protoregistry.NotFound) {
 		return schemaID, nil, nil
 	}
 
-	message = schemas[i].message.New().Interface()
+	if err != nil {
+		return 0, nil, ErrInvalidPayload.WithAttribute("subject", eventType).WithCause(err)
+	}
+
+	message = messageType.New().Interface()
 	if err := proto.Unmarshal(rest, message); err != nil {
 		return 0, nil, ErrInvalidPayload.WithAttribute("subject", eventType).WithCause(err)
 	}

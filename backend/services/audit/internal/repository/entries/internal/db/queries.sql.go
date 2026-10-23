@@ -14,9 +14,9 @@ const insertAuditEntry = `-- name: InsertAuditEntry :exec
 INSERT INTO audit_entries (
     source, id, type, spec_version, subject, time, data_content_type,
     headers, payload, kafka_topic, kafka_partition, kafka_offset,
-    actor_id, actor_organization_id
+    actor_id, actor_organization_id, ip_hash, correlation_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 ON CONFLICT (source, id) DO NOTHING
 `
 
@@ -35,6 +35,8 @@ type InsertAuditEntryParams struct {
 	KafkaOffset         int64
 	ActorID             *string
 	ActorOrganizationID *string
+	IpHash              *string
+	CorrelationID       *string
 }
 
 func (q *Queries) InsertAuditEntry(ctx context.Context, arg InsertAuditEntryParams) error {
@@ -53,6 +55,8 @@ func (q *Queries) InsertAuditEntry(ctx context.Context, arg InsertAuditEntryPara
 		arg.KafkaOffset,
 		arg.ActorID,
 		arg.ActorOrganizationID,
+		arg.IpHash,
+		arg.CorrelationID,
 	)
 	return err
 }

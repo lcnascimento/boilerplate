@@ -1,4 +1,4 @@
-package events
+package eventbus
 
 import "github.com/lcnascimento/go-kit/errors"
 
@@ -39,7 +39,7 @@ var (
 	ErrHandlerPanicked = errors.New("observer panicked while processing the message").
 				WithCode("HANDLER_PANICKED")
 
-	ErrInvalidSubscriberConfig = errors.New("subscriber needs brokers, a consumer group and an observer").
+	ErrInvalidSubscriberConfig = errors.New("subscriber needs brokers, a consumer group, topics and a handler").
 					WithCode("INVALID_SUBSCRIBER_CONFIG").
 					WithKind(errors.KindInvalidInput)
 

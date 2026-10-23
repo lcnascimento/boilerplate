@@ -4,6 +4,7 @@ export
 
 DB_NAME := iam
 PSQL := docker exec -i postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
+KAFKA_TOPICS := docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092
 
 .PHONY: db.setup
 db.setup:
@@ -26,3 +27,10 @@ db.rollback:
 db.reset:
 	@echo "DROP DATABASE IF EXISTS $(DB_NAME) WITH (FORCE)" | $(PSQL)
 	@$(MAKE) -s db.setup db.migrate
+
+.PHONY: kafka.topics
+kafka.topics:
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.user.v1 --partitions 3 --replication-factor 1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.session.v1 --partitions 3 --replication-factor 1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.organization.v1 --partitions 3 --replication-factor 1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.invitation.v1 --partitions 3 --replication-factor 1

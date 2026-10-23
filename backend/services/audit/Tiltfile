@@ -29,9 +29,16 @@ local_resource(
     labels=['backend'],
     cmd='make build.consumer -s',
     serve_cmd='make run.consumer -s',
-    deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'go.mod', '../notes/pkg/events/'],
+    deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'go.mod', '../iam/pkg/eventbus/', '../iam/pkg/events/'],
     ignore=['./**/mocks/', 'coverage*', 'cmd/migrate/', 'internal/repository/migrations/', './**/*_test.go'],
-    resource_deps=['audit-migrate', 'audit-topics', 'notes-topics'],
+    resource_deps=[
+        'audit-migrate',
+        'audit-topics',
+        'iam-topics',
+        # example:begin
+        'notes-topics',
+        # example:end
+    ],
     trigger_mode=TRIGGER_MODE_AUTO,
     allow_parallel=True,
     links=[link('http://localhost:8092/health', 'health')],

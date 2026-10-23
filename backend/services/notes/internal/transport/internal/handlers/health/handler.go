@@ -9,10 +9,10 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/http/httpserver/util"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 )
 
-const checkTimeout = 2 * events.PingTimeout
+const checkTimeout = 2 * eventbus.PingTimeout
 
 var ErrUnhealthy = errors.New("a readiness check failed")
 

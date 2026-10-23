@@ -1,4 +1,4 @@
-package events_test
+package eventbus_test
 
 import (
 	"testing"
@@ -8,23 +8,25 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 )
 
 func TestEnvelope_Headers(t *testing.T) {
 	t.Parallel()
 
-	envelope := events.Envelope{
+	envelope := eventbus.Envelope{
 		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
 		Source:              "notes",
 		Type:                "acme.notes.v1.NoteCreated",
 		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
 		Subject:             "note_0199f1a2-0000-7000-8000-000000000001",
 		PartitionKey:        "note_0199f1a2-0000-7000-8000-000000000001",
-		SpecVersion:         events.SpecVersion,
-		DataContentType:     events.ContentType,
+		SpecVersion:         eventbus.SpecVersion,
+		DataContentType:     eventbus.ContentType,
 		ActorID:             "user_0199f1a2-0000-7000-8000-0000000000a1",
 		ActorOrganizationID: "org_0199f1a2-0000-7000-8000-0000000000b2",
+		IPHash:              "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+		CorrelationID:       "784512",
 	}
 
 	require.Equal(t, map[string]string{
@@ -38,6 +40,8 @@ func TestEnvelope_Headers(t *testing.T) {
 		"content-type":           "application/protobuf",
 		"ce_actorid":             "user_0199f1a2-0000-7000-8000-0000000000a1",
 		"ce_actororganizationid": "org_0199f1a2-0000-7000-8000-0000000000b2",
+		"ce_iphash":              "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+		"ce_correlationid":       "784512",
 	}, envelope.Headers())
 }
 
@@ -56,6 +60,8 @@ func TestParseEnvelope(t *testing.T) {
 		"traceparent":            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
 		"ce_actorid":             "user_1",
 		"ce_actororganizationid": "org_1",
+		"ce_iphash":              "ip_1",
+		"ce_correlationid":       "42",
 	}
 
 	without := func(key string) map[string]string {
@@ -73,13 +79,13 @@ func TestParseEnvelope(t *testing.T) {
 	tests := []struct {
 		name    string
 		headers map[string]string
-		want    events.Envelope
+		want    eventbus.Envelope
 		wantErr error
 	}{
 		{
 			name:    "all headers",
 			headers: full,
-			want: events.Envelope{
+			want: eventbus.Envelope{
 				ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
 				Source:              "notes",
 				Type:                "acme.notes.v1.NoteDeleted",
@@ -90,6 +96,8 @@ func TestParseEnvelope(t *testing.T) {
 				DataContentType:     "application/protobuf",
 				ActorID:             "user_1",
 				ActorOrganizationID: "org_1",
+				IPHash:              "ip_1",
+				CorrelationID:       "42",
 			},
 		},
 		{
@@ -100,21 +108,21 @@ func TestParseEnvelope(t *testing.T) {
 				"ce_type":        "acme.notes.v1.NoteDeleted",
 				"ce_specversion": "1.0",
 			},
-			want: events.Envelope{ID: "1", Source: "notes", Type: "acme.notes.v1.NoteDeleted", SpecVersion: "1.0"},
+			want: eventbus.Envelope{ID: "1", Source: "notes", Type: "acme.notes.v1.NoteDeleted", SpecVersion: "1.0"},
 		},
-		{name: "missing ce_id", headers: without("ce_id"), wantErr: events.ErrMissingHeader},
-		{name: "missing ce_source", headers: without("ce_source"), wantErr: events.ErrMissingHeader},
-		{name: "missing ce_type", headers: without("ce_type"), wantErr: events.ErrMissingHeader},
-		{name: "missing ce_specversion", headers: without("ce_specversion"), wantErr: events.ErrMissingHeader},
+		{name: "missing ce_id", headers: without("ce_id"), wantErr: eventbus.ErrMissingHeader},
+		{name: "missing ce_source", headers: without("ce_source"), wantErr: eventbus.ErrMissingHeader},
+		{name: "missing ce_type", headers: without("ce_type"), wantErr: eventbus.ErrMissingHeader},
+		{name: "missing ce_specversion", headers: without("ce_specversion"), wantErr: eventbus.ErrMissingHeader},
 		{
 			name:    "empty ce_id",
 			headers: map[string]string{"ce_id": "", "ce_source": "notes", "ce_type": "t", "ce_specversion": "1.0"},
-			wantErr: events.ErrMissingHeader,
+			wantErr: eventbus.ErrMissingHeader,
 		},
 		{
 			name:    "malformed ce_time",
 			headers: map[string]string{"ce_id": "1", "ce_source": "notes", "ce_type": "t", "ce_specversion": "1.0", "ce_time": "yesterday"},
-			wantErr: events.ErrInvalidHeader,
+			wantErr: eventbus.ErrInvalidHeader,
 		},
 	}
 
@@ -122,7 +130,7 @@ func TestParseEnvelope(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := events.ParseEnvelope(tt.headers)
+			got, err := eventbus.ParseEnvelope(tt.headers)
 
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
@@ -142,7 +150,7 @@ func TestParseEnvelope(t *testing.T) {
 func TestParseEnvelope_NamesTheMissingHeader(t *testing.T) {
 	t.Parallel()
 
-	_, err := events.ParseEnvelope(map[string]string{"ce_id": "1", "ce_source": "notes", "ce_specversion": "1.0"})
+	_, err := eventbus.ParseEnvelope(map[string]string{"ce_id": "1", "ce_source": "notes", "ce_specversion": "1.0"})
 
 	require.Equal(t, "ce_type", errors.Attributes(err)["header"])
 }
@@ -150,20 +158,22 @@ func TestParseEnvelope_NamesTheMissingHeader(t *testing.T) {
 func TestEnvelope_RoundTrip(t *testing.T) {
 	t.Parallel()
 
-	envelope := events.Envelope{
+	envelope := eventbus.Envelope{
 		ID:                  "0199f1a2-7c3e-7d4a-9b1c-2e3f4a5b6c7d",
 		Source:              "notes",
 		Type:                "acme.notes.v1.NoteCreated",
 		Time:                time.Date(2026, 10, 17, 12, 30, 45, 123456789, time.UTC),
 		Subject:             "note_1",
 		PartitionKey:        "note_1",
-		SpecVersion:         events.SpecVersion,
-		DataContentType:     events.ContentType,
+		SpecVersion:         eventbus.SpecVersion,
+		DataContentType:     eventbus.ContentType,
 		ActorID:             "user_1",
 		ActorOrganizationID: "org_1",
+		IPHash:              "ip_1",
+		CorrelationID:       "42",
 	}
 
-	got, err := events.ParseEnvelope(envelope.Headers())
+	got, err := eventbus.ParseEnvelope(envelope.Headers())
 
 	require.NoError(t, err)
 	require.Equal(t, envelope, got)

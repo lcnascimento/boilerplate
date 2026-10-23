@@ -7,7 +7,7 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/idomain"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport"
@@ -30,13 +30,11 @@ var (
 )
 
 type Consumer struct {
-	events.UnimplementedObserver
-
 	audit    transport.AuditService
 	brokers  []string
 	shutdown func()
 
-	subscriber atomic.Pointer[events.Subscriber]
+	subscriber atomic.Pointer[eventbus.Subscriber]
 	stopped    atomic.Bool
 	closing    atomic.Bool
 	done       chan struct{}
@@ -52,7 +50,7 @@ func New(audit transport.AuditService, brokers []string, opts ...Option) *Consum
 	return c
 }
 
-func (c *Consumer) OnAny(ctx context.Context, event *events.Event) error {
+func (c *Consumer) Handle(ctx context.Context, event *eventbus.Event) error {
 	return c.audit.Record(ctx, &idomain.Entry{
 		Source:          event.Source,
 		ID:              event.ID,
@@ -69,11 +67,13 @@ func (c *Consumer) OnAny(ctx context.Context, event *events.Event) error {
 
 		ActorID:             event.ActorID,
 		ActorOrganizationID: event.ActorOrganizationID,
+		IPHash:              event.IPHash,
+		CorrelationID:       event.CorrelationID,
 	})
 }
 
 func (c *Consumer) Start(ctx context.Context) error {
-	subscriber, err := events.NewSubscriber(events.SubscriberConfig{Brokers: c.brokers, Group: Group, Observer: c})
+	subscriber, err := eventbus.NewSubscriber(&eventbus.SubscriberConfig{Brokers: c.brokers, Group: Group, Topics: Topics, Handler: c})
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (c *Consumer) Ready(ctx context.Context) error {
 	}
 }
 
-func (c *Consumer) run(ctx context.Context, subscriber *events.Subscriber) {
+func (c *Consumer) run(ctx context.Context, subscriber *eventbus.Subscriber) {
 	defer close(c.done)
 
 	err := subscriber.Run(ctx)

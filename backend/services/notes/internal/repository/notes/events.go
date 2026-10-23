@@ -14,6 +14,7 @@ import (
 	"github.com/lcnascimento/go-kit/outbox"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
@@ -51,15 +52,15 @@ func (r *Repository) newMessage(caller *actor.Actor, id domain.NoteID, at time.T
 		return nil, err
 	}
 
-	envelope := events.Envelope{
+	envelope := eventbus.Envelope{
 		ID:              messageID.String(),
 		Source:          source,
 		Type:            string(event.ProtoReflect().Descriptor().FullName()),
 		Time:            at.UTC(),
 		Subject:         id.String(),
 		PartitionKey:    id.String(),
-		SpecVersion:     events.SpecVersion,
-		DataContentType: events.ContentType,
+		SpecVersion:     eventbus.SpecVersion,
+		DataContentType: eventbus.ContentType,
 
 		ActorID:             caller.UserID.String(),
 		ActorOrganizationID: caller.OrganizationID.String(),

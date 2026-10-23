@@ -8,6 +8,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/outbox"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
@@ -22,7 +24,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, brokers []string, shutdown fun
 }
 
 func validEnvelope(msg *message.Message) error {
-	_, err := events.ParseEnvelope(msg.Metadata)
+	_, err := eventbus.ParseEnvelope(msg.Metadata)
 
 	return err
 }
