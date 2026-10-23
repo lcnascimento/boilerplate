@@ -40,3 +40,13 @@ Query them through the `grafana` MCP server (`mcp__grafana__*`, needs `GRAFANA_S
 - Traces: Tempo, `search_tempo_traces`
 - Profiles: Pyroscope, `query_pyroscope`
 - Dashboards: Grafana, `search_dashboards`
+
+401 from `mcp__grafana__*` means `GRAFANA_SERVICE_ACCOUNT_TOKEN` is invalid: run `make -C backend grafana.token`, then restart Claude Code.
+
+Loki stream selectors take `service_namespace` (`boilerplate`) and `service_name`; `trace_id`, `scope_name` and log attributes are structured metadata, filtered after the selector: `{service_namespace="boilerplate", service_name="<service>"} | trace_id="<trace_id>"`.
+
+Without the MCP server, query the backends over HTTP:
+
+- Logs: `curl -sG http://localhost:3100/loki/api/v1/query_range --data-urlencode 'query={service_namespace="boilerplate", service_name="<service>"} |= "<text>"' --data-urlencode 'since=1h' --data-urlencode 'limit=50'`; each entry's structured metadata carries its `trace_id`.
+- Traces: `curl -s http://localhost:3200/api/traces/<trace_id>`
+- Metrics: `curl -sG http://localhost:9090/api/v1/query --data-urlencode 'query=<promql>'`
