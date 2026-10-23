@@ -79,6 +79,19 @@ func TestRole_GrantsOrganizationTransferOnlyToTheOwner(t *testing.T) {
 	require.Equal(t, "organization:transfer", roles.OrganizationTransfer.String())
 }
 
+func TestRole_GrantsInvitationsToTheOwnerAndTheAdmin(t *testing.T) {
+	t.Parallel()
+
+	for _, p := range []roles.Permission{roles.InvitationCreate, roles.InvitationCancel} {
+		require.True(t, roles.Owner.Grants(p), p.String())
+		require.True(t, roles.Admin.Grants(p), p.String())
+		require.False(t, roles.Viewer.Grants(p), p.String())
+	}
+
+	require.Equal(t, "invitation:create", roles.InvitationCreate.String())
+	require.Equal(t, "invitation:cancel", roles.InvitationCancel.String())
+}
+
 func TestRole_ZeroValueGrantsNothing(t *testing.T) {
 	t.Parallel()
 

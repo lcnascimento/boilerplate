@@ -6,8 +6,6 @@ import { notFound, redirect } from "next/navigation";
 
 import { getIam } from "@/shared/auth/auth";
 import {
-  addMemberInputSchema,
-  can,
   memberRoleSchema,
   removeMemberInputSchema,
   updateMemberRoleInputSchema,
@@ -30,8 +28,6 @@ async function requireActor(): Promise<Actor | null> {
 }
 
 const errorCodes: Record<string, MembersErrorCode> = {
-  USER_NOT_FOUND: "userNotFound",
-  USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "alreadyMember",
   OWNER_NOT_ASSIGNABLE: "ownerNotAssignable",
   OWNER_MUST_TRANSFER: "ownerMustTransfer",
   YOU_CANNOT_LEAVE_THE_ORGANIZATION_AS_THE_ONLY_OWNER: "ownerMustTransfer",
@@ -92,30 +88,6 @@ export async function listMembers(): Promise<{
   if (self === undefined) notFound();
 
   return { actor: self, members: parsed };
-}
-
-export async function addMember(input: unknown): Promise<MembersResult> {
-  const parsed = addMemberInputSchema.safeParse(input);
-  if (!parsed.success) return invalidInput;
-
-  const actor = await requireActor();
-  // auth.api.addMember checks no Permission at all: this action is the only gate.
-  if (actor === null || !can(actor.role, "create")) return forbidden;
-
-  const { auth } = getIam();
-  const context = await auth.$context;
-  const user = await context.internalAdapter.findUserByEmail(parsed.data.email);
-  if (user === null) return { kind: "error", code: "userNotFound" };
-
-  return runMembersOperation("members.add", () =>
-    auth.api.addMember({
-      body: {
-        userId: user.user.id,
-        role: parsed.data.role,
-        organizationId: actor.organizationId,
-      },
-    })
-  );
 }
 
 export async function updateMemberRole(input: unknown): Promise<MembersResult> {

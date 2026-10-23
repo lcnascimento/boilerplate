@@ -1,4 +1,5 @@
 import auth from "./auth.json" with { type: "json" };
+import invitations from "./invitations.json" with { type: "json" };
 import members from "./members.json" with { type: "json" };
 import nav from "./nav.json" with { type: "json" };
 // example:begin
@@ -13,6 +14,7 @@ import type { Locale } from "@boilerplate/i18n";
 export function appMessages(locale: Locale) {
   return {
     auth: auth[locale],
+    invitations: invitations[locale],
     members: members[locale],
     nav: nav[locale],
     // example:begin

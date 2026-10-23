@@ -7,13 +7,6 @@ export const memberRoleSchema = z.enum(roleNames);
 
 export type MemberRole = Role;
 
-export const addMemberInputSchema = z.object({
-  email: z.email(),
-  role: memberRoleSchema,
-});
-
-export type AddMemberInput = z.infer<typeof addMemberInputSchema>;
-
 export const updateMemberRoleInputSchema = z.object({
   memberId: z.string().min(1),
   role: memberRoleSchema,
@@ -30,8 +23,6 @@ export const transferOwnershipInputSchema = z.object({
 export type MembersErrorCode =
   | "invalidInput"
   | "forbidden"
-  | "userNotFound"
-  | "alreadyMember"
   | "ownerNotAssignable"
   | "ownerMustTransfer"
   | "unexpected";
@@ -53,7 +44,8 @@ export interface MemberRow {
 }
 
 export interface MemberPolicy {
-  canAdd: boolean;
+  canInvite: boolean;
+  canCancelInvitations: boolean;
   assignableRoles: MemberRole[];
   rows: MemberRow[];
 }
@@ -77,7 +69,10 @@ export function memberPolicy(
   const canActOn = (member: Member) => member.role !== "owner";
 
   return {
-    canAdd: can(actor.role, "create"),
+    canInvite: roles[actor.role].authorize({ invitation: ["create"] }).success,
+    canCancelInvitations: roles[actor.role].authorize({
+      invitation: ["cancel"],
+    }).success,
     assignableRoles: can(actor.role, "update") ? assignableRoles : [],
     rows: members.map((member) => ({
       member,

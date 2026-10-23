@@ -77,6 +77,36 @@ describe("authRulesHook", () => {
     ).rejects.toMatchObject({ body: { code: "BLOCKED" } });
   });
 
+  it("refuses an Invitation with the rule's error and hands it the invited email", async () => {
+    const seen: unknown[] = [];
+    const auth = createAuth([
+      (action) => {
+        if (action.kind !== "createInvitation") return Promise.resolve();
+        seen.push(action);
+        return refuse("createInvitation")(action);
+      },
+    ]);
+    const { user } = await auth.api.signUpEmail({ body: ana });
+    const { id: organizationId } = await auth.api.createOrganization({
+      body: { name: "Acme", slug: "acme", userId: user.id },
+    });
+    const { headers } = await auth.api.signInEmail({
+      body: ana,
+      returnHeaders: true,
+    });
+    const cookie = headers.get("set-cookie")?.split(";")[0] ?? "";
+
+    await expect(
+      auth.api.createInvitation({
+        headers: new Headers({ cookie }),
+        body: { email: "bruno@acme.test", role: "member", organizationId },
+      })
+    ).rejects.toMatchObject({ body: { code: "BLOCKED" } });
+    expect(seen).toEqual([
+      { kind: "createInvitation", email: "bruno@acme.test" },
+    ]);
+  });
+
   it("hands the rule the email a sign-up uses", async () => {
     const seen: unknown[] = [];
     const auth = createAuth([
