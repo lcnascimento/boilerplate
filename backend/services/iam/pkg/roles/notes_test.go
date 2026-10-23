@@ -44,10 +44,12 @@ func TestPermission_StringJoinsResourceAndAction(t *testing.T) {
 	require.Equal(t, "delete", roles.NoteDelete.Action())
 }
 
-func TestPermissions_ListsNotePermissionsInDeclarationOrder(t *testing.T) {
+func TestPermissions_ListsNotePermissionsAfterTheCoreOnes(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, []roles.Permission{roles.NoteRead, roles.NoteCreate, roles.NoteDelete}, roles.Permissions())
+	require.Equal(t, []roles.Permission{
+		roles.OrganizationTransfer, roles.NoteRead, roles.NoteCreate, roles.NoteDelete,
+	}, roles.Permissions())
 	require.Equal(t, []roles.Permission{roles.NoteRead, roles.NoteCreate}, roles.Admin.Permissions())
 	require.Equal(t, []roles.Permission{roles.NoteRead}, roles.Viewer.Permissions())
 }

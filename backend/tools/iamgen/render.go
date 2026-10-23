@@ -36,7 +36,7 @@ func render(m matrix) []byte {
 
 	b.WriteString(header)
 	b.WriteString("\nexport const statement = {\n  ...defaultStatements,\n")
-	writeEntries(&b, "  ", m.statement)
+	writeEntries(&b, "  ", "defaultStatements", m.statement)
 	b.WriteString("} as const;\n\nexport const ac = createAccessControl(statement);\n\nexport const roles = {\n")
 
 	for _, r := range m.roles {
@@ -52,7 +52,7 @@ func render(m matrix) []byte {
 			fmt.Fprintf(&b, "    ...%s.statements,\n", r.betterAuthDefaults)
 		}
 
-		writeEntries(&b, "    ", r.permissions)
+		writeEntries(&b, "    ", defaultsOf(r), r.permissions)
 		b.WriteString("  }),\n")
 	}
 
@@ -71,7 +71,25 @@ func render(m matrix) []byte {
 	return []byte(b.String())
 }
 
-func writeEntries(b *strings.Builder, indent string, permissions []permission) {
+// betterAuthResources are the resources Better Auth's defaults already declare; an entry for one of them
+// extends the default actions, because a plain entry would replace them and break Better Auth's own checks.
+var betterAuthResources = map[string]bool{
+	"organization": true,
+	"member":       true,
+	"invitation":   true,
+	"team":         true,
+	"ac":           true,
+}
+
+func defaultsOf(r role) string {
+	if r.betterAuthDefaults == "" {
+		return ""
+	}
+
+	return r.betterAuthDefaults + ".statements"
+}
+
+func writeEntries(b *strings.Builder, indent, defaults string, permissions []permission) {
 	var resources []string
 
 	actions := map[string][]string{}
@@ -85,6 +103,11 @@ func writeEntries(b *strings.Builder, indent string, permissions []permission) {
 	}
 
 	for _, resource := range resources {
-		fmt.Fprintf(b, "%s%s: [%s],\n", indent, resource, strings.Join(actions[resource], ", "))
+		values := actions[resource]
+		if defaults != "" && betterAuthResources[resource] {
+			values = append([]string{"..." + defaults + "." + resource}, values...)
+		}
+
+		fmt.Fprintf(b, "%s%s: [%s],\n", indent, resource, strings.Join(values, ", "))
 	}
 }

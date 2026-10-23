@@ -52,6 +52,15 @@ func TestAll_ListsRolesFromMostToLeastPrivileged(t *testing.T) {
 	require.Equal(t, []roles.Role{roles.Owner, roles.Admin, roles.Viewer}, roles.All())
 }
 
+func TestRole_GrantsOrganizationTransferOnlyToTheOwner(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, roles.Owner.Grants(roles.OrganizationTransfer))
+	require.False(t, roles.Admin.Grants(roles.OrganizationTransfer))
+	require.False(t, roles.Viewer.Grants(roles.OrganizationTransfer))
+	require.Equal(t, "organization:transfer", roles.OrganizationTransfer.String())
+}
+
 func TestRole_ZeroValueGrantsNothing(t *testing.T) {
 	t.Parallel()
 
