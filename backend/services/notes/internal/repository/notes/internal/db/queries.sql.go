@@ -54,6 +54,19 @@ func (q *Queries) DeleteNote(ctx context.Context, arg DeleteNoteParams) (int64, 
 	return result.RowsAffected(), nil
 }
 
+const deleteOrganizationNotes = `-- name: DeleteOrganizationNotes :execrows
+DELETE FROM notes
+WHERE organization_id = $1
+`
+
+func (q *Queries) DeleteOrganizationNotes(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteOrganizationNotes, organizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getNote = `-- name: GetNote :one
 SELECT id, created_at, title, body, organization_id
 FROM notes

@@ -31,6 +31,7 @@ var services = []service.Service{
 		Processes: []service.Process{
 			service.Daemon("notes-api-frontend", service.API).WithDBPool().WithActorAuth(),
 			service.Daemon("notes-worker-forwarder", service.Worker).WithDBPool(),
+			service.Daemon("notes-consumer", service.Consumer).WithConsumerGroup("notes").WithDBPool(),
 			service.OneShot("notes-migrate"),
 			service.OneShot("notes-schemas"),
 		},

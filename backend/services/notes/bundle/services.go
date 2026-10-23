@@ -10,6 +10,6 @@ import (
 func NotesService() fx.Option {
 	return fx.Module(
 		"Notes Service",
-		fx.Provide(fx.Annotate(notes.New, fx.As(new(transport.NotesService)))),
+		fx.Provide(fx.Annotate(notes.New, fx.As(new(transport.NotesService)), fx.As(new(transport.OrganizationNotesService)))),
 	)
 }

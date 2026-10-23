@@ -2,13 +2,18 @@ package notes
 
 import (
 	"context"
+	"log/slog"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/o11y/baggage"
 	"github.com/lcnascimento/go-kit/o11y/log"
 	"github.com/lcnascimento/go-kit/o11y/metric"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 )
@@ -67,6 +72,22 @@ func (a *Application) onDeleteStart(ctx context.Context, id domain.NoteID) (cont
 func (a *Application) onDeleted(ctx context.Context) {
 	notesDeleted.Add(ctx, 1)
 	logger.Info(ctx, "note deleted")
+}
+
+func (a *Application) onDeleteOrganizationNotesStart(
+	ctx context.Context, orgID iamdomain.OrganizationID,
+) (context.Context, trace.Span) {
+	ctx, span := tracer.Start(ctx, "DeleteOrganizationNotes")
+	ctx = baggage.ContextWithMembers(ctx, baggage.NewMember(actor.MemberKeyOrganizationID, orgID.String()))
+
+	logger.Debug(ctx, "deleting the notes of an organization")
+
+	return ctx, span
+}
+
+func (a *Application) onOrganizationNotesDeleted(ctx context.Context, deleted int64) {
+	notesDeleted.Add(ctx, deleted)
+	logger.Info(ctx, "notes of an organization deleted", slog.Int64("notes", deleted))
 }
 
 func (a *Application) onError(ctx context.Context, err error) error {

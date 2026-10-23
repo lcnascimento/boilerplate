@@ -98,3 +98,65 @@ slos:
           description: 'Minutos em que a mensagem pendente mais antiga do outbox de notes tem até 30s, segundo notes-worker-forwarder. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de notes-worker-forwarder.'
           summary: 'SLO outbox-freshness de notes-worker-forwarder consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
           title: SLO outbox-freshness de notes-worker-forwarder consumindo o error budget acima do ritmo sustentável
+  - name: consumer-success
+    objective: 99.9
+    description: Tentativas de processamento de mensagens de notes-consumer que terminam sem erro.
+    labels:
+      service: notes-consumer
+    sli:
+      events:
+        error_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[{{.window}}])) or vector(0)
+        total_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
+    alerting:
+      name: SLOBurnRate
+      labels:
+        service: notes-consumer
+        sloth_slo: consumer-success
+      annotations:
+        dashboard_url: http://localhost:3010/d/boilerplate-notes
+        runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+      page_alert:
+        labels:
+          severity: critical
+        annotations:
+          description: 'Tentativas de processamento de mensagens de notes-consumer que terminam sem erro. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de notes-consumer.'
+          summary: 'SLO consumer-success de notes-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO consumer-success de notes-consumer queimando o error budget rápido demais
+      ticket_alert:
+        labels:
+          severity: warning
+        annotations:
+          description: 'Tentativas de processamento de mensagens de notes-consumer que terminam sem erro. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de notes-consumer.'
+          summary: 'SLO consumer-success de notes-consumer consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO consumer-success de notes-consumer consumindo o error budget acima do ritmo sustentável
+  - name: consumer-latency
+    objective: 99
+    description: Tentativas de processamento de mensagens de notes-consumer que terminam em até 1s.
+    labels:
+      service: notes-consumer
+    sli:
+      events:
+        error_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[{{.window}}]))
+        total_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
+    alerting:
+      name: SLOBurnRate
+      labels:
+        service: notes-consumer
+        sloth_slo: consumer-latency
+      annotations:
+        dashboard_url: http://localhost:3010/d/boilerplate-notes
+        runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+      page_alert:
+        labels:
+          severity: critical
+        annotations:
+          description: 'Tentativas de processamento de mensagens de notes-consumer que terminam em até 1s. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de notes-consumer.'
+          summary: 'SLO consumer-latency de notes-consumer queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO consumer-latency de notes-consumer queimando o error budget rápido demais
+      ticket_alert:
+        labels:
+          severity: warning
+        annotations:
+          description: 'Tentativas de processamento de mensagens de notes-consumer que terminam em até 1s. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de notes-consumer.'
+          summary: 'SLO consumer-latency de notes-consumer consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO consumer-latency de notes-consumer consumindo o error budget acima do ritmo sustentável

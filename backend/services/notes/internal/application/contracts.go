@@ -15,6 +15,7 @@ type NotesRepository interface {
 	Get(ctx context.Context, orgID iamdomain.OrganizationID, id domain.NoteID) (*domain.Note, error)
 	List(ctx context.Context, orgID iamdomain.OrganizationID) ([]*domain.Note, error)
 	Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error
+	DeleteByOrganization(ctx context.Context, orgID iamdomain.OrganizationID) (int64, error)
 }
 
 type Validator interface {

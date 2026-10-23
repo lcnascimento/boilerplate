@@ -121,6 +121,23 @@ func (r *Repository) Delete(ctx context.Context, caller *actor.Actor, id domain.
 	})
 }
 
+func (r *Repository) DeleteByOrganization(ctx context.Context, orgID iamdomain.OrganizationID) (int64, error) {
+	var deleted int64
+
+	err := r.inOrganizationTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
+		var err error
+
+		deleted, err = queries.DeleteOrganizationNotes(ctx, orgID.UUID())
+		if err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		return nil
+	})
+
+	return deleted, err
+}
+
 func (r *Repository) inOrganizationTx(ctx context.Context, orgID iamdomain.OrganizationID, fn func(pgx.Tx, *db.Queries) error) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

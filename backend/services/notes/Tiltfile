@@ -68,3 +68,21 @@ local_resource(
         http_get=http_get_action(port=8091, path='/health'),
     ),
 )
+
+local_resource(
+    'notes-consumer',
+    labels=['backend'],
+    cmd='make build.consumer -s',
+    serve_cmd='make run.consumer -s',
+    deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod', '../iam/pkg/eventbus/', '../iam/pkg/events/'],
+    ignore=['./**/mocks/', 'coverage*', 'cmd/migrate/', 'internal/repository/migrations/', './**/*_test.go'],
+    resource_deps=['notes-migrate', 'notes-schemas', 'notes-topics', 'iam-topics'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    allow_parallel=True,
+    links=[link('http://localhost:8094/health', 'health')],
+    readiness_probe=probe(
+        period_secs=5,
+        failure_threshold=10,
+        http_get=http_get_action(port=8094, path='/health'),
+    ),
+)

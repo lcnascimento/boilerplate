@@ -4,6 +4,7 @@ export
 
 FRONTEND_PORT ?= 8080
 FORWARDER_HEALTH_PORT ?= 8091
+CONSUMER_HEALTH_PORT ?= 8094
 SCHEMA_REGISTRY_URL ?= http://localhost:8081
 
 DB_NAME := notes
@@ -27,6 +28,14 @@ build.worker.forwarder:
 .PHONY: run.worker.forwarder
 run.worker.forwarder:
 	@OTEL_SERVICE_NAME=notes-worker-forwarder HEALTH_PORT=$(FORWARDER_HEALTH_PORT) ./bin/notes_worker_forwarder
+
+.PHONY: build.consumer
+build.consumer:
+	@go build -gcflags="$(DEBUG_GCFLAGS)" -o ./bin/notes_consumer ./cmd/consumer
+
+.PHONY: run.consumer
+run.consumer:
+	@OTEL_SERVICE_NAME=notes-consumer HEALTH_PORT=$(CONSUMER_HEALTH_PORT) ./bin/notes_consumer
 
 .PHONY: db.setup
 db.setup:
@@ -53,6 +62,7 @@ db.reset:
 .PHONY: kafka.topics
 kafka.topics:
 	@$(KAFKA_TOPICS) --create --if-not-exists --topic notes.note.v1 --partitions 3 --replication-factor 1
+	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.organization.v1.notes.dlq --partitions 1 --replication-factor 1 --config retention.ms=-1
 
 .PHONY: schemas.register
 schemas.register:

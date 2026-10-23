@@ -112,6 +112,8 @@ O `backend/docker-compose.yml` sobe um broker Kafka, o Schema Registry e o Redpa
 
 O `notes` grava cada Integration Event num outbox, na mesma transação da Note, e o runtime `notes-worker-forwarder` (`cmd/worker/forwarder`) leva o outbox ao tópico `notes.note.v1`, uma mensagem por vez, em ordem de commit, com o `NoteID` como key. Ele tenta publicar para sempre e nunca pula uma mensagem: com o Kafka fora do ar, a API continua aceitando escritas e o outbox cresce até o broker voltar. Várias réplicas podem rodar juntas, com uma ativa e as outras esperando. O outbox, o forwarder e a limpeza das mensagens já publicadas há mais de 7 dias vêm do pacote [`outbox`](https://github.com/lcnascimento/go-kit/tree/main/outbox) do go-kit, que todo serviço com Integration Events usa do mesmo jeito. O start falha se o broker não responder ou se o tópico não existir (`TOPIC_MISSING`: rode `make kafka.topics`). O `/health` na `8091` olha o Postgres e o forwarder, nunca o broker.
 
+O runtime `notes-consumer` (`cmd/consumer`, consumer group `notes`) lê o `iam.organization.v1` e, a cada `OrganizationDeleted`, apaga todas as Notes daquela Organization numa transação restrita a ela pela mesma RLS da API. Os outros eventos do tópico são ignorados, e reprocessar um `OrganizationDeleted` não muda nada. Um `OrganizationDeleted` com id inválido vai para a DLQ `iam.organization.v1.notes.dlq`; um erro do banco é retentado. O `/health` na `8094` olha o consumer e o Postgres.
+
 <!-- example:end -->
 
 Os schemas Protobuf dos Integration Events ficam no Schema Registry, um subject por mensagem (`RecordNameStrategy`: o nome completo da mensagem, igual ao `ce_type`). Cada serviço que publica eventos registra os próprios num `make schemas.register` idempotente, que aplica `FULL_TRANSITIVE` em cada subject e registra o `.proto` normalizado; o Tilt o roda como o recurso `<name>-schemas` depois do `schema-registry`, e de novo quando um `.proto` muda. Uma mudança incompatível faz o registro falhar. Os schema IDs mudam entre ambientes e a cada `docker compose down -v`, então nada no código depende do valor deles.
@@ -134,7 +136,7 @@ O `audit-consumer` herda o alerta de lag e o de DLQ do group `audit` e, declarad
 
 <!-- example:begin -->
 
-No exemplo, o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. A seção `worker` do dashboard `notes` mostra a idade da pendente mais antiga, os envios ao Kafka e a limpeza do outbox.
+No exemplo, o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. A seção `worker` do dashboard `notes` mostra a idade da pendente mais antiga, os envios ao Kafka e a limpeza do outbox. O `notes-consumer` herda o alerta de lag e o de DLQ do group `notes`, e a seção `consumer` do mesmo dashboard mostra o consumo do `iam.organization.v1`.
 
 <!-- example:end -->
 
