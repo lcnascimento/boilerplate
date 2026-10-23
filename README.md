@@ -397,7 +397,7 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
    ```
 
    - `NAME` precisa casar com `^[a-z][a-z0-9-]*$` (ex.: `my-app`). Um nome inválido é rejeitado antes de qualquer arquivo ser tocado.
-   - `boilerplate` vira `<name>` em todo arquivo versionado (módulos Go, escopo `@<name>/*`, rede docker, dashboards, `service.namespace`, cookie de idioma, servidor MCP) e `Boilerplate` vira o título derivado (`my-app` → `My App`).
+   - `boilerplate` vira `<name>` em todo arquivo versionado (módulos Go, escopo `@<name>/*`, rede docker, dashboards, `service.namespace`, cookie de idioma, servidor MCP) e `Boilerplate` vira o título derivado (`my-app` → `My App`). O pacote Protobuf e os nomes completos das mensagens (`boilerplate.iam.v1.UserCreated`, o `ce_type`) usam `_` no lugar de `-` (`my_app.iam.v1.UserCreated`), nos `.proto` e em todo arquivo que os cita.
    - Sai do `CLAUDE.md` a seção "Agent skills" e sai a pasta `docs/agents/` inteira.
    - O script exige a árvore git limpa e o pnpm/Node instalados, e não faz commit. Depois de trocar o nome, ele se apaga junto com o alvo `init`, o workflow `template` e esta seção do README, roda o `pnpm install` (na raiz e em `frontend/`) e o `pnpm -C frontend format` (o nome novo muda o comprimento de algumas linhas, e o prettier quebra ou junta imports de novo), então a árvore já sai formatada.
    - Se algo der errado, `git checkout . && git clean -fd` volta ao estado anterior.

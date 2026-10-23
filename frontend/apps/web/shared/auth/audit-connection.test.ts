@@ -134,7 +134,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
          FROM identity_change
          WHERE ip_hash = $1 AND table_name IN ('session', 'sign_in')
          UNION ALL
-         SELECT substring(headers ->> 'ce_type' FROM length('boilerplate.iam.v1.') + 1)
+         SELECT substring(headers ->> 'ce_type' FROM '[^.]+$')
          FROM watermill_iam_outbox,
               LATERAL (SELECT payload::jsonb -> 'metadata' AS headers) AS message
          WHERE headers ->> 'ce_iphash' = $1
