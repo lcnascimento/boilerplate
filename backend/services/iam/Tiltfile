@@ -23,3 +23,30 @@ local_resource(
     deps=['Makefile'],
     resource_deps=['schema-registry'],
 )
+
+local_resource(
+    'iam-schemas',
+    labels=['iam'],
+    cmd='make schemas.register -s',
+    deps=['.env', '../../.env', 'pkg/events/', 'cmd/schemas/', 'bundle/schemas.go'],
+    ignore=['./**/*_test.go'],
+    resource_deps=['schema-registry'],
+)
+
+local_resource(
+    'iam-worker',
+    labels=['iam'],
+    cmd='make build.worker -s',
+    serve_cmd='make run.worker -s',
+    deps=['.env', '../../.env', 'bundle/', 'cmd/', 'internal/', 'pkg/', 'go.mod'],
+    ignore=['./**/mocks/', 'coverage*', 'cmd/migrate/', 'internal/repository/migrations/', './**/*_test.go'],
+    resource_deps=['iam-migrate', 'iam-topics', 'iam-schemas'],
+    trigger_mode=TRIGGER_MODE_AUTO,
+    allow_parallel=True,
+    links=[link('http://localhost:8093/health', 'health')],
+    readiness_probe=probe(
+        period_secs=5,
+        failure_threshold=10,
+        http_get=http_get_action(port=8093, path='/health'),
+    ),
+)

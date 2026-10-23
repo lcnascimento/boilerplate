@@ -74,6 +74,8 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 | Redpanda Console (tópicos, mensagens e schemas) | <http://localhost:8085> |
 | Prometheus, Loki, Tempo, Pyroscope, Alloy | `9090`, `3100`, `3200`, `4040`, `12345` (links na UI do Tilt) |
 
+Triggers no banco `iam` gravam uma linha em `identity_change` para cada mudança de identidade, na mesma transação da escrita do Better Auth, só com ids, nunca email ou nome. O `iam-worker` (`backend/services/iam/cmd/worker`) traduz essas linhas em Integration Events (`UserCreated`, `UserDeleted` e `PasswordChanged` no `iam.user.v1`), grava os eventos no outbox e apaga as linhas traduzidas, tudo numa transação. O `txid` da transação vira o id de correlação (`ce_correlationid`). O mesmo processo leva o outbox ao Kafka e limpa as mensagens publicadas há mais de 7 dias. O health dele fica em <http://localhost:8093> (`/health`, `/ping`).
+
 O consumer do `audit` grava cada Integration Event dos tópicos `iam.user.v1`, `iam.session.v1`, `iam.organization.v1` e `iam.invitation.v1` como Audit Entry no banco `audit`, sem interpretar o payload, e guarda o Actor, o hash do IP de origem e o id de correlação que chegam nas extensões CloudEvents `ce_actorid`, `ce_actororganizationid`, `ce_iphash` e `ce_correlationid` (vazias quando o evento não as traz). O health dele fica em <http://localhost:8092> (`/health`, `/ping`). O envelope, as extensões e o subscriber Kafka ficam em `backend/services/iam/pkg/eventbus`, compartilhado por quem publica e por quem consome.
 
 <!-- example:begin -->
