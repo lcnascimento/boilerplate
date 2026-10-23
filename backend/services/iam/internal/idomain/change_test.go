@@ -70,6 +70,195 @@ func TestChange_EventTranslatesEachUserChange(t *testing.T) {
 	}
 }
 
+func TestChange_EventTranslatesEachOrganizationChange(t *testing.T) {
+	t.Parallel()
+
+	organization := map[string]string{"id": "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"}
+	member := func(role string) map[string]string {
+		return map[string]string{
+			"id":             "6d0e3b2a-4c5f-4e8d-9a1b-2c3d4e5f6a7b",
+			"organizationId": "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+			"userId":         "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+			"role":           role,
+		}
+	}
+
+	cases := map[string]struct {
+		change idomain.Change
+		want   proto.Message
+	}{
+		"inserted organization": {
+			change: idomain.Change{Table: "organization", Operation: "INSERT", Fields: organization},
+			want: &events.OrganizationCreated{
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				CreatedAt:      timestamppb.New(occurredAt),
+			},
+		},
+		"renamed organization": {
+			change: idomain.Change{Table: "organization", Operation: "UPDATE", Fields: organization},
+			want: &events.OrganizationRenamed{
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				RenamedAt:      timestamppb.New(occurredAt),
+			},
+		},
+		"deleted organization": {
+			change: idomain.Change{Table: "organization", Operation: "DELETE", Fields: organization},
+			want: &events.OrganizationDeleted{
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				DeletedAt:      timestamppb.New(occurredAt),
+			},
+		},
+		"inserted member": {
+			change: idomain.Change{Table: "member", Operation: "INSERT", Fields: member("viewer")},
+			want: &events.MemberAdded{
+				MemberId:       "member_6d0e3b2a-4c5f-4e8d-9a1b-2c3d4e5f6a7b",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				UserId:         "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+				Role:           "viewer",
+				AddedAt:        timestamppb.New(occurredAt),
+			},
+		},
+		"updated member role": {
+			change: idomain.Change{Table: "member", Operation: "UPDATE", Fields: member("admin")},
+			want: &events.MemberRoleChanged{
+				MemberId:       "member_6d0e3b2a-4c5f-4e8d-9a1b-2c3d4e5f6a7b",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				UserId:         "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+				Role:           "admin",
+				ChangedAt:      timestamppb.New(occurredAt),
+			},
+		},
+		"deleted member": {
+			change: idomain.Change{Table: "member", Operation: "DELETE", Fields: member("admin")},
+			want: &events.MemberRemoved{
+				MemberId:       "member_6d0e3b2a-4c5f-4e8d-9a1b-2c3d4e5f6a7b",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				UserId:         "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+				RemovedAt:      timestamppb.New(occurredAt),
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.change.TransactionID = "7311"
+			tc.change.OccurredAt = occurredAt
+
+			got, err := tc.change.Event()
+
+			require.NoError(t, err)
+			require.True(t, proto.Equal(tc.want, got.Message), "want %v, got %v", tc.want, got.Message)
+			require.Equal(t, "iam.organization.v1", got.Topic)
+			require.Equal(t, "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", got.Subject)
+			require.Equal(t, occurredAt, got.Time)
+			require.Equal(t, "7311", got.CorrelationID)
+		})
+	}
+}
+
+func TestChange_EventTranslatesEachInvitationChange(t *testing.T) {
+	t.Parallel()
+
+	invitation := func(status string) map[string]string {
+		return map[string]string{
+			"id":             "8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+			"organizationId": "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+			"status":         status,
+		}
+	}
+
+	cases := map[string]struct {
+		change idomain.Change
+		want   proto.Message
+	}{
+		"inserted invitation": {
+			change: idomain.Change{Table: "invitation", Operation: "INSERT", Fields: map[string]string{
+				"id":             "8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+				"organizationId": "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				"inviterId":      "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+				"role":           "admin",
+			}},
+			want: &events.InvitationCreated{
+				InvitationId:   "invitation_8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				InviterId:      "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+				Role:           "admin",
+				CreatedAt:      timestamppb.New(occurredAt),
+			},
+		},
+		"accepted invitation": {
+			change: idomain.Change{Table: "invitation", Operation: "UPDATE", Fields: invitation("accepted")},
+			want: &events.InvitationAccepted{
+				InvitationId:   "invitation_8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				AcceptedAt:     timestamppb.New(occurredAt),
+			},
+		},
+		"rejected invitation": {
+			change: idomain.Change{Table: "invitation", Operation: "UPDATE", Fields: invitation("rejected")},
+			want: &events.InvitationDeclined{
+				InvitationId:   "invitation_8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				DeclinedAt:     timestamppb.New(occurredAt),
+			},
+		},
+		"canceled invitation": {
+			change: idomain.Change{Table: "invitation", Operation: "UPDATE", Fields: invitation("canceled")},
+			want: &events.InvitationCanceled{
+				InvitationId:   "invitation_8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+				OrganizationId: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+				CanceledAt:     timestamppb.New(occurredAt),
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.change.OccurredAt = occurredAt
+
+			got, err := tc.change.Event()
+
+			require.NoError(t, err)
+			require.True(t, proto.Equal(tc.want, got.Message), "want %v, got %v", tc.want, got.Message)
+			require.Equal(t, "iam.invitation.v1", got.Topic)
+			require.Equal(t, "invitation_8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f", got.Subject)
+		})
+	}
+}
+
+func TestChange_EventRefusesAnInvitationStatusWithoutAnIntegrationEvent(t *testing.T) {
+	t.Parallel()
+
+	change := idomain.Change{Table: "invitation", Operation: "UPDATE", Fields: map[string]string{
+		"id":             "8c4f2e1d-0b3a-4d5c-8e6f-7a8b9c0d1e2f",
+		"organizationId": "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		"status":         "pending",
+	}}
+
+	_, err := change.Event()
+
+	require.ErrorIs(t, err, idomain.ErrUntranslatableChange)
+}
+
+func TestChange_EventRefusesAMalformedMemberID(t *testing.T) {
+	t.Parallel()
+
+	change := idomain.Change{Table: "member", Operation: "INSERT", Fields: map[string]string{
+		"id":             "ada",
+		"organizationId": "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		"userId":         "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		"role":           "viewer",
+	}}
+
+	_, err := change.Event()
+
+	require.ErrorIs(t, err, idomain.ErrUntranslatableChange)
+}
+
 func TestChange_EventCarriesTheActorAndTheIPHash(t *testing.T) {
 	t.Parallel()
 

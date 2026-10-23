@@ -28,8 +28,12 @@ export function hashIp(key: string, ip: string): string {
   return createHmac("sha256", key).update(ip).digest("hex");
 }
 
+export type AuditedActor = Pick<ActorIds, "userId"> & {
+  organizationId: ActorIds["organizationId"] | null;
+};
+
 export function runAsActor<T>(
-  actor: ActorIds,
+  actor: AuditedActor,
   headers: Headers,
   run: () => Promise<T>
 ): Promise<T> {

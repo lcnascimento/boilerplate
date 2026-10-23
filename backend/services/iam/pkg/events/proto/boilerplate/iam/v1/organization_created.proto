@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package boilerplate.iam.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/events;events";
+
+message OrganizationCreated {
+  string organization_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+}

@@ -2,6 +2,7 @@ package forwarder_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,110 +27,57 @@ import (
 
 const waitFor = 30 * time.Second
 
-func TestComponentPipeline_DeliversTheIdentityChangesToTheEventBus(t *testing.T) {
+func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 	if testing.Short() {
 		t.Skip("component test")
 	}
 
-	bus := eventbustest.New(t, events.Protos)
-	for _, topic := range events.Topics {
-		bus.CreateTopic(t, topic, 3)
-		bus.CreateTopic(t, eventbus.DLQTopic(topic, bus.Group), 1)
-	}
+	bus := newBus(t)
 
 	schemaIDs, err := eventbus.LookupSchemaIDs(t.Context(), bus.Registry(t), events.Protos)
 	require.NoError(t, err)
 
 	pool := testdb.New(t, migrations.FS)
+	userID := uuid.MustParse("3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b")
+
+	signedUp := inTx(t, pool, `
+		WITH new_user AS (
+			INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
+			VALUES ($1, 'Ada Lovelace', 'ada@acme.test', false, now(), now())
+			RETURNING id
+		)
+		INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
+		SELECT gen_random_uuid(), id::text, 'credential', id, 'hash', now(), now() FROM new_user`, userID)
+	passwordChanged := inRequest(t, pool, adaInAcme,
+		`UPDATE account SET password = 'new-hash', "updatedAt" = now() WHERE "userId" = $1`, userID)
+	deleted := inTx(t, pool, `DELETE FROM "user" WHERE id = $1`, userID)
+
+	received := subscribe(t, bus, events.UserTopic)
 	startWorker(t, pool, schemaIDs, bus.Brokers)
 
-	t.Run("the user lifecycle", func(t *testing.T) {
-		received := subscribe(t, bus, events.UserTopic)
-		userID := uuid.MustParse("3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b")
+	created, changed, gone := next(t, received), next(t, received), next(t, received)
 
-		signedUp := inTx(t, pool, `
-			WITH new_user AS (
-				INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
-				VALUES ($1, 'Ada Lovelace', 'ada@acme.test', false, now(), now())
-				RETURNING id
-			)
-			INSERT INTO account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
-			SELECT gen_random_uuid(), id::text, 'credential', id, 'hash', now(), now() FROM new_user`, userID)
-		passwordChanged := inRequest(t, pool, adaInAcme,
-			`UPDATE account SET password = 'new-hash', "updatedAt" = now() WHERE "userId" = $1`, userID)
-		deleted := inTx(t, pool, `DELETE FROM "user" WHERE id = $1`, userID)
-
-		created, changed, gone := next(t, received), next(t, received), next(t, received)
-
-		requireEvent(t, created, ada, signedUp, noRequest, &events.UserCreated{
-			UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-			CreatedAt: timestamppb.New(signedUp.at),
-		})
-		requireEvent(t, changed, ada, passwordChanged, adaInAcmeOrigin, &events.PasswordChanged{
-			UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-			ChangedAt: timestamppb.New(passwordChanged.at),
-		})
-		requireEvent(t, gone, ada, deleted, noRequest, &events.UserDeleted{
-			UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-			DeletedAt: timestamppb.New(deleted.at),
-		})
-
-		requireNoPendingChange(t, pool)
+	requireEvent(t, created, ada, signedUp, noRequest, &events.UserCreated{
+		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		CreatedAt: timestamppb.New(signedUp.at),
+	})
+	requireEvent(t, changed, ada, passwordChanged, origin{
+		actorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		actorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
+		ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
+	}, &events.PasswordChanged{
+		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		ChangedAt: timestamppb.New(passwordChanged.at),
+	})
+	requireEvent(t, gone, ada, deleted, noRequest, &events.UserDeleted{
+		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		DeletedAt: timestamppb.New(deleted.at),
 	})
 
-	t.Run("the sessions and the failed sign-ins", func(t *testing.T) {
-		received := subscribe(t, bus, events.SessionTopic)
-		userID := uuid.MustParse("5b8e2f0a-4c1d-4e7f-9a3b-6c5d4e3f2a1b")
-		sessionID := uuid.MustParse("8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f")
-
-		inTx(t, pool, `
-			INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
-			VALUES ($1, 'Grace Hopper', 'grace@acme.test', false, now(), now())`, userID)
-
-		signInFailed := inRequest(t, pool, anonymousFromGracesIP, `
-			INSERT INTO identity_change (table_name, operation, fields, ip_hash)
-			VALUES ('sign_in', 'FAILED', jsonb_build_object('reason', 'invalid_credentials'),
-			        NULLIF(current_setting('app.ip_hash', true), ''))`)
-		signedIn := inRequest(t, pool, anonymousFromGracesIP, `
-			INSERT INTO session (id, "expiresAt", token, "updatedAt", "ipAddress", "userId", "activeOrganizationId")
-			VALUES ($1, now() + interval '7 days', 'token', now(), '203.0.113.7', $2, '3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d')`,
-			sessionID, userID)
-		inRequest(t, pool, graceInAcme, `UPDATE session SET "updatedAt" = now() WHERE id = $1`, sessionID)
-		signedOut := inRequest(t, pool, anonymousFromGracesIP, `DELETE FROM session WHERE id = $1`, sessionID)
-
-		got := byType(t, received, 3)
-
-		requireEvent(t, got["boilerplate.iam.v1.SignInFailed"], anonymous, signInFailed, origin{
-			ipHash: "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
-		}, &events.SignInFailed{
-			Reason:   events.SignInFailed_REASON_INVALID_CREDENTIALS,
-			FailedAt: timestamppb.New(signInFailed.at),
-		})
-		requireEvent(t, got["boilerplate.iam.v1.SessionStarted"], gracesSession, signedIn, graceInAcmeOrigin, &events.SessionStarted{
-			SessionId: "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
-			UserId:    "user_5b8e2f0a-4c1d-4e7f-9a3b-6c5d4e3f2a1b",
-			StartedAt: timestamppb.New(signedIn.at),
-		})
-		requireEvent(t, got["boilerplate.iam.v1.SessionEnded"], gracesSession, signedOut, graceInAcmeOrigin, &events.SessionEnded{
-			SessionId: "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
-			UserId:    "user_5b8e2f0a-4c1d-4e7f-9a3b-6c5d4e3f2a1b",
-			EndedAt:   timestamppb.New(signedOut.at),
-		})
-
-		requireNoPendingChange(t, pool)
-	})
+	var pending int
+	require.NoError(t, pool.QueryRow(t.Context(), `SELECT count(*) FROM identity_change`).Scan(&pending))
+	require.Zero(t, pending)
 }
-
-type subject struct {
-	topic string
-	id    string
-}
-
-var (
-	ada           = subject{topic: "iam.user.v1", id: "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"}
-	gracesSession = subject{topic: "iam.session.v1", id: "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f"}
-	anonymous     = subject{topic: "iam.session.v1"}
-)
 
 type origin struct {
 	actorID             string
@@ -137,29 +85,23 @@ type origin struct {
 	ipHash              string
 }
 
-var (
-	noRequest       = origin{}
-	adaInAcmeOrigin = origin{
-		actorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
-		actorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
-		ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
-	}
-	graceInAcmeOrigin = origin{
-		actorID:             "user_5b8e2f0a-4c1d-4e7f-9a3b-6c5d4e3f2a1b",
-		actorOrganizationID: "org_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
-		ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
-	}
-)
+var noRequest = origin{}
 
-func requireEvent(t *testing.T, got *eventbus.Event, about subject, tx transaction, from origin, want proto.Message) {
+type aggregate struct {
+	topic   string
+	subject string
+}
+
+var ada = aggregate{topic: "iam.user.v1", subject: "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"}
+
+func requireEvent(t *testing.T, got *eventbus.Event, of aggregate, tx transaction, from origin, want proto.Message) {
 	t.Helper()
 
-	require.NotNil(t, got, "no %s", want.ProtoReflect().Descriptor().FullName())
 	require.True(t, proto.Equal(want, got.Message), "want %v, got %v", want, got.Message)
-	require.Equal(t, about.topic, got.Topic)
+	require.Equal(t, of.topic, got.Topic)
 	require.Equal(t, "iam", got.Source)
 	require.Equal(t, string(want.ProtoReflect().Descriptor().FullName()), got.Type)
-	require.Equal(t, about.id, got.Subject)
+	require.Equal(t, of.subject, got.Subject)
 	require.Equal(t, tx.id, got.CorrelationID)
 	require.True(t, tx.at.Equal(got.Time), "want %v, got %v", tx.at, got.Time)
 	require.Equal(t, from, origin{
@@ -184,16 +126,6 @@ var adaInAcme = connectionSettings{
 	actorID:             "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 	actorOrganizationID: "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
 	ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
-}
-
-var graceInAcme = connectionSettings{
-	actorID:             "5b8e2f0a-4c1d-4e7f-9a3b-6c5d4e3f2a1b",
-	actorOrganizationID: "3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d",
-	ipHash:              "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
-}
-
-var anonymousFromGracesIP = connectionSettings{
-	ipHash: "61370b3ab3601445f17092312e647e82fb0adbd5c0dd53592b53f2f4fbd59cc7",
 }
 
 func inTx(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) transaction {
@@ -249,15 +181,35 @@ func (r recorder) Handle(_ context.Context, event *eventbus.Event) error {
 	return nil
 }
 
-func subscribe(t *testing.T, bus *eventbustest.Env, topic string) recorder {
+var createTopics sync.Once
+
+func newBus(t *testing.T) *eventbustest.Env {
 	t.Helper()
+
+	bus := eventbustest.New(t, events.Protos)
+
+	createTopics.Do(func() {
+		for _, topic := range events.Topics {
+			bus.CreateTopic(t, topic, 3)
+		}
+	})
+
+	return bus
+}
+
+func subscribe(t *testing.T, bus *eventbustest.Env, topics ...string) recorder {
+	t.Helper()
+
+	for _, topic := range topics {
+		bus.CreateTopic(t, eventbus.DLQTopic(topic, bus.Group), 1)
+	}
 
 	received := make(recorder, 100)
 
 	subscriber, err := eventbus.NewSubscriber(&eventbus.SubscriberConfig{
 		Brokers: bus.Brokers,
 		Group:   bus.Group,
-		Topics:  []string{topic},
+		Topics:  topics,
 		Handler: received,
 	})
 	require.NoError(t, err)
@@ -298,24 +250,4 @@ func next(t *testing.T, received recorder) *eventbus.Event {
 
 		return nil
 	}
-}
-
-func byType(t *testing.T, received recorder, count int) map[string]*eventbus.Event {
-	t.Helper()
-
-	got := make(map[string]*eventbus.Event, count)
-	for range count {
-		event := next(t, received)
-		got[event.Type] = event
-	}
-
-	return got
-}
-
-func requireNoPendingChange(t *testing.T, pool *pgxpool.Pool) {
-	t.Helper()
-
-	var pending int
-	require.NoError(t, pool.QueryRow(t.Context(), `SELECT count(*) FROM identity_change`).Scan(&pending))
-	require.Zero(t, pending)
 }

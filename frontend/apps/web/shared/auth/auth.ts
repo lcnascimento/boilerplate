@@ -50,7 +50,7 @@ function createIam(env: IamEnv) {
     },
     session: { expiresIn: 7 * DAY_SECONDS, updateAge: DAY_SECONDS },
     rateLimit: { storage: "database" },
-    disabledPaths: ["/token"],
+    disabledPaths: ["/token", "/organization/create"],
     hooks: {
       before: authRulesHook(authRules),
       after: loginFailureHook((reason) =>

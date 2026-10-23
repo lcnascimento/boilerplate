@@ -111,6 +111,16 @@ test.describe("signed out", () => {
 
     expect(response.status()).toBe(404);
   });
+
+  test("organizations are not created through the auth route", async ({
+    request,
+  }) => {
+    const response = await request.post("/api/auth/organization/create", {
+      data: { name: "Bypass", slug: "bypass" },
+    });
+
+    expect(response.status()).toBe(404);
+  });
 });
 
 test("a signed-in user opening the sign-in goes to the home", async ({

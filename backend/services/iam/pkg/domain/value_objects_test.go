@@ -85,6 +85,22 @@ func TestUserID_FromUUIDAddsTheUserPrefix(t *testing.T) {
 	require.Equal(t, "user_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", id.String())
 }
 
+func TestMemberID_FromUUIDAddsTheMemberPrefix(t *testing.T) {
+	t.Parallel()
+
+	id := domain.MemberIDFromUUID(uuid.MustParse("3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"))
+
+	require.Equal(t, "member_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", id.String())
+}
+
+func TestInvitationID_FromUUIDAddsTheInvitationPrefix(t *testing.T) {
+	t.Parallel()
+
+	id := domain.InvitationIDFromUUID(uuid.MustParse("3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"))
+
+	require.Equal(t, "invitation_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", id.String())
+}
+
 func TestOrganizationID_MustParsePanicsOnMalformedID(t *testing.T) {
 	t.Parallel()
 
