@@ -174,7 +174,7 @@ test("the signed-in layout creates a missing sign-up organization once", async (
   await undoSignUpOrganization(userId, visitor.organizationName);
   expect(await organizationsOf(page.request)).toEqual([]);
 
-  await page.goto("/profile/preferences");
+  await page.goto("/settings/preferences");
   const [created] = await organizationsOf(page.request);
   expect(created).toMatchObject({ name: visitor.organizationName });
 
@@ -198,7 +198,7 @@ test("a user who lost every membership does not get a new organization", async (
     client.query(`DELETE FROM member WHERE "userId" = $1`, [userId])
   );
 
-  await page.goto("/profile/preferences");
+  await page.goto("/settings/preferences");
   await page.reload();
 
   expect(await organizationsOf(page.request)).toEqual([]);

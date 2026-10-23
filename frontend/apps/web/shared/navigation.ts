@@ -27,36 +27,43 @@ interface NavRoute {
   href: Route;
   labelKey: NavLabelKey;
   icon: LucideIcon;
-  area: "sidebar" | "userMenu";
+  area: NavArea;
 }
 
+type NavArea = "product" | "organization" | "account";
+
 export const navRoutes = [
-  { href: "/", labelKey: "nav.home", icon: House, area: "sidebar" },
+  { href: "/", labelKey: "nav.home", icon: House, area: "product" },
   // example:begin
   {
     href: NOTES_HREF,
     labelKey: "notes.title",
     icon: NotebookPen,
-    area: "sidebar",
+    area: "product",
   },
   // example:end
   {
     href: "/settings/members",
     labelKey: "members.title",
     icon: Users,
-    area: "sidebar",
+    area: "organization",
   },
   {
-    href: "/profile/preferences",
+    href: "/settings/preferences",
     labelKey: "nav.preferences",
     icon: SlidersHorizontal,
-    area: "userMenu",
+    area: "account",
   },
 ] as const satisfies readonly NavRoute[];
 
-export function routesIn(area: NavRoute["area"]): NavRoute[] {
+export function routesIn(area: NavArea): NavRoute[] {
   return navRoutes.filter((route) => route.area === area);
 }
+
+export const settingsSections = [
+  { area: "organization", labelKey: "nav.settingsOrganization" },
+  { area: "account", labelKey: "nav.settingsAccount" },
+] as const satisfies readonly { area: NavArea; labelKey: NavLabelKey }[];
 
 export function isActiveHref(pathname: string, href: string): boolean {
   const path = trimTrailingSlash(pathname);
