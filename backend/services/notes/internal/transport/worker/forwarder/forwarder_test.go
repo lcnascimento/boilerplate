@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
@@ -23,6 +25,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	"github.com/lcnascimento/go-kit/outbox"
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
@@ -32,7 +35,6 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
@@ -266,6 +268,37 @@ func TestComponentForwarder_MessagingMetricsOmitTheDeliveryAttempt(t *testing.T)
 	}
 }
 
+func TestComponentForwarder_HoldsBackEverythingAfterAMessageWithoutAValidEnvelope(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	t.Parallel()
+
+	env := newEnv(t)
+	repo := notes.New(env.pool, env.schemaIDs)
+	note := newNote("after the malformed one", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+
+	malformed := message.NewMessage(uuid.NewString(), []byte("{}"))
+	malformed.Metadata.Set("ce_subject", note.ID.String())
+	malformed.Metadata.Set("ce_partitionkey", note.ID.String())
+
+	tx, err := env.pool.Begin(t.Context())
+	require.NoError(t, err)
+	require.NoError(t, notes.Outbox.Publish(t.Context(), tx, events.Topic, malformed))
+	require.NoError(t, tx.Commit(t.Context()))
+	require.NoError(t, repo.Create(t.Context(), author, note))
+
+	observer := env.subscribe(t, note.ID)
+	env.startForwarder(t)
+
+	select {
+	case event := <-observer.events:
+		t.Fatalf("the forwarder sent %s past a malformed message", event.Type)
+	case <-time.After(5 * time.Second):
+	}
+}
+
 func messagingMetricAttributes(t *testing.T, names ...string) map[string][]attribute.Set {
 	t.Helper()
 
@@ -391,15 +424,10 @@ func newEnv(t *testing.T) *env {
 	return &env{Env: e, brokers: e.Brokers, pool: testdb.New(t, migrations.FS), schemaIDs: schemaIDs}
 }
 
-func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {
+func (e *env) startForwarder(t *testing.T) *outbox.Forwarder {
 	t.Helper()
 
-	subscriber, err := outbox.NewSubscriber(e.pool)
-	require.NoError(t, err)
-
-	f, err := forwarder.New(subscriber, e.brokers, forwarder.WithShutdown(func() {
-		t.Errorf("forwarder stopped unexpectedly")
-	}))
+	f, err := forwarder.New(t.Context(), e.pool, e.brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
 	require.NoError(t, err)
 
 	require.NoError(t, f.Start(t.Context()))

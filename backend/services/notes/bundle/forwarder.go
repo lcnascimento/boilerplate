@@ -1,11 +1,15 @@
 package bundle
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 
+	"github.com/lcnascimento/go-kit/outbox"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 )
@@ -18,10 +22,8 @@ func workerForwarderOptions() []fx.Option {
 	return []fx.Option{
 		Logger(logger),
 		Database(),
-		OutboxRepository(),
-		OutboxService(),
-		fx.Provide(newForwarder, newForwarderHealthServer, forwarder.NewJanitor),
-		fx.Invoke(func(lifecycle fx.Lifecycle, f *forwarder.Forwarder, janitor *forwarder.Janitor, health *forwarder.HealthServer) {
+		fx.Provide(newForwarder, newForwarderHealthServer, newJanitor),
+		fx.Invoke(func(lifecycle fx.Lifecycle, f *outbox.Forwarder, janitor *outbox.Janitor, health *forwarder.HealthServer) {
 			lifecycle.Append(fx.Hook{OnStart: f.Start, OnStop: f.Stop})
 			lifecycle.Append(fx.Hook{OnStart: janitor.Start, OnStop: janitor.Stop})
 			lifecycle.Append(fx.Hook{OnStart: health.Start, OnStop: health.Shutdown})
@@ -29,22 +31,21 @@ func workerForwarderOptions() []fx.Option {
 	}
 }
 
-func newForwarder(pool *pgxpool.Pool, shutdowner fx.Shutdowner) (*forwarder.Forwarder, error) {
+func newForwarder(pool *pgxpool.Pool, shutdowner fx.Shutdowner) (*outbox.Forwarder, error) {
 	brokers, err := config.KafkaBrokers()
 	if err != nil {
 		return nil, err
 	}
 
-	subscriber, err := outbox.NewSubscriber(pool)
-	if err != nil {
-		return nil, err
-	}
+	return forwarder.New(context.Background(), pool, brokers, exitWithFailure(shutdowner))
+}
 
-	return forwarder.New(subscriber, brokers, forwarder.WithShutdown(exitWithFailure(shutdowner)))
+func newJanitor(pool *pgxpool.Pool) (*outbox.Janitor, error) {
+	return outbox.NewJanitor(notes.Outbox, pool)
 }
 
 func newForwarderHealthServer(
-	db transport.Database, f *forwarder.Forwarder, shutdowner fx.Shutdowner,
+	db transport.Database, f *outbox.Forwarder, shutdowner fx.Shutdowner,
 ) (*forwarder.HealthServer, error) {
 	port, err := config.HealthPort()
 	if err != nil {

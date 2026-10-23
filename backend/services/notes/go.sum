@@ -143,6 +143,8 @@ github.com/lcnascimento/go-kit/http v1.5.1 h1:LfGSkQwwWw54Y8dDT8DwgTKEJ0vXsAMXSn
 github.com/lcnascimento/go-kit/http v1.5.1/go.mod h1:X9o0IyQOSefkTWgm5BG5aeXnRqiulnTejJRZTqidHyQ=
 github.com/lcnascimento/go-kit/o11y v1.8.1 h1:WOsbS7+IsJN9a1y5q9SXissyYqfFjOUt6inHUucOukk=
 github.com/lcnascimento/go-kit/o11y v1.8.1/go.mod h1:w2j7RtJp7vCKpKg/Df2ZiREJtU6mjixix8s7ERG5Ens=
+github.com/lcnascimento/go-kit/outbox v0.0.0-20261023014622-fda683d79f9e h1:LnooJOUATfp3LEMXcj46T+7+JZhN+5NMPrqr5Vam+g4=
+github.com/lcnascimento/go-kit/outbox v0.0.0-20261023014622-fda683d79f9e/go.mod h1:6j5XT9thGHtsrsUaHISzyzJZJkxLgC3pGgNB6Oae1pM=
 github.com/lcnascimento/go-kit/postgres v1.0.0 h1:3pfDWfT+1yRahcI3InbPGyfroxovCKblcwSboQfNFtU=
 github.com/lcnascimento/go-kit/postgres v1.0.0/go.mod h1:4BitXpM2mBwK23WbzKeNbmjHPuhPQPRhkri7AEXSmJk=
 github.com/lcnascimento/go-kit/util v1.4.6 h1:FD+oBkTTqCpS55+m596nT3I5zLCxJp4xB1fx2AA/zsw=
