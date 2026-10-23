@@ -104,7 +104,7 @@ O `backend/docker-compose.yml` sobe um broker Kafka, o Schema Registry e o Redpa
 
 <!-- example:begin -->
 
-O `notes` grava cada Integration Event num outbox, na mesma transação da Note, e o runtime `notes-worker-forwarder` (`cmd/worker/forwarder`) leva o outbox ao tópico `notes.note.v1`, uma mensagem por vez, em ordem de commit, com o `NoteID` como key. Ele tenta publicar para sempre e nunca pula uma mensagem: com o Kafka fora do ar, a API continua aceitando escritas e o outbox cresce até o broker voltar. Várias réplicas podem rodar juntas, com uma ativa e as outras esperando. O start falha se o broker não responder ou se o tópico não existir (`TOPIC_MISSING`: rode `make kafka.topics`). O `/health` na `8091` olha o Postgres e o forwarder, nunca o broker.
+O `notes` grava cada Integration Event num outbox, na mesma transação da Note, e o runtime `notes-worker-forwarder` (`cmd/worker/forwarder`) leva o outbox ao tópico `notes.note.v1`, uma mensagem por vez, em ordem de commit, com o `NoteID` como key. Ele tenta publicar para sempre e nunca pula uma mensagem: com o Kafka fora do ar, a API continua aceitando escritas e o outbox cresce até o broker voltar. Várias réplicas podem rodar juntas, com uma ativa e as outras esperando. O outbox, o forwarder e a limpeza das mensagens já publicadas há mais de 7 dias vêm do pacote [`outbox`](https://github.com/lcnascimento/go-kit/tree/main/outbox) do go-kit, que todo serviço com Integration Events usa do mesmo jeito. O start falha se o broker não responder ou se o tópico não existir (`TOPIC_MISSING`: rode `make kafka.topics`). O `/health` na `8091` olha o Postgres e o forwarder, nunca o broker.
 
 <!-- example:end -->
 

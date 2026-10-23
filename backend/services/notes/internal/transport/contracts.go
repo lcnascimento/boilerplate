@@ -3,7 +3,6 @@ package transport
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 
@@ -16,11 +15,6 @@ type NotesService interface {
 	List(ctx context.Context, caller *actor.Actor) ([]*domain.Note, error)
 	Get(ctx context.Context, caller *actor.Actor, id domain.NoteID) (*domain.Note, error)
 	Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error
-}
-
-type OutboxService interface {
-	Purge(ctx context.Context) error
-	OldestPendingAge(ctx context.Context) (time.Duration, error)
 }
 
 type Authenticator interface {

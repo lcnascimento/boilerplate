@@ -23,6 +23,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	"github.com/lcnascimento/go-kit/outbox"
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
@@ -30,8 +31,6 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events/eventstest"
@@ -390,13 +389,10 @@ func newEnv(t *testing.T) *env {
 	return &env{Env: e, brokers: e.Brokers, pool: testdb.New(t, migrations.FS), schemaIDs: schemaIDs}
 }
 
-func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {
+func (e *env) startForwarder(t *testing.T) *outbox.Forwarder {
 	t.Helper()
 
-	subscriber, err := outbox.NewSubscriber(e.pool)
-	require.NoError(t, err)
-
-	f, err := forwarder.New(subscriber, e.brokers, forwarder.WithShutdown(func() {
+	f, err := outbox.NewForwarder(notes.Outbox, e.pool, e.brokers, []string{events.Topic}, outbox.WithShutdown(func() {
 		t.Errorf("forwarder stopped unexpectedly")
 	}))
 	require.NoError(t, err)

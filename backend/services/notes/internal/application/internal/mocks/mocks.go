@@ -12,7 +12,6 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
-	time "time"
 
 	actor "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	domain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
@@ -100,60 +99,6 @@ func (m *MockNotesRepository) List(ctx context.Context, orgID domain.Organizatio
 func (mr *MockNotesRepositoryMockRecorder) List(ctx, orgID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesRepository)(nil).List), ctx, orgID)
-}
-
-// MockOutboxRepository is a mock of OutboxRepository interface.
-type MockOutboxRepository struct {
-	ctrl     *gomock.Controller
-	recorder *MockOutboxRepositoryMockRecorder
-	isgomock struct{}
-}
-
-// MockOutboxRepositoryMockRecorder is the mock recorder for MockOutboxRepository.
-type MockOutboxRepositoryMockRecorder struct {
-	mock *MockOutboxRepository
-}
-
-// NewMockOutboxRepository creates a new mock instance.
-func NewMockOutboxRepository(ctrl *gomock.Controller) *MockOutboxRepository {
-	mock := &MockOutboxRepository{ctrl: ctrl}
-	mock.recorder = &MockOutboxRepositoryMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockOutboxRepository) EXPECT() *MockOutboxRepositoryMockRecorder {
-	return m.recorder
-}
-
-// OldestPendingAge mocks base method.
-func (m *MockOutboxRepository) OldestPendingAge(ctx context.Context) (time.Duration, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OldestPendingAge", ctx)
-	ret0, _ := ret[0].(time.Duration)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// OldestPendingAge indicates an expected call of OldestPendingAge.
-func (mr *MockOutboxRepositoryMockRecorder) OldestPendingAge(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OldestPendingAge", reflect.TypeOf((*MockOutboxRepository)(nil).OldestPendingAge), ctx)
-}
-
-// Purge mocks base method.
-func (m *MockOutboxRepository) Purge(ctx context.Context, retention time.Duration) (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Purge", ctx, retention)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Purge indicates an expected call of Purge.
-func (mr *MockOutboxRepositoryMockRecorder) Purge(ctx, retention any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Purge", reflect.TypeOf((*MockOutboxRepository)(nil).Purge), ctx, retention)
 }
 
 // MockValidator is a mock of Validator interface.

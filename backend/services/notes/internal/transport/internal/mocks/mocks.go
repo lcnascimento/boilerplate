@@ -13,7 +13,6 @@ import (
 	context "context"
 	http "net/http"
 	reflect "reflect"
-	time "time"
 
 	actor "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	domain "github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -102,59 +101,6 @@ func (m *MockNotesService) List(ctx context.Context, caller *actor.Actor) ([]*do
 func (mr *MockNotesServiceMockRecorder) List(ctx, caller any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotesService)(nil).List), ctx, caller)
-}
-
-// MockOutboxService is a mock of OutboxService interface.
-type MockOutboxService struct {
-	ctrl     *gomock.Controller
-	recorder *MockOutboxServiceMockRecorder
-	isgomock struct{}
-}
-
-// MockOutboxServiceMockRecorder is the mock recorder for MockOutboxService.
-type MockOutboxServiceMockRecorder struct {
-	mock *MockOutboxService
-}
-
-// NewMockOutboxService creates a new mock instance.
-func NewMockOutboxService(ctrl *gomock.Controller) *MockOutboxService {
-	mock := &MockOutboxService{ctrl: ctrl}
-	mock.recorder = &MockOutboxServiceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockOutboxService) EXPECT() *MockOutboxServiceMockRecorder {
-	return m.recorder
-}
-
-// OldestPendingAge mocks base method.
-func (m *MockOutboxService) OldestPendingAge(ctx context.Context) (time.Duration, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OldestPendingAge", ctx)
-	ret0, _ := ret[0].(time.Duration)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// OldestPendingAge indicates an expected call of OldestPendingAge.
-func (mr *MockOutboxServiceMockRecorder) OldestPendingAge(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OldestPendingAge", reflect.TypeOf((*MockOutboxService)(nil).OldestPendingAge), ctx)
-}
-
-// Purge mocks base method.
-func (m *MockOutboxService) Purge(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Purge", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Purge indicates an expected call of Purge.
-func (mr *MockOutboxServiceMockRecorder) Purge(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Purge", reflect.TypeOf((*MockOutboxService)(nil).Purge), ctx)
 }
 
 // MockAuthenticator is a mock of Authenticator interface.

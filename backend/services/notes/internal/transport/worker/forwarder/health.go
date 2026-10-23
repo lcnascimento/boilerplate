@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/lcnascimento/go-kit/http/httpserver"
+	"github.com/lcnascimento/go-kit/outbox"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/internal/handlers/health"
@@ -14,11 +15,11 @@ import (
 type HealthServer struct {
 	server    *httpserver.Server
 	db        transport.Database
-	forwarder *Forwarder
+	forwarder *outbox.Forwarder
 	shutdown  func()
 }
 
-func NewHealthServer(port int, db transport.Database, forwarder *Forwarder, shutdown func()) *HealthServer {
+func NewHealthServer(port int, db transport.Database, forwarder *outbox.Forwarder, shutdown func()) *HealthServer {
 	return &HealthServer{
 		server:    httpserver.NewServer(httpserver.WithPort(port)),
 		db:        db,
