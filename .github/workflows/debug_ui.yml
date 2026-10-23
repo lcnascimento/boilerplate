@@ -10,8 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
-        mode: [ui, make_test]
+        shard: [1, 2, 3, 4]
+        mode: [backend_turbo, turbo]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -27,18 +27,17 @@ jobs:
           DEBUG: vite:deps
         run: |
           nproc; uname -m
-          runs=6; [ "$MODE" = make_test ] && runs=2
+          runs=3
           red=0
           for i in $(seq 1 $runs); do
             rm -rf frontend/packages/ui/node_modules/.cache frontend/packages/ui/node_modules/.vite
-            if [ "$MODE" = ui ]; then
-              (cd frontend/packages/ui && pnpm vitest run) > run-$i.log 2>&1 || true
-            else
-              make test > run-$i.log 2>&1 || true
-            fi
+            {
+              if [ "$MODE" = backend_turbo ]; then make -C backend test || true; fi
+              (cd frontend && pnpm turbo run test --force --env-mode=loose) || true
+            } > run-$i.log 2>&1
             if grep -q "Failed to fetch dynamically imported module" run-$i.log; then
               red=$((red+1)); echo "::warning::run $i RED"
-              sed 's/\x1b\[[0-9;]*m//g' run-$i.log | grep -E "vite:deps|FAIL|Caused by|Error|optimiz|reload" | cut -c1-300 | head -80
+              sed 's/\x1b\[[0-9;]*m//g' run-$i.log | grep -E "vite:deps|vitest|FAIL|Caused by|optimiz|reload|504" | cut -c1-300 | head -120
             else
               echo "run $i green: $(sed 's/\x1b\[[0-9;]*m//g' run-$i.log | grep -E 'Test Files' | tail -1)"
             fi
