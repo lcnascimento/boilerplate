@@ -1,12 +1,17 @@
 import { sql, type Kysely } from "kysely";
 import { z } from "zod";
 
-import { organizationIdSchema, userIdSchema, type ActorIds } from "./actor-ids";
+import {
+  memberIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+  type ActorIds,
+} from "./actor-ids";
 import { memberRoleSchema } from "./members";
 
 const userMemberSchema = z
   .object({
-    memberId: z.uuid().brand<"MemberId">(),
+    memberId: memberIdSchema,
     role: memberRoleSchema,
     organizationId: organizationIdSchema,
     organizationName: z.string(),

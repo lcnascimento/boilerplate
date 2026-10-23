@@ -8,7 +8,11 @@ import {
   vi,
 } from "vitest";
 
-import { organizationIdSchema, userIdSchema } from "./actor-ids";
+import {
+  memberIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+} from "./actor-ids";
 import { transferOwnership } from "./ownership";
 import { fixtureDatabase } from "./test-database";
 
@@ -22,16 +26,22 @@ const BRUNO = "7a1d0c3e-0000-4000-8000-000000000102";
 const CARLA = "7a1d0c3e-0000-4000-8000-000000000103";
 const INITECH = "7a1d0c3e-0000-4000-8000-0000000001a1";
 const HOOLI = "7a1d0c3e-0000-4000-8000-0000000001a2";
-const ANA_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b1";
-const BRUNO_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b2";
-const CARLA_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b3";
-const CARLA_HOOLI_MEMBER = "7a1d0c3e-0000-4000-8000-0000000001b4";
+const ANA_MEMBER = memberIdSchema.parse("7a1d0c3e-0000-4000-8000-0000000001b1");
+const BRUNO_MEMBER = memberIdSchema.parse(
+  "7a1d0c3e-0000-4000-8000-0000000001b2"
+);
+const CARLA_MEMBER = memberIdSchema.parse(
+  "7a1d0c3e-0000-4000-8000-0000000001b3"
+);
+const CARLA_HOOLI_MEMBER = memberIdSchema.parse(
+  "7a1d0c3e-0000-4000-8000-0000000001b4"
+);
 
 function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
   return {
     userId: userIdSchema.parse(userId),
     organizationId: organizationIdSchema.parse(INITECH),
-    memberId: memberId as Actor["memberId"],
+    memberId: memberIdSchema.parse(memberId),
     role,
   };
 }

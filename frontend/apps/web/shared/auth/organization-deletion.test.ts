@@ -8,7 +8,11 @@ import {
   vi,
 } from "vitest";
 
-import { organizationIdSchema, userIdSchema } from "./actor-ids";
+import {
+  memberIdSchema,
+  organizationIdSchema,
+  userIdSchema,
+} from "./actor-ids";
 import { deleteOrganization } from "./organization-deletion";
 import { fixtureDatabase } from "./test-database";
 
@@ -31,7 +35,7 @@ function actor(userId: string, memberId: string, role: Actor["role"]): Actor {
   return {
     userId: userIdSchema.parse(userId),
     organizationId: organizationIdSchema.parse(INITECH),
-    memberId: memberId as Actor["memberId"],
+    memberId: memberIdSchema.parse(memberId),
     role,
   };
 }
@@ -133,6 +137,31 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       invitations: ["admin", "viewer"],
       users: ["Ana", "Bruno", "Carla"],
     };
+
+    it("refuses an Owner whose ownership transfer commits while the deletion waits", async () => {
+      const transfer = await database.connect();
+      try {
+        await transfer.query("BEGIN");
+        await transfer.query(
+          "SELECT id FROM organization WHERE id = $1 FOR UPDATE",
+          [INITECH]
+        );
+        await transfer.query(
+          `UPDATE member SET role = CASE id WHEN $1 THEN 'owner' ELSE 'admin' END
+           WHERE id = ANY($2)`,
+          [BRUNO_MEMBER, [BRUNO_MEMBER, ANA_MEMBER]]
+        );
+
+        const deletion = deleteOrganization(anaAsOwner, "Initech");
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await transfer.query("COMMIT");
+
+        expect(await deletion).toEqual({ kind: "error", code: "forbidden" });
+      } finally {
+        transfer.release();
+      }
+      expect((await remaining()).organizations).toEqual(["Hooli", "Initech"]);
+    });
 
     it("deletes the Organization with its Members and Invitations, and nothing else", async () => {
       expect(await deleteOrganization(anaAsOwner, "Initech")).toEqual({
