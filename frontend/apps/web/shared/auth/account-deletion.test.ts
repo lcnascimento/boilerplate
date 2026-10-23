@@ -211,25 +211,24 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       );
 
       const { rows } = await database.query(
-        `SELECT CASE table_name
-                  WHEN 'user' THEN 'UserDeleted'
-                  WHEN 'organization' THEN 'OrganizationDeleted'
-                  WHEN 'member' THEN 'MemberRemoved'
+        `SELECT CASE table_name || ' ' || operation
+                  WHEN 'user DELETE' THEN 'UserDeleted'
+                  WHEN 'session DELETE' THEN 'SessionEnded'
+                  WHEN 'organization DELETE' THEN 'OrganizationDeleted'
+                  WHEN 'member DELETE' THEN 'MemberRemoved'
+                  ELSE table_name || ' ' || operation
                 END AS type,
                 actor_id::text AS "actorId",
                 actor_organization_id::text AS "actorOrganizationId"
          FROM identity_change
-         WHERE operation = 'DELETE'
-           AND table_name IN ('user', 'organization', 'member')
-           AND ip_hash = $1
+         WHERE ip_hash = $1
          UNION ALL
          SELECT substring(headers ->> 'ce_type' FROM 20),
                 substring(headers ->> 'ce_actorid' FROM 6),
                 substring(headers ->> 'ce_actororganizationid' FROM 5)
          FROM watermill_iam_outbox,
               LATERAL (SELECT payload::jsonb -> 'metadata' AS headers) AS message
-         WHERE headers ->> 'ce_type' IN ('boilerplate.iam.v1.UserDeleted', 'boilerplate.iam.v1.OrganizationDeleted', 'boilerplate.iam.v1.MemberRemoved')
-           AND headers ->> 'ce_iphash' = $1
+         WHERE headers ->> 'ce_iphash' = $1
          ORDER BY type DESC`,
         [ipHash]
       );
@@ -237,6 +236,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       const asBruno = { actorId: BRUNO, actorOrganizationId: BRUNO_SOLO };
       expect(rows).toEqual([
         { type: "UserDeleted", ...asBruno },
+        { type: "SessionEnded", ...asBruno },
         { type: "OrganizationDeleted", ...asBruno },
         { type: "MemberRemoved", ...asBruno },
         { type: "MemberRemoved", ...asBruno },
