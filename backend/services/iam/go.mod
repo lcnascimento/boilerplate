@@ -13,7 +13,7 @@ require (
 	github.com/lcnascimento/go-kit/errors v1.9.4
 	github.com/lcnascimento/go-kit/http v1.5.1
 	github.com/lcnascimento/go-kit/o11y v1.8.1
-	github.com/lcnascimento/go-kit/outbox v0.0.0-20261023015853-d8be4b9546b9
+	github.com/lcnascimento/go-kit/outbox v1.0.0
 	github.com/lcnascimento/go-kit/postgres v1.0.0
 	github.com/stretchr/testify v1.12.1
 	github.com/twmb/franz-go/pkg/sr v1.8.0
