@@ -12,7 +12,7 @@ import { OrganizationsProvider } from "@/providers";
 import { appMessages } from "@/shared/_messages";
 import { authClient } from "@/shared/auth/client";
 
-import { OrganizationSwitcher } from "./organization-switcher";
+import { OrganizationMenu } from "./organization-menu";
 
 import type { UserOrganizations } from "@/shared/auth/organizations";
 
@@ -32,7 +32,7 @@ const acmeActive: UserOrganizations = {
   organizations: [acme, globex],
 };
 
-function renderSwitcher(organizations: UserOrganizations) {
+function renderMenu(organizations: UserOrganizations) {
   render(
     <NextIntlClientProvider
       locale="pt-BR"
@@ -41,13 +41,30 @@ function renderSwitcher(organizations: UserOrganizations) {
     >
       <OrganizationsProvider organizations={organizations}>
         <SidebarProvider>
-          <OrganizationSwitcher />
+          <OrganizationMenu />
         </SidebarProvider>
       </OrganizationsProvider>
       <Toaster />
     </NextIntlClientProvider>
   );
   return userEvent.setup();
+}
+
+async function openSwitch(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: "Abrir menu da Organization" })
+  );
+  await user.click(
+    screen.getByRole("menuitem", { name: "Trocar Organization" })
+  );
+}
+
+async function choose(
+  user: ReturnType<typeof userEvent.setup>,
+  organization: string
+) {
+  screen.getByRole("menuitemradio", { name: organization }).focus();
+  await user.keyboard("{Enter}");
 }
 
 beforeEach(() => {
@@ -67,15 +84,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("OrganizationSwitcher", () => {
-  it("shows the active Organization and lists every one, the active checked", async () => {
-    const user = renderSwitcher(acmeActive);
+describe("OrganizationMenu", () => {
+  it("shows the active Organization and links to its Members", async () => {
+    const user = renderMenu(acmeActive);
 
     const trigger = screen.getByRole("button", {
-      name: "Trocar de Organization",
+      name: "Abrir menu da Organization",
     });
     expect(trigger.textContent).toContain("Acme");
     await user.click(trigger);
+
+    expect(
+      screen.getByRole("menuitem", { name: "Members" }).getAttribute("href")
+    ).toBe("/settings/members");
+  });
+
+  it("lists every Organization under the switch, the active checked", async () => {
+    const user = renderMenu(acmeActive);
+
+    await openSwitch(user);
 
     const items = screen.getAllByRole("menuitemradio");
     expect(
@@ -88,24 +115,20 @@ describe("OrganizationSwitcher", () => {
 
   it("makes the chosen Organization active and refreshes the page", async () => {
     setActive.mockResolvedValue({ data: null, error: null });
-    const user = renderSwitcher(acmeActive);
+    const user = renderMenu(acmeActive);
 
-    await user.click(
-      screen.getByRole("button", { name: "Trocar de Organization" })
-    );
-    await user.click(screen.getByRole("menuitemradio", { name: "Globex" }));
+    await openSwitch(user);
+    await choose(user, "Globex");
 
     expect(setActive).toHaveBeenCalledWith({ organizationId: "org-globex" });
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("stays put when the active Organization is chosen again", async () => {
-    const user = renderSwitcher(acmeActive);
+    const user = renderMenu(acmeActive);
 
-    await user.click(
-      screen.getByRole("button", { name: "Trocar de Organization" })
-    );
-    await user.click(screen.getByRole("menuitemradio", { name: "Acme" }));
+    await openSwitch(user);
+    await choose(user, "Acme");
 
     expect(setActive).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
@@ -116,12 +139,10 @@ describe("OrganizationSwitcher", () => {
       data: null,
       error: { status: 403, statusText: "Forbidden" },
     });
-    const user = renderSwitcher(acmeActive);
+    const user = renderMenu(acmeActive);
 
-    await user.click(
-      screen.getByRole("button", { name: "Trocar de Organization" })
-    );
-    await user.click(screen.getByRole("menuitemradio", { name: "Globex" }));
+    await openSwitch(user);
+    await choose(user, "Globex");
 
     expect(
       await screen.findByText(

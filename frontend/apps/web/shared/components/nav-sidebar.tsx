@@ -20,7 +20,7 @@ import {
 import { isActiveHref, routesIn } from "@/shared/navigation";
 
 import { NavUser } from "./nav-user";
-import { OrganizationSwitcher } from "./organization-switcher";
+import { OrganizationMenu } from "./organization-menu";
 
 import type { User } from "@boilerplate/types";
 
@@ -35,14 +35,14 @@ export function NavSidebar({ user }: NavSidebarProps) {
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
-        <OrganizationSwitcher />
+        <OrganizationMenu />
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>{t("nav.navigation")}</SidebarGroupLabel>
           <SidebarMenu>
-            {routesIn("sidebar").map(({ href, labelKey, icon: Icon }) => (
+            {routesIn("product").map(({ href, labelKey, icon: Icon }) => (
               <SidebarMenuItem key={href}>
                 <SidebarMenuButton
                   asChild

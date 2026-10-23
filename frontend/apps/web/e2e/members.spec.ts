@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { storageStateOf } from "./auth-state";
+import { organizationMenu } from "./organization-menu";
 import { WEB_URL } from "./stack";
 
 const MEMBERS_HREF = "/settings/members";
@@ -37,7 +38,8 @@ test.describe("as the Acme Owner", () => {
       page,
     }) => {
       await page.goto("/");
-      await page.getByRole("link", { name: "Members", exact: true }).click();
+      await organizationMenu(page).click();
+      await page.getByRole("menuitem", { name: "Members" }).click();
       await expect(page).toHaveURL(MEMBERS_HREF);
 
       await page.getByRole("button", { name: "Adicionar Member" }).click();
