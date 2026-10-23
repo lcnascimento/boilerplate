@@ -51,6 +51,26 @@ const routes: Record<string, Route> = {
       })
     );
   },
+  "GET /whoami": (req, _body, res) => {
+    json(
+      res,
+      200,
+      JSON.stringify({
+        id: "w_1",
+        display_name: req.headers.authorization ?? "anonymous",
+      })
+    );
+  },
+  "POST /whoami": (req, body, res) => {
+    json(
+      res,
+      201,
+      JSON.stringify({
+        id: "w_2",
+        display_name: `${req.headers.authorization ?? "anonymous"} ${req.headers["content-type"] ?? ""} ${body}`,
+      })
+    );
+  },
   "DELETE /widgets/1": (_req, _body, res) => {
     res.writeHead(204);
     res.end();
@@ -116,6 +136,50 @@ describe("request", () => {
       data: {
         id: "w_2",
         displayName: 'application/json {"display_name":"Gear"}',
+      },
+    });
+  });
+
+  it("sends no Authorization header without a token", async () => {
+    const result = await request({
+      url: `${baseUrl}/whoami`,
+      schema: widgetSchema,
+    });
+
+    expect(result).toEqual({
+      kind: "ok",
+      data: { id: "w_1", displayName: "anonymous" },
+    });
+  });
+
+  it("sends the token as a Bearer Authorization header", async () => {
+    const result = await request({
+      url: `${baseUrl}/whoami`,
+      token: "actor-token",
+      schema: widgetSchema,
+    });
+
+    expect(result).toEqual({
+      kind: "ok",
+      data: { id: "w_1", displayName: "Bearer actor-token" },
+    });
+  });
+
+  it("sends the token along with a JSON body", async () => {
+    const result = await request({
+      url: `${baseUrl}/whoami`,
+      method: "POST",
+      token: "actor-token",
+      body: { display_name: "Gear" },
+      schema: widgetSchema,
+    });
+
+    expect(result).toEqual({
+      kind: "ok",
+      data: {
+        id: "w_2",
+        displayName:
+          'Bearer actor-token application/json {"display_name":"Gear"}',
       },
     });
   });

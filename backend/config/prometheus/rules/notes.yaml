@@ -32,6 +32,17 @@ groups:
           description: Mais de 90% das conexões do pool pgx de notes-api-frontend estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de notes-api-frontend com {{ $value | humanizePercentage }} das conexões em uso
+      - alert: AuthenticationFailuresHigh
+        expr: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend", http_route!~"/ping|/health", http_response_status_code="401"}[5m])) / sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend", http_route!~"/ping|/health"}[5m])) > 0.1
+        for: 5m
+        labels:
+          service: notes-api-frontend
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-notes
+          description: 'Mais de 10% das requisições de notes-api-frontend respondem 401 há 5 minutos: credenciais ou tokens recusados em massa. Veja primeiro os motivos na linha Autenticação e autorização do dashboard do serviço.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/AuthenticationFailuresHigh.md
+          summary: notes-api-frontend responde 401 a {{ $value | humanizePercentage }} das requisições
       - alert: SeriesBudgetExceeded
         expr: job:series:count{job="boilerplate/notes-api-frontend"} > 2000
         for: 15m

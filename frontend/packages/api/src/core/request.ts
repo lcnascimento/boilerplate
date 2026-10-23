@@ -10,8 +10,11 @@ export interface RequestOptions<T> {
   url: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  token?: string;
   schema: z.ZodType<T>;
 }
+
+export type GetToken = () => Promise<string>;
 
 const apiErrorBodySchema = z.object({
   code: z.string(),
@@ -35,20 +38,21 @@ export async function request<T>({
   url,
   method = "GET",
   body,
+  token,
   schema,
 }: RequestOptions<T>): Promise<Result<T>> {
+  const headers = new Headers();
+  if (token !== undefined) headers.set("Authorization", `Bearer ${token}`);
+  if (body !== undefined) headers.set("Content-Type", "application/json");
+
   let status: number;
   let text: string;
   try {
     const response = await fetch(url, {
       method,
       cache: "no-store",
-      ...(body === undefined
-        ? {}
-        : {
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          }),
+      headers,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     status = response.status;
     text = await response.text();

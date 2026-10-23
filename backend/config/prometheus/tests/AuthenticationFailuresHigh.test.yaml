@@ -1,0 +1,82 @@
+rule_files:
+  - fixture.yaml
+  - fixture-node.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: fires when a fifth of the Go requests answer 401 for five minutes
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="200"}
+        values: 0+80x15
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="401"}
+        values: 0+20x15
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AuthenticationFailuresHigh
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: AuthenticationFailuresHigh
+        exp_alerts:
+          - exp_labels:
+              service: fixture-api
+              severity: warning
+            exp_annotations:
+              summary: fixture-api responde 401 a 20% das requisições
+              description: "Mais de 10% das requisições de fixture-api respondem 401 há 5 minutos: credenciais ou tokens recusados em massa. Veja primeiro os motivos na linha Autenticação e autorização do dashboard do serviço."
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/AuthenticationFailuresHigh.md
+              dashboard_url: http://localhost:3010/d/boilerplate-fixture
+
+  - name: stays quiet with 5% of the Go requests answering 401, probes and other jobs aside
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="200"}
+        values: 0+95x15
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="401"}
+        values: 0+5x15
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_request_method="GET", http_response_status_code="401"}
+        values: 0+100x15
+      - series: http_server_request_total{job="boilerplate/other-api", http_route="/notes", http_request_method="GET", http_response_status_code="401"}
+        values: 0+100x15
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: AuthenticationFailuresHigh
+        exp_alerts: []
+
+  - name: fires when a fifth of the Node server spans answer 401 for five minutes
+    interval: 1m
+    input_series:
+      - series: traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_SERVER", span_name="POST /api/auth/[...all]", http_status_code="200"}
+        values: 0+80x15
+      - series: traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_SERVER", span_name="POST /api/auth/[...all]", http_status_code="401"}
+        values: 0+20x15
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AuthenticationFailuresHigh
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: AuthenticationFailuresHigh
+        exp_alerts:
+          - exp_labels:
+              service: fixture-web
+              severity: warning
+            exp_annotations:
+              summary: fixture-web responde 401 a 20% das requisições
+              description: "Mais de 10% das requisições de fixture-web respondem 401 há 5 minutos: credenciais ou tokens recusados em massa. Veja primeiro os motivos na linha Autenticação e autorização do dashboard do serviço."
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/AuthenticationFailuresHigh.md
+              dashboard_url: http://localhost:3010/d/boilerplate-fixture-node
+
+  - name: stays quiet with 5% of the Node server spans answering 401, client spans aside
+    interval: 1m
+    input_series:
+      - series: traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_SERVER", span_name="POST /api/auth/[...all]", http_status_code="200"}
+        values: 0+95x15
+      - series: traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_SERVER", span_name="POST /api/auth/[...all]", http_status_code="401"}
+        values: 0+5x15
+      - series: traces_spanmetrics_calls_total{service="fixture-web", span_kind="SPAN_KIND_CLIENT", span_name="GET", http_status_code="401"}
+        values: 0+100x15
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: AuthenticationFailuresHigh
+        exp_alerts: []

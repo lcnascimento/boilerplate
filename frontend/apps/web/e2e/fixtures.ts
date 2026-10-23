@@ -5,6 +5,14 @@ import { test as base, expect, type APIRequestContext } from "@playwright/test";
 // example:begin
 import { noteListSchema } from "@boilerplate/api/notes/schemas";
 
+import {
+  seedOrganizations,
+  type SeedOrganization,
+} from "../scripts/iam-seed/users";
+import { findActor } from "../shared/auth/actor";
+import { mintActorToken } from "../shared/auth/actor-token";
+import { getIam } from "../shared/auth/auth";
+
 import { NOTES_URL } from "./stack";
 // example:end
 
@@ -18,15 +26,44 @@ interface CleanupArgs {
 type Cleanup = (args: CleanupArgs) => Promise<void>;
 
 // example:begin
-async function deleteMarkedNotes({ request, markers }: CleanupArgs) {
-  const list = await request.get(`${NOTES_URL}/notes/v1/notes`);
-  expect(list.status()).toBe(200);
-  const notes = noteListSchema.parse(await list.json());
+async function ownerToken({ slug, owner }: SeedOrganization): Promise<string> {
+  const { auth, database } = getIam();
+  const context = await auth.$context;
+  const user = await context.internalAdapter.findUserByEmail(owner.email);
+  const organization = await context.adapter.findOne<{ id: string }>({
+    model: "organization",
+    where: [{ field: "slug", value: slug }],
+  });
+  if (user === null || organization === null) {
+    throw new Error(
+      `the iam seed has no ${slug} owner: run the iam-seed resource`
+    );
+  }
+  return mintActorToken(
+    await findActor(database, {
+      userId: user.user.id,
+      organizationId: organization.id,
+    })
+  );
+}
 
-  for (const { id, title } of notes) {
-    if (!markers.some((marker) => title.includes(marker))) continue;
-    const deleted = await request.delete(`${NOTES_URL}/notes/v1/notes/${id}`);
-    expect(deleted.status()).toBe(204);
+async function deleteMarkedNotes({ request, markers }: CleanupArgs) {
+  for (const organization of seedOrganizations) {
+    const headers = {
+      Authorization: `Bearer ${await ownerToken(organization)}`,
+    };
+    const list = await request.get(`${NOTES_URL}/notes/v1/notes`, { headers });
+    expect(list.status()).toBe(200);
+    const notes = noteListSchema.parse(await list.json());
+
+    for (const { id, title } of notes) {
+      if (!markers.some((marker) => title.includes(marker))) continue;
+      const deleted = await request.delete(
+        `${NOTES_URL}/notes/v1/notes/${id}`,
+        { headers }
+      );
+      expect(deleted.status()).toBe(204);
+    }
   }
 }
 // example:end

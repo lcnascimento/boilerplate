@@ -8,7 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/errors"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes/internal/db"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -34,57 +38,73 @@ func New(pool *pgxpool.Pool, schemaIDs events.SchemaIDs, opts ...Option) *Reposi
 	return r
 }
 
-func (r *Repository) Create(ctx context.Context, note *domain.Note) error {
-	return r.inTx(ctx, func(tx pgx.Tx) error {
-		err := r.queries.WithTx(tx).CreateNote(ctx, db.CreateNoteParams{
-			ID:        note.ID.UUID(),
-			CreatedAt: note.CreatedAt,
-			Title:     note.Title,
-			Body:      note.Body,
+func (r *Repository) Create(ctx context.Context, caller *actor.Actor, note *domain.Note) error {
+	return r.inOrganizationTx(ctx, note.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
+		err := queries.CreateNote(ctx, db.CreateNoteParams{
+			ID:             note.ID.UUID(),
+			OrganizationID: note.OrganizationID.UUID(),
+			CreatedAt:      note.CreatedAt,
+			Title:          note.Title,
+			Body:           note.Body,
 		})
 		if err != nil {
 			return ErrQuery.WithCause(err)
 		}
 
-		return r.emit(ctx, tx, note.ID, note.CreatedAt, &events.NoteCreated{
-			Id:        note.ID.String(),
-			Title:     note.Title,
-			Body:      note.Body,
-			CreatedAt: timestamppb.New(note.CreatedAt),
+		return r.emit(ctx, tx, caller, note.ID, note.CreatedAt, &events.NoteCreated{
+			Id:             note.ID.String(),
+			OrganizationId: note.OrganizationID.String(),
+			Title:          note.Title,
+			Body:           note.Body,
+			CreatedAt:      timestamppb.New(note.CreatedAt),
 		})
 	})
 }
 
-func (r *Repository) Get(ctx context.Context, id domain.NoteID) (*domain.Note, error) {
-	row, err := r.queries.GetNote(ctx, id.UUID())
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, domain.ErrNoteNotFound
-	}
+func (r *Repository) Get(ctx context.Context, orgID iamdomain.OrganizationID, id domain.NoteID) (*domain.Note, error) {
+	var note *domain.Note
 
-	if err != nil {
-		return nil, ErrQuery.WithCause(err)
-	}
+	err := r.inOrganizationTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
+		row, err := queries.GetNote(ctx, db.GetNoteParams{OrganizationID: orgID.UUID(), ID: id.UUID()})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrNoteNotFound
+		}
 
-	return toDomain(row), nil
+		if err != nil {
+			return ErrQuery.WithCause(err)
+		}
+
+		note = toDomain(&row)
+
+		return nil
+	})
+
+	return note, err
 }
 
-func (r *Repository) List(ctx context.Context) ([]*domain.Note, error) {
-	rows, err := r.queries.ListNotes(ctx)
-	if err != nil {
-		return nil, ErrQuery.WithCause(err)
-	}
+func (r *Repository) List(ctx context.Context, orgID iamdomain.OrganizationID) ([]*domain.Note, error) {
+	var out []*domain.Note
 
-	out := make([]*domain.Note, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, toDomain(row))
-	}
+	err := r.inOrganizationTx(ctx, orgID, func(_ pgx.Tx, queries *db.Queries) error {
+		rows, err := queries.ListNotes(ctx, orgID.UUID())
+		if err != nil {
+			return ErrQuery.WithCause(err)
+		}
 
-	return out, nil
+		out = make([]*domain.Note, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, toDomain(&row))
+		}
+
+		return nil
+	})
+
+	return out, err
 }
 
-func (r *Repository) Delete(ctx context.Context, id domain.NoteID) error {
-	return r.inTx(ctx, func(tx pgx.Tx) error {
-		deleted, err := r.queries.WithTx(tx).DeleteNote(ctx, id.UUID())
+func (r *Repository) Delete(ctx context.Context, caller *actor.Actor, id domain.NoteID) error {
+	return r.inOrganizationTx(ctx, caller.OrganizationID, func(tx pgx.Tx, queries *db.Queries) error {
+		deleted, err := queries.DeleteNote(ctx, db.DeleteNoteParams{OrganizationID: caller.OrganizationID.UUID(), ID: id.UUID()})
 		if err != nil {
 			return ErrQuery.WithCause(err)
 		}
@@ -93,11 +113,14 @@ func (r *Repository) Delete(ctx context.Context, id domain.NoteID) error {
 			return domain.ErrNoteNotFound
 		}
 
-		return r.emit(ctx, tx, id, r.now(), &events.NoteDeleted{Id: id.String()})
+		return r.emit(ctx, tx, caller, id, r.now(), &events.NoteDeleted{
+			Id:             id.String(),
+			OrganizationId: caller.OrganizationID.String(),
+		})
 	})
 }
 
-func (r *Repository) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
+func (r *Repository) inOrganizationTx(ctx context.Context, orgID iamdomain.OrganizationID, fn func(pgx.Tx, *db.Queries) error) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return ErrQuery.WithCause(err)
@@ -105,7 +128,12 @@ func (r *Repository) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if err := fn(tx); err != nil {
+	queries := r.queries.WithTx(tx)
+	if err := queries.SetOrganization(ctx, orgID.UUID().String()); err != nil {
+		return ErrQuery.WithCause(err)
+	}
+
+	if err := fn(tx, queries); err != nil {
 		return err
 	}
 
@@ -117,10 +145,11 @@ func (r *Repository) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 }
 
 // toDomain returns CreatedAt in UTC: pgx reads timestamptz in the local zone.
-func toDomain(row db.Note) *domain.Note {
+func toDomain(row *db.Note) *domain.Note {
 	return &domain.Note{
-		ID:          domain.NoteIDFromUUID(row.ID),
-		NoteContent: domain.NoteContent{Title: row.Title, Body: row.Body},
-		CreatedAt:   row.CreatedAt.UTC(),
+		ID:             domain.NoteIDFromUUID(row.ID),
+		NoteContent:    domain.NoteContent{Title: row.Title, Body: row.Body},
+		OrganizationID: iamdomain.OrganizationIDFromUUID(row.OrganizationID),
+		CreatedAt:      row.CreatedAt.UTC(),
 	}
 }

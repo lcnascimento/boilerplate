@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, Languages, Palette } from "lucide-react";
+import { ChevronsUpDown, Languages, LogOut, Palette } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
@@ -29,6 +29,7 @@ import {
 } from "@boilerplate/ui/components/sidebar";
 import { getInitials } from "@boilerplate/utils";
 
+import { useSignOut } from "@/shared/hooks/use-sign-out";
 import { routesIn } from "@/shared/navigation";
 
 import { LocaleRadioItems, ThemeRadioItems } from "./menu-radio-items";
@@ -64,7 +65,9 @@ export function NavUser({ user }: NavUserProps) {
   const t = useTranslations();
   const tNav = useTranslations("nav");
   const tProfile = useTranslations("profile");
+  const tAuth = useTranslations("auth");
   const { isMobile } = useSidebar();
+  const { signOut, isSigningOut } = useSignOut();
 
   return (
     <SidebarMenu>
@@ -124,6 +127,12 @@ export function NavUser({ user }: NavUserProps) {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem disabled={isSigningOut} onSelect={signOut}>
+              <LogOut aria-hidden />
+              {tAuth("signOut")}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

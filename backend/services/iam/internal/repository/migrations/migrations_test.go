@@ -1,0 +1,152 @@
+package migrations_test
+
+import (
+	"database/sql"
+	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
+
+	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/postgres/migrate"
+	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/internal/repository/migrations"
+)
+
+const checkViolation = "23514"
+
+var betterAuthTables = []string{
+	"account",
+	"invitation",
+	"jwks",
+	"member",
+	"organization",
+	"rateLimit",
+	"session",
+	"user",
+	"verification",
+}
+
+func TestComponentMigrations_CreatesTheBetterAuthTables(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	require.Equal(t, betterAuthTables, publicTables(t, db))
+}
+
+func TestComponentMigrations_AcceptsOnlyTheKnownRoles(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	_, err := db.ExecContext(t.Context(), `
+		INSERT INTO "user" (id, name, email, "emailVerified")
+		VALUES ('00000000-0000-4000-8000-000000000001', 'Ada', 'ada@acme.test', false);
+		INSERT INTO organization (id, name, slug, "createdAt")
+		VALUES ('00000000-0000-4000-8000-000000000002', 'Acme', 'acme', now())`)
+	require.NoError(t, err)
+
+	for _, role := range []string{"owner", "admin", "viewer"} {
+		require.NoError(t, insertMember(t, db, role), role)
+		require.NoError(t, insertInvitation(t, db, role), role)
+	}
+
+	for _, role := range []string{"member", "owner,admin", "Owner", ""} {
+		requireCheckViolation(t, insertMember(t, db, role), role)
+		requireCheckViolation(t, insertInvitation(t, db, role), role)
+	}
+}
+
+func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	for rollbacks := 0; ; rollbacks++ {
+		require.Less(t, rollbacks, 1000, "Down never ran out of migrations")
+
+		err := migrate.Down(t.Context(), db, migrations.FS)
+		if errors.Is(err, migrate.ErrNothingToRollBack) {
+			break
+		}
+
+		require.NoError(t, err)
+	}
+
+	require.Empty(t, publicTables(t, db))
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+	require.Equal(t, betterAuthTables, publicTables(t, db))
+}
+
+func insertMember(t *testing.T, db *sql.DB, role string) error {
+	t.Helper()
+
+	_, err := db.ExecContext(t.Context(), `
+		INSERT INTO member ("organizationId", "userId", role, "createdAt")
+		VALUES ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', $1, now())`,
+		role)
+
+	return err
+}
+
+func insertInvitation(t *testing.T, db *sql.DB, role string) error {
+	t.Helper()
+
+	_, err := db.ExecContext(t.Context(), `
+		INSERT INTO invitation ("organizationId", email, role, status, "expiresAt", "inviterId")
+		VALUES ('00000000-0000-4000-8000-000000000002', 'grace@acme.test', $1, 'pending', now(),
+			'00000000-0000-4000-8000-000000000001')`,
+		role)
+
+	return err
+}
+
+func requireCheckViolation(t *testing.T, err error, role string) {
+	t.Helper()
+
+	var pgErr *pgconn.PgError
+	require.ErrorAs(t, err, &pgErr, role)
+	require.Equal(t, checkViolation, pgErr.Code, role)
+}
+
+func publicTables(t *testing.T, db *sql.DB) []string {
+	t.Helper()
+
+	rows, err := db.QueryContext(t.Context(), `
+		SELECT table_name FROM information_schema.tables
+		WHERE table_schema = 'public' AND table_name <> 'goose_db_version'
+		ORDER BY table_name COLLATE "C"`)
+	require.NoError(t, err)
+
+	defer func() { require.NoError(t, rows.Close()) }()
+
+	var tables []string
+
+	for rows.Next() {
+		var table string
+		require.NoError(t, rows.Scan(&table))
+
+		tables = append(tables, table)
+	}
+
+	require.NoError(t, rows.Err())
+
+	return tables
+}
+
+func newDatabase(t *testing.T) *sql.DB {
+	t.Helper()
+
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	return testdb.NewEmpty(t)
+}

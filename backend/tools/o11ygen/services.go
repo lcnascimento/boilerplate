@@ -8,13 +8,17 @@ var services = []service.Service{
 	{
 		Name:      "web",
 		Runtime:   service.Node,
-		Processes: []service.Process{service.Daemon("web", service.API, service.Browser)},
+		Processes: []service.Process{service.Daemon("web", service.API, service.Browser).WithActorAuth()},
+	},
+	{
+		Name:      "iam",
+		Processes: []service.Process{service.OneShot("iam-migrate")},
 	},
 	// example:begin
 	{
 		Name: "notes",
 		Processes: []service.Process{
-			service.Daemon("notes-api-frontend", service.API).WithDBPool(),
+			service.Daemon("notes-api-frontend", service.API).WithDBPool().WithActorAuth(),
 			service.Daemon("notes-worker-forwarder", service.Worker).WithDBPool(),
 			service.OneShot("notes-migrate"),
 			service.OneShot("notes-schemas"),

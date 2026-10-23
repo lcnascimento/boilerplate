@@ -8,6 +8,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/http/httpserver/util"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/models"
@@ -26,6 +28,11 @@ func (h *Notes) Create(rw http.ResponseWriter, r *http.Request) {
 		_ = r.Body.Close()
 	}()
 
+	caller, ok := callerOf(rw, r)
+	if !ok {
+		return
+	}
+
 	var req models.CreateNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		util.WriteError(r.Context(), rw, util.ErrParseRequestBody.WithCause(err))
@@ -33,7 +40,7 @@ func (h *Notes) Create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.service.Create(r.Context(), &req)
+	note, err := h.service.Create(r.Context(), caller, &req)
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
 
@@ -44,7 +51,12 @@ func (h *Notes) Create(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Notes) List(rw http.ResponseWriter, r *http.Request) {
-	notes, err := h.service.List(r.Context())
+	caller, ok := callerOf(rw, r)
+	if !ok {
+		return
+	}
+
+	notes, err := h.service.List(r.Context(), caller)
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
 
@@ -59,6 +71,11 @@ func (h *Notes) List(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Notes) Get(rw http.ResponseWriter, r *http.Request) {
+	caller, ok := callerOf(rw, r)
+	if !ok {
+		return
+	}
+
 	id, err := domain.ParseNoteID(mux.Vars(r)["id"])
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
@@ -66,7 +83,7 @@ func (h *Notes) Get(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	note, err := h.service.Get(r.Context(), id)
+	note, err := h.service.Get(r.Context(), caller, id)
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
 
@@ -77,6 +94,11 @@ func (h *Notes) Get(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Notes) Delete(rw http.ResponseWriter, r *http.Request) {
+	caller, ok := callerOf(rw, r)
+	if !ok {
+		return
+	}
+
 	id, err := domain.ParseNoteID(mux.Vars(r)["id"])
 	if err != nil {
 		util.WriteError(r.Context(), rw, err)
@@ -84,11 +106,22 @@ func (h *Notes) Delete(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), id); err != nil {
+	if err := h.service.Delete(r.Context(), caller, id); err != nil {
 		util.WriteError(r.Context(), rw, err)
 
 		return
 	}
 
 	rw.WriteHeader(http.StatusNoContent)
+}
+
+func callerOf(rw http.ResponseWriter, r *http.Request) (*actor.Actor, bool) {
+	caller, err := actor.FromContext(r.Context())
+	if err != nil {
+		util.WriteError(r.Context(), rw, err)
+
+		return nil, false
+	}
+
+	return caller, true
 }

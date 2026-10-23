@@ -16,6 +16,8 @@ const (
 	Browser  Component = "browser"
 )
 
+var ErrActorAuthWithoutAPI = errors.New("process declares actor auth but serves no api")
+
 var components = []Component{API, Consumer, Worker, Browser}
 
 type Runtime int
@@ -67,6 +69,7 @@ type Process struct {
 
 type processOptions struct {
 	dbPool        bool
+	actorAuth     bool
 	consumerGroup string
 	logAlerts     []LogAlert
 }
@@ -90,6 +93,12 @@ func (p Process) WithDBPool() Process {
 }
 
 func (p Process) DBPool() bool { return p.opts().dbPool }
+
+func (p Process) WithActorAuth() Process {
+	return p.with(func(o *processOptions) { o.actorAuth = true })
+}
+
+func (p Process) ActorAuth() bool { return p.opts().actorAuth }
 
 func (p Process) WithConsumerGroup(group string) Process {
 	return p.with(func(o *processOptions) { o.consumerGroup = group })
@@ -250,6 +259,10 @@ func validateProcess(svc string, process Process, seen map[string]bool) error {
 
 	if process.Runs(Consumer) != (process.ConsumerGroup() != "") {
 		return errors.New("process %q must declare a consumer group if, and only if, it runs a consumer", process.name)
+	}
+
+	if process.ActorAuth() && !process.Runs(API) {
+		return ErrActorAuthWithoutAPI.WithAttribute("process", process.name)
 	}
 
 	if process.DBPool() && !process.LongRunning() {

@@ -23,13 +23,14 @@ const (
 )
 
 type NoteCreated struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Body          string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title          string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Body           string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	OrganizationId string                 `protobuf:"bytes,5,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *NoteCreated) Reset() {
@@ -90,17 +91,25 @@ func (x *NoteCreated) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *NoteCreated) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
 var File_boilerplate_notes_v1_note_created_proto protoreflect.FileDescriptor
 
 const file_boilerplate_notes_v1_note_created_proto_rawDesc = "" +
 	"\n" +
-	"'boilerplate/notes/v1/note_created.proto\x12\x14boilerplate.notes.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x82\x01\n" +
+	"'boilerplate/notes/v1/note_created.proto\x12\x14boilerplate.notes.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x01\n" +
 	"\vNoteCreated\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtBNZLgithub.com/lcnascimento/boilerplate/backend/services/notes/pkg/events;eventsb\x06proto3"
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
+	"\x0forganization_id\x18\x05 \x01(\tR\x0eorganizationIdBNZLgithub.com/lcnascimento/boilerplate/backend/services/notes/pkg/events;eventsb\x06proto3"
 
 var (
 	file_boilerplate_notes_v1_note_created_proto_rawDescOnce sync.Once

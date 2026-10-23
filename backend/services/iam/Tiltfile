@@ -1,0 +1,17 @@
+# -*- mode: Python -*-
+
+local_resource(
+    'iam-db',
+    labels=['iam'],
+    cmd='make db.setup -s',
+    resource_deps=['postgres'],
+)
+
+local_resource(
+    'iam-migrate',
+    labels=['iam'],
+    cmd='make db.migrate -s',
+    deps=['.env', '../../.env', 'internal/repository/migrations/', 'cmd/migrate/'],
+    ignore=['./**/*_test.go'],
+    resource_deps=['iam-db'],
+)
