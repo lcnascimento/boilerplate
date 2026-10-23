@@ -1,6 +1,8 @@
 package bundle
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 
@@ -10,7 +12,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
 func NewWorkerForwarder() *fx.App {
@@ -36,10 +37,10 @@ func newForwarder(pool *pgxpool.Pool, shutdowner fx.Shutdowner) (*outbox.Forward
 		return nil, err
 	}
 
-	return outbox.NewForwarder(notes.Outbox, pool, brokers, []string{events.Topic}, outbox.WithShutdown(exitWithFailure(shutdowner)))
+	return forwarder.New(context.Background(), pool, brokers, exitWithFailure(shutdowner))
 }
 
-func newJanitor(pool *pgxpool.Pool) *outbox.Janitor {
+func newJanitor(pool *pgxpool.Pool) (*outbox.Janitor, error) {
 	return outbox.NewJanitor(notes.Outbox, pool)
 }
 
