@@ -24,7 +24,7 @@ jobs:
         shell: bash
         env:
           MODE: ${{ matrix.mode }}
-          DEBUG: vite:deps,vite:time,pw:browser*
+          DEBUG: vite:deps,vite:hmr,pw:browser*
         run: |
           nproc; uname -m
           runs=1
@@ -33,7 +33,11 @@ jobs:
             rm -rf frontend/packages/ui/node_modules/.cache frontend/packages/ui/node_modules/.vite
             {
               if [ "$MODE" = backend_turbo ]; then make -C backend test || true; fi
+              echo "== git status before frontend"; git status --porcelain --ignored=no
+              touch /tmp/marker
               (cd frontend && pnpm turbo run test --force --env-mode=loose) || true
+              echo "== files changed during frontend"; find . -newer /tmp/marker -type f -not -path '*/node_modules/*' -not -path './.git/*' | head -50
+              echo "== git status after frontend"; git status --porcelain --ignored=no
             } > run-$i.log 2>&1
             if grep -q "Failed to fetch dynamically imported module" run-$i.log; then
               red=$((red+1)); echo "::warning::run $i RED"
