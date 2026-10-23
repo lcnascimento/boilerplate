@@ -13,6 +13,27 @@ Issues and specs for this Project live in Linear, team **Boilerplate** (key `BOI
 
 Refer to issues by title in prose; the identifier (`BOI-12`) and URL ride inside the link.
 
+## Work lifecycle
+
+Skills that build a ticket (`implement`, `implement-spec`) name lifecycle roles. Each maps to a workflow status of team Boilerplate, set with `save_issue` and `state: "<status>"`:
+
+| Role | Status |
+| - | - |
+| start | `In Progress` |
+| hand off for review | `In Review` |
+| close | `Done` |
+
+- **Approval**: the merge of the work's PR is the user's approval. The PR body carries one `Closes <identifier>` line per issue it resolves, so Linear's forge integration closes each one on merge. When the user approves the work in the session instead, close each issue yourself.
+- **Missing status**: statuses belong to each team. When `list_issue_statuses` for team Boilerplate has no `In Review` in any letter case, create it, typed `started` and placed after the team's other `started` statuses. The MCP server can't create statuses, so call Linear's API with `LINEAR_API_KEY`, never printing it:
+
+  ```bash
+  [ -n "${LINEAR_API_KEY:-}" ] || { set -a; . ./.env; set +a; }
+  linear() { curl -sS https://api.linear.app/graphql -H "Authorization: $LINEAR_API_KEY" -H 'Content-Type: application/json' -d "$1"; }
+  team="$(linear '{"query":"query($key:String!){teams(filter:{key:{eq:$key}}){nodes{id states{nodes{name type position}}}}}","variables":{"key":"BOI"}}' | jq -c '.data.teams.nodes[0]')"
+  input="$(jq -c '{teamId: .id, name: "In Review", type: "started", color: "#0f783c", position: ([.states.nodes[] | select(.type == "started") | .position] | max + 1)}' <<<"$team")"
+  linear "$(jq -nc --argjson input "$input" '{query: "mutation($input:WorkflowStateCreateInput!){workflowStateCreate(input:$input){success}}", variables: {input: $input}}')"
+  ```
+
 ## When a skill says "publish to the issue tracker"
 
 Create a Linear issue in team Boilerplate.
