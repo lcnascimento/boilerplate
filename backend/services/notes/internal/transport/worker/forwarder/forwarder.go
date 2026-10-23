@@ -14,7 +14,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
-// New forwards the Notes outbox to events.Topic and holds back any message without a valid envelope.
 func New(ctx context.Context, pool *pgxpool.Pool, brokers []string, shutdown func()) (*outbox.Forwarder, error) {
 	return outbox.NewForwarder(ctx, notes.Outbox, pool,
 		outbox.KafkaTarget{Brokers: brokers, Topics: []string{events.Topic}},
