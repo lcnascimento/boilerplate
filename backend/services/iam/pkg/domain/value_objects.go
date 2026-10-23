@@ -11,6 +11,7 @@ const (
 	organizationIDPrefix string = "org"
 	memberIDPrefix       string = "member"
 	invitationIDPrefix   string = "invitation"
+	sessionIDPrefix      string = "session"
 )
 
 type UserID struct {
@@ -70,4 +71,12 @@ type InvitationID struct {
 
 func InvitationIDFromUUID(u uuid.UUID) InvitationID {
 	return InvitationID{util.CanonicalIDFromUUID(invitationIDPrefix, u)}
+}
+
+type SessionID struct {
+	util.CanonicalID
+}
+
+func SessionIDFromUUID(u uuid.UUID) SessionID {
+	return SessionID{util.CanonicalIDFromUUID(sessionIDPrefix, u)}
 }

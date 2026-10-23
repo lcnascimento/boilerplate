@@ -28,12 +28,14 @@ var (
 	userCreatedType     = string((&events.UserCreated{}).ProtoReflect().Descriptor().FullName())
 	userDeletedType     = string((&events.UserDeleted{}).ProtoReflect().Descriptor().FullName())
 	passwordChangedType = string((&events.PasswordChanged{}).ProtoReflect().Descriptor().FullName())
+	sessionStartedType  = string((&events.SessionStarted{}).ProtoReflect().Descriptor().FullName())
 )
 
 var schemaIDs = eventbus.SchemaIDs{
 	userCreatedType:     11,
 	userDeletedType:     12,
 	passwordChangedType: 13,
+	sessionStartedType:  14,
 }
 
 var ada = uuid.MustParse("3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b")
@@ -193,6 +195,49 @@ func TestComponentRepository_EventsCarryNoEmailOrName(t *testing.T) {
 	require.NotContains(t, outbox, "ada@acme.test")
 	require.NotContains(t, outbox, "Ada Lovelace")
 	require.NotContains(t, outbox, "new-hash")
+}
+
+func TestComponentRepository_SessionWithoutAnActiveOrganizationWritesSessionStartedByItsUser(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepository(t)
+	signUp(t, pool, ada)
+	tx := inTx(t, pool, `
+		INSERT INTO session (id, "expiresAt", token, "updatedAt", "userId")
+		VALUES ('8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f', now() + interval '7 days', 'token', now(), $1)`, ada)
+
+	_, err := repo.Translate(t.Context(), batch)
+	require.NoError(t, err)
+
+	got := outboxEvents(t, pool)
+	require.Equal(t, []string{userCreatedType, sessionStartedType}, eventTypes(got))
+	require.Equal(t, "iam.session.v1", got[1].destination)
+	require.Equal(t, "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f", got[1].headers["ce_subject"])
+	require.Equal(t, "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f", got[1].headers["ce_partitionkey"])
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", got[1].headers["ce_actorid"])
+	require.NotContains(t, got[1].headers, "ce_actororganizationid")
+	requireProtoEqual(t, &events.SessionStarted{
+		SessionId: "session_8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f",
+		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		StartedAt: timestamppb.New(tx.at),
+	}, got[1].message)
+}
+
+func TestComponentRepository_SessionRefreshWritesNothing(t *testing.T) {
+	t.Parallel()
+
+	repo, pool := newRepository(t)
+	signUp(t, pool, ada)
+	inTx(t, pool, `
+		INSERT INTO session (id, "expiresAt", token, "updatedAt", "userId")
+		VALUES ('8c4d2e1f-6a7b-4c3d-9e0f-1a2b3c4d5e6f', now() + interval '7 days', 'token', now(), $1)`, ada)
+
+	_, err := repo.Translate(t.Context(), batch)
+	require.NoError(t, err)
+
+	inTx(t, pool, `UPDATE session SET "expiresAt" = now() + interval '8 days', "activeOrganizationId" = 'acme'`)
+
+	require.Zero(t, pendingChanges(t, pool))
 }
 
 func TestComponentRepository_TranslatedChangesAreGone(t *testing.T) {
