@@ -12,17 +12,19 @@ import {
   CardTitle,
 } from "@boilerplate/ui/components/card";
 
+import { listReceivedInvitations } from "@/actions/invitations";
 import { getRequestActor } from "@/shared/auth/request-actor";
 import { SIGN_IN_HREF, SIGNED_IN_HOME } from "@/shared/auth/routes";
 import { getRequestSession } from "@/shared/auth/session";
 import { SignOutButton } from "@/shared/components";
 
-import { CreateOrganizationForm } from "../../_components";
+import { CreateOrganizationForm, ReceivedInvitations } from "../../_components";
 
 export default async function CreateOrJoinPage() {
-  const [session, requestActor, t] = await Promise.all([
+  const [session, requestActor, invitations, t] = await Promise.all([
     getRequestSession(),
     getRequestActor(),
+    listReceivedInvitations(),
     getTranslations("organizations"),
   ]);
   if (session === null || requestActor.kind === "signed-out") {
@@ -62,6 +64,8 @@ export default async function CreateOrJoinPage() {
               {t("createOrJoinDescription")}
             </p>
           </div>
+
+          <ReceivedInvitations invitations={invitations} />
 
           <Card>
             <CardHeader>

@@ -2,18 +2,21 @@ import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@boilerplate/ui/primitives/page-header";
 
+import { listSentInvitations } from "@/actions/invitations";
 import { listMembers } from "@/actions/members";
 import { memberPolicy } from "@/shared/auth/members";
 
 import {
-  AddMemberDialog,
+  InvitationsTable,
+  InviteMemberDialog,
   LeaveOrganization,
   MembersTable,
 } from "./_components";
 
 export default async function MembersPage() {
-  const [{ actor, members }, t] = await Promise.all([
+  const [{ actor, members }, invitations, t] = await Promise.all([
     listMembers(),
+    listSentInvitations(),
     getTranslations("members"),
   ]);
   const policy = memberPolicy(actor, members);
@@ -21,16 +24,16 @@ export default async function MembersPage() {
   return (
     <>
       <PageHeader
-        action={
-          policy.canAdd ? (
-            <AddMemberDialog assignableRoles={policy.assignableRoles} />
-          ) : null
-        }
+        action={policy.canInvite ? <InviteMemberDialog /> : null}
         description={t("description")}
         title={t("title")}
       />
       <div className="grid gap-6">
         <MembersTable actorId={actor.id} policy={policy} />
+        <InvitationsTable
+          canCancel={policy.canCancelInvitations}
+          invitations={invitations}
+        />
         <LeaveOrganization leave={policy.leave} />
       </div>
     </>
