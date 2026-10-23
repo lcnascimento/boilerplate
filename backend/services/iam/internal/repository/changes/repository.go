@@ -25,7 +25,7 @@ var Outbox = outbox.MustNew("iam")
 
 var (
 	ErrQuery = errors.New("failed to query the identity changes")
-	ErrEmit  = errors.New("failed to write the Integration Event to the outbox").WithCode("OUTBOX_EMIT")
+	ErrEmit  = errors.New("failed to write the Integration Event to the outbox")
 )
 
 type Repository struct {
