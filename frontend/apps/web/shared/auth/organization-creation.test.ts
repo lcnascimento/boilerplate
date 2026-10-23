@@ -52,7 +52,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
            AND ((table_name = 'organization' AND fields ->> 'id' = $1)
              OR (table_name = 'member' AND fields ->> 'organizationId' = $1))
          UNION ALL
-         SELECT substring(headers ->> 'ce_type' FROM 20),
+         SELECT substring(headers ->> 'ce_type' FROM '[^.]+$'),
                 headers ->> 'ce_correlationid',
                 substring(headers ->> 'ce_actorid' FROM 6),
                 substring(headers ->> 'ce_actororganizationid' FROM 5),
