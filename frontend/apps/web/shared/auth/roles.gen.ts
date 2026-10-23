@@ -9,7 +9,12 @@ import {
 
 export const statement = {
   ...defaultStatements,
-  organization: [...defaultStatements.organization, "transfer"],
+  organization: [
+    ...defaultStatements.organization,
+    "update",
+    "delete",
+    "transfer",
+  ],
   invitation: [...defaultStatements.invitation, "create", "cancel"],
   note: ["read", "create", "delete"],
 } as const;
@@ -19,12 +24,18 @@ export const ac = createAccessControl(statement);
 export const roles = {
   owner: ac.newRole({
     ...ownerAc.statements,
-    organization: [...ownerAc.statements.organization, "transfer"],
+    organization: [
+      ...ownerAc.statements.organization,
+      "update",
+      "delete",
+      "transfer",
+    ],
     invitation: [...ownerAc.statements.invitation, "create", "cancel"],
     note: ["read", "create", "delete"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,
+    organization: [...adminAc.statements.organization, "update"],
     invitation: [...adminAc.statements.invitation, "create", "cancel"],
     note: ["read", "create"],
   }),

@@ -81,6 +81,7 @@ function createIam(env: IamEnv) {
         roles,
         allowUserToCreateOrganization: true,
         organizationLimit: ORGANIZATION_LIMIT,
+        disableOrganizationDeletion: true,
         invitationExpiresIn: INVITATION_EXPIRES_IN_DAYS * DAY_SECONDS,
         organizationHooks: {
           ...roleHooks(async (organizationId) => {

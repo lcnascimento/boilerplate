@@ -48,11 +48,12 @@ func TestPermissions_ListsNotePermissionsAfterTheCoreOnes(t *testing.T) {
 	t.Parallel()
 
 	require.Equal(t, []roles.Permission{
-		roles.OrganizationTransfer, roles.InvitationCreate, roles.InvitationCancel,
+		roles.OrganizationUpdate, roles.OrganizationDelete, roles.OrganizationTransfer,
+		roles.InvitationCreate, roles.InvitationCancel,
 		roles.NoteRead, roles.NoteCreate, roles.NoteDelete,
 	}, roles.Permissions())
 	require.Equal(t, []roles.Permission{
-		roles.InvitationCreate, roles.InvitationCancel, roles.NoteRead, roles.NoteCreate,
+		roles.OrganizationUpdate, roles.InvitationCreate, roles.InvitationCancel, roles.NoteRead, roles.NoteCreate,
 	}, roles.Admin.Permissions())
 	require.Equal(t, []roles.Permission{roles.NoteRead}, roles.Viewer.Permissions())
 }

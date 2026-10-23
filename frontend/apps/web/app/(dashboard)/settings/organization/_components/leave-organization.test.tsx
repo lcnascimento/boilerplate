@@ -4,8 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { leaveOrganization } from "@/actions/members";
 
+import {
+  renderWithMessages,
+  stubBrowserApis,
+} from "../../members/_components/test-utils";
+
 import { LeaveOrganization } from "./leave-organization";
-import { renderWithMessages, stubBrowserApis } from "./test-utils";
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -40,11 +44,6 @@ describe("LeaveOrganization", () => {
         "Você é o Owner. Transfira a propriedade a outro Member antes de sair."
       ).id
     ).toBe(button.getAttribute("aria-describedby"));
-    expect(
-      screen
-        .getByRole("link", { name: "Transferir a propriedade" })
-        .getAttribute("href")
-    ).toBe("/settings/organization");
   });
 
   it("leaves after confirmation and goes home", async () => {

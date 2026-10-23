@@ -1,21 +1,20 @@
 import { LogOut } from "lucide-react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@boilerplate/ui/components/button";
 
 import { LeaveOrganizationDialog } from "./leave-organization-dialog";
 
-import type { MemberPolicy } from "@/shared/auth/members";
+import type { OrganizationSettingsPolicy } from "@/shared/auth/organizations";
 
 interface LeaveOrganizationProps {
-  leave: MemberPolicy["leave"];
+  leave: OrganizationSettingsPolicy["leave"];
 }
 
 const OWNER_HINT_ID = "leave-organization-hint";
 
 export function LeaveOrganization({ leave }: LeaveOrganizationProps) {
-  const t = useTranslations("members");
+  const t = useTranslations("organizationSettings");
 
   if (leave === "allowed") return <LeaveOrganizationDialog />;
 
@@ -28,12 +27,6 @@ export function LeaveOrganization({ leave }: LeaveOrganizationProps) {
       <p className="text-sm text-muted-foreground" id={OWNER_HINT_ID}>
         {t("ownerMustTransferBeforeLeaving")}
       </p>
-      <Link
-        className="text-sm font-medium underline underline-offset-4"
-        href="/settings/organization"
-      >
-        {t("transferOwnership")}
-      </Link>
     </div>
   );
 }

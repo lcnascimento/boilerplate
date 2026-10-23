@@ -9,7 +9,6 @@ import { memberPolicy } from "@/shared/auth/members";
 import {
   InvitationsTable,
   InviteMemberDialog,
-  LeaveOrganization,
   MembersTable,
 } from "./_components";
 
@@ -34,7 +33,6 @@ export default async function MembersPage() {
           canCancel={policy.canCancelInvitations}
           invitations={invitations}
         />
-        <LeaveOrganization leave={policy.leave} />
       </div>
     </>
   );

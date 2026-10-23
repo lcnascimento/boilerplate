@@ -2,9 +2,21 @@
 -include .env
 export
 
+WORKER_HEALTH_PORT ?= 8093
+
 DB_NAME := iam
 PSQL := docker exec -i postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
 KAFKA_TOPICS := docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092
+
+DEBUG_GCFLAGS := all=-N -l
+
+.PHONY: build.worker
+build.worker:
+	@go build -gcflags="$(DEBUG_GCFLAGS)" -o ./bin/iam_worker ./cmd/worker
+
+.PHONY: run.worker
+run.worker:
+	@OTEL_SERVICE_NAME=iam-worker HEALTH_PORT=$(WORKER_HEALTH_PORT) ./bin/iam_worker
 
 .PHONY: db.setup
 db.setup:
@@ -34,3 +46,8 @@ kafka.topics:
 	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.session.v1 --partitions 3 --replication-factor 1
 	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.organization.v1 --partitions 3 --replication-factor 1
 	@$(KAFKA_TOPICS) --create --if-not-exists --topic iam.invitation.v1 --partitions 3 --replication-factor 1
+
+.PHONY: schemas.register
+schemas.register:
+	@go build -o ./bin/iam_schemas ./cmd/schemas
+	@OTEL_SERVICE_NAME=iam-schemas ./bin/iam_schemas

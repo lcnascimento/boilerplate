@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: postgresql
+    schema: internal/repository/migrations
+    queries: internal/repository/changes/queries.sql
+    gen:
+      go:
+        package: db
+        out: internal/repository/changes/internal/db
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
