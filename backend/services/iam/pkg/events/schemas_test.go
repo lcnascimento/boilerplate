@@ -12,6 +12,16 @@ import (
 )
 
 var subjects = []string{
+	"boilerplate.iam.v1.InvitationAccepted",
+	"boilerplate.iam.v1.InvitationCanceled",
+	"boilerplate.iam.v1.InvitationCreated",
+	"boilerplate.iam.v1.InvitationDeclined",
+	"boilerplate.iam.v1.MemberAdded",
+	"boilerplate.iam.v1.MemberRemoved",
+	"boilerplate.iam.v1.MemberRoleChanged",
+	"boilerplate.iam.v1.OrganizationCreated",
+	"boilerplate.iam.v1.OrganizationDeleted",
+	"boilerplate.iam.v1.OrganizationRenamed",
 	"boilerplate.iam.v1.PasswordChanged",
 	"boilerplate.iam.v1.UserCreated",
 	"boilerplate.iam.v1.UserDeleted",

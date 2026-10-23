@@ -48,51 +48,199 @@ type changeKind struct {
 	operation string
 }
 
-type userEvent struct {
-	userIDField string
-	message     func(userID string, at *timestamppb.Timestamp) proto.Message
+type translation struct {
+	topic     string
+	translate func(f *fields, at *timestamppb.Timestamp) (subject string, message proto.Message)
 }
 
-var userEvents = map[changeKind]userEvent{
+var translations = map[changeKind]translation{
 	{table: "user", operation: "INSERT"}: {
-		userIDField: "id",
-		message: func(userID string, at *timestamppb.Timestamp) proto.Message {
-			return &events.UserCreated{UserId: userID, CreatedAt: at}
+		topic: events.UserTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			userID := f.userID("id")
+
+			return userID, &events.UserCreated{UserId: userID, CreatedAt: at}
 		},
 	},
 	{table: "user", operation: "DELETE"}: {
-		userIDField: "id",
-		message: func(userID string, at *timestamppb.Timestamp) proto.Message {
-			return &events.UserDeleted{UserId: userID, DeletedAt: at}
+		topic: events.UserTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			userID := f.userID("id")
+
+			return userID, &events.UserDeleted{UserId: userID, DeletedAt: at}
 		},
 	},
 	{table: "account", operation: "UPDATE"}: {
-		userIDField: "userId",
-		message: func(userID string, at *timestamppb.Timestamp) proto.Message {
-			return &events.PasswordChanged{UserId: userID, ChangedAt: at}
+		topic: events.UserTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			userID := f.userID("userId")
+
+			return userID, &events.PasswordChanged{UserId: userID, ChangedAt: at}
+		},
+	},
+	{table: "organization", operation: "INSERT"}: {
+		topic: events.OrganizationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			organizationID := f.organizationID("id")
+
+			return organizationID, &events.OrganizationCreated{OrganizationId: organizationID, CreatedAt: at}
+		},
+	},
+	{table: "organization", operation: "UPDATE"}: {
+		topic: events.OrganizationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			organizationID := f.organizationID("id")
+
+			return organizationID, &events.OrganizationRenamed{OrganizationId: organizationID, RenamedAt: at}
+		},
+	},
+	{table: "organization", operation: "DELETE"}: {
+		topic: events.OrganizationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			organizationID := f.organizationID("id")
+
+			return organizationID, &events.OrganizationDeleted{OrganizationId: organizationID, DeletedAt: at}
+		},
+	},
+	{table: "member", operation: "INSERT"}: {
+		topic: events.OrganizationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			organizationID := f.organizationID("organizationId")
+
+			return organizationID, &events.MemberAdded{
+				MemberId:       f.memberID("id"),
+				OrganizationId: organizationID,
+				UserId:         f.userID("userId"),
+				Role:           f.values["role"],
+				AddedAt:        at,
+			}
+		},
+	},
+	{table: "member", operation: "UPDATE"}: {
+		topic: events.OrganizationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			organizationID := f.organizationID("organizationId")
+
+			return organizationID, &events.MemberRoleChanged{
+				MemberId:       f.memberID("id"),
+				OrganizationId: organizationID,
+				UserId:         f.userID("userId"),
+				Role:           f.values["role"],
+				ChangedAt:      at,
+			}
+		},
+	},
+	{table: "member", operation: "DELETE"}: {
+		topic: events.OrganizationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			organizationID := f.organizationID("organizationId")
+
+			return organizationID, &events.MemberRemoved{
+				MemberId:       f.memberID("id"),
+				OrganizationId: organizationID,
+				UserId:         f.userID("userId"),
+				RemovedAt:      at,
+			}
+		},
+	},
+	{table: "invitation", operation: "INSERT"}: {
+		topic: events.InvitationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			invitationID := f.invitationID("id")
+
+			return invitationID, &events.InvitationCreated{
+				InvitationId:   invitationID,
+				OrganizationId: f.organizationID("organizationId"),
+				InviterId:      f.userID("inviterId"),
+				Role:           f.values["role"],
+				CreatedAt:      at,
+			}
+		},
+	},
+	{table: "invitation", operation: "UPDATE"}: {
+		topic: events.InvitationTopic,
+		translate: func(f *fields, at *timestamppb.Timestamp) (string, proto.Message) {
+			invitationID, organizationID := f.invitationID("id"), f.organizationID("organizationId")
+
+			switch status := f.values["status"]; status {
+			case "accepted":
+				return invitationID, &events.InvitationAccepted{
+					InvitationId: invitationID, OrganizationId: organizationID, AcceptedAt: at,
+				}
+			case "rejected":
+				return invitationID, &events.InvitationDeclined{
+					InvitationId: invitationID, OrganizationId: organizationID, DeclinedAt: at,
+				}
+			case "canceled":
+				return invitationID, &events.InvitationCanceled{
+					InvitationId: invitationID, OrganizationId: organizationID, CanceledAt: at,
+				}
+			default:
+				f.fail(errUnknownInvitationStatus.WithAttribute("status", status))
+
+				return invitationID, nil
+			}
 		},
 	},
 }
 
+var errUnknownInvitationStatus = errors.New("the invitation status has no Integration Event")
+
+type fields struct {
+	values map[string]string
+	err    error
+}
+
+func (f *fields) fail(err error) {
+	if f.err == nil {
+		f.err = err
+	}
+}
+
+func (f *fields) uuid(name string) uuid.UUID {
+	id, err := uuid.Parse(f.values[name])
+	if err != nil {
+		f.fail(err)
+	}
+
+	return id
+}
+
+func (f *fields) userID(name string) string {
+	return domain.UserIDFromUUID(f.uuid(name)).String()
+}
+
+func (f *fields) organizationID(name string) string {
+	return domain.OrganizationIDFromUUID(f.uuid(name)).String()
+}
+
+func (f *fields) memberID(name string) string {
+	return domain.MemberIDFromUUID(f.uuid(name)).String()
+}
+
+func (f *fields) invitationID(name string) string {
+	return domain.InvitationIDFromUUID(f.uuid(name)).String()
+}
+
 func (c *Change) Event() (*Event, error) {
-	translation, ok := userEvents[changeKind{table: c.Table, operation: c.Operation}]
+	translation, ok := translations[changeKind{table: c.Table, operation: c.Operation}]
 	if !ok {
 		return nil, c.untranslatable()
 	}
 
-	raw, err := uuid.Parse(c.Fields[translation.userIDField])
-	if err != nil {
-		return nil, c.untranslatable().WithCause(err)
+	f := &fields{values: c.Fields}
+
+	subject, message := translation.translate(f, timestamppb.New(c.OccurredAt))
+	if f.err != nil {
+		return nil, c.untranslatable().WithCause(f.err)
 	}
 
-	userID := domain.UserIDFromUUID(raw).String()
-
 	return &Event{
-		Topic:         events.UserTopic,
-		Subject:       userID,
+		Topic:         translation.topic,
+		Subject:       subject,
 		Time:          c.OccurredAt,
 		CorrelationID: c.TransactionID,
-		Message:       translation.message(userID, timestamppb.New(c.OccurredAt)),
+		Message:       message,
 
 		ActorID:             prefixed(c.ActorID, domain.UserIDFromUUID),
 		ActorOrganizationID: prefixed(c.ActorOrganizationID, domain.OrganizationIDFromUUID),
