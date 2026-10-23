@@ -9,6 +9,8 @@ var (
 	OrganizationUpdate   = Permission{"organization", "update"}
 	OrganizationDelete   = Permission{"organization", "delete"}
 	OrganizationTransfer = Permission{"organization", "transfer"}
+	InvitationCreate     = Permission{"invitation", "create"}
+	InvitationCancel     = Permission{"invitation", "cancel"}
 )
 
 // example:begin
@@ -24,6 +26,8 @@ var matrix = []grant{
 	{OrganizationUpdate, []Role{Owner, Admin}},
 	{OrganizationDelete, []Role{Owner}},
 	{OrganizationTransfer, []Role{Owner}},
+	{InvitationCreate, []Role{Owner, Admin}},
+	{InvitationCancel, []Role{Owner, Admin}},
 	// example:begin
 	{NoteRead, []Role{Owner, Admin, Viewer}},
 	{NoteCreate, []Role{Owner, Admin}},
