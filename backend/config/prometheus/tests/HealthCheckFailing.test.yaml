@@ -72,7 +72,7 @@ tests:
   - name: stays quiet for a route other than /health
     interval: 1m
     input_series:
-      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/notes", http_request_method="GET", http_response_status_code="503"}
+      - series: http_server_request_total{job="boilerplate/fixture-api", http_route="/items", http_request_method="GET", http_response_status_code="503"}
         values: 0+12x6
     alert_rule_test:
       - eval_time: 6m

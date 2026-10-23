@@ -1,0 +1,76 @@
+groups:
+  - name: iam-worker
+    rules:
+      - alert: ServiceTelemetryAbsent
+        expr: absent_over_time(target_info{job="boilerplate/iam-worker"}[5m])
+        labels:
+          service: iam-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: 'Nenhum target_info de iam-worker chegou ao Prometheus nos últimos 5 minutos: o processo caiu, travou ou não alcança o Alloy. Veja primeiro se ele está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
+          summary: iam-worker não envia telemetria há 5 minutos
+      - alert: HealthCheckFailing
+        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/iam-worker", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/iam-worker", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        labels:
+          service: iam-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: 'Todo /health de iam-worker respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o Postgres, o forwarder e o Kafka) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de iam-worker por que o health check falha e os alertas das dependências (PostgresDown, KafkaBrokersDown).'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
+          summary: iam-worker responde 5xx em todo /health há 2 minutos
+      - alert: DBPoolSaturated
+        expr: max(pgxpool_acquired_connections{job="boilerplate/iam-worker"} / pgxpool_max_connections{job="boilerplate/iam-worker"}) > 0.9
+        for: 5m
+        labels:
+          service: iam-worker
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: Mais de 90% das conexões do pool pgx de iam-worker estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
+          summary: Pool do Postgres de iam-worker com {{ $value | humanizePercentage }} das conexões em uso
+      - alert: OutboxAgeAbsent
+        expr: absent(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"})
+        for: 5m
+        labels:
+          service: iam-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: 'iam-worker não reporta iam_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se iam-worker está no ar e os logs dele.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
+          summary: iam-worker não reporta a idade do outbox há 5 minutos
+      - alert: IdentityChangeBacklogHigh
+        expr: max(iam_identity_change_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > 300
+        labels:
+          service: iam-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: 'A mudança de identidade pendente mais antiga de iam-worker passou de 5 minutos sem virar Integration Event: a tradução parou, ou travou numa mudança que ela não sabe traduzir, e o Audit Log deixa de receber as mudanças de identidade. Veja primeiro os logs de iam-worker (UNTRANSLATABLE_CHANGE) e a idade da mudança pendente mais antiga no dashboard do serviço.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/IdentityChangeBacklogHigh.md
+          summary: iam-worker com a mudança de identidade mais antiga há {{ $value | humanizeDuration }} sem tradução
+      - alert: SeriesBudgetExceeded
+        expr: job:series:count{job="boilerplate/iam-worker"} > 2000
+        for: 15m
+        labels:
+          service: iam-worker
+          severity: warning
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-postgres
+          description: 'iam-worker mantém mais de 2000 séries no Prometheus há 15 minutos: algum atributo de métrica tem valores sem limite (ID, URL crua, mensagem de erro). Veja primeiro quais métricas do job têm mais séries, depois o atributo que as multiplica.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SeriesBudgetExceeded.md
+          summary: iam-worker com {{ $value | humanize }} séries, acima do teto de 2000
+      - alert: CriticalLogRecorded
+        expr: sum_over_time(service:log_records_critical:rate1m{service="iam-worker"}[5m]) * 60 > 0
+        labels:
+          service: iam-worker
+          severity: critical
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: iam-worker registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um.
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md
+          summary: '{{ $value | humanize }} log(s) Critical ou Fatal de iam-worker nos últimos 5 minutos'

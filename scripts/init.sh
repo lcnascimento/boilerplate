@@ -41,8 +41,8 @@ proto_name=${name//-/_}
 while IFS= read -r dir; do
 	git mv "$dir/$marker" "$dir/$proto_name"
 done < <(git ls-files -- '*.proto' | sed -n "s#^\(.*/proto\)/$marker/.*#\1#p" | sort -u)
-{ git grep -lz "$marker" -- '*.proto' || true; } |
-	NAME=$proto_name xargs -0 perl -pi -e 's/(?<![\w\/.-])boilerplate(?=[.\/])/$ENV{NAME}/g'
+{ git grep -lzIE "$marker[./][a-z_]+[./]v[0-9]" -- ":!$self" || true; } |
+	NAME=$proto_name xargs -0 perl -pi -e 's/(?<![\w\/.-])boilerplate(?=[.\/][a-z_]+[.\/]v[0-9])/$ENV{NAME}/g'
 
 git grep -lzI -e "$marker" -e "$title_marker" -- ":!$self" |
 	NAME=$name TITLE=$title xargs -0 perl -pi -e 's/boilerplate/$ENV{NAME}/g; s/Boilerplate/$ENV{TITLE}/g'

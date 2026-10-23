@@ -8,7 +8,11 @@
     "welcomeTitle": "Bem-vindo ao Boilerplate",
     "welcomeDescription": "Um ponto de partida para projetos pessoais: backend Go, frontend Next.js e observabilidade local.",
     "toggleSidebar": "Recolher ou expandir a barra lateral",
-    "localUser": "Usuário local"
+    "settings": "Configurações",
+    "settingsOrganization": "Organization",
+    "settingsAccount": "Conta",
+    "organizationSettings": "Configurações",
+    "accountSettings": "Configurações"
   },
   "en": {
     "home": "Home",
@@ -19,6 +23,10 @@
     "welcomeTitle": "Welcome to Boilerplate",
     "welcomeDescription": "A starting point for personal projects: Go backend, Next.js frontend and local observability.",
     "toggleSidebar": "Collapse or expand the sidebar",
-    "localUser": "Local user"
+    "settings": "Settings",
+    "settingsOrganization": "Organization",
+    "settingsAccount": "Account",
+    "organizationSettings": "Settings",
+    "accountSettings": "Settings"
   }
 }

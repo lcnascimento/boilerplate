@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package boilerplate.eventbustest.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message ThingCreated {
+  string id = 1;
+  int64 title = 2;
+  google.protobuf.Timestamp created_at = 3;
+}

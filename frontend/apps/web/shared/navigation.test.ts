@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 
-import { breadcrumbTrail, isActiveHref } from "./navigation";
+import { breadcrumbTrail, isActiveHref, routesIn } from "./navigation";
+
+describe("routesIn", () => {
+  it("keeps only the product content in the main menu", () => {
+    expect(routesIn("product").map(({ href }) => href)).toEqual([
+      "/",
+      // example:begin
+      "/notes",
+      // example:end
+    ]);
+  });
+
+  it("puts the Organization settings in the Organization menu", () => {
+    expect(routesIn("organization").map(({ href }) => href)).toEqual([
+      "/settings/organization",
+      "/settings/members",
+    ]);
+  });
+
+  it("puts the account settings in the User menu", () => {
+    expect(routesIn("account").map(({ href }) => href)).toEqual([
+      "/settings/account",
+      "/settings/preferences",
+    ]);
+  });
+});
 
 describe("breadcrumbTrail", () => {
   it("shows only the current home crumb on /", () => {
@@ -10,10 +35,10 @@ describe("breadcrumbTrail", () => {
   });
 
   it("links home and marks the matched route as current", () => {
-    expect(breadcrumbTrail("/profile/preferences")).toEqual([
+    expect(breadcrumbTrail("/settings/preferences")).toEqual([
       { href: "/", labelKey: "nav.home", current: false },
       {
-        href: "/profile/preferences",
+        href: "/settings/preferences",
         labelKey: "nav.preferences",
         current: true,
       },
@@ -21,10 +46,10 @@ describe("breadcrumbTrail", () => {
   });
 
   it("ignores a trailing slash", () => {
-    expect(breadcrumbTrail("/profile/preferences/")).toEqual([
+    expect(breadcrumbTrail("/settings/preferences/")).toEqual([
       { href: "/", labelKey: "nav.home", current: false },
       {
-        href: "/profile/preferences",
+        href: "/settings/preferences",
         labelKey: "nav.preferences",
         current: true,
       },
@@ -32,12 +57,41 @@ describe("breadcrumbTrail", () => {
   });
 
   it("keeps a route as a link below a path it does not own", () => {
-    expect(breadcrumbTrail("/profile/preferences/extra")).toEqual([
+    expect(breadcrumbTrail("/settings/preferences/extra")).toEqual([
       { href: "/", labelKey: "nav.home", current: false },
       {
-        href: "/profile/preferences",
+        href: "/settings/preferences",
         labelKey: "nav.preferences",
         current: false,
+      },
+    ]);
+  });
+
+  it("names the Organization settings page", () => {
+    expect(breadcrumbTrail("/settings/organization")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      {
+        href: "/settings/organization",
+        labelKey: "nav.organizationSettings",
+        current: true,
+      },
+    ]);
+  });
+
+  it("names the Members settings page", () => {
+    expect(breadcrumbTrail("/settings/members")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      { href: "/settings/members", labelKey: "members.title", current: true },
+    ]);
+  });
+
+  it("names the account settings page", () => {
+    expect(breadcrumbTrail("/settings/account")).toEqual([
+      { href: "/", labelKey: "nav.home", current: false },
+      {
+        href: "/settings/account",
+        labelKey: "nav.accountSettings",
+        current: true,
       },
     ]);
   });
@@ -58,7 +112,7 @@ describe("breadcrumbTrail", () => {
   });
 
   it("does not match a route by a partial segment", () => {
-    expect(breadcrumbTrail("/profile/preferencesX")).toEqual([
+    expect(breadcrumbTrail("/settings/preferencesX")).toEqual([
       { href: "/", labelKey: "nav.home", current: false },
     ]);
   });
@@ -67,20 +121,20 @@ describe("breadcrumbTrail", () => {
 describe("isActiveHref", () => {
   it.each([
     { pathname: "/", href: "/", active: true },
-    { pathname: "/profile/preferences", href: "/", active: false },
+    { pathname: "/settings/preferences", href: "/", active: false },
     {
-      pathname: "/profile/preferences",
-      href: "/profile/preferences",
+      pathname: "/settings/preferences",
+      href: "/settings/preferences",
       active: true,
     },
     {
-      pathname: "/profile/preferences/x",
-      href: "/profile/preferences",
+      pathname: "/settings/preferences/x",
+      href: "/settings/preferences",
       active: true,
     },
     {
-      pathname: "/profile/preferencesX",
-      href: "/profile/preferences",
+      pathname: "/settings/preferencesX",
+      href: "/settings/preferences",
       active: false,
     },
   ])("$pathname under $href is $active", ({ pathname, href, active }) => {

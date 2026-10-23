@@ -11,7 +11,7 @@ clean-example:
 
 .PHONY: format
 format:
-	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate
+	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate iam.generate
 	@$(MAKE) -C frontend format
 
 .PHONY: format.check

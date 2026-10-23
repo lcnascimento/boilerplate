@@ -1,0 +1,51 @@
+package bundle
+
+import (
+	"go.uber.org/fx"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/health"
+
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
+	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/consumer"
+)
+
+func NewConsumer() *fx.App {
+	return fx.New(consumerOptions()...)
+}
+
+func consumerOptions() []fx.Option {
+	return []fx.Option{
+		Logger(logger),
+		Validator(),
+		Database(),
+		Repositories(),
+		NotesService(),
+		fx.Provide(newConsumer, newConsumerHealthServer),
+		fx.Invoke(func(lifecycle fx.Lifecycle, c *eventbus.Consumer, health *health.Server) {
+			lifecycle.Append(fx.Hook{OnStart: c.Start, OnStop: c.Stop})
+			lifecycle.Append(fx.Hook{OnStart: health.Start, OnStop: health.Shutdown})
+		}),
+	}
+}
+
+func newConsumer(notes transport.OrganizationNotesService, shutdowner fx.Shutdowner) (*eventbus.Consumer, error) {
+	brokers, err := config.KafkaBrokers()
+	if err != nil {
+		return nil, err
+	}
+
+	return consumer.New(notes, brokers, eventbus.WithShutdown(exitWithFailure(shutdowner))), nil
+}
+
+func newConsumerHealthServer(
+	db transport.Database, c *eventbus.Consumer, shutdowner fx.Shutdowner,
+) (*health.Server, error) {
+	port, err := config.HealthPort()
+	if err != nil {
+		return nil, err
+	}
+
+	return health.NewServer(port, exitWithFailure(shutdowner), c.Ready, db.Ping), nil
+}

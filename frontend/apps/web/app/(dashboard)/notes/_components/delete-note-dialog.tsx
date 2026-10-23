@@ -3,7 +3,6 @@
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useTransition, type MouseEvent } from "react";
 import { toast } from "sonner";
 
 import { ErrorCode } from "@boilerplate/api/core/errors";
@@ -21,8 +20,10 @@ import {
 import { Button } from "@boilerplate/ui/components/button";
 
 import { deleteNote } from "@/actions/notes";
+import { useConfirmDialog } from "@/shared/hooks/use-confirm-dialog";
 import { NOTES_HREF } from "@/shared/navigation";
 
+import type { APIError } from "@boilerplate/api/core";
 import type { Note } from "@boilerplate/api/notes/schemas";
 
 interface DeleteNoteDialogProps {
@@ -34,29 +35,27 @@ export function DeleteNoteDialog({ id, title }: DeleteNoteDialogProps) {
   const t = useTranslations("notes");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
-  function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
-    // Radix closes the dialog on the action's click.
-    event.preventDefault();
+  function failureMessage(error: Pick<APIError, "code" | "status">) {
+    if (error.status === 403) return t("deleteForbidden");
+    if (error.code === ErrorCode.Unavailable)
+      return t("unavailableDescription");
+    return t("deleteFailed");
+  }
 
-    startTransition(async () => {
+  const { open, setOpen, isPending, handleConfirm } = useConfirmDialog(
+    async () => {
       const result = await deleteNote(id);
       if (result.kind === "error") {
-        toast.error(
-          result.error.code === ErrorCode.Unavailable
-            ? t("unavailableDescription")
-            : t("deleteFailed")
-        );
-        return;
+        toast.error(failureMessage(result.error));
+        return "failed";
       }
-      setOpen(false);
       toast.success(t("deleted"));
       router.push(NOTES_HREF);
       router.refresh();
-    });
-  }
+      return "done";
+    }
+  );
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

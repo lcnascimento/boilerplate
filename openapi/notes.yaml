@@ -9,6 +9,12 @@ info:
     As notas ficam em memória e o repositório começa vazio a cada subida do
     serviço. Não há edição nem paginação.
 
+    ## Autenticação
+
+    As rotas de notas exigem `Authorization: Bearer <token>`, um JWT de Actor
+    de vida curta que o BFF (o app web) emite a cada requisição. Veja o
+    esquema `bearerAuth`. As rotas `/health` e `/ping` são públicas.
+
     ## Erros
 
     Toda resposta de erro usa o `APIError` do go-kit. O status HTTP vem do
@@ -17,6 +23,8 @@ info:
     | Status | Quando |
     |--------|--------|
     | `400`  | Corpo malformado ou entrada inválida. Os motivos vêm em `details.reasons`. |
+    | `401`  | Token de Actor ausente ou inválido (malformado, expirado, de issuer ou audience errados, assinatura inválida, claim faltando ou Role desconhecida). O motivo não vem na resposta. |
+    | `403`  | A Role do Actor não concede a Permission da operação, ou a Organization do Actor foi excluída (`ORGANIZATION_DELETED`, ao criar uma nota). |
     | `404`  | Nota inexistente. |
     | `500`  | Falha inesperada no servidor. |
   contact:
@@ -27,11 +35,63 @@ servers:
   - url: http://localhost:8080
     description: Local (Tilt)
 
+security:
+  - bearerAuth: []
+
 tags:
   - name: Notes
     description: Notas de texto com título e corpo.
+  - name: Health
+    description: Probes públicas, sem token.
 
 paths:
+  /ping:
+    get:
+      operationId: ping
+      tags: [Health]
+      summary: Responder se o processo está de pé
+      security: []
+      responses:
+        '200':
+          description: Processo de pé.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              examples:
+                default:
+                  value:
+                    message: pong
+
+  /health:
+    get:
+      operationId: health
+      tags: [Health]
+      summary: Conferir as dependências do serviço
+      description: Responde `200` quando o banco responde, e `503` quando não.
+      security: []
+      responses:
+        '200':
+          description: Serviço pronto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              examples:
+                default:
+                  value:
+                    message: healthy
+        '503':
+          description: Uma dependência não respondeu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              examples:
+                default:
+                  value:
+                    message: unhealthy
+
   /notes/v1/notes:
     post:
       operationId: createNote
@@ -69,6 +129,10 @@ paths:
                     created_at: '2026-10-10T19:30:00Z'
         '400':
           $ref: '#/components/responses/InvalidInput'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
     get:
@@ -97,6 +161,10 @@ paths:
                         title: Lista de compras
                         body: Leite, ovos e café.
                         created_at: '2026-10-10T19:30:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -126,6 +194,10 @@ paths:
           $ref: '#/components/responses/InvalidInput'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
     delete:
@@ -140,10 +212,33 @@ paths:
           $ref: '#/components/responses/InvalidInput'
         '404':
           $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT de Actor que o BFF emite com o plugin `jwt` do Better Auth, válido
+        por 5 minutos. A assinatura é EdDSA (Ed25519), com o `kid` no header, e
+        a chave pública vem do JWKS do app web (`/api/auth/jwks`). Claims:
+
+        | Claim  | Conteúdo |
+        |--------|----------|
+        | `sub`  | id do User, `user_<uuid>`. |
+        | `org`  | id da Organization ativa, `org_<uuid>`. |
+        | `role` | Role do User nessa Organization: `owner`, `admin` ou `viewer`. |
+        | `iss`  | URL do app web (`BETTER_AUTH_URL`). |
+        | `aud`  | `boilerplate-api`. |
+        | `iat`  | Emissão, em segundos Unix. |
+        | `exp`  | Expiração, em segundos Unix. |
   parameters:
     NoteID:
       name: id
@@ -154,6 +249,14 @@ components:
         $ref: '#/components/schemas/NoteID'
 
   schemas:
+    Message:
+      type: object
+      description: Resposta das probes.
+      properties:
+        message:
+          type: string
+          examples: [healthy]
+      required: [message]
     NoteID:
       type: string
       description: Identificador canônico da nota, `note_` seguido de um UUID v7.
@@ -259,6 +362,33 @@ components:
       required: [code, message, retryable]
 
   responses:
+    Unauthenticated:
+      description: Token de Actor ausente ou inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+          examples:
+            default:
+              value:
+                code: ERR_UNAUTHENTICATED
+                message: unauthenticated request
+                retryable: false
+    Forbidden:
+      description: A Role do Actor não concede a Permission da operação, ou a Organization do Actor foi excluída.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+          examples:
+            default:
+              value:
+                code: ERR_UNAUTHORIZED
+                message: failed to delete note
+                retryable: false
+                details:
+                  reasons:
+                    - unauthorized request
     InvalidInput:
       description: >
         Corpo malformado ou entrada inválida, como título ausente, título ou

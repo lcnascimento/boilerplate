@@ -1,17 +1,29 @@
+import accountSettings from "./account-settings.json" with { type: "json" };
+import auth from "./auth.json" with { type: "json" };
+import invitations from "./invitations.json" with { type: "json" };
+import members from "./members.json" with { type: "json" };
 import nav from "./nav.json" with { type: "json" };
 // example:begin
 import notes from "./notes.json" with { type: "json" };
 // example:end
+import organizationSettings from "./organization-settings.json" with { type: "json" };
+import organizations from "./organizations.json" with { type: "json" };
 import profile from "./profile.json" with { type: "json" };
 
 import type { Locale } from "@boilerplate/i18n";
 
 export function appMessages(locale: Locale) {
   return {
+    accountSettings: accountSettings[locale],
+    auth: auth[locale],
+    invitations: invitations[locale],
+    members: members[locale],
     nav: nav[locale],
     // example:begin
     notes: notes[locale],
     // example:end
+    organizationSettings: organizationSettings[locale],
+    organizations: organizations[locale],
     profile: profile[locale],
   };
 }

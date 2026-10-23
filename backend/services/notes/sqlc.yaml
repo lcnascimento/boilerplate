@@ -13,14 +13,3 @@ sql:
             go_type: github.com/google/uuid.UUID
           - db_type: timestamptz
             go_type: time.Time
-  - engine: postgresql
-    schema: internal/repository/migrations
-    queries: internal/repository/outbox/queries.sql
-    gen:
-      go:
-        package: db
-        out: internal/repository/outbox/internal/db
-        sql_package: pgx/v5
-        overrides:
-          - db_type: timestamptz
-            go_type: time.Time

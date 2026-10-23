@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
@@ -19,18 +21,23 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	"github.com/lcnascimento/go-kit/outbox"
 	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/eventbustest"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events/eventstest"
 )
 
 var (
@@ -40,6 +47,12 @@ var (
 )
 
 const waitFor = 30 * time.Second
+
+var author = &actor.Actor{
+	UserID:         mustParseUserID("user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"),
+	OrganizationID: iamdomain.MustParseOrganizationID("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"),
+	Role:           authz.RoleAdmin,
+}
 
 var (
 	spans   = tracetest.NewSpanRecorder()
@@ -67,32 +80,39 @@ func TestComponentForwarder_DeliversCreateAndDeleteToTheEventsSubscriber(t *test
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC))
 
 	env.startForwarder(t)
-	require.NoError(t, repo.Create(t.Context(), note))
-	require.NoError(t, repo.Delete(t.Context(), note.ID))
+	require.NoError(t, repo.Create(t.Context(), author, note))
+	require.NoError(t, repo.Delete(t.Context(), author, note.ID))
 
 	observer := env.subscribe(t, note.ID)
 	created := observer.next(t)
 	deleted := observer.next(t)
 
 	wantCreated := &events.NoteCreated{
-		Id:        note.ID.String(),
-		Title:     "Lista de compras",
-		Body:      "body of Lista de compras",
-		CreatedAt: timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
+		Id:             note.ID.String(),
+		OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+		Title:          "Lista de compras",
+		Body:           "body of Lista de compras",
+		CreatedAt:      timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
 	}
-	require.True(t, proto.Equal(wantCreated, created.Message), "want %v, got %v", wantCreated, created.Message)
+	createdMessage, _ := created.Message()
+	require.True(t, proto.Equal(wantCreated, createdMessage), "want %v, got %v", wantCreated, createdMessage)
 	require.Equal(t, noteCreatedType, created.Type)
 	require.Equal(t, "notes", created.Source)
 	require.Equal(t, note.ID.String(), created.Subject)
 	require.Equal(t, events.Topic, created.Topic)
 	require.True(t, note.CreatedAt.Equal(created.Time), "want %v, got %v", note.CreatedAt, created.Time)
 	require.Equal(t, created.ID, created.Headers["_watermill_message_uuid"])
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", created.ActorID)
+	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", created.ActorOrganizationID)
 
-	wantDeleted := &events.NoteDeleted{Id: note.ID.String()}
-	require.True(t, proto.Equal(wantDeleted, deleted.Message), "want %v, got %v", wantDeleted, deleted.Message)
+	wantDeleted := &events.NoteDeleted{Id: note.ID.String(), OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"}
+	deletedMessage, _ := deleted.Message()
+	require.True(t, proto.Equal(wantDeleted, deletedMessage), "want %v, got %v", wantDeleted, deletedMessage)
 	require.Equal(t, noteDeletedType, deleted.Type)
 	require.True(t, deletedAt.Equal(deleted.Time), "want %v, got %v", deletedAt, deleted.Time)
 	require.NotEqual(t, created.ID, deleted.ID)
+	require.Equal(t, "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b", deleted.ActorID)
+	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", deleted.ActorOrganizationID)
 }
 
 func TestComponentForwarder_KeepsTheOrderOfANoteUnderItsIDAsKey(t *testing.T) {
@@ -107,8 +127,8 @@ func TestComponentForwarder_KeepsTheOrderOfANoteUnderItsIDAsKey(t *testing.T) {
 	note := newNote("recreated", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
 	for range 3 {
-		require.NoError(t, repo.Create(t.Context(), note))
-		require.NoError(t, repo.Delete(t.Context(), note.ID))
+		require.NoError(t, repo.Create(t.Context(), author, note))
+		require.NoError(t, repo.Delete(t.Context(), author, note.ID))
 	}
 
 	env.startForwarder(t)
@@ -146,7 +166,7 @@ func TestComponentForwarder_RestartLeavesNoGap(t *testing.T) {
 		for range n {
 			note := newNote("restart", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 			observer.want(note.ID)
-			require.NoError(t, repo.Create(t.Context(), note))
+			require.NoError(t, repo.Create(t.Context(), author, note))
 		}
 	}
 
@@ -173,7 +193,7 @@ func TestComponentForwarder_SendSpanIsARootLinkedToTheCreateSpan(t *testing.T) {
 	repo := notes.New(env.pool, env.schemaIDs)
 	note := newNote("traced", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 	env.startForwarder(t)
 
 	messageID := env.subscribe(t, note.ID).next(t).ID
@@ -208,7 +228,7 @@ func TestComponentForwarder_RecordsSendAndProcessDurationsInSeconds(t *testing.T
 	repo := notes.New(env.pool, env.schemaIDs)
 	note := newNote("timed", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 	env.startForwarder(t)
 	env.subscribe(t, note.ID).next(t)
 
@@ -232,7 +252,7 @@ func TestComponentForwarder_MessagingMetricsOmitTheDeliveryAttempt(t *testing.T)
 	repo := notes.New(env.pool, env.schemaIDs)
 	note := newNote("unbounded", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 	env.startForwarder(t)
 	env.subscribe(t, note.ID).next(t)
 
@@ -247,6 +267,37 @@ func TestComponentForwarder_MessagingMetricsOmitTheDeliveryAttempt(t *testing.T)
 		for _, set := range recorded[name] {
 			require.False(t, set.HasValue("messaging.delivery.attempt"), "%s carries %v", name, set.ToSlice())
 		}
+	}
+}
+
+func TestComponentForwarder_HoldsBackEverythingAfterAMessageWithoutAValidEnvelope(t *testing.T) {
+	if testing.Short() {
+		t.Skip("component test")
+	}
+
+	t.Parallel()
+
+	env := newEnv(t)
+	repo := notes.New(env.pool, env.schemaIDs)
+	note := newNote("after the malformed one", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
+
+	malformed := message.NewMessage(uuid.NewString(), []byte("{}"))
+	malformed.Metadata.Set("ce_subject", note.ID.String())
+	malformed.Metadata.Set("ce_partitionkey", note.ID.String())
+
+	tx, err := env.pool.Begin(t.Context())
+	require.NoError(t, err)
+	require.NoError(t, notes.Outbox.Publish(t.Context(), tx, events.Topic, malformed))
+	require.NoError(t, tx.Commit(t.Context()))
+	require.NoError(t, repo.Create(t.Context(), author, note))
+
+	observer := env.subscribe(t, note.ID)
+	env.startForwarder(t)
+
+	select {
+	case event := <-observer.events:
+		t.Fatalf("the forwarder sent %s past a malformed message", event.Type)
+	case <-time.After(5 * time.Second):
 	}
 }
 
@@ -353,11 +404,11 @@ func attributesOf(span sdktrace.ReadOnlySpan) map[string]string {
 }
 
 type env struct {
-	*eventstest.Env
+	*eventbustest.Env
 
 	brokers   []string
 	pool      *pgxpool.Pool
-	schemaIDs events.SchemaIDs
+	schemaIDs eventbus.SchemaIDs
 }
 
 var createTopic sync.Once
@@ -365,25 +416,20 @@ var createTopic sync.Once
 func newEnv(t *testing.T) *env {
 	t.Helper()
 
-	e := eventstest.New(t)
+	e := eventbustest.New(t, events.Protos)
 
 	createTopic.Do(func() { e.CreateTopic(t, events.Topic, 3) })
 
-	schemaIDs, err := events.LookupSchemaIDs(t.Context(), e.Registry(t))
+	schemaIDs, err := eventbus.LookupSchemaIDs(t.Context(), e.Registry(t), events.Protos)
 	require.NoError(t, err)
 
 	return &env{Env: e, brokers: e.Brokers, pool: testdb.New(t, migrations.FS), schemaIDs: schemaIDs}
 }
 
-func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {
+func (e *env) startForwarder(t *testing.T) *outbox.Forwarder {
 	t.Helper()
 
-	subscriber, err := outbox.NewSubscriber(e.pool)
-	require.NoError(t, err)
-
-	f, err := forwarder.New(subscriber, e.brokers, forwarder.WithShutdown(func() {
-		t.Errorf("forwarder stopped unexpectedly")
-	}))
+	f, err := forwarder.New(t.Context(), notes.Outbox, e.pool, e.brokers, func() { t.Errorf("forwarder stopped unexpectedly") })
 	require.NoError(t, err)
 
 	require.NoError(t, f.Start(t.Context()))
@@ -397,12 +443,17 @@ func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {
 func (e *env) subscribe(t *testing.T, ids ...domain.NoteID) *recorder {
 	t.Helper()
 
-	e.CreateTopic(t, events.DLQTopic(events.Topic, e.Group), 1)
+	e.CreateTopic(t, eventbus.DLQTopic(events.Topic, e.Group), 1)
 
-	r := &recorder{events: make(chan *events.Event, 1000), wanted: map[string]bool{}, seen: map[string]bool{}}
+	r := &recorder{events: make(chan *eventbus.Event, 1000), wanted: map[string]bool{}, seen: map[string]bool{}}
 	r.want(ids...)
 
-	subscriber, err := events.NewSubscriber(events.SubscriberConfig{Brokers: e.brokers, Group: e.Group, Observer: r})
+	subscriber, err := eventbus.NewSubscriber(&eventbus.SubscriberConfig{
+		Brokers: e.brokers,
+		Group:   e.Group,
+		Topics:  []string{events.Topic},
+		Handler: r,
+	})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -432,15 +483,13 @@ func (e *env) subscribe(t *testing.T, ids ...domain.NoteID) *recorder {
 }
 
 type recorder struct {
-	events.UnimplementedObserver
-
 	mu     sync.Mutex
 	wanted map[string]bool
 	seen   map[string]bool
-	events chan *events.Event
+	events chan *eventbus.Event
 }
 
-func (r *recorder) OnAny(_ context.Context, event *events.Event) error {
+func (r *recorder) Handle(_ context.Context, event *eventbus.Event) error {
 	r.mu.Lock()
 
 	wanted := r.wanted[event.Subject]
@@ -467,7 +516,7 @@ func (r *recorder) want(ids ...domain.NoteID) {
 	}
 }
 
-func (r *recorder) next(t *testing.T) *events.Event {
+func (r *recorder) next(t *testing.T) *eventbus.Event {
 	t.Helper()
 
 	select {
@@ -562,8 +611,18 @@ func header(record *sarama.ConsumerMessage, key string) string {
 
 func newNote(title string, createdAt time.Time) *domain.Note {
 	return &domain.Note{
-		ID:          domain.NewNoteID(),
-		NoteContent: domain.NoteContent{Title: title, Body: "body of " + title},
-		CreatedAt:   createdAt,
+		ID:             domain.NewNoteID(),
+		OrganizationID: author.OrganizationID,
+		NoteContent:    domain.NoteContent{Title: title, Body: "body of " + title},
+		CreatedAt:      createdAt,
 	}
+}
+
+func mustParseUserID(s string) iamdomain.UserID {
+	id, err := iamdomain.ParseUserID(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return id
 }

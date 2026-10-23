@@ -30,8 +30,8 @@ const meta = {
           <DialogDescription>Dê um título para a nota.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
-          <Label htmlFor="note-title">Título</Label>
-          <Input id="note-title" />
+          <Label htmlFor="item-title">Título</Label>
+          <Input id="item-title" />
         </div>
         <DialogFooter>
           <DialogClose asChild>

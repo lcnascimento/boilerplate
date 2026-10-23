@@ -1,0 +1,38 @@
+version: prometheus/v1
+service: iam
+slo_plugins:
+  chain:
+    - id: sloth.dev/core/sli_rules/v1
+      config:
+        disableOptimized: true
+slos:
+  - name: outbox-freshness
+    objective: 99
+    description: Minutos em que a mensagem pendente mais antiga do outbox de iam tem até 30s, segundo iam-worker.
+    labels:
+      service: iam-worker
+    sli:
+      raw:
+        error_ratio_query: avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[{{.window}}:1m])
+    alerting:
+      name: SLOBurnRate
+      labels:
+        service: iam-worker
+        sloth_slo: outbox-freshness
+      annotations:
+        dashboard_url: http://localhost:3010/d/boilerplate-iam
+        runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+      page_alert:
+        labels:
+          severity: critical
+        annotations:
+          description: 'Minutos em que a mensagem pendente mais antiga do outbox de iam tem até 30s, segundo iam-worker. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de iam-worker.'
+          summary: 'SLO outbox-freshness de iam-worker queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO outbox-freshness de iam-worker queimando o error budget rápido demais
+      ticket_alert:
+        labels:
+          severity: warning
+        annotations:
+          description: 'Minutos em que a mensagem pendente mais antiga do outbox de iam tem até 30s, segundo iam-worker. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de iam-worker.'
+          summary: 'SLO outbox-freshness de iam-worker consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO outbox-freshness de iam-worker consumindo o error budget acima do ritmo sustentável

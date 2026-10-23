@@ -29,6 +29,8 @@ AGAINST ?= origin/main
 
 MIGRATION_DIRS := $(wildcard services/*/internal/repository/migrations)
 MIGRATIONS := $(wildcard $(addsuffix /*.sql,$(MIGRATION_DIRS)))
+MIGRATIONS_WITHOUT_TRANSACTION := $(if $(MIGRATIONS),$(shell grep -l '^-- +goose NO TRANSACTION' $(MIGRATIONS)))
+MIGRATIONS_IN_TRANSACTION := $(filter-out $(MIGRATIONS_WITHOUT_TRANSACTION),$(MIGRATIONS))
 
 PACKAGES = go list ./... | { grep -v -e '/cmd/' -e '/mocks$$' || true; }
 
@@ -142,7 +144,10 @@ o11y.tools:
 lint:
 	$(call in_modules,lint,if [ -z "$$($(PACKAGES))" ]; then echo "no packages"; else $(GOBIN)/golangci-lint run --timeout 10m ./...; fi)
 	@echo "==> lint migrations"
-	@if [ -z "$(MIGRATIONS)" ]; then echo "no migrations"; else $(GOBIN)/squawk --config .squawk.toml $(MIGRATIONS); fi
+	@if [ -z "$(MIGRATIONS)" ]; then echo "no migrations"; fi
+	@if [ -n "$(MIGRATIONS_IN_TRANSACTION)" ]; then $(GOBIN)/squawk --config .squawk.toml $(MIGRATIONS_IN_TRANSACTION); fi
+	@if [ -n "$(MIGRATIONS_WITHOUT_TRANSACTION)" ]; then \
+		$(GOBIN)/squawk --config .squawk.toml --no-assume-in-transaction $(MIGRATIONS_WITHOUT_TRANSACTION); fi
 
 .PHONY: lint.fix
 lint.fix:
@@ -194,17 +199,21 @@ sqlc:
 o11y.generate:
 	@cd tools && GOWORK=off go run ./o11ygen -root ..
 
+.PHONY: iam.generate
+iam.generate:
+	@cd tools && GOWORK=off go run ./iamgen -out ../../frontend/apps/web/shared/auth/authz.gen.ts
+
 .PHONY: o11y.lint
 o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo o11y.lint.alloy
 
 .PHONY: o11y.lint.rules
 o11y.lint.rules:
 	@echo "==> promtool check rules"
-	@$(GOBIN)/promtool check rules config/prometheus/rules/*.yaml config/prometheus/tests/fixture.yaml
+	@$(GOBIN)/promtool check rules config/prometheus/rules/*.yaml config/prometheus/tests/fixture*.yaml
 	@echo "==> promtool test rules"
 	@$(GOBIN)/promtool test rules config/prometheus/tests/*.test.yaml
 	@echo "==> pint lint"
-	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture.yaml
+	@$(GOBIN)/pint --no-color --log-level warn --offline lint config/prometheus/rules config/prometheus/tests/fixture*.yaml
 
 .PHONY: o11y.lint.slo
 o11y.lint.slo:

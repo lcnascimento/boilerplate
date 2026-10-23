@@ -1,6 +1,6 @@
 # Boilerplate
 
-Boilerplate de um sistema de anotações, usado como referência para a arquitetura de serviços, frontend e mensageria do Projeto.
+A linguagem de domínio do Projeto: cada termo tem um só sentido no código, na documentação e nas conversas.
 
 ## Language
 
@@ -11,31 +11,35 @@ Uma pessoa que se autentica no sistema por email e senha.
 _Avoid_: Usuário, conta, account
 
 **Organization**:
-O tenant: o espaço ao qual as Notes pertencem e no qual Users atuam como Members.
+O tenant: o espaço ao qual os dados do produto pertencem e no qual Users atuam como Members.
 _Avoid_: Workspace, tenant, time
 
 **Member**:
 O vínculo de um User com uma Organization, com exatamente uma Role.
 _Avoid_: Membership, participante
 
+**Invitation**:
+O convite, feito por um Owner ou Admin a um email, para que o User com esse email se torne Member da Organization com uma Role (Admin ou Viewer). Vale 7 dias e só vira Member se o convidado aceitar.
+_Avoid_: Invite, adicionar Member
+
 **Role**:
 O papel de um Member na sua Organization, que define o que ele pode fazer: Owner, Admin ou Viewer.
 _Avoid_: Perfil, permissão, grupo
 
 **Permission**:
-Uma ação sobre um tipo de recurso que uma Role concede ou não (ex.: apagar Note).
+Uma ação sobre um tipo de recurso que uma Role concede ou não (ex.: transferir a propriedade da Organization).
 _Avoid_: Capability, privilégio
 
 **Owner**:
-Role com todos os poderes na Organization, inclusive apagar Notes.
+O único Member com todos os poderes na Organization, inclusive excluí-la e transferir a propriedade a outro Member.
 _Avoid_: Dono, superadmin
 
 **Admin**:
-Role que lê e cria Notes e gere Members, mas não apaga Notes nem promove a Owner.
+Role que renomeia a Organization e gere Members e Invitations, mas não exclui a Organization nem transfere a propriedade.
 _Avoid_: Editor, moderador
 
 **Viewer**:
-Role que só lê Notes.
+Role que só lê os dados da Organization, sem gerir Members nem Invitations.
 _Avoid_: Leitor, read-only, member
 
 **Actor**:
@@ -50,17 +54,23 @@ _Avoid_: Toggle, feature switch
 O que um Actor pode fazer numa requisição: as Permissions da sua Role, exceto as condicionadas a uma Feature Flag desligada, mais as Feature Flags ligadas para ele.
 _Avoid_: Access, entitlement, grant
 
+<!-- example:begin -->
+
 ### Notes
 
 **Note**:
-Uma anotação com título e corpo, pertencente a uma Organization, identificada por um id canônico e datada pela sua criação.
+Uma anotação com título e corpo, pertencente a uma Organization, identificada por um id canônico e datada pela sua criação. O Owner lê, cria e apaga Notes, o Admin lê e cria, e o Viewer só lê.
 _Avoid_: Memo, post
+
+<!-- example:end -->
 
 ### Events
 
 **Integration Event**:
 Fato consumado sobre o estado do sistema, publicado no event bus como contrato público e versionado para outros serviços consumirem.
 _Avoid_: Domain event, mensagem, notificação
+
+<!-- example:begin -->
 
 **NoteCreated**:
 Integration Event que registra que uma Note passou a existir.
@@ -69,6 +79,8 @@ _Avoid_: NoteCreate, NoteAdded
 **NoteDeleted**:
 Integration Event que registra que uma Note deixou de existir.
 _Avoid_: NoteDelete, NoteRemoved
+
+<!-- example:end -->
 
 ### Audit
 

@@ -22,17 +22,12 @@ func New(pool *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) Insert(ctx context.Context, entry *idomain.Entry) error {
-	var subject *string
-	if entry.Subject != "" {
-		subject = &entry.Subject
-	}
-
 	err := r.queries.InsertAuditEntry(ctx, db.InsertAuditEntryParams{
 		Source:          entry.Source,
 		ID:              entry.ID,
 		Type:            entry.Type,
 		SpecVersion:     entry.SpecVersion,
-		Subject:         subject,
+		Subject:         nullable(entry.Subject),
 		Time:            entry.Time,
 		DataContentType: entry.DataContentType,
 		Headers:         entry.Headers,
@@ -40,10 +35,23 @@ func (r *Repository) Insert(ctx context.Context, entry *idomain.Entry) error {
 		KafkaTopic:      entry.KafkaTopic,
 		KafkaPartition:  entry.KafkaPartition,
 		KafkaOffset:     entry.KafkaOffset,
+
+		ActorID:             nullable(entry.ActorID),
+		ActorOrganizationID: nullable(entry.ActorOrganizationID),
+		IpHash:              nullable(entry.IPHash),
+		CorrelationID:       nullable(entry.CorrelationID),
 	})
 	if err != nil {
 		return ErrQuery.WithCause(err)
 	}
 
 	return nil
+}
+
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+
+	return &s
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 )
 
+const acmeOrganizationID = "9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"
+
 func TestComponentMigrations_CreatesNotesTable(t *testing.T) {
 	t.Parallel()
 
@@ -21,22 +23,80 @@ func TestComponentMigrations_CreatesNotesTable(t *testing.T) {
 
 	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
 
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+
+	defer func() { _ = tx.Rollback() }()
+
+	_, err = tx.ExecContext(t.Context(), `SELECT set_config('app.organization_id', $1, true)`, acmeOrganizationID)
+	require.NoError(t, err)
+
 	createdAt := time.Date(2026, 10, 12, 18, 0, 0, 0, time.UTC)
-	_, err := db.ExecContext(t.Context(),
-		`INSERT INTO notes (id, created_at, title, body) VALUES ($1, $2, $3, $4)`,
-		"0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e", createdAt, "Lista de compras", "Leite e pão",
+	_, err = tx.ExecContext(t.Context(),
+		`INSERT INTO notes (id, organization_id, created_at, title, body) VALUES ($1, $2, $3, $4, $5)`,
+		"0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e", acmeOrganizationID, createdAt, "Lista de compras", "Leite e pão",
 	)
 	require.NoError(t, err)
 
-	var title, body string
+	var organizationID, title, body string
 
 	var gotCreatedAt time.Time
 
-	err = db.QueryRowContext(t.Context(), `SELECT title, body, created_at FROM notes`).Scan(&title, &body, &gotCreatedAt)
+	err = tx.QueryRowContext(t.Context(), `SELECT organization_id, title, body, created_at FROM notes`).
+		Scan(&organizationID, &title, &body, &gotCreatedAt)
 	require.NoError(t, err)
+	require.Equal(t, acmeOrganizationID, organizationID)
 	require.Equal(t, "Lista de compras", title)
 	require.Equal(t, "Leite e pão", body)
 	require.True(t, createdAt.Equal(gotCreatedAt))
+}
+
+func TestComponentMigrations_NotesRejectAnotherOrganizationsRow(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+
+	defer func() { _ = tx.Rollback() }()
+
+	_, err = tx.ExecContext(t.Context(), `SELECT set_config('app.organization_id', $1, true)`, acmeOrganizationID)
+	require.NoError(t, err)
+
+	_, err = tx.ExecContext(t.Context(),
+		`INSERT INTO notes (id, organization_id, created_at, title, body) VALUES ($1, $2, now(), 'x', '')`,
+		"0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e", "4d7a1c3e-5b6f-4a8b-9c0d-1e2f3a4b5c6d",
+	)
+	require.ErrorContains(t, err, `new row violates row-level security policy for table "notes"`)
+}
+
+func TestComponentMigrations_NotesRequireAnOrganizationAndAreIndexedByIt(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	var nullable string
+
+	err := db.QueryRowContext(t.Context(),
+		`SELECT is_nullable FROM information_schema.columns WHERE table_name = 'notes' AND column_name = 'organization_id'`,
+	).Scan(&nullable)
+	require.NoError(t, err)
+	require.Equal(t, "NO", nullable)
+
+	var index string
+
+	err = db.QueryRowContext(t.Context(),
+		`SELECT indexdef FROM pg_indexes WHERE indexname = 'notes_organization_id_created_at_id_idx'`,
+	).Scan(&index)
+	require.NoError(t, err)
+	require.Equal(t,
+		"CREATE INDEX notes_organization_id_created_at_id_idx ON public.notes USING btree (organization_id, created_at DESC, id DESC)",
+		index)
 }
 
 func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {

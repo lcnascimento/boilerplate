@@ -3,7 +3,10 @@ import {
   // example:begin
   NotebookPen,
   // example:end
+  Settings,
   SlidersHorizontal,
+  UserCog,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,37 +18,66 @@ export const NOTES_HREF = "/notes" satisfies Route;
 // example:end
 
 type NavLabelKey = {
-  [N in keyof AppMessages]: `${N}.${Extract<keyof AppMessages[N], string>}`;
+  [N in keyof AppMessages]: {
+    [K in keyof AppMessages[N]]: AppMessages[N][K] extends string
+      ? `${N}.${Extract<K, string>}`
+      : never;
+  }[keyof AppMessages[N]];
 }[keyof AppMessages];
 
 interface NavRoute {
   href: Route;
   labelKey: NavLabelKey;
   icon: LucideIcon;
-  area: "sidebar" | "userMenu";
+  area: NavArea;
 }
 
+type NavArea = "product" | "organization" | "account";
+
 export const navRoutes = [
-  { href: "/", labelKey: "nav.home", icon: House, area: "sidebar" },
+  { href: "/", labelKey: "nav.home", icon: House, area: "product" },
   // example:begin
   {
     href: NOTES_HREF,
     labelKey: "notes.title",
     icon: NotebookPen,
-    area: "sidebar",
+    area: "product",
   },
   // example:end
   {
-    href: "/profile/preferences",
+    href: "/settings/organization",
+    labelKey: "nav.organizationSettings",
+    icon: Settings,
+    area: "organization",
+  },
+  {
+    href: "/settings/members",
+    labelKey: "members.title",
+    icon: Users,
+    area: "organization",
+  },
+  {
+    href: "/settings/account",
+    labelKey: "nav.accountSettings",
+    icon: UserCog,
+    area: "account",
+  },
+  {
+    href: "/settings/preferences",
     labelKey: "nav.preferences",
     icon: SlidersHorizontal,
-    area: "userMenu",
+    area: "account",
   },
 ] as const satisfies readonly NavRoute[];
 
-export function routesIn(area: NavRoute["area"]): NavRoute[] {
+export function routesIn(area: NavArea): NavRoute[] {
   return navRoutes.filter((route) => route.area === area);
 }
+
+export const settingsSections = [
+  { area: "organization", labelKey: "nav.settingsOrganization" },
+  { area: "account", labelKey: "nav.settingsAccount" },
+] as const satisfies readonly { area: NavArea; labelKey: NavLabelKey }[];
 
 export function isActiveHref(pathname: string, href: string): boolean {
   const path = trimTrailingSlash(pathname);

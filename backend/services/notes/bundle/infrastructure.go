@@ -13,10 +13,11 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport"
 )
 
@@ -111,17 +112,29 @@ func newPool(lifecycle fx.Lifecycle) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+func ActorMiddleware() fx.Option {
+	return fx.Module(
+		"Actor Middleware",
+		fx.Provide(fx.Annotate(newActorMiddleware, fx.As(new(transport.Authenticator)))),
+	)
+}
+
+func newActorMiddleware(lifecycle fx.Lifecycle) (*actor.Middleware, error) {
+	cfg, err := config.ActorAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	middleware := actor.NewMiddleware(cfg)
+	lifecycle.Append(fx.Hook{OnStart: middleware.Start, OnStop: middleware.Stop})
+
+	return middleware, nil
+}
+
 func Repositories() fx.Option {
 	return fx.Module(
 		"Repositories",
 		fx.Provide(newSchemaIDs),
 		fx.Provide(fx.Annotate(notes.New, fx.As(new(application.NotesRepository)))),
-	)
-}
-
-func OutboxRepository() fx.Option {
-	return fx.Module(
-		"Outbox Repository",
-		fx.Provide(fx.Annotate(outbox.New, fx.As(new(application.OutboxRepository)))),
 	)
 }

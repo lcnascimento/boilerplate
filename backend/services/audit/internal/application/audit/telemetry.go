@@ -4,7 +4,10 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+
+	otelmetric "go.opentelemetry.io/otel/metric"
 
 	"github.com/lcnascimento/go-kit/o11y/baggage"
 	"github.com/lcnascimento/go-kit/o11y/log"
@@ -19,7 +22,8 @@ var (
 	meter  = otel.Meter(pkg)
 	tracer = otel.Tracer(pkg)
 
-	entriesRecorded = metric.MustIntCounter(meter, "audit.entries.recorded", "Number of Audit Entries recorded, redeliveries included")
+	entriesRecorded = metric.MustIntCounter(meter, "audit.entries.recorded",
+		"Number of Audit Entries recorded, by event type, redeliveries included")
 )
 
 func (a *Application) onRecordStart(ctx context.Context, entry *idomain.Entry) (context.Context, trace.Span) {
@@ -35,8 +39,8 @@ func (a *Application) onRecordStart(ctx context.Context, entry *idomain.Entry) (
 	return ctx, span
 }
 
-func (a *Application) onRecorded(ctx context.Context) {
-	entriesRecorded.Add(ctx, 1)
+func (a *Application) onRecorded(ctx context.Context, entry *idomain.Entry) {
+	entriesRecorded.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("cloudevents.event_type", entry.Type)))
 	logger.Info(ctx, "audit entry recorded")
 }
 

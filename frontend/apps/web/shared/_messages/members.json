@@ -1,0 +1,64 @@
+{
+  "pt-BR": {
+    "title": "Members",
+    "description": "Quem faz parte da Organization ativa e com qual Role.",
+    "tableCaption": "Members da Organization",
+    "nameColumn": "Nome",
+    "emailColumn": "Email",
+    "roleColumn": "Role",
+    "actionsColumn": "Ações",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "viewer": "Viewer"
+    },
+    "nameWithYou": "{name} (você)",
+    "changeRoleOf": "Role de {name}",
+    "roleChanged": "Role atualizada.",
+    "removeMemberOf": "Remover {name}",
+    "removeTitle": "Remover {name}?",
+    "removeDescription": "{name} perde o acesso à Organization em até 5 minutos.",
+    "remove": "Remover",
+    "removed": "Member removido.",
+    "ownerMustTransferHint": "Para mudar de Role ou sair, transfira a propriedade.",
+    "transferOwnership": "Transferir a propriedade",
+    "errors": {
+      "invalidInput": "Confira os dados e tente de novo.",
+      "forbidden": "Sua Role não permite essa ação.",
+      "ownerNotAssignable": "Só a transferência de propriedade torna alguém Owner.",
+      "ownerMustTransfer": "O Owner precisa transferir a propriedade antes.",
+      "unexpected": "Não foi possível concluir. Tente de novo."
+    }
+  },
+  "en": {
+    "title": "Members",
+    "description": "Who belongs to the active Organization and with which Role.",
+    "tableCaption": "Organization Members",
+    "nameColumn": "Name",
+    "emailColumn": "Email",
+    "roleColumn": "Role",
+    "actionsColumn": "Actions",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "viewer": "Viewer"
+    },
+    "nameWithYou": "{name} (you)",
+    "changeRoleOf": "Role of {name}",
+    "roleChanged": "Role updated.",
+    "removeMemberOf": "Remove {name}",
+    "removeTitle": "Remove {name}?",
+    "removeDescription": "{name} loses access to the Organization within 5 minutes.",
+    "remove": "Remove",
+    "removed": "Member removed.",
+    "ownerMustTransferHint": "To change your Role or leave, transfer the ownership.",
+    "transferOwnership": "Transfer the ownership",
+    "errors": {
+      "invalidInput": "Check the details and try again.",
+      "forbidden": "Your Role does not allow this action.",
+      "ownerNotAssignable": "Only an ownership transfer makes someone the Owner.",
+      "ownerMustTransfer": "The Owner must transfer the ownership first.",
+      "unexpected": "Could not finish. Try again."
+    }
+  }
+}

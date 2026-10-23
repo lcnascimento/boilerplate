@@ -11,40 +11,37 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/outbox"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
 const source = "notes"
 
+var Outbox = outbox.MustNew("notes")
+
 var ErrEmit = errors.New("failed to write the Integration Event to the outbox").WithCode("OUTBOX_EMIT")
 
-func (r *Repository) emit(ctx context.Context, tx pgx.Tx, id domain.NoteID, at time.Time, event proto.Message) (err error) {
-	msg, err := r.newMessage(id, at, event)
+func (r *Repository) emit(
+	ctx context.Context, tx pgx.Tx, caller *actor.Actor, id domain.NoteID, at time.Time, event proto.Message,
+) error {
+	msg, err := r.newMessage(caller, id, at, event)
 	if err != nil {
 		return ErrEmit.WithCause(err)
 	}
 
-	ctx, span := onEmitStart(ctx, msg)
-	defer func() { onEmitEnd(span, err) }()
-
-	msg.SetContext(ctx)
-
-	publisher, err := outbox.NewPublisher(tx)
-	if err != nil {
-		return ErrEmit.WithCause(err)
-	}
-
-	if err := publisher.Publish(events.Topic, msg); err != nil {
+	if err := Outbox.Publish(ctx, tx, events.Topic, msg); err != nil {
 		return ErrEmit.WithCause(err)
 	}
 
 	return nil
 }
 
-func (r *Repository) newMessage(id domain.NoteID, at time.Time, event proto.Message) (*message.Message, error) {
+func (r *Repository) newMessage(caller *actor.Actor, id domain.NoteID, at time.Time, event proto.Message) (*message.Message, error) {
 	value, err := r.schemaIDs.Encode(event)
 	if err != nil {
 		return nil, err
@@ -55,15 +52,20 @@ func (r *Repository) newMessage(id domain.NoteID, at time.Time, event proto.Mess
 		return nil, err
 	}
 
-	envelope := events.Envelope{
+	envelope := eventbus.Envelope{
 		ID:              messageID.String(),
 		Source:          source,
 		Type:            string(event.ProtoReflect().Descriptor().FullName()),
 		Time:            at.UTC(),
 		Subject:         id.String(),
 		PartitionKey:    id.String(),
-		SpecVersion:     events.SpecVersion,
-		DataContentType: events.ContentType,
+		SpecVersion:     eventbus.SpecVersion,
+		DataContentType: eventbus.ContentType,
+
+		Origin: eventbus.Origin{
+			ActorID:             caller.UserID.String(),
+			ActorOrganizationID: caller.OrganizationID.String(),
+		},
 	}
 
 	msg := message.NewMessage(envelope.ID, value)

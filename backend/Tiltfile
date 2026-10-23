@@ -85,7 +85,9 @@ if not minimal:
         resource_deps=['grafana'],
     )
 
+include('./services/iam/Tiltfile')
+include('./services/audit/Tiltfile')
+
 # example:begin
 include('./services/notes/Tiltfile')
-include('./services/audit/Tiltfile')
 # example:end

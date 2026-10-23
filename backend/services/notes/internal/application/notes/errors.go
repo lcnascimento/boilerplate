@@ -7,4 +7,6 @@ var (
 	ErrListNotes  = errors.New("failed to list notes")
 	ErrGetNote    = errors.New("failed to get note")
 	ErrDeleteNote = errors.New("failed to delete note")
+
+	ErrDeleteOrganizationNotes = errors.New("failed to delete the notes of an organization")
 )

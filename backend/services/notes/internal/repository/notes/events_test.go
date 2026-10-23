@@ -12,7 +12,13 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	iamdomain "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
+
 	"github.com/lcnascimento/go-kit/postgres/testdb"
+
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes"
@@ -26,7 +32,13 @@ var (
 	noteDeletedType       = string((&events.NoteDeleted{}).ProtoReflect().Descriptor().FullName())
 )
 
-var schemaIDs = events.SchemaIDs{
+var author = &actor.Actor{
+	UserID:         mustParseUserID("user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"),
+	OrganizationID: acme,
+	Role:           authz.RoleAdmin,
+}
+
+var schemaIDs = eventbus.SchemaIDs{
 	noteCreatedType: 7,
 	noteDeletedType: 8,
 }
@@ -38,25 +50,28 @@ func TestComponentRepository_CreateWritesNoteCreated(t *testing.T) {
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC))
 	note.Body = "Leite e pão"
 
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), author, note))
 
 	got := outboxEvents(t, pool)
 	require.Len(t, got, 1)
 	requireEnvelope(t, got[0], map[string]string{
-		"ce_source":       "notes",
-		"ce_type":         noteCreatedType,
-		"ce_time":         "2026-10-10T19:30:00.123456Z",
-		"ce_subject":      note.ID.String(),
-		"ce_partitionkey": note.ID.String(),
-		"ce_specversion":  "1.0",
-		"content-type":    "application/protobuf",
+		"ce_source":              "notes",
+		"ce_type":                noteCreatedType,
+		"ce_time":                "2026-10-10T19:30:00.123456Z",
+		"ce_subject":             note.ID.String(),
+		"ce_partitionkey":        note.ID.String(),
+		"ce_specversion":         "1.0",
+		"content-type":           "application/protobuf",
+		"ce_actorid":             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		"ce_actororganizationid": "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
 	})
 	require.Equal(t, 7, got[0].schemaID)
 	requireProtoEqual(t, &events.NoteCreated{
-		Id:        note.ID.String(),
-		Title:     "Lista de compras",
-		Body:      "Leite e pão",
-		CreatedAt: timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
+		Id:             note.ID.String(),
+		OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+		Title:          "Lista de compras",
+		Body:           "Leite e pão",
+		CreatedAt:      timestamppb.New(time.Date(2026, 10, 10, 19, 30, 0, 123456000, time.UTC)),
 	}, got[0].message)
 }
 
@@ -66,23 +81,28 @@ func TestComponentRepository_DeleteWritesNoteDeletedAtClockTime(t *testing.T) {
 	deletedAt := time.Date(2026, 10, 11, 8, 15, 0, 0, time.UTC)
 	repo, pool := newRepositoryWithPool(t, notes.WithClock(func() time.Time { return deletedAt }))
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, note))
 
-	require.NoError(t, repo.Delete(t.Context(), note.ID))
+	require.NoError(t, repo.Delete(t.Context(), author, note.ID))
 
 	got := outboxEvents(t, pool)
 	require.Len(t, got, 2)
 	requireEnvelope(t, got[1], map[string]string{
-		"ce_source":       "notes",
-		"ce_type":         noteDeletedType,
-		"ce_time":         "2026-10-11T08:15:00Z",
-		"ce_subject":      note.ID.String(),
-		"ce_partitionkey": note.ID.String(),
-		"ce_specversion":  "1.0",
-		"content-type":    "application/protobuf",
+		"ce_source":              "notes",
+		"ce_type":                noteDeletedType,
+		"ce_time":                "2026-10-11T08:15:00Z",
+		"ce_subject":             note.ID.String(),
+		"ce_partitionkey":        note.ID.String(),
+		"ce_specversion":         "1.0",
+		"content-type":           "application/protobuf",
+		"ce_actorid":             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+		"ce_actororganizationid": "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
 	})
 	require.Equal(t, 8, got[1].schemaID)
-	requireProtoEqual(t, &events.NoteDeleted{Id: note.ID.String()}, got[1].message)
+	requireProtoEqual(t, &events.NoteDeleted{
+		Id:             note.ID.String(),
+		OrganizationId: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+	}, got[1].message)
 }
 
 func TestComponentRepository_DeleteWithoutEffectWritesNothing(t *testing.T) {
@@ -90,7 +110,7 @@ func TestComponentRepository_DeleteWithoutEffectWritesNothing(t *testing.T) {
 
 	repo, pool := newRepositoryWithPool(t)
 
-	err := repo.Delete(t.Context(), domain.NewNoteID())
+	err := repo.Delete(t.Context(), acmeOwner, domain.NewNoteID())
 
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 	require.Empty(t, outboxEvents(t, pool))
@@ -101,9 +121,9 @@ func TestComponentRepository_FailedCreateWritesNothing(t *testing.T) {
 
 	repo, pool := newRepositoryWithPool(t)
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, note))
 
-	err := repo.Create(t.Context(), note)
+	err := repo.Create(t.Context(), acmeOwner, note)
 
 	require.ErrorIs(t, err, notes.ErrQuery)
 	require.Len(t, outboxEvents(t, pool), 1)
@@ -114,7 +134,7 @@ func TestComponentRepository_ConcurrentDeletesWriteOneNoteDeleted(t *testing.T) 
 
 	repo, pool := newRepositoryWithPool(t)
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
-	require.NoError(t, repo.Create(t.Context(), note))
+	require.NoError(t, repo.Create(t.Context(), acmeOwner, note))
 
 	const deletes = 8
 
@@ -123,7 +143,7 @@ func TestComponentRepository_ConcurrentDeletesWriteOneNoteDeleted(t *testing.T) 
 	var wg sync.WaitGroup
 
 	for i := range deletes {
-		wg.Go(func() { errs[i] = repo.Delete(t.Context(), note.ID) })
+		wg.Go(func() { errs[i] = repo.Delete(t.Context(), acmeOwner, note.ID) })
 	}
 
 	wg.Wait()
@@ -153,11 +173,11 @@ func TestComponentRepository_OutboxFailureLeavesNoNote(t *testing.T) {
 
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	err = repo.Create(t.Context(), note)
+	err = repo.Create(t.Context(), acmeOwner, note)
 
 	require.ErrorIs(t, err, notes.ErrEmit)
 
-	_, err = repo.Get(t.Context(), note.ID)
+	_, err = repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
 
@@ -168,14 +188,14 @@ func TestComponentRepository_UnregisteredSchemaLeavesNoNote(t *testing.T) {
 		t.Skip("component test: needs Postgres")
 	}
 
-	repo := notes.New(testdb.New(t, migrations.FS), events.SchemaIDs{})
+	repo := notes.New(testdb.New(t, migrations.FS), eventbus.SchemaIDs{})
 	note := newNote("Lista de compras", time.Date(2026, 10, 10, 19, 30, 0, 0, time.UTC))
 
-	err := repo.Create(t.Context(), note)
+	err := repo.Create(t.Context(), acmeOwner, note)
 
-	require.ErrorIs(t, err, events.ErrUnknownSchema)
+	require.ErrorIs(t, err, eventbus.ErrUnknownSchema)
 
-	_, err = repo.Get(t.Context(), note.ID)
+	_, err = repo.Get(t.Context(), note.OrganizationID, note.ID)
 	require.ErrorIs(t, err, domain.ErrNoteNotFound)
 }
 
@@ -209,7 +229,7 @@ func outboxEvents(t *testing.T, pool *pgxpool.Pool) []outboxEvent {
 		}
 		require.NoError(t, json.Unmarshal(raw, &envelope))
 
-		schemaID, message, err := events.Decode(envelope.Metadata["ce_type"], envelope.Payload)
+		schemaID, message, err := eventbus.Decode(envelope.Metadata["ce_type"], envelope.Payload)
 		require.NoError(t, err)
 
 		out = append(out, outboxEvent{
@@ -252,6 +272,15 @@ func eventTypes(list []outboxEvent) []string {
 	}
 
 	return out
+}
+
+func mustParseUserID(s string) iamdomain.UserID {
+	id, err := iamdomain.ParseUserID(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return id
 }
 
 func requireProtoEqual(t *testing.T, want, got proto.Message) {

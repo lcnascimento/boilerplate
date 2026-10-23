@@ -5,8 +5,54 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/config"
 )
+
+func TestActorAuth_Set(t *testing.T) {
+	t.Setenv("AUTH_JWKS_URL", "http://web:3000/api/auth/jwks")
+	t.Setenv("AUTH_ISSUER", "http://web:3000")
+	t.Setenv("AUTH_AUDIENCE", "boilerplate-api")
+
+	cfg, err := config.ActorAuth()
+
+	require.NoError(t, err)
+	require.Equal(t, actor.Config{
+		JWKSURL:  "http://web:3000/api/auth/jwks",
+		Issuer:   "http://web:3000",
+		Audience: "boilerplate-api",
+	}, cfg)
+}
+
+func TestActorAuth_MissingSaysWhichKeyToAdd(t *testing.T) {
+	cases := []struct {
+		key     string
+		missing error
+	}{
+		{"AUTH_JWKS_URL", config.ErrAuthJWKSURLMissing},
+		{"AUTH_ISSUER", config.ErrAuthIssuerMissing},
+		{"AUTH_AUDIENCE", config.ErrAuthAudienceMissing},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv("AUTH_JWKS_URL", "http://web:3000/api/auth/jwks")
+			t.Setenv("AUTH_ISSUER", "http://web:3000")
+			t.Setenv("AUTH_AUDIENCE", "boilerplate-api")
+			t.Setenv(tc.key, "")
+
+			_, err := config.ActorAuth()
+
+			require.ErrorIs(t, err, tc.missing)
+			require.Equal(t,
+				tc.key+" is not set: run `make -C backend env` to add the missing keys of "+
+					"backend/services/notes/.env.example to backend/services/notes/.env",
+				err.Error(),
+			)
+		})
+	}
+}
 
 func TestDatabaseURL_Set(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://user:pass@db:5432/notes")

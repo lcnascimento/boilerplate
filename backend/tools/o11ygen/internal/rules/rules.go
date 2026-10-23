@@ -27,11 +27,17 @@ var fixture = service.Service{
 	Name:         "fixture",
 	SeriesBudget: fixtureSeriesBudget,
 	Processes: []service.Process{
-		service.Daemon("fixture-api", service.API).WithDBPool(),
+		service.Daemon("fixture-api", service.API).WithDBPool().WithActorAuth(),
 		service.Daemon("fixture-consumer", service.Consumer).WithConsumerGroup("fixture"),
-		service.Daemon("fixture-worker", service.Worker),
+		service.Daemon("fixture-worker", service.Worker).WithIdentityChanges(),
 		service.OneShot("fixture-migrate"),
 	},
+}
+
+var nodeFixture = service.Service{
+	Name:      "fixture-node",
+	Runtime:   service.Node,
+	Processes: []service.Process{service.Daemon("fixture-web", service.API).WithActorAuth()},
 }
 
 func Kind() artifact.Kind {
@@ -43,7 +49,7 @@ func Kind() artifact.Kind {
 func FixtureKind() artifact.Kind {
 	return artifact.Kind{
 		Dir:      "config/prometheus/tests",
-		Glob:     "fixture.yaml",
+		Glob:     "fixture*.yaml",
 		LoadedBy: artifact.Promtool,
 		Build: func([]service.Service) ([]artifact.File, error) {
 			file, err := encode(fixture.Name, append(processGroups(&fixture), recordingGroups...)...)
@@ -51,7 +57,12 @@ func FixtureKind() artifact.Kind {
 				return nil, err
 			}
 
-			return []artifact.File{file}, nil
+			node, err := encode(nodeFixture.Name, processGroups(&nodeFixture)...)
+			if err != nil {
+				return nil, err
+			}
+
+			return []artifact.File{file, node}, nil
 		},
 		Queries: queries,
 	}

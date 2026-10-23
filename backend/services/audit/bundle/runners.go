@@ -10,19 +10,21 @@ import (
 
 	"github.com/lcnascimento/go-kit/o11y"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/consumer"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/health"
 )
 
-func Run(app *fx.App) {
-	if code := run(app); code != 0 {
+func Run(newAppAfterO11yStarts func() *fx.App) {
+	if code := run(newAppAfterO11yStarts); code != 0 {
 		os.Exit(code)
 	}
 }
 
-func run(app *fx.App) int {
+func run(newAppAfterO11yStarts func() *fx.App) int {
 	ctx := context.Background()
 
 	o11y.MustStart(ctx)
@@ -32,6 +34,8 @@ func run(app *fx.App) int {
 			onO11yShutdownFailed(ctx, err)
 		}
 	}()
+
+	app := newAppAfterO11yStarts()
 
 	// fx only listens for signals from app.Wait on.
 	startCtx, stopSignals := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
@@ -68,23 +72,23 @@ func consumerOptions() []fx.Option {
 		Repositories(),
 		AuditService(),
 		fx.Provide(newConsumer, newHealthServer),
-		fx.Invoke(func(lifecycle fx.Lifecycle, consumer *consumer.Consumer, server *health.Server) {
+		fx.Invoke(func(lifecycle fx.Lifecycle, consumer *eventbus.Consumer, server *health.Server) {
 			lifecycle.Append(fx.Hook{OnStart: consumer.Start, OnStop: consumer.Stop})
 			lifecycle.Append(fx.Hook{OnStart: server.Start, OnStop: server.Shutdown})
 		}),
 	}
 }
 
-func newConsumer(audit transport.AuditService, shutdowner fx.Shutdowner) (*consumer.Consumer, error) {
+func newConsumer(audit transport.AuditService, shutdowner fx.Shutdowner) (*eventbus.Consumer, error) {
 	brokers, err := config.KafkaBrokers()
 	if err != nil {
 		return nil, err
 	}
 
-	return consumer.New(audit, brokers, consumer.WithShutdown(exitWithFailure(shutdowner))), nil
+	return consumer.New(audit, brokers, eventbus.WithShutdown(exitWithFailure(shutdowner))), nil
 }
 
-func newHealthServer(db transport.Database, c *consumer.Consumer, shutdowner fx.Shutdowner) (*health.Server, error) {
+func newHealthServer(db transport.Database, c *eventbus.Consumer, shutdowner fx.Shutdowner) (*health.Server, error) {
 	port, err := config.HealthPort()
 	if err != nil {
 		return nil, err

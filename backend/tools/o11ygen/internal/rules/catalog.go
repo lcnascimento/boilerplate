@@ -12,6 +12,7 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/slo"
 )
 
 const (
@@ -21,7 +22,11 @@ const (
 
 	sustainedFor = 5 * time.Minute
 
+	IdentityChangeBacklogThreshold = 5 * time.Minute
+
 	seriesBudgetSustainedFor = 15 * time.Minute
+
+	unauthenticatedRatio = "0.1"
 
 	postgresDown     = "PostgresDown"
 	kafkaBrokersDown = "KafkaBrokersDown"
@@ -65,6 +70,12 @@ func (p *process) healthChecks() (names, downAlerts []string) {
 	}
 
 	return names, downAlerts
+}
+
+func (p *process) unauthenticatedRatio() string {
+	q := slo.Unauthenticated(p.service.Runtime, []service.Process{p.Process})
+
+	return fmt.Sprintf("sum(rate(%s{%s, %s}[5m])) / sum(rate(%s{%s}[5m]))", q.Series, q.Selector, q.Matcher, q.Series, q.Selector)
 }
 
 func enumerated(items []string) string {
@@ -139,6 +150,22 @@ var processAlerts = []inheritedAlert{
 		},
 	},
 	{
+		inheritedBy: func(p *process) bool { return p.ActorAuth() },
+		alert: func(p *process) alert {
+			return alert{
+				name:        "AuthenticationFailuresHigh",
+				expr:        p.unauthenticatedRatio() + " > " + unauthenticatedRatio,
+				forDuration: sustainedFor,
+				severity:    warning,
+				summary:     p.Name() + " responde 401 a {{ $value | humanizePercentage }} das requisições",
+				description: "Mais de 10% das requisições de " + p.Name() + " respondem 401 há 5 minutos: " +
+					"credenciais ou tokens recusados em massa. Veja primeiro os motivos na linha Autenticação e " +
+					"autorização do dashboard do serviço.",
+				dashboard: p.service.Name,
+			}
+		},
+	},
+	{
 		inheritedBy: func(p *process) bool { return p.Runs(service.Consumer) },
 		alert: func(p *process) alert {
 			return alert{
@@ -187,6 +214,24 @@ var processAlerts = []inheritedAlert{
 				summary:     p.Name() + " não reporta a idade do outbox há 5 minutos",
 				description: p.Name() + " não reporta " + gauge + ": sem forwarder ninguém esvazia o outbox e os " +
 					"Integration Events param de sair. Veja primeiro se " + p.Name() + " está no ar e os logs dele.",
+				dashboard: p.service.Name,
+			}
+		},
+	},
+	{
+		inheritedBy: func(p *process) bool { return p.IdentityChanges() },
+		alert: func(p *process) alert {
+			return alert{
+				name: "IdentityChangeBacklogHigh",
+				expr: fmt.Sprintf("max(%s%s) > %d",
+					catalog.IAMIdentityChangeOldestPendingAge, p.job(), int(IdentityChangeBacklogThreshold.Seconds())),
+				severity: critical,
+				summary:  p.Name() + " com a mudança de identidade mais antiga há {{ $value | humanizeDuration }} sem tradução",
+				description: "A mudança de identidade pendente mais antiga de " + p.Name() + " passou de " +
+					strconv.Itoa(int(IdentityChangeBacklogThreshold.Minutes())) + " minutos sem virar " +
+					"Integration Event: a tradução parou, ou travou numa mudança que ela não sabe traduzir, e o Audit Log " +
+					"deixa de receber as mudanças de identidade. Veja primeiro os logs de " + p.Name() +
+					" (UNTRANSLATABLE_CHANGE) e a idade da mudança pendente mais antiga no dashboard do serviço.",
 				dashboard: p.service.Name,
 			}
 		},

@@ -5,7 +5,7 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/idomain"
@@ -25,14 +25,14 @@ func (a *Application) Record(ctx context.Context, entry *idomain.Entry) error {
 	defer span.End()
 
 	if err := a.validate(entry); err != nil {
-		return a.onError(ctx, events.ErrPermanent.WithCause(err))
+		return a.onError(ctx, eventbus.ErrPermanent.WithCause(err))
 	}
 
 	if err := a.repo.Insert(ctx, entry); err != nil {
 		return a.onError(ctx, ErrRecordEntry.WithCause(err))
 	}
 
-	a.onRecorded(ctx)
+	a.onRecorded(ctx, entry)
 
 	return nil
 }

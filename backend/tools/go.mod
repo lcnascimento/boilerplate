@@ -2,9 +2,12 @@ module github.com/lcnascimento/boilerplate/backend/tools
 
 go 1.27.3
 
+replace github.com/lcnascimento/boilerplate/backend/services/iam/pkg => ../services/iam/pkg
+
 require (
 	github.com/grafana/grafana-foundation-sdk/go v0.0.20
 	github.com/grafana/loki/v3 v3.7.8
+	github.com/lcnascimento/boilerplate/backend/services/iam/pkg v0.0.0-00010101000000-000000000000
 	github.com/lcnascimento/go-kit/errors v1.9.4
 	github.com/prometheus/common v0.71.0
 	github.com/prometheus/prometheus v0.315.0
@@ -75,7 +78,7 @@ require (
 	github.com/jaegertracing/jaeger-idl v0.6.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.20.0 // indirect
+	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/mdlayher/socket v0.6.0 // indirect
@@ -147,7 +150,7 @@ require (
 	go4.org/netipx v0.0.0-20230125063823-8449b0a6169f // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
-	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
@@ -156,7 +159,7 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
-	google.golang.org/grpc v1.83.2 // indirect
+	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
