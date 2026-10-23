@@ -11,7 +11,8 @@
     "settings": "Configurações",
     "settingsOrganization": "Organization",
     "settingsAccount": "Conta",
-    "organizationSettings": "Configurações"
+    "organizationSettings": "Configurações",
+    "accountSettings": "Configurações"
   },
   "en": {
     "home": "Home",
@@ -25,6 +26,7 @@
     "settings": "Settings",
     "settingsOrganization": "Organization",
     "settingsAccount": "Account",
-    "organizationSettings": "Settings"
+    "organizationSettings": "Settings",
+    "accountSettings": "Settings"
   }
 }

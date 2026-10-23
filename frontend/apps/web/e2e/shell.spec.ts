@@ -86,9 +86,9 @@ test("the Organization menu shows the active Organization and opens its Members"
   await expect(
     settings.getByRole("list", { name: "Organization" }).getByRole("listitem")
   ).toHaveText(["Configurações", "Members"]);
-  await expect(settings.getByRole("list", { name: "Conta" })).toHaveText(
-    "Preferências"
-  );
+  await expect(
+    settings.getByRole("list", { name: "Conta" }).getByRole("listitem")
+  ).toHaveText(["Configurações", "Preferências"]);
   await expect(settings.getByRole("link", { name: "Members" })).toHaveAttribute(
     "aria-current",
     "page"
@@ -101,7 +101,11 @@ test("the User menu opens the Preferences under the settings", async ({
   await page.goto("/");
 
   await page.getByRole("button", { name: "Abrir menu do usuário" }).click();
-  await expect(page.getByRole("menuitem")).toHaveText(["Preferências", "Sair"]);
+  await expect(page.getByRole("menuitem")).toHaveText([
+    "Configurações",
+    "Preferências",
+    "Sair",
+  ]);
   await page.getByRole("menuitem", { name: "Preferências" }).click();
 
   await expect(page).toHaveURL("/settings/preferences");

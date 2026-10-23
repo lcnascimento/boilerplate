@@ -5,6 +5,7 @@ import {
   // example:end
   Settings,
   SlidersHorizontal,
+  UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -54,6 +55,12 @@ export const navRoutes = [
     labelKey: "members.title",
     icon: Users,
     area: "organization",
+  },
+  {
+    href: "/settings/account",
+    labelKey: "nav.accountSettings",
+    icon: UserCog,
+    area: "account",
   },
   {
     href: "/settings/preferences",
