@@ -3,9 +3,10 @@ import { createHmac } from "node:crypto";
 
 import { tryGetCurrentAuthEndpointContext } from "@better-auth/core/context";
 import { getIP } from "better-auth/api";
-import { CompiledQuery, Kysely, PostgresDialect } from "kysely";
+import { CompiledQuery, Kysely, PostgresDialect, sql } from "kysely";
 
 import type { ActorIds } from "./actor-ids";
+import type { SignInFailureReason } from "./login-failures";
 import type { BetterAuthOptions } from "better-auth";
 import type { Pool } from "pg";
 
@@ -90,4 +91,15 @@ export function createAuditedDatabase(
       },
     }),
   });
+}
+
+export async function recordSignInFailure(
+  database: Kysely<unknown>,
+  reason: SignInFailureReason
+): Promise<void> {
+  await sql`INSERT INTO identity_change (table_name, operation, fields, ip_hash)
+            VALUES ('sign_in', 'FAILED', jsonb_build_object('reason', ${reason}::text),
+                    NULLIF(current_setting('app.ip_hash', true), ''))`.execute(
+    database
+  );
 }

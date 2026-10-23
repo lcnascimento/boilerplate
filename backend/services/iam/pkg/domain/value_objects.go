@@ -9,6 +9,7 @@ import (
 const (
 	userIDPrefix         string = "user"
 	organizationIDPrefix string = "org"
+	sessionIDPrefix      string = "session"
 )
 
 type UserID struct {
@@ -52,4 +53,12 @@ func MustParseOrganizationID(s string) OrganizationID {
 
 func OrganizationIDFromUUID(u uuid.UUID) OrganizationID {
 	return OrganizationID{util.CanonicalIDFromUUID(organizationIDPrefix, u)}
+}
+
+type SessionID struct {
+	util.CanonicalID
+}
+
+func SessionIDFromUUID(u uuid.UUID) SessionID {
+	return SessionID{util.CanonicalIDFromUUID(sessionIDPrefix, u)}
 }

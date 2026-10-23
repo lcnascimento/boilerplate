@@ -48,56 +48,116 @@ type changeKind struct {
 	operation string
 }
 
-type userEvent struct {
-	userIDField string
-	message     func(userID string, at *timestamppb.Timestamp) proto.Message
+type translation func(c *Change) (*Event, error)
+
+var translations = map[changeKind]translation{
+	{table: "user", operation: "INSERT"}: userEvent("id", func(userID string, at *timestamppb.Timestamp) proto.Message {
+		return &events.UserCreated{UserId: userID, CreatedAt: at}
+	}),
+	{table: "user", operation: "DELETE"}: userEvent("id", func(userID string, at *timestamppb.Timestamp) proto.Message {
+		return &events.UserDeleted{UserId: userID, DeletedAt: at}
+	}),
+	{table: "account", operation: "UPDATE"}: userEvent("userId", func(userID string, at *timestamppb.Timestamp) proto.Message {
+		return &events.PasswordChanged{UserId: userID, ChangedAt: at}
+	}),
+	{table: "session", operation: "INSERT"}: sessionEvent(func(sessionID, userID string, at *timestamppb.Timestamp) proto.Message {
+		return &events.SessionStarted{SessionId: sessionID, UserId: userID, StartedAt: at}
+	}),
+	{table: "session", operation: "DELETE"}: sessionEvent(func(sessionID, userID string, at *timestamppb.Timestamp) proto.Message {
+		return &events.SessionEnded{SessionId: sessionID, UserId: userID, EndedAt: at}
+	}),
+	{table: "sign_in", operation: "FAILED"}: signInFailed,
 }
 
-var userEvents = map[changeKind]userEvent{
-	{table: "user", operation: "INSERT"}: {
-		userIDField: "id",
-		message: func(userID string, at *timestamppb.Timestamp) proto.Message {
-			return &events.UserCreated{UserId: userID, CreatedAt: at}
-		},
-	},
-	{table: "user", operation: "DELETE"}: {
-		userIDField: "id",
-		message: func(userID string, at *timestamppb.Timestamp) proto.Message {
-			return &events.UserDeleted{UserId: userID, DeletedAt: at}
-		},
-	},
-	{table: "account", operation: "UPDATE"}: {
-		userIDField: "userId",
-		message: func(userID string, at *timestamppb.Timestamp) proto.Message {
-			return &events.PasswordChanged{UserId: userID, ChangedAt: at}
-		},
-	},
+var signInFailureReasons = map[string]events.SignInFailed_Reason{
+	"invalid_credentials": events.SignInFailed_REASON_INVALID_CREDENTIALS,
+	"invalid_input":       events.SignInFailed_REASON_INVALID_INPUT,
 }
 
 func (c *Change) Event() (*Event, error) {
-	translation, ok := userEvents[changeKind{table: c.Table, operation: c.Operation}]
+	translate, ok := translations[changeKind{table: c.Table, operation: c.Operation}]
 	if !ok {
 		return nil, c.untranslatable()
 	}
 
-	raw, err := uuid.Parse(c.Fields[translation.userIDField])
-	if err != nil {
-		return nil, c.untranslatable().WithCause(err)
+	return translate(c)
+}
+
+func userEvent(userIDField string, message func(userID string, at *timestamppb.Timestamp) proto.Message) translation {
+	return func(c *Change) (*Event, error) {
+		userID, err := fieldID(c, userIDField, domain.UserIDFromUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		return c.event(events.UserTopic, userID, message(userID, timestamppb.New(c.OccurredAt))), nil
+	}
+}
+
+func sessionEvent(message func(sessionID, userID string, at *timestamppb.Timestamp) proto.Message) translation {
+	return func(c *Change) (*Event, error) {
+		sessionID, err := fieldID(c, "id", domain.SessionIDFromUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		userID, err := fieldID(c, "userId", domain.UserIDFromUUID)
+		if err != nil {
+			return nil, err
+		}
+
+		event := c.event(events.SessionTopic, sessionID, message(sessionID, userID, timestamppb.New(c.OccurredAt)))
+		if c.ActorID.Valid {
+			return event, nil
+		}
+
+		event.ActorID = userID
+		event.ActorOrganizationID = ""
+
+		if c.Fields["activeOrganizationId"] != "" {
+			event.ActorOrganizationID, err = fieldID(c, "activeOrganizationId", domain.OrganizationIDFromUUID)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return event, nil
+	}
+}
+
+func signInFailed(c *Change) (*Event, error) {
+	reason, ok := signInFailureReasons[c.Fields["reason"]]
+	if !ok {
+		return nil, c.untranslatable().WithAttribute("reason", c.Fields["reason"])
 	}
 
-	userID := domain.UserIDFromUUID(raw).String()
+	return c.event(events.SessionTopic, "", &events.SignInFailed{
+		Reason:   reason,
+		FailedAt: timestamppb.New(c.OccurredAt),
+	}), nil
+}
 
+func (c *Change) event(topic, subject string, message proto.Message) *Event {
 	return &Event{
-		Topic:         events.UserTopic,
-		Subject:       userID,
+		Topic:         topic,
+		Subject:       subject,
 		Time:          c.OccurredAt,
 		CorrelationID: c.TransactionID,
-		Message:       translation.message(userID, timestamppb.New(c.OccurredAt)),
+		Message:       message,
 
 		ActorID:             prefixed(c.ActorID, domain.UserIDFromUUID),
 		ActorOrganizationID: prefixed(c.ActorOrganizationID, domain.OrganizationIDFromUUID),
 		IPHash:              c.IPHash,
-	}, nil
+	}
+}
+
+func fieldID[ID fmt.Stringer](c *Change, field string, fromUUID func(uuid.UUID) ID) (string, error) {
+	raw, err := uuid.Parse(c.Fields[field])
+	if err != nil {
+		return "", c.untranslatable().WithAttribute("field", field).WithCause(err)
+	}
+
+	return fromUUID(raw).String(), nil
 }
 
 func (e *Event) Type() string {

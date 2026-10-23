@@ -13,6 +13,9 @@ import (
 
 var subjects = []string{
 	"boilerplate.iam.v1.PasswordChanged",
+	"boilerplate.iam.v1.SessionEnded",
+	"boilerplate.iam.v1.SessionStarted",
+	"boilerplate.iam.v1.SignInFailed",
 	"boilerplate.iam.v1.UserCreated",
 	"boilerplate.iam.v1.UserDeleted",
 }
