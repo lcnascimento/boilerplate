@@ -95,8 +95,12 @@ class TransactionTrackingKysely extends Kysely<unknown> {
   }
 }
 
+export function openTransaction(): Transaction<unknown> | undefined {
+  return openTransactions.getStore();
+}
+
 export function currentConnection(database: Kysely<unknown>): Kysely<unknown> {
-  return openTransactions.getStore() ?? database;
+  return openTransaction() ?? database;
 }
 
 export function createAuditedDatabase(

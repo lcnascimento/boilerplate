@@ -4,7 +4,9 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { organizationIdSchema, userIdSchema } from "@/shared/auth/actor-ids";
 import { getIam } from "@/shared/auth/auth";
+import { acceptInvitationFor } from "@/shared/auth/invitation-acceptance";
 import {
   createInvitationInputSchema,
   invitableRoleSchema,
@@ -148,14 +150,21 @@ export async function acceptInvitation(
   const parsed = invitationIdInputSchema.safeParse(input);
   if (!parsed.success) return invalidInput;
 
-  const requestHeaders = await headers();
-  await requireSignedIn();
+  const requestHeaders = new Headers(await headers());
+  const { user, session } = await requireSignedIn();
 
   return runInvitationsOperation("invitations.accept", () =>
-    getIam().auth.api.acceptInvitation({
-      headers: requestHeaders,
-      body: parsed.data,
-    })
+    acceptInvitationFor(
+      {
+        userId: userIdSchema.parse(user.id),
+        organizationId:
+          session.activeOrganizationId == null
+            ? null
+            : organizationIdSchema.parse(session.activeOrganizationId),
+      },
+      requestHeaders,
+      parsed.data.invitationId
+    )
   );
 }
 

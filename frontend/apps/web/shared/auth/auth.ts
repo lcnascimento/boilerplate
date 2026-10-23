@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, organization } from "better-auth/plugins";
+import { sql } from "kysely";
 import { Pool } from "pg";
 
 import { listMembersOldestFirst } from "./actor";
@@ -10,6 +11,7 @@ import {
   createAuditedDatabase,
   currentConnection,
   currentConnectionSettings,
+  openTransaction,
   recordSignInFailure,
 } from "./audit-connection";
 import { authRules, authRulesHook } from "./auth-rules";
@@ -52,7 +54,11 @@ function createIam(env: IamEnv) {
     },
     session: { expiresIn: 7 * DAY_SECONDS, updateAge: DAY_SECONDS },
     rateLimit: { storage: "database" },
-    disabledPaths: ["/token", ORGANIZATION_CREATION_PATH],
+    disabledPaths: [
+      "/token",
+      ORGANIZATION_CREATION_PATH,
+      "/organization/accept-invitation",
+    ],
     hooks: {
       before: authRulesHook(authRules),
       after: loginFailureHook((reason) =>
@@ -107,8 +113,17 @@ function createIam(env: IamEnv) {
               ORGANIZATION_CREATION_PATH
           ),
           beforeAcceptInvitation: async ({ user }) => {
+            const transaction = openTransaction();
+            if (transaction === undefined) {
+              throw new Error(
+                "accept an Invitation through acceptInvitationFor, in a transaction"
+              );
+            }
+            await sql`SELECT id FROM "user" WHERE id = ${user.id} FOR UPDATE`.execute(
+              transaction
+            );
             const memberships = await listMembersOldestFirst(
-              currentConnection(database),
+              transaction,
               user.id
             );
             if (memberships.length < ORGANIZATION_LIMIT) return;

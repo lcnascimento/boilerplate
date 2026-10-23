@@ -8,7 +8,9 @@ import {
   vi,
 } from "vitest";
 
+import { userIdSchema } from "./actor-ids";
 import { getIam } from "./auth";
+import { acceptInvitationFor } from "./invitation-acceptance";
 import { ORGANIZATION_LIMIT } from "./policy";
 import { fixtureDatabase } from "./test-database";
 
@@ -50,6 +52,14 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       await database.query(`DELETE FROM organization WHERE id = ANY($1)`, [
         [UMBRELLA, ...DORA_ORGANIZATIONS],
       ]);
+    }
+
+    function acceptAsDora(headers: Headers) {
+      return acceptInvitationFor(
+        { userId: userIdSchema.parse(doraId), organizationId: null },
+        headers,
+        UMBRELLA_INVITATION
+      );
     }
 
     async function sessionOf(user: typeof ANA): Promise<Headers> {
@@ -135,10 +145,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       const headers = await sessionOf(DORA);
       const { auth } = getIam();
 
-      await auth.api.acceptInvitation({
-        headers,
-        body: { invitationId: UMBRELLA_INVITATION },
-      });
+      await acceptAsDora(headers);
 
       expect(await doraMemberships()).toEqual([
         { name: "Umbrella", role: "admin" },
@@ -152,12 +159,7 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       await giveDoraOrganizations(ORGANIZATION_LIMIT);
       await inviteDora(new Date(Date.now() + DAY_MS));
 
-      await expect(
-        getIam().auth.api.acceptInvitation({
-          headers: await sessionOf(DORA),
-          body: { invitationId: UMBRELLA_INVITATION },
-        })
-      ).rejects.toMatchObject({
+      await expect(acceptAsDora(await sessionOf(DORA))).rejects.toMatchObject({
         body: { code: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS" },
       });
 
@@ -165,15 +167,49 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       expect(await umbrellaInvitationStatus()).toBe("pending");
     });
 
+    it("refuses the 11th Organization when another one joins while accepting", async () => {
+      await giveDoraOrganizations(ORGANIZATION_LIMIT - 1);
+      await inviteDora(new Date(Date.now() + DAY_MS));
+      const headers = await sessionOf(DORA);
+      const joining = await database.connect();
+      try {
+        await joining.query("BEGIN");
+        await joining.query(`SELECT id FROM "user" WHERE id = $1 FOR UPDATE`, [
+          doraId,
+        ]);
+        await joining.query(
+          `INSERT INTO organization (id, name, slug, "createdAt")
+           VALUES ($1, 'Dora last', 'invitations-last', now())`,
+          [DORA_ORGANIZATIONS[ORGANIZATION_LIMIT - 1]]
+        );
+        await joining.query(
+          `INSERT INTO member (id, "organizationId", "userId", role, "createdAt")
+           VALUES (gen_random_uuid(), $1, $2, 'viewer', now())`,
+          [DORA_ORGANIZATIONS[ORGANIZATION_LIMIT - 1], doraId]
+        );
+
+        const acceptance = acceptAsDora(headers);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await joining.query("COMMIT");
+
+        await expect(acceptance).rejects.toMatchObject({
+          body: {
+            code: "YOU_HAVE_REACHED_THE_MAXIMUM_NUMBER_OF_ORGANIZATIONS",
+          },
+        });
+      } finally {
+        joining.release();
+      }
+      expect(await doraMemberships()).toEqual([]);
+      expect(await umbrellaInvitationStatus()).toBe("pending");
+    });
+
     it("refuses an expired Invitation", async () => {
       await inviteDora(new Date(Date.now() - 1000));
 
-      await expect(
-        getIam().auth.api.acceptInvitation({
-          headers: await sessionOf(DORA),
-          body: { invitationId: UMBRELLA_INVITATION },
-        })
-      ).rejects.toMatchObject({ body: { code: "INVITATION_NOT_FOUND" } });
+      await expect(acceptAsDora(await sessionOf(DORA))).rejects.toMatchObject({
+        body: { code: "INVITATION_NOT_FOUND" },
+      });
 
       expect(await doraMemberships()).toEqual([]);
     });
