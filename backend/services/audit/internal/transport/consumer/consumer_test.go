@@ -44,7 +44,7 @@ func TestHandle_RecordsAnIamEventAsAnAuditEntry(t *testing.T) {
 		CorrelationID:       "784512",
 	}).Return(nil)
 
-	err := consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), memberRoleChangedEvent())
+	err := consumer.NewHandler(service).Handle(t.Context(), memberRoleChangedEvent())
 
 	require.NoError(t, err)
 }
@@ -67,7 +67,7 @@ func TestHandle_RecordsAnEnvelopeWithoutActorIPHashOrCorrelationWithThemEmpty(t 
 		return nil
 	})
 
-	err := consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), event)
+	err := consumer.NewHandler(service).Handle(t.Context(), event)
 
 	require.NoError(t, err)
 	require.Equal(t, "boilerplate.iam.v1.MemberRoleChanged", recorded.Type)
@@ -98,20 +98,12 @@ func TestHandle_PassesTheServiceErrorThrough(t *testing.T) {
 			service := mocks.NewMockAuditService(gomock.NewController(t))
 			service.EXPECT().Record(gomock.Any(), gomock.Any()).Return(tc.serviceErr)
 
-			err := consumer.New(service, []string{"localhost:9092"}).Handle(t.Context(), memberRoleChangedEvent())
+			err := consumer.NewHandler(service).Handle(t.Context(), memberRoleChangedEvent())
 
 			require.ErrorIs(t, err, errors.ErrMock)
 			require.Equal(t, tc.permanent, errors.Is(err, eventbus.ErrPermanent))
 		})
 	}
-}
-
-func TestReady_FailsBeforeStart(t *testing.T) {
-	t.Parallel()
-
-	service := mocks.NewMockAuditService(gomock.NewController(t))
-
-	require.ErrorIs(t, consumer.New(service, []string{"localhost:9092"}).Ready(t.Context()), consumer.ErrNotConsuming)
 }
 
 func memberRoleChangedEvent() *eventbus.Event {

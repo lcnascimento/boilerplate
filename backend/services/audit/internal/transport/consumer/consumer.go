@@ -2,10 +2,6 @@ package consumer
 
 import (
 	"context"
-	"sync/atomic"
-	"time"
-
-	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
@@ -13,45 +9,27 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport"
 )
 
-const (
-	Group = "audit"
+const Group = "audit"
 
-	runningTimeout = 30 * time.Second
-)
-
-var (
-	ErrNotRunning = errors.New("events subscriber did not start consuming in time").
-			WithCode("SUBSCRIBER_NOT_RUNNING")
-
-	ErrRouterStopped = errors.New("events subscriber stopped while the process was running").
-				WithCode("ROUTER_STOPPED")
-
-	ErrNotConsuming = errors.New("events subscriber is not consuming").WithCode("SUBSCRIBER_NOT_CONSUMING")
-)
-
-type Consumer struct {
-	audit    transport.AuditService
-	brokers  []string
-	shutdown func()
-
-	subscriber atomic.Pointer[eventbus.Subscriber]
-	stopped    atomic.Bool
-	closing    atomic.Bool
-	done       chan struct{}
+type Handler struct {
+	audit transport.AuditService
 }
 
-func New(audit transport.AuditService, brokers []string, opts ...Option) *Consumer {
-	c := &Consumer{audit: audit, brokers: brokers, shutdown: func() {}, done: make(chan struct{})}
-
-	for _, opt := range opts {
-		opt(c)
-	}
-
-	return c
+func New(audit transport.AuditService, brokers []string, opts ...eventbus.ConsumerOption) *eventbus.Consumer {
+	return eventbus.NewConsumer(&eventbus.SubscriberConfig{
+		Brokers: brokers,
+		Group:   Group,
+		Topics:  Topics,
+		Handler: NewHandler(audit),
+	}, opts...)
 }
 
-func (c *Consumer) Handle(ctx context.Context, event *eventbus.Event) error {
-	return c.audit.Record(ctx, &idomain.Entry{
+func NewHandler(audit transport.AuditService) *Handler {
+	return &Handler{audit: audit}
+}
+
+func (h *Handler) Handle(ctx context.Context, event *eventbus.Event) error {
+	return h.audit.Record(ctx, &idomain.Entry{
 		Source:          event.Source,
 		ID:              event.ID,
 		Type:            event.Type,
@@ -70,67 +48,4 @@ func (c *Consumer) Handle(ctx context.Context, event *eventbus.Event) error {
 		IPHash:              event.IPHash,
 		CorrelationID:       event.CorrelationID,
 	})
-}
-
-func (c *Consumer) Start(ctx context.Context) error {
-	subscriber, err := eventbus.NewSubscriber(&eventbus.SubscriberConfig{Brokers: c.brokers, Group: Group, Topics: Topics, Handler: c})
-	if err != nil {
-		return err
-	}
-
-	c.subscriber.Store(subscriber)
-
-	go c.run(context.WithoutCancel(ctx), subscriber)
-
-	ctx, cancel := context.WithTimeout(ctx, runningTimeout)
-	defer cancel()
-
-	select {
-	case <-subscriber.Running():
-		return nil
-	case <-c.done:
-		return ErrRouterStopped
-	case <-ctx.Done():
-		_ = c.Stop(ctx)
-
-		return ErrNotRunning.WithCause(ctx.Err())
-	}
-}
-
-func (c *Consumer) Stop(_ context.Context) error {
-	c.closing.Store(true)
-
-	subscriber := c.subscriber.Load()
-	if subscriber == nil {
-		return nil
-	}
-
-	return subscriber.Close()
-}
-
-func (c *Consumer) Ready(ctx context.Context) error {
-	subscriber := c.subscriber.Load()
-	if subscriber == nil || c.stopped.Load() {
-		return ErrNotConsuming
-	}
-
-	select {
-	case <-subscriber.Running():
-		return subscriber.Ping(ctx)
-	default:
-		return ErrNotConsuming
-	}
-}
-
-func (c *Consumer) run(ctx context.Context, subscriber *eventbus.Subscriber) {
-	defer close(c.done)
-
-	err := subscriber.Run(ctx)
-
-	c.stopped.Store(true)
-
-	if !c.closing.Load() {
-		onRouterStopped(ctx, ErrRouterStopped.WithCause(err))
-		c.shutdown()
-	}
 }

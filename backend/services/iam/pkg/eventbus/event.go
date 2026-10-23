@@ -22,8 +22,19 @@ type Event struct {
 	Topic     string
 	Partition int32
 	Offset    int64
-	// Message is nil when no Go type of the event's ce_type is linked into the process.
-	Message proto.Message
+
+	message proto.Message
+}
+
+func (e *Event) Message() (proto.Message, bool) {
+	return e.message, e.message != nil
+}
+
+func (e *Event) WithMessage(m proto.Message) *Event {
+	with := *e
+	with.message = m
+
+	return &with
 }
 
 func parseEvent(topic string, msg *message.Message) (Event, error) {
@@ -55,6 +66,6 @@ func parseEvent(topic string, msg *message.Message) (Event, error) {
 		Topic:     topic,
 		Partition: partition,
 		Offset:    offset,
-		Message:   decoded,
+		message:   decoded,
 	}, nil
 }

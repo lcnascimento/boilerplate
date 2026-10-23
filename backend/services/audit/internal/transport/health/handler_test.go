@@ -13,7 +13,6 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
-	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/consumer"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/health"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/internal/mocks"
 )
@@ -46,7 +45,7 @@ func TestHealth_Routes(t *testing.T) {
 		},
 		"health is unhealthy when the consumer is not consuming": {
 			path:     "/health",
-			readyErr: consumer.ErrNotConsuming,
+			readyErr: eventbus.ErrNotConsuming,
 			status:   http.StatusServiceUnavailable,
 			body:     `{"message":"unhealthy"}`,
 		},

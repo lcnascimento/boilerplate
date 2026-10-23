@@ -97,7 +97,8 @@ var ada = aggregate{topic: "iam.user.v1", subject: "user_3f2a1b4c-5d6e-4f70-8a9b
 func requireEvent(t *testing.T, got *eventbus.Event, of aggregate, tx transaction, from origin, want proto.Message) {
 	t.Helper()
 
-	require.True(t, proto.Equal(want, got.Message), "want %v, got %v", want, got.Message)
+	message, _ := got.Message()
+	require.True(t, proto.Equal(want, message), "want %v, got %v", want, message)
 	require.Equal(t, of.topic, got.Topic)
 	require.Equal(t, "iam", got.Source)
 	require.Equal(t, string(want.ProtoReflect().Descriptor().FullName()), got.Type)

@@ -51,4 +51,12 @@ var (
 
 	ErrSubscriberStopped = errors.New("subscriber stopped with an error").
 				WithCode("SUBSCRIBER_STOPPED")
+
+	ErrNotRunning = errors.New("events subscriber did not start consuming in time").
+			WithCode("SUBSCRIBER_NOT_RUNNING")
+
+	ErrRouterStopped = errors.New("events subscriber stopped while the process was running").
+				WithCode("ROUTER_STOPPED")
+
+	ErrNotConsuming = errors.New("events subscriber is not consuming").WithCode("SUBSCRIBER_NOT_CONSUMING")
 )

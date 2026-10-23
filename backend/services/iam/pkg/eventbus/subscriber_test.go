@@ -106,7 +106,9 @@ func TestComponentSubscriber_DeliversTheDecodedEvent(t *testing.T) {
 	require.Equal(t, env.Topic, event.Topic)
 	require.Equal(t, int64(0), event.Offset)
 	require.Contains(t, []int32{0, 1, 2}, event.Partition)
-	require.True(t, proto.Equal(sent, event.Message), "want %v, got %v", sent, event.Message)
+	got, ok := event.Message()
+	require.True(t, ok)
+	require.True(t, proto.Equal(sent, got), "want %v, got %v", sent, got)
 
 	schemaID, decoded, err := eventbus.Decode(event.Type, event.Payload)
 	require.NoError(t, err)
@@ -160,7 +162,8 @@ func TestComponentSubscriber_DeliversAnUnknownTypeWithoutMessage(t *testing.T) {
 
 	require.Equal(t, thingArchivedType, got.Type)
 	require.Equal(t, 42, got.SchemaID)
-	require.Nil(t, got.Message)
+	_, decoded := got.Message()
+	require.False(t, decoded)
 	handler.requireNoMoreCalls(t)
 }
 
