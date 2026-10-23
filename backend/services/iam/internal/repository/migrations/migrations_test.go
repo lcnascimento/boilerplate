@@ -19,8 +19,9 @@ const (
 	exclusionViolation = "23P01"
 )
 
-var betterAuthTables = []string{
+var wantTables = []string{
 	"account",
+	"identity_change",
 	"invitation",
 	"jwks",
 	"member",
@@ -29,16 +30,18 @@ var betterAuthTables = []string{
 	"session",
 	"user",
 	"verification",
+	"watermill_iam_outbox",
+	"watermill_offsets_iam_outbox",
 }
 
-func TestComponentMigrations_CreatesTheBetterAuthTables(t *testing.T) {
+func TestComponentMigrations_CreatesTheBetterAuthAndAuditTables(t *testing.T) {
 	t.Parallel()
 
 	db := newDatabase(t)
 
 	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
 
-	require.Equal(t, betterAuthTables, publicTables(t, db))
+	require.Equal(t, wantTables, publicTables(t, db))
 }
 
 func TestComponentMigrations_AcceptsOnlyTheKnownRoles(t *testing.T) {
@@ -128,7 +131,7 @@ func TestComponentMigrations_EveryMigrationRollsBackAndReapplies(t *testing.T) {
 
 	require.Empty(t, publicTables(t, db))
 	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
-	require.Equal(t, betterAuthTables, publicTables(t, db))
+	require.Equal(t, wantTables, publicTables(t, db))
 }
 
 func insertMember(t *testing.T, db *sql.DB, role string) error {

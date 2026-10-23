@@ -1,0 +1,178 @@
+groups:
+  - name: sloth-slo-sli-recordings-iam-outbox-freshness
+    rules:
+      - record: slo:sli_error:ratio_rate5m
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[5m:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 5m
+      - record: slo:sli_error:ratio_rate30m
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[30m:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 30m
+      - record: slo:sli_error:ratio_rate1h
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[1h:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 1h
+      - record: slo:sli_error:ratio_rate2h
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[2h:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 2h
+      - record: slo:sli_error:ratio_rate6h
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[6h:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 6h
+      - record: slo:sli_error:ratio_rate1d
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[1d:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 1d
+      - record: slo:sli_error:ratio_rate3d
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[3d:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 3d
+      - record: slo:sli_error:ratio_rate30d
+        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[30d:1m]))
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_window: 30d
+  - name: sloth-slo-meta-recordings-iam-outbox-freshness
+    rules:
+      - record: slo:objective:ratio
+        expr: vector(0.99)
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+      - record: slo:error_budget:ratio
+        expr: vector(1-0.99)
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+      - record: slo:time_period:days
+        expr: vector(30)
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+      - record: slo:current_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate5m{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"}
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+      - record: slo:period_burn_rate:ratio
+        expr: |
+          slo:sli_error:ratio_rate30d{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"}
+          / on(sloth_id, sloth_slo, sloth_service) group_left
+          slo:error_budget:ratio{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"}
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+      - record: slo:period_error_budget_remaining:ratio
+        expr: 1 - slo:period_burn_rate:ratio{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"}
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+      - record: sloth_slo_info
+        expr: vector(1)
+        labels:
+          service: iam-worker
+          sloth_id: iam-outbox-freshness
+          sloth_mode: cli-gen-prom
+          sloth_objective: "99"
+          sloth_service: iam
+          sloth_slo: outbox-freshness
+          sloth_spec: prometheus/v1
+          sloth_version: v0.16.0
+  - name: sloth-slo-alerts-iam-outbox-freshness
+    rules:
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate5m{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (14.4 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1h{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (14.4 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate30m{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (6 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate6h{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (6 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: iam-worker
+          severity: critical
+          sloth_severity: page
+          sloth_slo: outbox-freshness
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: 'Minutos em que a mensagem pendente mais antiga do outbox de iam tem até 30s, segundo iam-worker. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de iam-worker.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO outbox-freshness de iam-worker queimando o error budget rápido demais: {{ $value | humanizePercentage }} de eventos ruins na janela curta (5m ou 30m)'
+          title: SLO outbox-freshness de iam-worker queimando o error budget rápido demais
+      - alert: SLOBurnRate
+        expr: |
+          (
+              max(slo:sli_error:ratio_rate2h{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (3 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate1d{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (3 * 0.01)) without (sloth_window)
+          )
+          or
+          (
+              max(slo:sli_error:ratio_rate6h{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (1 * 0.01)) without (sloth_window)
+              and
+              max(slo:sli_error:ratio_rate3d{sloth_id="iam-outbox-freshness", sloth_service="iam", sloth_slo="outbox-freshness"} > (1 * 0.01)) without (sloth_window)
+          )
+        labels:
+          service: iam-worker
+          severity: warning
+          sloth_severity: ticket
+          sloth_slo: outbox-freshness
+        annotations:
+          dashboard_url: http://localhost:3010/d/boilerplate-iam
+          description: 'Minutos em que a mensagem pendente mais antiga do outbox de iam tem até 30s, segundo iam-worker. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de iam-worker.'
+          runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+          summary: 'SLO outbox-freshness de iam-worker consumindo o error budget acima do ritmo sustentável: {{ $value | humanizePercentage }} de eventos ruins na janela curta (2h ou 6h)'
+          title: SLO outbox-freshness de iam-worker consumindo o error budget acima do ritmo sustentável
