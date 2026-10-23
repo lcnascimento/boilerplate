@@ -26,6 +26,8 @@ import (
 	"github.com/lcnascimento/go-kit/postgres/testdb"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/eventbustest"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/migrations"
@@ -34,7 +36,6 @@ import (
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/transport/worker/forwarder"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events/eventstest"
 )
 
 var (
@@ -368,11 +369,11 @@ func attributesOf(span sdktrace.ReadOnlySpan) map[string]string {
 }
 
 type env struct {
-	*eventstest.Env
+	*eventbustest.Env
 
 	brokers   []string
 	pool      *pgxpool.Pool
-	schemaIDs events.SchemaIDs
+	schemaIDs eventbus.SchemaIDs
 }
 
 var createTopic sync.Once
@@ -380,11 +381,11 @@ var createTopic sync.Once
 func newEnv(t *testing.T) *env {
 	t.Helper()
 
-	e := eventstest.New(t)
+	e := eventbustest.New(t, events.Protos)
 
 	createTopic.Do(func() { e.CreateTopic(t, events.Topic, 3) })
 
-	schemaIDs, err := events.LookupSchemaIDs(t.Context(), e.Registry(t))
+	schemaIDs, err := eventbus.LookupSchemaIDs(t.Context(), e.Registry(t), events.Protos)
 	require.NoError(t, err)
 
 	return &env{Env: e, brokers: e.Brokers, pool: testdb.New(t, migrations.FS), schemaIDs: schemaIDs}
@@ -412,12 +413,17 @@ func (e *env) startForwarder(t *testing.T) *forwarder.Forwarder {
 func (e *env) subscribe(t *testing.T, ids ...domain.NoteID) *recorder {
 	t.Helper()
 
-	e.CreateTopic(t, events.DLQTopic(events.Topic, e.Group), 1)
+	e.CreateTopic(t, eventbus.DLQTopic(events.Topic, e.Group), 1)
 
-	r := &recorder{events: make(chan *events.Event, 1000), wanted: map[string]bool{}, seen: map[string]bool{}}
+	r := &recorder{events: make(chan *eventbus.Event, 1000), wanted: map[string]bool{}, seen: map[string]bool{}}
 	r.want(ids...)
 
-	subscriber, err := events.NewSubscriber(events.SubscriberConfig{Brokers: e.brokers, Group: e.Group, Observer: r})
+	subscriber, err := eventbus.NewSubscriber(&eventbus.SubscriberConfig{
+		Brokers: e.brokers,
+		Group:   e.Group,
+		Topics:  []string{events.Topic},
+		Handler: r,
+	})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -447,15 +453,13 @@ func (e *env) subscribe(t *testing.T, ids ...domain.NoteID) *recorder {
 }
 
 type recorder struct {
-	events.UnimplementedObserver
-
 	mu     sync.Mutex
 	wanted map[string]bool
 	seen   map[string]bool
-	events chan *events.Event
+	events chan *eventbus.Event
 }
 
-func (r *recorder) OnAny(_ context.Context, event *events.Event) error {
+func (r *recorder) Handle(_ context.Context, event *eventbus.Event) error {
 	r.mu.Lock()
 
 	wanted := r.wanted[event.Subject]
@@ -482,7 +486,7 @@ func (r *recorder) want(ids ...domain.NoteID) {
 	}
 }
 
-func (r *recorder) next(t *testing.T) *events.Event {
+func (r *recorder) next(t *testing.T) *eventbus.Event {
 	t.Helper()
 
 	select {

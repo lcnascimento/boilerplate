@@ -13,6 +13,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/notes/internal/db"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/domain"
@@ -24,11 +25,11 @@ var ErrQuery = errors.New("notes query failed")
 type Repository struct {
 	pool      *pgxpool.Pool
 	queries   *db.Queries
-	schemaIDs events.SchemaIDs
+	schemaIDs eventbus.SchemaIDs
 	now       func() time.Time
 }
 
-func New(pool *pgxpool.Pool, schemaIDs events.SchemaIDs, opts ...Option) *Repository {
+func New(pool *pgxpool.Pool, schemaIDs eventbus.SchemaIDs, opts ...Option) *Repository {
 	r := &Repository{pool: pool, queries: db.New(pool), schemaIDs: schemaIDs, now: time.Now}
 
 	for _, opt := range opts {

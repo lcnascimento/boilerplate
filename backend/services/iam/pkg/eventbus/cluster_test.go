@@ -1,4 +1,4 @@
-package events_test
+package eventbus_test
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events/eventstest"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/eventbustest"
 )
 
 const healthCheckBudget = 2 * time.Second
@@ -21,9 +21,9 @@ func TestComponentCluster_PingAnswersWhileTheBrokerIsUp(t *testing.T) {
 
 	t.Parallel()
 
-	env := eventstest.New(t)
+	env := eventbustest.New(t)
 
-	cluster, err := events.DialCluster(env.Brokers, env.Topic)
+	cluster, err := eventbus.DialCluster(env.Brokers, env.Topic)
 	require.NoError(t, err)
 
 	t.Cleanup(func() { _ = cluster.Close() })
@@ -38,14 +38,14 @@ func TestComponentCluster_PingFailsWithinAHealthCheckOnceTheBrokerIsGone(t *test
 
 	t.Parallel()
 
-	container, err := redpanda.Run(t.Context(), eventstest.Image)
+	container, err := redpanda.Run(t.Context(), eventbustest.Image)
 	testcontainers.CleanupContainer(t, container)
 	require.NoError(t, err)
 
 	broker, err := container.KafkaSeedBroker(t.Context())
 	require.NoError(t, err)
 
-	cluster, err := events.DialCluster([]string{broker})
+	cluster, err := eventbus.DialCluster([]string{broker})
 	require.NoError(t, err)
 
 	t.Cleanup(func() { _ = cluster.Close() })
@@ -56,7 +56,7 @@ func TestComponentCluster_PingFailsWithinAHealthCheckOnceTheBrokerIsGone(t *test
 	for range 3 {
 		started := time.Now()
 
-		require.ErrorIs(t, cluster.Ping(t.Context()), events.ErrKafkaUnavailable)
+		require.ErrorIs(t, cluster.Ping(t.Context()), eventbus.ErrKafkaUnavailable)
 		require.Less(t, time.Since(started), healthCheckBudget)
 	}
 }
@@ -64,7 +64,7 @@ func TestComponentCluster_PingFailsWithinAHealthCheckOnceTheBrokerIsGone(t *test
 func TestDialCluster_FailsWithoutABroker(t *testing.T) {
 	t.Parallel()
 
-	_, err := events.DialCluster([]string{"127.0.0.1:1"})
+	_, err := eventbus.DialCluster([]string{"127.0.0.1:1"})
 
-	require.ErrorIs(t, err, events.ErrKafkaUnavailable)
+	require.ErrorIs(t, err, eventbus.ErrKafkaUnavailable)
 }

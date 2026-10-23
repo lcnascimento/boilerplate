@@ -18,4 +18,6 @@ type Entry struct {
 
 	ActorID             string `json:"actor_id"`
 	ActorOrganizationID string `json:"actor_organization_id"`
+	IPHash              string `json:"ip_hash"`
+	CorrelationID       string `json:"correlation_id"`
 }

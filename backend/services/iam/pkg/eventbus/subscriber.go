@@ -1,8 +1,9 @@
-package events
+package eventbus
 
 import (
 	"context"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -24,9 +25,10 @@ const (
 )
 
 type SubscriberConfig struct {
-	Brokers  []string
-	Group    string
-	Observer Observer
+	Brokers []string
+	Group   string
+	Topics  []string
+	Handler Handler
 }
 
 func DLQTopic(topic, group string) string {
@@ -34,9 +36,8 @@ func DLQTopic(topic, group string) string {
 }
 
 type Subscriber struct {
-	topic    string
-	group    string
-	observer Observer
+	group   string
+	handler Handler
 
 	router     *message.Router
 	subscriber *kafka.Subscriber
@@ -44,18 +45,19 @@ type Subscriber struct {
 	cluster    *Cluster
 }
 
-func NewSubscriber(cfg SubscriberConfig) (*Subscriber, error) {
-	return newSubscriber(cfg, Topic)
-}
-
-func newSubscriber(cfg SubscriberConfig, topic string) (*Subscriber, error) {
-	if len(cfg.Brokers) == 0 || cfg.Group == "" || cfg.Observer == nil {
+func NewSubscriber(cfg *SubscriberConfig) (*Subscriber, error) {
+	if cfg == nil || len(cfg.Brokers) == 0 || cfg.Group == "" || len(cfg.Topics) == 0 || cfg.Handler == nil {
 		return nil, ErrInvalidSubscriberConfig
 	}
 
-	s := &Subscriber{topic: topic, group: cfg.Group, observer: cfg.Observer}
+	s := &Subscriber{group: cfg.Group, handler: cfg.Handler}
 
-	if err := checkTopics(cfg.Brokers, s.topic, s.dlqTopic()); err != nil {
+	topics := slices.Clone(cfg.Topics)
+	for _, topic := range cfg.Topics {
+		topics = append(topics, DLQTopic(topic, s.group))
+	}
+
+	if err := checkTopics(cfg.Brokers, topics...); err != nil {
 		return nil, err
 	}
 
@@ -63,7 +65,7 @@ func newSubscriber(cfg SubscriberConfig, topic string) (*Subscriber, error) {
 		return nil, err
 	}
 
-	cluster, err := DialCluster(cfg.Brokers, s.topic, s.dlqTopic())
+	cluster, err := DialCluster(cfg.Brokers, topics...)
 	if err != nil {
 		_ = s.subscriber.Close()
 		_ = s.dlq.Close()
@@ -73,25 +75,16 @@ func newSubscriber(cfg SubscriberConfig, topic string) (*Subscriber, error) {
 
 	s.cluster = cluster
 
-	poisonQueue, err := middleware.PoisonQueueWithFilter(dlqPublisher{s}, s.dlqTopic(), isPermanent)
-	if err != nil {
-		return nil, ErrInvalidSubscriberConfig.WithCause(err)
-	}
-
 	s.router, err = message.NewRouter(message.RouterConfig{}, watermill.NopLogger{})
 	if err != nil {
 		return nil, ErrInvalidSubscriberConfig.WithCause(err)
 	}
 
-	retry := middleware.Retry{
-		MaxRetries:      math.MaxInt32,
-		InitialInterval: retryInitialInterval,
-		MaxInterval:     retryMaxInterval,
-		Multiplier:      retryMultiplier,
+	for _, topic := range cfg.Topics {
+		if err := s.route(topic); err != nil {
+			return nil, err
+		}
 	}
-
-	s.router.AddMiddleware(s.trackDelivery, poisonQueue, retry.Middleware, s.attempt, middleware.Recoverer)
-	s.router.AddConsumerHandler(handlerName, s.topic, s.subscriber, s.handle)
 
 	return s, nil
 }
@@ -127,8 +120,25 @@ func (s *Subscriber) Close() error {
 	return nil
 }
 
-func (s *Subscriber) dlqTopic() string {
-	return DLQTopic(s.topic, s.group)
+func (s *Subscriber) route(topic string) error {
+	poisonQueue, err := middleware.PoisonQueueWithFilter(dlqPublisher{s: s, topic: topic}, DLQTopic(topic, s.group), isPermanent)
+	if err != nil {
+		return ErrInvalidSubscriberConfig.WithCause(err)
+	}
+
+	retry := middleware.Retry{
+		MaxRetries:      math.MaxInt32,
+		InitialInterval: retryInitialInterval,
+		MaxInterval:     retryMaxInterval,
+		Multiplier:      retryMultiplier,
+	}
+
+	h := topicHandler{s: s, topic: topic}
+
+	handler := s.router.AddConsumerHandler(topic, topic, s.subscriber, h.handle)
+	handler.AddMiddleware(h.trackDelivery, poisonQueue, retry.Middleware, h.attempt, middleware.Recoverer)
+
+	return nil
 }
 
 func (s *Subscriber) connect(brokers []string) error {
@@ -194,27 +204,32 @@ func originalKey(_ string, msg *message.Message) (string, error) {
 	return string(key), nil
 }
 
-func (s *Subscriber) handle(msg *message.Message) error {
-	event, err := parseEvent(s.topic, msg)
+type topicHandler struct {
+	s     *Subscriber
+	topic string
+}
+
+func (h topicHandler) handle(msg *message.Message) error {
+	event, err := parseEvent(h.topic, msg)
 	if err != nil {
 		return ErrPermanent.WithCause(err)
 	}
 
-	return notify(msg.Context(), s.observer, &event)
+	return h.s.handler.Handle(msg.Context(), &event)
 }
 
-func (s *Subscriber) trackDelivery(h message.HandlerFunc) message.HandlerFunc {
+func (h topicHandler) trackDelivery(next message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 		msg.SetContext(withDelivery(msg.Context()))
 
-		produced, err := h(msg)
-		s.onConsumed(msg, err)
+		produced, err := next(msg)
+		h.s.onConsumed(h.topic, msg, err)
 
 		return produced, err
 	}
 }
 
-func (s *Subscriber) attempt(h message.HandlerFunc) message.HandlerFunc {
+func (h topicHandler) attempt(next message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 		d := deliveryFrom(msg.Context())
 		d.attempt++
@@ -222,10 +237,10 @@ func (s *Subscriber) attempt(h message.HandlerFunc) message.HandlerFunc {
 		original := msg.Context()
 		defer msg.SetContext(original)
 
-		ctx, end := s.onAttemptStart(msg, d.attempt)
+		ctx, end := h.s.onAttemptStart(h.topic, msg, d.attempt)
 		msg.SetContext(ctx)
 
-		produced, err := h(msg)
+		produced, err := next(msg)
 		err = classify(err)
 		end(err)
 
@@ -266,7 +281,8 @@ func isPermanent(err error) bool {
 }
 
 type dlqPublisher struct {
-	s *Subscriber
+	s     *Subscriber
+	topic string
 }
 
 func (p dlqPublisher) Publish(topic string, messages ...*message.Message) error {
@@ -275,7 +291,7 @@ func (p dlqPublisher) Publish(topic string, messages ...*message.Message) error 
 	}
 
 	for _, msg := range messages {
-		p.s.onDeadLettered(msg)
+		p.s.onDeadLettered(p.topic, msg)
 	}
 
 	return nil

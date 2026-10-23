@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package boilerplate.eventbustest.v1;
+
+option go_package = "github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus/internal/testevents;testevents";
+
+message ThingDeleted {
+  string id = 1;
+}

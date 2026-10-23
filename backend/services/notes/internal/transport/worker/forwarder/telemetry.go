@@ -18,6 +18,8 @@ import (
 	"github.com/lcnascimento/go-kit/o11y/log"
 	"github.com/lcnascimento/go-kit/o11y/metric"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
 
@@ -94,7 +96,7 @@ func onSendStart(msg *message.Message, topic string, attempt int) func(error) {
 
 	attributes := append(commonAttributes(topic), deliveryAttempt(attempt))
 
-	if envelope, err := events.ParseEnvelope(msg.Metadata); err == nil {
+	if envelope, err := eventbus.ParseEnvelope(msg.Metadata); err == nil {
 		attributes = append(attributes,
 			semconv.MessagingMessageID(envelope.ID),
 			semconv.MessagingKafkaMessageKey(envelope.PartitionKey),

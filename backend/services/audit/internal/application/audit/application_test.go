@@ -10,7 +10,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/validator"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application/audit"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/application/internal/mocks"
@@ -36,7 +36,7 @@ func TestRecord_RepositoryErrorIsTransient(t *testing.T) {
 
 	require.ErrorIs(t, err, audit.ErrRecordEntry)
 	require.ErrorIs(t, err, errors.ErrMock)
-	require.NotErrorIs(t, err, events.ErrPermanent)
+	require.NotErrorIs(t, err, eventbus.ErrPermanent)
 }
 
 func TestRecord_InvalidEnvelopeIsPermanentAndNotInserted(t *testing.T) {
@@ -64,7 +64,7 @@ func TestRecord_InvalidEnvelopeIsPermanentAndNotInserted(t *testing.T) {
 
 			err := audit.New(repo, newValidator(t)).Record(t.Context(), entry)
 
-			require.ErrorIs(t, err, events.ErrPermanent)
+			require.ErrorIs(t, err, eventbus.ErrPermanent)
 			require.ErrorIs(t, err, audit.ErrInvalidEnvelope)
 			require.Contains(t, errors.SafeReasons(err), tc.reason)
 		})

@@ -30,6 +30,8 @@ type row struct {
 
 	ActorID             *string
 	ActorOrganizationID *string
+	IPHash              *string
+	CorrelationID       *string
 }
 
 func TestComponentRepository_InsertStoresEveryField(t *testing.T) {
@@ -38,29 +40,31 @@ func TestComponentRepository_InsertStoresEveryField(t *testing.T) {
 	pool := newPool(t)
 	repo := entries.New(pool)
 
-	require.NoError(t, repo.Insert(t.Context(), noteCreatedEntry()))
+	require.NoError(t, repo.Insert(t.Context(), userCreatedEntry()))
 
 	rows := readRows(t, pool)
 	require.Len(t, rows, 1)
 	require.Equal(t, row{
-		Source:          "notes",
+		Source:          "iam",
 		ID:              "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-		Type:            "boilerplate.notes.v1.NoteCreated",
+		Type:            "boilerplate.iam.v1.UserCreated",
 		SpecVersion:     "1.0",
-		Subject:         new("note_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00"),
+		Subject:         new("user_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00"),
 		Time:            time.Date(2026, 10, 17, 12, 30, 0, 123456000, time.UTC),
 		DataContentType: "application/protobuf",
 		Headers: map[string]string{
 			"ce_id":     "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-			"ce_source": "notes",
+			"ce_source": "iam",
 		},
 		Payload:        []byte{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0a, 0x02, 'h', 'i'},
-		KafkaTopic:     "notes.note.v1",
+		KafkaTopic:     "iam.user.v1",
 		KafkaPartition: 2,
 		KafkaOffset:    41,
 
 		ActorID:             new("user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"),
 		ActorOrganizationID: new("org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f"),
+		IPHash:              new("5d41402abc4b2a76b9719d911017c592ae0b6a0f7d5b3e1c2a4f6e8d0b1c3a5f"),
+		CorrelationID:       new("784512"),
 	}, rows[0])
 }
 
@@ -68,7 +72,7 @@ func TestComponentRepository_InsertWithoutSubjectStoresNull(t *testing.T) {
 	t.Parallel()
 
 	pool := newPool(t)
-	entry := noteCreatedEntry()
+	entry := userCreatedEntry()
 	entry.Subject = ""
 
 	require.NoError(t, entries.New(pool).Insert(t.Context(), entry))
@@ -78,13 +82,15 @@ func TestComponentRepository_InsertWithoutSubjectStoresNull(t *testing.T) {
 	require.Nil(t, rows[0].Subject)
 }
 
-func TestComponentRepository_InsertWithoutActorStoresNull(t *testing.T) {
+func TestComponentRepository_InsertWithoutActorIPHashOrCorrelationStoresNull(t *testing.T) {
 	t.Parallel()
 
 	pool := newPool(t)
-	entry := noteCreatedEntry()
+	entry := userCreatedEntry()
 	entry.ActorID = ""
 	entry.ActorOrganizationID = ""
+	entry.IPHash = ""
+	entry.CorrelationID = ""
 
 	require.NoError(t, entries.New(pool).Insert(t.Context(), entry))
 
@@ -92,6 +98,8 @@ func TestComponentRepository_InsertWithoutActorStoresNull(t *testing.T) {
 	require.Len(t, rows, 1)
 	require.Nil(t, rows[0].ActorID)
 	require.Nil(t, rows[0].ActorOrganizationID)
+	require.Nil(t, rows[0].IPHash)
+	require.Nil(t, rows[0].CorrelationID)
 }
 
 func TestComponentRepository_InsertOfSameSourceAndIDKeepsTheOriginal(t *testing.T) {
@@ -100,9 +108,9 @@ func TestComponentRepository_InsertOfSameSourceAndIDKeepsTheOriginal(t *testing.
 	pool := newPool(t)
 	repo := entries.New(pool)
 
-	require.NoError(t, repo.Insert(t.Context(), noteCreatedEntry()))
+	require.NoError(t, repo.Insert(t.Context(), userCreatedEntry()))
 
-	redelivered := noteCreatedEntry()
+	redelivered := userCreatedEntry()
 	redelivered.Payload = []byte("other")
 	redelivered.KafkaPartition = 0
 	redelivered.KafkaOffset = 99
@@ -122,9 +130,9 @@ func TestComponentRepository_InsertOfSameIDFromAnotherSourceIsAnotherEntry(t *te
 	pool := newPool(t)
 	repo := entries.New(pool)
 
-	require.NoError(t, repo.Insert(t.Context(), noteCreatedEntry()))
+	require.NoError(t, repo.Insert(t.Context(), userCreatedEntry()))
 
-	other := noteCreatedEntry()
+	other := userCreatedEntry()
 	other.Source = "billing"
 
 	require.NoError(t, repo.Insert(t.Context(), other))
@@ -138,31 +146,33 @@ func TestComponentRepository_InsertFailsWhenTheDatabaseIsClosed(t *testing.T) {
 	pool := newPool(t)
 	pool.Close()
 
-	err := entries.New(pool).Insert(t.Context(), noteCreatedEntry())
+	err := entries.New(pool).Insert(t.Context(), userCreatedEntry())
 
 	require.ErrorIs(t, err, entries.ErrQuery)
 }
 
-func noteCreatedEntry() *idomain.Entry {
+func userCreatedEntry() *idomain.Entry {
 	return &idomain.Entry{
-		Source:          "notes",
+		Source:          "iam",
 		ID:              "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-		Type:            "boilerplate.notes.v1.NoteCreated",
+		Type:            "boilerplate.iam.v1.UserCreated",
 		SpecVersion:     "1.0",
-		Subject:         "note_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
+		Subject:         "user_0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b00",
 		Time:            time.Date(2026, 10, 17, 12, 30, 0, 123456000, time.UTC),
 		DataContentType: "application/protobuf",
 		Headers: map[string]string{
 			"ce_id":     "0199d9a8-6f1e-7c3a-9b1e-2f6d1c0a4b5e",
-			"ce_source": "notes",
+			"ce_source": "iam",
 		},
 		Payload:        []byte{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0a, 0x02, 'h', 'i'},
-		KafkaTopic:     "notes.note.v1",
+		KafkaTopic:     "iam.user.v1",
 		KafkaPartition: 2,
 		KafkaOffset:    41,
 
 		ActorID:             "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		ActorOrganizationID: "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f",
+		IPHash:              "5d41402abc4b2a76b9719d911017c592ae0b6a0f7d5b3e1c2a4f6e8d0b1c3a5f",
+		CorrelationID:       "784512",
 	}
 }
 
@@ -172,7 +182,7 @@ func readRows(t *testing.T, pool *pgxpool.Pool) []row {
 	rows, err := pool.Query(t.Context(), `
 		SELECT source, id, type, spec_version, subject, time, data_content_type,
 			headers, payload, kafka_topic, kafka_partition, kafka_offset,
-			actor_id, actor_organization_id
+			actor_id, actor_organization_id, ip_hash, correlation_id
 		FROM audit_entries ORDER BY source, id`)
 	require.NoError(t, err)
 
@@ -186,7 +196,7 @@ func readRows(t *testing.T, pool *pgxpool.Pool) []row {
 		require.NoError(t, rows.Scan(
 			&r.Source, &r.ID, &r.Type, &r.SpecVersion, &r.Subject, &r.Time, &r.DataContentType,
 			&r.Headers, &r.Payload, &r.KafkaTopic, &r.KafkaPartition, &r.KafkaOffset,
-			&r.ActorID, &r.ActorOrganizationID,
+			&r.ActorID, &r.ActorOrganizationID, &r.IPHash, &r.CorrelationID,
 		))
 
 		r.Time = r.Time.UTC()

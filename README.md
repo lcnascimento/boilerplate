@@ -74,9 +74,11 @@ A UI do Tilt fica em <http://localhost:10350>. Ela sobe:
 | Redpanda Console (tópicos, mensagens e schemas) | <http://localhost:8085> |
 | Prometheus, Loki, Tempo, Pyroscope, Alloy | `9090`, `3100`, `3200`, `4040`, `12345` (links na UI do Tilt) |
 
+O consumer do `audit` grava cada Integration Event dos tópicos `iam.user.v1`, `iam.session.v1`, `iam.organization.v1` e `iam.invitation.v1` como Audit Entry no banco `audit`, sem interpretar o payload, e guarda o Actor, o hash do IP de origem e o id de correlação que chegam nas extensões CloudEvents `ce_actorid`, `ce_actororganizationid`, `ce_iphash` e `ce_correlationid` (vazias quando o evento não as traz). O health dele fica em <http://localhost:8092> (`/health`, `/ping`). O envelope, as extensões e o subscriber Kafka ficam em `backend/services/iam/pkg/eventbus`, compartilhado por quem publica e por quem consome.
+
 <!-- example:begin -->
 
-E cada serviço Go na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`), o forwarder do `notes` em <http://localhost:8091> (`/health`, `/ping`) e o consumer do `audit`, que grava cada Integration Event de `notes.note.v1` como Audit Entry no banco `audit`, com health em <http://localhost:8092> (`/health`, `/ping`).
+E cada serviço Go de exemplo na sua porta: o `notes` em <http://localhost:8080> (`/health`, `/ping`, `/notes/v1/notes`) e o forwarder do `notes` em <http://localhost:8091> (`/health`, `/ping`). O `audit` também consome o `notes.note.v1`.
 
 <!-- example:end -->
 
@@ -122,9 +124,11 @@ Cada processo também herda os SLOs padrão dos componentes que declara, todos c
 
 Cada serviço declarado ganha um dashboard gerado, com UID `boilerplate-<serviço>` (o mesmo do `dashboard_url` dos alertas dos processos dele), sem variável `$service`. No topo ficam o SLI atual, o budget restante de 30 dias e o burn rate de cada SLO, lidos das recording rules do Sloth, e a lista dos alertas do serviço. Abaixo vem uma seção por componente declarado: `api` (taxa, % de 5xx, latência p50, p90 e p99 total e por rota, um painel por percentil, 4xx/5xx por rota), `consumer` (mensagens/s com sucesso e falha, duração p50, p90 e p99, retentativas, lag do group, envios à DLQ por causa) e `worker` (idade da pendente mais antiga, envios/s, duração do envio p50, p90 e p99, limpeza, réplicas reportando), com o limite do SLO desenhado nos painéis de latência e frescor e exemplars nos de latência. Por fim, Runtime (goroutines, memória, GC) e Banco (pool pgx e conexões no servidor por `application_name`), colapsadas, e Logs (volume por nível e logs de erro), todas filtradas pela variável `$process`. Os links do topo abrem os apps Drilldown de Traces, Logs e Profiles já filtrados pelos processos do serviço e pelo intervalo, e cada série do painel de latência por rota abre os traces lentos daquela rota.
 
+O `audit-consumer` herda o alerta de lag e o de DLQ do group `audit`.
+
 <!-- example:begin -->
 
-No exemplo, o `audit-consumer` herda o alerta de lag e o de DLQ do group `audit`, e o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. A seção `worker` do dashboard `notes` mostra a idade da pendente mais antiga, os envios ao Kafka e a limpeza do outbox.
+No exemplo, o `notes-worker-forwarder` herda o `OutboxAgeAbsent`, que dispara quando ele não reporta a idade do outbox do `notes` por 5 minutos, já que sem forwarder ninguém esvazia o outbox. A seção `worker` do dashboard `notes` mostra a idade da pendente mais antiga, os envios ao Kafka e a limpeza do outbox.
 
 <!-- example:end -->
 
@@ -392,16 +396,16 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
 
 ## Removendo o exemplo
 
-Para começar sem os serviços de exemplo `notes` e `audit`:
+Para começar sem o serviço de exemplo `notes`:
 
 ```sh
 make clean-example
 ```
 
 - É opcional e independente do `make init`: rode antes, depois ou nunca.
-- Mantém o `iam` inteiro: login, cadastro, troca de Organization e gestão de Members continuam funcionando, e o `make iam.generate`, que o script roda, deixa no `roles.gen.ts` só as Permissions de membership.
-- Apaga os arquivos do exemplo (`backend/services/notes/`, `backend/services/audit/`, os testes das Permissions de Note em `iam/pkg/roles`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
+- Mantém o `iam` e o `audit` inteiros (o `audit` passa a consumir só os tópicos `iam.*`): login, cadastro, troca de Organization e gestão de Members continuam funcionando, e o `make iam.generate`, que o script roda, deixa no `roles.gen.ts` só as Permissions de membership.
+- Apaga os arquivos do exemplo (`backend/services/notes/`, os testes das Permissions de Note em `iam/pkg/roles`, a coleção Bruno `Notes`, `openapi/notes.yaml`, as telas e a action do `notes`, `frontend/packages/api/src/notes/`, as mensagens `notes` e os cenários e2e dele) e todo trecho entre cercas `example:begin` / `example:end` nos arquivos compartilhados, este README incluído (cercas em comentário HTML). Falha se sobrar alguma cerca.
 - Exige a árvore git limpa e o pnpm/Node instalados, e não faz commit. Depois de rodar com sucesso, se apaga junto com o alvo `clean-example` e esta seção do README. Para desfazer antes do commit: `git checkout . && git clean -fd`.
 - Tirar as cercas pode deixar código fora do formato do prettier (um import que passa a caber numa linha, um array vazio). Por isso o script termina com `pnpm install` (na raiz e em `frontend/`) e `pnpm -C frontend format`; falta só revisar o diff e commitar.
 
-O estado sem os serviços de exemplo também é válido e fica verde: o `go.work` fica com `quality`, `tools`, `services/iam` e `services/iam/pkg` (`make lint` e `make test` passam, com o squawk nas migrations do `iam`), o `tilt up` sobe o Postgres, a observabilidade, a cadeia do `iam` e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/` (a home depois do login), `/sign-in`, `/sign-up`, `/settings/members`, `/profile/preferences` e o `not-found`, o e2e roda os testes do shell, de login, cadastro, Organizations e Members, e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`). Um serviço novo entra como diz [Como adicionar um serviço](#como-adicionar-um-serviço), já com o `actor.NewMiddleware` para autenticar as rotas.
+O estado sem os serviços de exemplo também é válido e fica verde: o `go.work` fica com `quality`, `tools`, `services/audit`, `services/iam` e `services/iam/pkg` (`make lint` e `make test` passam, com o squawk nas migrations do `iam` e do `audit`), o `tilt up` sobe o Postgres, a observabilidade, a cadeia do `iam`, o `audit` e o `web`, o `openapi/` mantém a infra sem subir o Scalar, o app fica com `/` (a home depois do login), `/sign-in`, `/sign-up`, `/settings/members`, `/profile/preferences` e o `not-found`, o e2e roda os testes do shell, de login, cadastro, Organizations e Members, e o `@boilerplate/api` fica só com o `core` (`request`, `Result` e `APIError`). Um serviço novo entra como diz [Como adicionar um serviço](#como-adicionar-um-serviço), já com o `actor.NewMiddleware` para autenticar as rotas.

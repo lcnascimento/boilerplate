@@ -15,6 +15,8 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
+
 	"github.com/lcnascimento/boilerplate/backend/services/notes/internal/repository/outbox"
 	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
 )
@@ -49,7 +51,7 @@ var (
 type Forwarder struct {
 	router    *message.Router
 	publisher *kafka.Publisher
-	cluster   *events.Cluster
+	cluster   *eventbus.Cluster
 	shutdown  func()
 
 	started  atomic.Bool
@@ -68,7 +70,7 @@ func New(outboxSubscriber message.Subscriber, brokers []string, opts ...Option) 
 		return nil, err
 	}
 
-	cluster, err := events.DialCluster(brokers, events.Topic)
+	cluster, err := eventbus.DialCluster(brokers, events.Topic)
 	if err != nil {
 		return nil, ErrKafkaUnavailable.WithCause(err)
 	}
@@ -208,7 +210,7 @@ func newPublisher(brokers []string) (*kafka.Publisher, error) {
 }
 
 func partitionKey(_ string, msg *message.Message) (string, error) {
-	envelope, err := events.ParseEnvelope(msg.Metadata)
+	envelope, err := eventbus.ParseEnvelope(msg.Metadata)
 	if err != nil {
 		return "", err
 	}

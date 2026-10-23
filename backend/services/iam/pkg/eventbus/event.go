@@ -1,4 +1,4 @@
-package events
+package eventbus
 
 import (
 	"context"
@@ -9,19 +9,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type Observer interface {
-	OnNoteCreated(ctx context.Context, event *Event, note *NoteCreated) error
-	OnNoteDeleted(ctx context.Context, event *Event, note *NoteDeleted) error
-	OnAny(ctx context.Context, event *Event) error
+type Handler interface {
+	Handle(ctx context.Context, event *Event) error
 }
-
-type UnimplementedObserver struct{}
-
-func (UnimplementedObserver) OnNoteCreated(context.Context, *Event, *NoteCreated) error { return nil }
-
-func (UnimplementedObserver) OnNoteDeleted(context.Context, *Event, *NoteDeleted) error { return nil }
-
-func (UnimplementedObserver) OnAny(context.Context, *Event) error { return nil }
 
 type Event struct {
 	Envelope
@@ -32,7 +22,8 @@ type Event struct {
 	Topic     string
 	Partition int32
 	Offset    int64
-	Message   proto.Message
+	// Message is nil when no Go type of the event's ce_type is linked into the process.
+	Message proto.Message
 }
 
 func parseEvent(topic string, msg *message.Message) (Event, error) {
@@ -66,21 +57,4 @@ func parseEvent(topic string, msg *message.Message) (Event, error) {
 		Offset:    offset,
 		Message:   decoded,
 	}, nil
-}
-
-func notify(ctx context.Context, observer Observer, event *Event) error {
-	var err error
-
-	switch m := event.Message.(type) {
-	case *NoteCreated:
-		err = observer.OnNoteCreated(ctx, event, m)
-	case *NoteDeleted:
-		err = observer.OnNoteDeleted(ctx, event, m)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return observer.OnAny(ctx, event)
 }

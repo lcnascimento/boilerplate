@@ -11,7 +11,7 @@ import (
 
 	"github.com/lcnascimento/go-kit/errors"
 
-	"github.com/lcnascimento/boilerplate/backend/services/notes/pkg/events"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/eventbus"
 
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/consumer"
 	"github.com/lcnascimento/boilerplate/backend/services/audit/internal/transport/health"
@@ -52,7 +52,7 @@ func TestHealth_Routes(t *testing.T) {
 		},
 		"health is unhealthy when the consumer cannot reach Kafka": {
 			path:     "/health",
-			readyErr: events.ErrKafkaUnavailable,
+			readyErr: eventbus.ErrKafkaUnavailable,
 			status:   http.StatusServiceUnavailable,
 			body:     `{"message":"unhealthy"}`,
 		},

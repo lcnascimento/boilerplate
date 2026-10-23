@@ -1,38 +1,28 @@
-package events
+package eventbus
 
 import (
-	"embed"
 	"io/fs"
 	"path"
-	"sync"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
-
-//go:embed proto
-var protoFS embed.FS
 
 type schema struct {
 	subject string
 	text    string
-	message protoreflect.MessageType
 }
 
-var loadSchemas = sync.OnceValues(func() ([]schema, error) {
-	root, err := fs.Sub(protoFS, "proto")
-	if err != nil {
-		return nil, ErrLoadSchemas.WithCause(err)
-	}
-
+// loadSchemas reads every .proto file under protos, whose paths must match the import paths the generated Go code
+// registered.
+func loadSchemas(protos fs.FS) ([]schema, error) {
 	var schemas []schema
 
-	err = fs.WalkDir(root, ".", func(name string, entry fs.DirEntry, err error) error {
+	err := fs.WalkDir(protos, ".", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || path.Ext(name) != ".proto" {
 			return err
 		}
 
-		s, err := loadSchema(root, name)
+		s, err := loadSchema(protos, name)
 		if err != nil {
 			return err
 		}
@@ -46,10 +36,10 @@ var loadSchemas = sync.OnceValues(func() ([]schema, error) {
 	}
 
 	return schemas, nil
-})
+}
 
-func loadSchema(root fs.FS, name string) (schema, error) {
-	text, err := fs.ReadFile(root, name)
+func loadSchema(protos fs.FS, name string) (schema, error) {
+	text, err := fs.ReadFile(protos, name)
 	if err != nil {
 		return schema{}, err
 	}
@@ -63,18 +53,11 @@ func loadSchema(root fs.FS, name string) (schema, error) {
 		return schema{}, ErrLoadSchemas.WithAttribute("file", name).WithCause(ErrNotOneMessagePerFile)
 	}
 
-	subject := file.Messages().Get(0).FullName()
-
-	message, err := protoregistry.GlobalTypes.FindMessageByName(subject)
-	if err != nil {
-		return schema{}, ErrLoadSchemas.WithAttribute("file", name).WithCause(err)
-	}
-
-	return schema{subject: string(subject), text: string(text), message: message}, nil
+	return schema{subject: string(file.Messages().Get(0).FullName()), text: string(text)}, nil
 }
 
-func Subjects() ([]string, error) {
-	schemas, err := loadSchemas()
+func Subjects(protos fs.FS) ([]string, error) {
+	schemas, err := loadSchemas(protos)
 	if err != nil {
 		return nil, err
 	}

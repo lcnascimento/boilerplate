@@ -25,8 +25,8 @@ func TestComponentMigrations_CreatesAuditEntriesTableStampingReceivedAt(t *testi
 	_, err := db.ExecContext(t.Context(), `
 		INSERT INTO audit_entries (source, id, type, spec_version, time, data_content_type,
 			headers, payload, kafka_topic, kafka_partition, kafka_offset)
-		VALUES ('notes', 'event-1', 'boilerplate.notes.v1.NoteDeleted', '1.0', now(), 'application/protobuf',
-			'{}', '\x00', 'notes.note.v1', 0, 0)`)
+		VALUES ('iam', 'event-1', 'boilerplate.iam.v1.UserDeleted', '1.0', now(), 'application/protobuf',
+			'{}', '\x00', 'iam.user.v1', 0, 0)`)
 	require.NoError(t, err)
 
 	var subject sql.NullString
@@ -39,6 +39,29 @@ func TestComponentMigrations_CreatesAuditEntriesTableStampingReceivedAt(t *testi
 	require.WithinDuration(t, before, receivedAt, time.Minute)
 }
 
+func TestComponentMigrations_IPHashAndCorrelationColumnsDefaultToNull(t *testing.T) {
+	t.Parallel()
+
+	db := newDatabase(t)
+
+	require.NoError(t, migrate.Up(t.Context(), db, migrations.FS))
+
+	_, err := db.ExecContext(t.Context(), `
+		INSERT INTO audit_entries (source, id, type, spec_version, time, data_content_type,
+			headers, payload, kafka_topic, kafka_partition, kafka_offset)
+		VALUES ('iam', 'event-1', 'boilerplate.iam.v1.UserDeleted', '1.0', now(), 'application/protobuf',
+			'{}', '\x00', 'iam.user.v1', 0, 0)`)
+	require.NoError(t, err)
+
+	var ipHash, correlationID sql.NullString
+
+	err = db.QueryRowContext(t.Context(), `SELECT ip_hash, correlation_id FROM audit_entries`).
+		Scan(&ipHash, &correlationID)
+	require.NoError(t, err)
+	require.False(t, ipHash.Valid)
+	require.False(t, correlationID.Valid)
+}
+
 func TestComponentMigrations_ActorColumnsDefaultToNull(t *testing.T) {
 	t.Parallel()
 
@@ -49,8 +72,8 @@ func TestComponentMigrations_ActorColumnsDefaultToNull(t *testing.T) {
 	_, err := db.ExecContext(t.Context(), `
 		INSERT INTO audit_entries (source, id, type, spec_version, time, data_content_type,
 			headers, payload, kafka_topic, kafka_partition, kafka_offset)
-		VALUES ('notes', 'event-1', 'boilerplate.notes.v1.NoteDeleted', '1.0', now(), 'application/protobuf',
-			'{}', '\x00', 'notes.note.v1', 0, 0)`)
+		VALUES ('iam', 'event-1', 'boilerplate.iam.v1.UserDeleted', '1.0', now(), 'application/protobuf',
+			'{}', '\x00', 'iam.user.v1', 0, 0)`)
 	require.NoError(t, err)
 
 	var actorID, actorOrganizationID sql.NullString

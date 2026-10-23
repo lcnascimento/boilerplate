@@ -24,4 +24,6 @@ type AuditEntry struct {
 	ReceivedAt          time.Time
 	ActorID             *string
 	ActorOrganizationID *string
+	IpHash              *string
+	CorrelationID       *string
 }
