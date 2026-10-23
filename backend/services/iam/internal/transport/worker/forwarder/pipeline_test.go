@@ -57,7 +57,7 @@ func TestComponentPipeline_DeliversTheUserLifecycleToTheEventBus(t *testing.T) {
 
 	created, changed, gone := next(t, received), next(t, received), next(t, received)
 
-	requireEvent(t, created, ada, signedUp, noRequest, &events.UserCreated{
+	requireEvent(t, created, ada, signedUp, origin{actorID: "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b"}, &events.UserCreated{
 		UserId:    "user_3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
 		CreatedAt: timestamppb.New(signedUp.at),
 	})

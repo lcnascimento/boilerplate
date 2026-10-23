@@ -62,6 +62,7 @@ var translations = map[changeKind]translation{
 
 			return userID, &events.UserCreated{UserId: userID, CreatedAt: at}
 		},
+		ownActor: func(f *fields) (userID, organizationID string) { return f.userID("id"), "" },
 	},
 	{table: "user", operation: "DELETE"}: {
 		topic: events.UserTopic,
