@@ -201,7 +201,7 @@ o11y.generate:
 
 .PHONY: iam.generate
 iam.generate:
-	@cd tools && GOWORK=off go run ./iamgen -out ../../frontend/apps/web/shared/auth/roles.gen.ts
+	@cd tools && GOWORK=off go run ./iamgen -out ../../frontend/apps/web/shared/auth/authz.gen.ts
 
 .PHONY: o11y.lint
 o11y.lint: o11y.lint.dashboards o11y.lint.rules o11y.lint.loki o11y.lint.slo o11y.lint.alloy

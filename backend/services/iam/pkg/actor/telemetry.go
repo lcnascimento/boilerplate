@@ -13,7 +13,7 @@ import (
 	"github.com/lcnascimento/go-kit/o11y/log"
 	"github.com/lcnascimento/go-kit/o11y/metric"
 
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 )
 
 const (
@@ -45,8 +45,8 @@ func addZeroToEverySeries(ctx context.Context) {
 		authenticationFailures.Add(ctx, 0, rejection(r))
 	}
 
-	for _, role := range roles.All() {
-		for _, p := range roles.Permissions() {
+	for _, role := range authz.AllRoles() {
+		for _, p := range authz.Permissions() {
 			if !role.Grants(p) {
 				authorizationDenials.Add(ctx, 0, denial(p, role))
 			}
@@ -58,7 +58,7 @@ func rejection(r reason) otelmetric.AddOption {
 	return otelmetric.WithAttributes(attribute.String("reason", r.String()))
 }
 
-func denial(p roles.Permission, role roles.Role) otelmetric.AddOption {
+func denial(p authz.Permission, role authz.Role) otelmetric.AddOption {
 	return otelmetric.WithAttributes(attribute.String("permission", p.String()), attribute.String("role", role.String()))
 }
 
@@ -75,7 +75,7 @@ func onRejected(ctx context.Context, r reason) {
 	logger.Warn(ctx, "request rejected: unauthenticated", log.String(attrFailureReason, r.String()))
 }
 
-func onDenied(ctx context.Context, a *Actor, p roles.Permission) {
+func onDenied(ctx context.Context, a *Actor, p authz.Permission) {
 	permission, role := p.String(), a.Role.String()
 
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String(attrPermission, permission), attribute.String(attrRole, role))

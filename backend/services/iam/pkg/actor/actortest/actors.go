@@ -7,8 +7,8 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/internal/ctxkey"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 )
 
 func Context(ctx context.Context, a *actor.Actor) context.Context {
@@ -16,18 +16,18 @@ func Context(ctx context.Context, a *actor.Actor) context.Context {
 }
 
 func Owner(orgID domain.OrganizationID) *actor.Actor {
-	return newActor(orgID, roles.Owner)
+	return newActor(orgID, authz.RoleOwner)
 }
 
 func Admin(orgID domain.OrganizationID) *actor.Actor {
-	return newActor(orgID, roles.Admin)
+	return newActor(orgID, authz.RoleAdmin)
 }
 
 func Viewer(orgID domain.OrganizationID) *actor.Actor {
-	return newActor(orgID, roles.Viewer)
+	return newActor(orgID, authz.RoleViewer)
 }
 
-func newActor(orgID domain.OrganizationID, role roles.Role) *actor.Actor {
+func newActor(orgID domain.OrganizationID, role authz.Role) *actor.Actor {
 	userID, err := domain.ParseUserID("user_" + uuid.NewString())
 	if err != nil {
 		panic(err)

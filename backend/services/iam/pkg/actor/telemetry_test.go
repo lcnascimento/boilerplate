@@ -23,7 +23,7 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 )
 
 const authenticationFailures = "iam.actor.authentication.failures"
@@ -64,7 +64,7 @@ func TestMiddleware_PutsTheActorIDsOnTheRequestSpanAndLogs(t *testing.T) {
 	a := &actor.Actor{
 		UserID:         mustUserID(t, "user_5d2a7c10-3e4f-4b6a-8c9d-0e1f2a3b4c5d"),
 		OrganizationID: acmeID(t),
-		Role:           roles.Owner,
+		Role:           authz.RoleOwner,
 	}
 
 	var logs bytes.Buffer

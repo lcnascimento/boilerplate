@@ -11,8 +11,8 @@ import (
 
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/actor/actortest"
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 )
 
 func TestMiddleware_ValidTokenPutsTheActorInTheContext(t *testing.T) {
@@ -20,7 +20,7 @@ func TestMiddleware_ValidTokenPutsTheActorInTheContext(t *testing.T) {
 	want := &actor.Actor{
 		UserID:         mustUserID(t, "user_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d"),
 		OrganizationID: acmeID(t),
-		Role:           roles.Admin,
+		Role:           authz.RoleAdmin,
 	}
 
 	var got *actor.Actor
@@ -35,7 +35,7 @@ func TestMiddleware_ValidTokenPutsTheActorInTheContext(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "user_3f1c9a52-8d4e-4b7a-9c21-6e0f5a7b8c9d", got.UserID.String())
 	require.Equal(t, "org_9b2e4c71-1a3f-4d5e-8f60-7a8b9c0d1e2f", got.OrganizationID.String())
-	require.Equal(t, roles.Admin, got.Role)
+	require.Equal(t, authz.RoleAdmin, got.Role)
 }
 
 func TestMiddleware_RejectsWithAGeneric401AndCountsTheReason(t *testing.T) {

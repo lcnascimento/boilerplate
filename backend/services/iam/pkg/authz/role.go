@@ -1,4 +1,4 @@
-package roles
+package authz
 
 import "slices"
 
@@ -7,17 +7,17 @@ type Role struct {
 }
 
 var (
-	Owner  = Role{"owner"}
-	Admin  = Role{"admin"}
-	Viewer = Role{"viewer"}
+	RoleOwner  = Role{"owner"}
+	RoleAdmin  = Role{"admin"}
+	RoleViewer = Role{"viewer"}
 )
 
-func All() []Role {
-	return []Role{Owner, Admin, Viewer}
+func AllRoles() []Role {
+	return []Role{RoleOwner, RoleAdmin, RoleViewer}
 }
 
 func ParseRole(s string) (Role, error) {
-	for _, r := range All() {
+	for _, r := range AllRoles() {
 		if r.name == s {
 			return r, nil
 		}

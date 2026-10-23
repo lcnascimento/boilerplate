@@ -13,8 +13,8 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 	"github.com/lcnascimento/go-kit/http/httpserver/util"
 
+	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/authz"
 	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/domain"
-	"github.com/lcnascimento/boilerplate/backend/services/iam/pkg/roles"
 )
 
 const (
@@ -182,7 +182,7 @@ func actorOf(c *claims) (*Actor, reason, bool) {
 		return nil, reasonMalformed, false
 	}
 
-	role, err := roles.ParseRole(c.Role)
+	role, err := authz.ParseRole(c.Role)
 	if err != nil {
 		return nil, reasonUnknownRole, false
 	}
