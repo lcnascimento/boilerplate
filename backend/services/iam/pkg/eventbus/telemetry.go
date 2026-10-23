@@ -92,6 +92,7 @@ func (s *Subscriber) onAttemptStart(topic string, msg *message.Message, attempt 
 			metricAttributes = append(metricAttributes, errType)
 
 			span.SetAttributes(errType)
+			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 		}
 

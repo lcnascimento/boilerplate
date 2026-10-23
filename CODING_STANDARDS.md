@@ -42,7 +42,7 @@ Source: `model-the-domain`.
 
 ## Log an error once, where it is handled
 
-The code that handles an error logs it once: the application, or the port when the error originates there. Code that only passes an error on records it on the span and in the metrics (`error.type`) and does not log it, so one failure is one log line and one tracked exception.
+The code that handles an error logs it once: the application, or the port when the error originates there. Code that only passes an error on records it on the span and in the metrics (`error.type`) and does not log it, so each error reaches the logs, and the error tracking built on them, once.
 
 Violation:
 
@@ -65,6 +65,7 @@ Fix:
 ```go
 end := func(err error) {
 	span.SetAttributes(semconv.ErrorTypeKey.String(errorType(err)))
+	span.RecordError(err)
 	span.SetStatus(codes.Error, err.Error())
 }
 ```

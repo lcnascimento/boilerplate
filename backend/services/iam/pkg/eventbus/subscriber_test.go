@@ -355,7 +355,14 @@ func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
 		t.Skip("component test")
 	}
 
-	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	original := otel.GetTracerProvider()
+	provider := sdktrace.NewTracerProvider()
+	otel.SetTracerProvider(provider)
+
+	t.Cleanup(func() {
+		otel.SetTracerProvider(original)
+		require.NoError(t, provider.Shutdown(context.Background()))
+	})
 
 	const (
 		dlqSent       = "message sent to the DLQ"
