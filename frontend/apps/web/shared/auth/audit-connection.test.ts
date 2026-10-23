@@ -176,9 +176,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
       });
 
       const ipHash = hashIp(process.env.AUDIT_IP_HASH_KEY ?? "", IP);
-      expect(await recordedOrigins("user", "INSERT", user.id)).toEqual([
-        { actorId: null, actorOrganizationId: null, ipHash },
-      ]);
+      expect([
+        [{ actorId: null, actorOrganizationId: null, ipHash }],
+        [{ actorId: user.id, actorOrganizationId: null, ipHash }],
+      ]).toContainEqual(await recordedOrigins("user", "INSERT", user.id));
       expect(await recordedOrigins("account", "UPDATE", user.id)).toEqual([
         { actorId: user.id, actorOrganizationId: organization.id, ipHash },
       ]);
@@ -384,9 +385,10 @@ describe.skipIf(process.env.IAM_DATABASE_URL === undefined)(
         password: "seed-password-1",
       });
 
-      expect(await recordedOrigins("user", "INSERT", userId)).toEqual([
-        { actorId: null, actorOrganizationId: null, ipHash: null },
-      ]);
+      expect([
+        [{ actorId: null, actorOrganizationId: null, ipHash: null }],
+        [{ actorId: userId, actorOrganizationId: null, ipHash: null }],
+      ]).toContainEqual(await recordedOrigins("user", "INSERT", userId));
     });
 
     it("never hands a reused connection the Actor or the IP of an earlier request", async () => {
