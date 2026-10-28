@@ -106,6 +106,14 @@ iac.tools iac.format iac.check iac.plan iac.apply iac.dev-token:
 env.up env.down env.status env.prune:
 	@bash scripts/env.sh $(@:env.%=%)
 
+.PHONY: env.check
+env.check:
+	@bash scripts/env-check.sh
+
+.PHONY: env.check.test
+env.check.test:
+	@bash scripts/env-check_test.sh
+
 .PHONY: stack.up
 stack.up:
 	@tilt up --stream < /dev/null > "$(TILT_LOG)" 2>&1 &
