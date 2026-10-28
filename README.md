@@ -338,6 +338,10 @@ A coleção do `notes` fica em `backend/config/bruno/collections/Notes`, e o `Cr
 
 <!-- example:end -->
 
+## Doppler
+
+O projeto separa config de secret. Config tem valor versionado nos `.env.example`, inclusive as credenciais de dev; secret mora só no Doppler e chega a cada processo pelo ambiente. O modelo de ameaça, as barreiras do agente e o inventário das chaves do Doppler ficam em [`docs/secrets.md`](docs/secrets.md).
+
 ## Como adicionar um serviço
 
 Nos passos abaixo, `<name>` é o nome do serviço em kebab-case (ex.: `billing`) e `<NAME>` é o mesmo nome em maiúsculas com `_` (ex.: `BILLING`).

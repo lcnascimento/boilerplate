@@ -1,9 +1,10 @@
 # Issue tracker: Linear
 
-Issues and specs for this Project live in Linear, team **Boilerplate** (key `BOI`), in this Project's own Linear workspace. Use the `linear` MCP server's tools (`mcp__linear__*`) for all operations; never the forge's issue tracker. The server authenticates with `LINEAR_API_KEY` from this Project's `.env`, so it reaches only this Project's workspace.
+Issues and specs for this Project live in Linear, team **Boilerplate** (key `BOI`), in this Project's own Linear workspace. Use the `linear` MCP server's tools (`mcp__linear__*`) for all operations; never the forge's issue tracker. The server authenticates with OAuth (see `docs/agents/environment.md`), and the sign-in picks the workspace.
 
 ## Conventions
 
+- **Workspace check**: before the session's first write to Linear, call `get_workspace` and confirm it answers `Boilerplate`. When it answers another workspace, write nothing: ask the user to run `/mcp`, pick `linear`, choose "Clear authentication", then authenticate again choosing workspace `Boilerplate`.
 - **Create an issue**: `save_issue` with `team: "Boilerplate"`, `title`, `description` (Markdown, literal newlines). Set `project` only when the work belongs to a Linear project (a finite deliverable); there is no catch-all project.
 - **Read an issue**: `get_issue` with the identifier (e.g. `BOI-12`), plus `list_comments` for the thread.
 - **List issues**: `list_issues` with `team`, `label`, `state`, `parentId`, `assignee` filters as needed.
@@ -24,15 +25,7 @@ Skills that build a ticket (`implement`, `implement-spec`) name lifecycle roles.
 | close | `Done` |
 
 - **Approval**: the merge of the work's PR is the user's approval. The PR body carries one `Closes <identifier>` line per issue it resolves, so Linear's forge integration closes each one on merge. When the user approves the work in the session instead, close each issue yourself.
-- **Missing status**: statuses belong to each team. When `list_issue_statuses` for team Boilerplate has no `In Review` in any letter case, create it, typed `started` and placed after the team's other `started` statuses. The MCP server can't create statuses, so call Linear's API with `LINEAR_API_KEY`, never printing it:
-
-  ```bash
-  [ -n "${LINEAR_API_KEY:-}" ] || { set -a; . ./.env; set +a; }
-  linear() { curl -sS https://api.linear.app/graphql -H "Authorization: $LINEAR_API_KEY" -H 'Content-Type: application/json' -d "$1"; }
-  team="$(linear '{"query":"query($key:String!){teams(filter:{key:{eq:$key}}){nodes{id states{nodes{name type position}}}}}","variables":{"key":"BOI"}}' | jq -c '.data.teams.nodes[0]')"
-  input="$(jq -c '{teamId: .id, name: "In Review", type: "started", color: "#0f783c", position: ([.states.nodes[] | select(.type == "started") | .position] | max + 1)}' <<<"$team")"
-  linear "$(jq -nc --argjson input "$input" '{query: "mutation($input:WorkflowStateCreateInput!){workflowStateCreate(input:$input){success}}", variables: {input: $input}}')"
-  ```
+- **Missing status**: statuses belong to each team. When `list_issue_statuses` for team Boilerplate has no `In Review` in any letter case, stop and ask the user to create it in Linear's UI (team Boilerplate, Settings, Workflow): typed `started`, placed after the team's other `started` statuses. The MCP server can't create statuses. Resume once it exists.
 
 ## When a skill says "publish to the issue tracker"
 
