@@ -30,7 +30,9 @@ func unauthenticatedRatio(runtime service.Runtime, processes []service.Process) 
 		return "sum (rate(" + q.Series + "{" + matchers + "}" + rate + "))"
 	}
 
-	return "(" + sum(q.Selector+", "+q.Matcher) + " or vector(0)) / " + sum(q.Selector)
+	selector := q.Selector + ", " + selectedEnvironment
+
+	return "(" + sum(selector+", "+q.Matcher) + " or vector(0)) / " + sum(selector)
 }
 
 func countedBy(series string, processes []service.Process, labels ...string) query {

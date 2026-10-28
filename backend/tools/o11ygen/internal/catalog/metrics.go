@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
@@ -156,8 +157,11 @@ var (
 )
 
 var (
-	sloErrorRatio = Metric{Type: Gauge, Source: SlothRecording, Labels: []string{"sloth_window"}, Presence: PresenceOnEvent}
-	sloMeta       = Metric{Type: Gauge, Source: SlothRecording, Presence: PresenceOnEvent}
+	sloErrorRatio = Metric{
+		Type: Gauge, Source: SlothRecording, Labels: []string{"sloth_window", config.EnvironmentLabel}, Presence: PresenceOnEvent,
+	}
+	sloBurn = Metric{Type: Gauge, Source: SlothRecording, Labels: []string{config.EnvironmentLabel}, Presence: PresenceOnEvent}
+	sloMeta = Metric{Type: Gauge, Source: SlothRecording, Presence: PresenceOnEvent}
 )
 
 var metrics = map[string]Metric{
@@ -253,9 +257,9 @@ var metrics = map[string]Metric{
 	SLOObjectiveRatio:                  sloMeta,
 	SLOErrorBudgetRatio:                sloMeta,
 	SLOTimePeriodDays:                  sloMeta,
-	SLOCurrentBurnRateRatio:            sloMeta,
-	SLOPeriodBurnRateRatio:             sloMeta,
-	SLOPeriodErrorBudgetRemainingRatio: sloMeta,
+	SLOCurrentBurnRateRatio:            sloBurn,
+	SLOPeriodBurnRateRatio:             sloBurn,
+	SLOPeriodErrorBudgetRemainingRatio: sloBurn,
 	SlothSLOInfo: {
 		Type: Gauge, Source: SlothRecording, Presence: PresenceOnEvent,
 		Labels: []string{"sloth_mode", "sloth_objective", "sloth_spec", "sloth_version"},
@@ -327,17 +331,22 @@ func lookup(series string) (Metric, bool) {
 }
 
 var sourceLabels = map[Source][]string{
-	OTLP:             {"job", "instance", "service_name", "service_namespace"},
-	OTLPResource:     {"job", "instance"},
-	Scrape:           {"job", "instance"},
-	RecordingRule:    {"job"},
-	SlothRecording:   {"sloth_id", "sloth_service", "sloth_slo", "service"},
-	TempoSpanMetrics: {"service", "span_name", "span_kind", "status_code", "http_status_code", "source"},
+	OTLP:              {"job", "instance", "service_name", "service_namespace", config.EnvironmentLabel},
+	OTLPResource:      {"job", "instance"},
+	Scrape:            {"job", "instance"},
+	RecordingRule:     {"job", config.EnvironmentLabel},
+	LokiRecordingRule: {config.EnvironmentLabel},
+	SlothRecording:    {"sloth_id", "sloth_service", "sloth_slo", "service"},
+	TempoSpanMetrics: {
+		"service", "span_name", "span_kind", "status_code", "http_status_code", "source", config.EnvironmentLabel,
+	},
 }
 
 var (
 	targetLabels = []string{"__name__", "job", "instance"}
-	logLabels    = []string{"service_name", "service_namespace", "compose_project", "compose_service", "detected_level", "severity_number"}
+	logLabels    = []string{
+		"service_name", "service_namespace", config.EnvironmentLabel, "compose_project", "compose_service", "detected_level", "severity_number",
+	}
 )
 
 func OutboxOldestPendingAge(serviceName string) string {

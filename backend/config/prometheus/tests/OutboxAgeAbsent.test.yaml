@@ -7,7 +7,9 @@ tests:
   - name: fires five minutes after the worker stops reporting the outbox age
     interval: 1m
     input_series:
-      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}
+      - series: target_info{job="boilerplate/fixture-worker", deployment_environment="local"}
+        values: 1x30
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="local"}
         values: 0x5
     alert_rule_test:
       - eval_time: 14m
@@ -17,7 +19,7 @@ tests:
         alertname: OutboxAgeAbsent
         exp_alerts:
           - exp_labels:
-              job: boilerplate/fixture-worker
+              deployment_environment: local
               service: fixture-worker
               severity: critical
             exp_annotations:
@@ -29,11 +31,53 @@ tests:
   - name: stays quiet while the worker reports the outbox age, even when another worker stops
     interval: 1m
     input_series:
-      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}
+      - series: target_info{job="boilerplate/fixture-worker", deployment_environment="local"}
+        values: 1x30
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="local"}
         values: 0x30
-      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker-old"}
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker-old", deployment_environment="local"}
         values: 0x2
     alert_rule_test:
+      - eval_time: 30m
+        alertname: OutboxAgeAbsent
+        exp_alerts: []
+
+  - name: fires only in the environment whose worker stopped reporting the outbox age
+    interval: 1m
+    input_series:
+      - series: target_info{job="boilerplate/fixture-worker", deployment_environment="local"}
+        values: 1x30
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="local"}
+        values: 0x30
+      - series: target_info{job="boilerplate/fixture-worker", deployment_environment="boi-137"}
+        values: 1x30
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="boi-137"}
+        values: 0x5
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: OutboxAgeAbsent
+        exp_alerts:
+          - exp_labels:
+              deployment_environment: boi-137
+              service: fixture-worker
+              severity: critical
+            exp_annotations:
+              summary: "fixture-worker não reporta a idade do outbox há 5 minutos"
+              description: "fixture-worker não reporta fixture_outbox_oldest_pending_age_seconds: sem forwarder ninguém esvazia o outbox e os Integration Events param de sair. Veja primeiro se fixture-worker está no ar e os logs dele."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"
+
+  - name: stays quiet when a whole environment stops
+    interval: 1m
+    input_series:
+      - series: target_info{job="boilerplate/fixture-worker", deployment_environment="boi-137"}
+        values: 1x5
+      - series: fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="boi-137"}
+        values: 0x5
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: OutboxAgeAbsent
+        exp_alerts: []
       - eval_time: 30m
         alertname: OutboxAgeAbsent
         exp_alerts: []

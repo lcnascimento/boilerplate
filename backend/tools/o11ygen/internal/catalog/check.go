@@ -12,6 +12,7 @@ import (
 	"github.com/lcnascimento/go-kit/errors"
 
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/artifact"
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 )
 
 var (
@@ -106,7 +107,7 @@ func selectorLabels(selector *parser.VectorSelector) (labelSet, error) {
 		}
 	}
 
-	allowed := setOf(targetLabels)
+	allowed := setOf(targetLabels, []string{config.EnvironmentLabel})
 
 	if name != "" {
 		var err error

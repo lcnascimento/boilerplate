@@ -13,7 +13,7 @@ slos:
       service: iam-worker
     sli:
       raw:
-        error_ratio_query: avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[{{.window}}:1m])
+        error_ratio_query: avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[{{.window}}:1m])
     alerting:
       name: SLOBurnRate
       labels:

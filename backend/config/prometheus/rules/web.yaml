@@ -2,7 +2,7 @@ groups:
   - name: web
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/web"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/web"}[5m]))
         labels:
           service: web
           severity: critical
@@ -12,7 +12,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: web não envia telemetria há 5 minutos
       - alert: AuthenticationFailuresHigh
-        expr: sum(rate(traces_spanmetrics_calls_total{service="web", span_kind="SPAN_KIND_SERVER", http_status_code="401"}[5m])) / sum(rate(traces_spanmetrics_calls_total{service="web", span_kind="SPAN_KIND_SERVER"}[5m])) > 0.1
+        expr: sum by (deployment_environment) (rate(traces_spanmetrics_calls_total{service="web", span_kind="SPAN_KIND_SERVER", http_status_code="401"}[5m])) / sum by (deployment_environment) (rate(traces_spanmetrics_calls_total{service="web", span_kind="SPAN_KIND_SERVER"}[5m])) > 0.1
         for: 5m
         labels:
           service: web

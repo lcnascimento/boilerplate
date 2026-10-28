@@ -46,17 +46,18 @@ func TestGenerate_ActorAuthAddsTheAuthenticationRowAfterTheComponentsOfAGoServic
 
 	assert.Equal(t, []string{"SLOs e alertas", "api", "worker", authSection, "Runtime", "Banco", "Logs"}, rowTitles(&payments))
 
-	requests := `http_server_request_total{job="boilerplate/payments-api", http_route!~"/ping|/health"`
+	requests := `http_server_request_total{job="boilerplate/payments-api", http_route!~"/ping|/health", ` +
+		`deployment_environment="$environment"`
 	assert.Equal(t, map[string][]string{
 		"401 por motivo": {
-			`sum by (reason) (rate(iam_actor_authentication_failures_total{job=~"boilerplate/(payments-api)"}[$__rate_interval])) => {{reason}}`,
+			`sum by (reason) (rate(iam_actor_authentication_failures_total{job=~"boilerplate/(payments-api)", deployment_environment="$environment"}[$__rate_interval])) => {{reason}}`,
 		},
 		"Taxa de 401": {
 			`(sum (rate(` + requests + `, http_response_status_code="401"}[$__rate_interval])) or vector(0)) / sum (rate(` +
 				requests + `}[$__rate_interval])) => `,
 		},
 		"403 por Permission e Role": {
-			`sum by (permission, role) (rate(iam_actor_authorization_denials_total{job=~"boilerplate/(payments-api)"}[$__rate_interval])) => {{permission}} {{role}}`,
+			`sum by (permission, role) (rate(iam_actor_authorization_denials_total{job=~"boilerplate/(payments-api)", deployment_environment="$environment"}[$__rate_interval])) => {{permission}} {{role}}`,
 		},
 	}, legendsByTitle(payments.section(t, authSection).panels, "401 por motivo", "Taxa de 401", "403 por Permission e Role"))
 }
@@ -69,10 +70,10 @@ func TestGenerate_ActorAuthShowsTheLoginFailuresAndThe401RateOfANodeService(t *t
 
 	assert.Equal(t, []string{"Alertas", "api", "browser", authSection, "Runtime", "Logs"}, rowTitles(&shop))
 
-	calls := `traces_spanmetrics_calls_total{service="shop", span_kind="SPAN_KIND_SERVER"`
+	calls := `traces_spanmetrics_calls_total{service="shop", span_kind="SPAN_KIND_SERVER", deployment_environment="$environment"`
 	assert.Equal(t, map[string][]string{
 		"Falhas de login por motivo": {
-			`sum by (reason) (rate(iam_login_failures_total{job=~"boilerplate/(shop)"}[$__rate_interval])) => {{reason}}`,
+			`sum by (reason) (rate(iam_login_failures_total{job=~"boilerplate/(shop)", deployment_environment="$environment"}[$__rate_interval])) => {{reason}}`,
 		},
 		"Taxa de 401": {
 			`(sum (rate(` + calls + `, http_status_code="401"}[$__rate_interval])) or vector(0)) / sum (rate(` +
@@ -109,9 +110,10 @@ func TestGenerate_AlertsWhenThe401RateOfAnActorAuthProcessStaysHigh(t *testing.T
 	requests := `http_server_request_total{job="boilerplate/payments-api", http_route!~"/ping|/health"`
 	calls := `traces_spanmetrics_calls_total{service="shop", span_kind="SPAN_KIND_SERVER"`
 	assert.Equal(t, map[string]string{
-		"payments-api": `sum(rate(` + requests + `, http_response_status_code="401"}[5m])) / sum(rate(` + requests +
-			`}[5m])) > 0.1`,
-		"shop": `sum(rate(` + calls + `, http_status_code="401"}[5m])) / sum(rate(` + calls + `}[5m])) > 0.1`,
+		"payments-api": `sum by (deployment_environment) (rate(` + requests + `, http_response_status_code="401"}[5m]))` +
+			` / sum by (deployment_environment) (rate(` + requests + `}[5m])) > 0.1`,
+		"shop": `sum by (deployment_environment) (rate(` + calls + `, http_status_code="401"}[5m]))` +
+			` / sum by (deployment_environment) (rate(` + calls + `}[5m])) > 0.1`,
 	}, alerts)
 }
 

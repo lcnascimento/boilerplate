@@ -1,0 +1,55 @@
+rule_files:
+  - ../slo/audit.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: pages only in the environment burning the budget, and keeps the other environment's SLI at 0
+    interval: 1m
+    input_series:
+      - series: messaging_process_duration_seconds_count{job="boilerplate/audit-consumer", deployment_environment="local", error_type=""}
+        values: 0+60x20
+      - series: messaging_process_duration_seconds_count{job="boilerplate/audit-consumer", deployment_environment="boi-137", error_type=""}
+        values: 0+30x20
+      - series: messaging_process_duration_seconds_count{job="boilerplate/audit-consumer", deployment_environment="boi-137", error_type="processing_failed"}
+        values: 0+30x20
+    promql_expr_test:
+      - expr: slo:sli_error:ratio_rate5m{sloth_slo="consumer-success"}
+        eval_time: 10m
+        exp_samples:
+          - labels: slo:sli_error:ratio_rate5m{deployment_environment="local", service="audit-consumer", sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success", sloth_window="5m"}
+            value: 0
+          - labels: slo:sli_error:ratio_rate5m{deployment_environment="boi-137", service="audit-consumer", sloth_id="audit-consumer-success", sloth_service="audit", sloth_slo="consumer-success", sloth_window="5m"}
+            value: 0.5
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SLOBurnRate
+        exp_alerts:
+          - exp_annotations:
+              dashboard_url: http://localhost:3010/d/boilerplate-audit
+              description: 'Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. Incidente em andamento: a 14,4x ou 6x o ritmo sustentável, o error budget de 30 dias acaba em 2 a 5 dias. Aja agora: veja no dashboard do serviço qual SLI piorou e desde quando, depois os logs de erro de audit-consumer.'
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+              summary: 'SLO consumer-success de audit-consumer queimando o error budget rápido demais: 50% de eventos ruins na janela curta (5m ou 30m)'
+              title: SLO consumer-success de audit-consumer queimando o error budget rápido demais
+            exp_labels:
+              deployment_environment: boi-137
+              service: audit-consumer
+              severity: critical
+              sloth_id: audit-consumer-success
+              sloth_service: audit
+              sloth_severity: page
+              sloth_slo: consumer-success
+          - exp_annotations:
+              dashboard_url: http://localhost:3010/d/boilerplate-audit
+              description: 'Tentativas de processamento de mensagens de audit-consumer que terminam sem erro. Consumo sustentado de 3x ou 1x o ritmo sustentável: mantido, o error budget de 30 dias se esgota antes do fim da janela. Sem urgência: investigue em horário comercial, pelo dashboard do serviço (qual SLI piorou e desde quando) e depois pelos logs de erro de audit-consumer.'
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/SLOBurnRate.md
+              summary: 'SLO consumer-success de audit-consumer consumindo o error budget acima do ritmo sustentável: 50% de eventos ruins na janela curta (2h ou 6h)'
+              title: SLO consumer-success de audit-consumer consumindo o error budget acima do ritmo sustentável
+            exp_labels:
+              deployment_environment: boi-137
+              service: audit-consumer
+              severity: warning
+              sloth_id: audit-consumer-success
+              sloth_service: audit
+              sloth_severity: ticket
+              sloth_slo: consumer-success

@@ -42,6 +42,14 @@ func (p *process) job() string {
 	return `{job=` + strconv.Quote(config.Namespace+"/"+p.Name()) + `}`
 }
 
+// The 2 minutes are shorter than the absence windows, so an environment torn down whole fires nothing.
+func absentInLiveEnvironments(present string) string {
+	live := fmt.Sprintf("group %s (last_over_time(%s{job=~%s}[2m]))",
+		config.ByEnvironment, catalog.TargetInfo, strconv.Quote(config.Namespace+"/.+"))
+
+	return fmt.Sprintf("%s unless on (%s) group %s (%s)", live, config.EnvironmentLabel, config.ByEnvironment, present)
+}
+
 type healthDependency struct {
 	name      string
 	downAlert string
@@ -75,7 +83,8 @@ func (p *process) healthChecks() (names, downAlerts []string) {
 func (p *process) unauthenticatedRatio() string {
 	q := slo.Unauthenticated(p.service.Runtime, []service.Process{p.Process})
 
-	return fmt.Sprintf("sum(rate(%s{%s, %s}[5m])) / sum(rate(%s{%s}[5m]))", q.Series, q.Selector, q.Matcher, q.Series, q.Selector)
+	return fmt.Sprintf("sum %s (rate(%s{%s, %s}[5m])) / sum %s (rate(%s{%s}[5m]))",
+		config.ByEnvironment, q.Series, q.Selector, q.Matcher, config.ByEnvironment, q.Series, q.Selector)
 }
 
 func enumerated(items []string) string {
@@ -97,7 +106,7 @@ var processAlerts = []inheritedAlert{
 		alert: func(p *process) alert {
 			return alert{
 				name:     "ServiceTelemetryAbsent",
-				expr:     fmt.Sprintf("absent_over_time(%s%s[5m])", catalog.TargetInfo, p.job()),
+				expr:     absentInLiveEnvironments(fmt.Sprintf("last_over_time(%s%s[5m])", catalog.TargetInfo, p.job())),
 				severity: critical,
 				summary:  p.Name() + " não envia telemetria há 5 minutos",
 				description: "Nenhum target_info de " + p.Name() + " chegou ao Prometheus nos últimos 5 minutos: " +
@@ -115,8 +124,8 @@ var processAlerts = []inheritedAlert{
 		alert: func(p *process) alert {
 			checked, downAlerts := p.healthChecks()
 			checks := func(status string) string {
-				return fmt.Sprintf(`sum by (job) (increase(%s{job=%s, http_route="/health", http_response_status_code=~%q}[2m])) > 0`,
-					catalog.HTTPServerRequestTotal, strconv.Quote(config.Namespace+"/"+p.Name()), status)
+				return fmt.Sprintf(`sum by (job, %s) (increase(%s{job=%s, http_route="/health", http_response_status_code=~%q}[2m])) > 0`,
+					config.EnvironmentLabel, catalog.HTTPServerRequestTotal, strconv.Quote(config.Namespace+"/"+p.Name()), status)
 			}
 
 			return alert{
@@ -137,8 +146,8 @@ var processAlerts = []inheritedAlert{
 		alert: func(p *process) alert {
 			return alert{
 				name: "DBPoolSaturated",
-				expr: fmt.Sprintf("max(%s%s / %s%s) > 0.9",
-					catalog.PgxpoolAcquiredConnections, p.job(), catalog.PgxpoolMaxConnections, p.job()),
+				expr: fmt.Sprintf("max %s (%s%s / %s%s) > 0.9",
+					config.ByEnvironment, catalog.PgxpoolAcquiredConnections, p.job(), catalog.PgxpoolMaxConnections, p.job()),
 				forDuration: sustainedFor,
 				severity:    warning,
 				summary:     "Pool do Postgres de " + p.Name() + " com {{ $value | humanizePercentage }} das conexões em uso",
@@ -208,7 +217,7 @@ var processAlerts = []inheritedAlert{
 
 			return alert{
 				name:        "OutboxAgeAbsent",
-				expr:        fmt.Sprintf("absent(%s%s)", gauge, p.job()),
+				expr:        absentInLiveEnvironments(gauge + p.job()),
 				forDuration: sustainedFor,
 				severity:    critical,
 				summary:     p.Name() + " não reporta a idade do outbox há 5 minutos",
@@ -223,8 +232,8 @@ var processAlerts = []inheritedAlert{
 		alert: func(p *process) alert {
 			return alert{
 				name: "IdentityChangeBacklogHigh",
-				expr: fmt.Sprintf("max(%s%s) > %d",
-					catalog.IAMIdentityChangeOldestPendingAge, p.job(), int(IdentityChangeBacklogThreshold.Seconds())),
+				expr: fmt.Sprintf("max %s (%s%s) > %d",
+					config.ByEnvironment, catalog.IAMIdentityChangeOldestPendingAge, p.job(), int(IdentityChangeBacklogThreshold.Seconds())),
 				severity: critical,
 				summary:  p.Name() + " com a mudança de identidade mais antiga há {{ $value | humanizeDuration }} sem tradução",
 				description: "A mudança de identidade pendente mais antiga de " + p.Name() + " passou de " +
@@ -297,7 +306,7 @@ var recordingGroups = []group{{
 	name: "cardinality",
 	records: []recording{{
 		name: catalog.JobSeriesCount,
-		expr: `count by (job) ({__name__=~".+"})`,
+		expr: `count by (job, ` + config.EnvironmentLabel + `) ({__name__=~".+"})`,
 	}},
 }}
 

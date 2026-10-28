@@ -78,3 +78,27 @@ tests:
       - eval_time: 6m
         alertname: HealthCheckFailing
         exp_alerts: []
+
+  - name: fires only in the environment whose every health check failed
+    interval: 1m
+    input_series:
+      - series: http_server_request_total{job="boilerplate/fixture-api", deployment_environment="local", http_route="/health", http_request_method="GET", http_response_status_code="200"}
+        values: 0+12x6
+      - series: http_server_request_total{job="boilerplate/fixture-api", deployment_environment="boi-137", http_route="/health", http_request_method="GET", http_response_status_code="200"}
+        values: 12 24 36 48 48 48 48
+      - series: http_server_request_total{job="boilerplate/fixture-api", deployment_environment="boi-137", http_route="/health", http_request_method="GET", http_response_status_code="503"}
+        values: 0 0 0 0 12 24 36
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: HealthCheckFailing
+        exp_alerts:
+          - exp_labels:
+              deployment_environment: boi-137
+              job: boilerplate/fixture-api
+              service: fixture-api
+              severity: critical
+            exp_annotations:
+              summary: "fixture-api responde 5xx em todo /health há 2 minutos"
+              description: "Todo /health de fixture-api respondeu 5xx nos últimos 2 minutos: uma dependência que ele checa (o Postgres) está fora, e quem faz o probe o considera fora do ar. Veja primeiro nos logs de fixture-api por que o health check falha e os alertas das dependências (PostgresDown)."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"

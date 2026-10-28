@@ -13,8 +13,8 @@ slos:
       service: notes-api-frontend
     sli:
       events:
-        error_query: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[{{.window}}])) or vector(0)
-        total_query: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}]))
+        error_query: sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[{{.window}}])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}]))
+        total_query: sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
       labels:
@@ -44,8 +44,8 @@ slos:
       service: notes-api-frontend
     sli:
       events:
-        error_query: sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[{{.window}}]))
-        total_query: sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}]))
+        error_query: sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[{{.window}}]))
+        total_query: sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
       labels:
@@ -75,7 +75,7 @@ slos:
       service: notes-worker-forwarder
     sli:
       raw:
-        error_ratio_query: avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[{{.window}}:1m])
+        error_ratio_query: avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[{{.window}}:1m])
     alerting:
       name: SLOBurnRate
       labels:
@@ -105,8 +105,8 @@ slos:
       service: notes-consumer
     sli:
       events:
-        error_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[{{.window}}])) or vector(0)
-        total_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
+        error_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[{{.window}}])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
+        total_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
       labels:
@@ -136,8 +136,8 @@ slos:
       service: notes-consumer
     sli:
       events:
-        error_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[{{.window}}]))
-        total_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
+        error_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[{{.window}}]))
+        total_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
       labels:

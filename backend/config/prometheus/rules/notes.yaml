@@ -2,7 +2,7 @@ groups:
   - name: notes-api-frontend
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/notes-api-frontend"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/notes-api-frontend"}[5m]))
         labels:
           service: notes-api-frontend
           severity: critical
@@ -12,7 +12,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: notes-api-frontend não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/notes-api-frontend", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/notes-api-frontend", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/notes-api-frontend", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/notes-api-frontend", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: notes-api-frontend
           severity: critical
@@ -22,7 +22,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: notes-api-frontend responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
-        expr: max(pgxpool_acquired_connections{job="boilerplate/notes-api-frontend"} / pgxpool_max_connections{job="boilerplate/notes-api-frontend"}) > 0.9
+        expr: max by (deployment_environment) (pgxpool_acquired_connections{job="boilerplate/notes-api-frontend"} / pgxpool_max_connections{job="boilerplate/notes-api-frontend"}) > 0.9
         for: 5m
         labels:
           service: notes-api-frontend
@@ -33,7 +33,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de notes-api-frontend com {{ $value | humanizePercentage }} das conexões em uso
       - alert: AuthenticationFailuresHigh
-        expr: sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend", http_route!~"/ping|/health", http_response_status_code="401"}[5m])) / sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend", http_route!~"/ping|/health"}[5m])) > 0.1
+        expr: sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend", http_route!~"/ping|/health", http_response_status_code="401"}[5m])) / sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend", http_route!~"/ping|/health"}[5m])) > 0.1
         for: 5m
         labels:
           service: notes-api-frontend
@@ -67,7 +67,7 @@ groups:
   - name: notes-worker-forwarder
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/notes-worker-forwarder"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/notes-worker-forwarder"}[5m]))
         labels:
           service: notes-worker-forwarder
           severity: critical
@@ -77,7 +77,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: notes-worker-forwarder não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/notes-worker-forwarder", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/notes-worker-forwarder", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/notes-worker-forwarder", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/notes-worker-forwarder", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: notes-worker-forwarder
           severity: critical
@@ -87,7 +87,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: notes-worker-forwarder responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
-        expr: max(pgxpool_acquired_connections{job="boilerplate/notes-worker-forwarder"} / pgxpool_max_connections{job="boilerplate/notes-worker-forwarder"}) > 0.9
+        expr: max by (deployment_environment) (pgxpool_acquired_connections{job="boilerplate/notes-worker-forwarder"} / pgxpool_max_connections{job="boilerplate/notes-worker-forwarder"}) > 0.9
         for: 5m
         labels:
           service: notes-worker-forwarder
@@ -98,7 +98,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de notes-worker-forwarder com {{ $value | humanizePercentage }} das conexões em uso
       - alert: OutboxAgeAbsent
-        expr: absent(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"})
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"})
         for: 5m
         labels:
           service: notes-worker-forwarder
@@ -132,7 +132,7 @@ groups:
   - name: notes-consumer
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/notes-consumer"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/notes-consumer"}[5m]))
         labels:
           service: notes-consumer
           severity: critical
@@ -142,7 +142,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: notes-consumer não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/notes-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/notes-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/notes-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/notes-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: notes-consumer
           severity: critical
@@ -152,7 +152,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: notes-consumer responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
-        expr: max(pgxpool_acquired_connections{job="boilerplate/notes-consumer"} / pgxpool_max_connections{job="boilerplate/notes-consumer"}) > 0.9
+        expr: max by (deployment_environment) (pgxpool_acquired_connections{job="boilerplate/notes-consumer"} / pgxpool_max_connections{job="boilerplate/notes-consumer"}) > 0.9
         for: 5m
         labels:
           service: notes-consumer

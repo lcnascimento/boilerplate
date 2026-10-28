@@ -4,7 +4,7 @@ Severidade: `warning`. Herdado por todo processo de longa duração declarado no
 
 ## Sintoma
 
-A recording rule `job:series:count` (`count by (job) ({__name__=~".+"})`) do processo passou do teto de séries há 15 minutos. O teto padrão é 2000 séries por `job`; um serviço pode declarar outro em `SeriesBudget` (`backend/tools/o11ygen/services.go`). O label `service` do alerta diz qual processo passou do teto.
+A recording rule `job:series:count` (`count by (job, deployment_environment) ({__name__=~".+"})`) do processo passou do teto de séries há 15 minutos. O teto padrão é 2000 séries por `job` e ambiente; um serviço pode declarar outro em `SeriesBudget` (`backend/tools/o11ygen/services.go`). Os labels `service` e `deployment_environment` do alerta dizem qual processo passou do teto e em qual ambiente.
 
 ## Impacto
 

@@ -28,7 +28,8 @@ func topSection(svc *service.Service, declaresSLOs bool) section {
 	alerts := serviceAlerts{
 		title:       "Alertas do serviço",
 		description: "Alertas de cada processo de " + svc.Name + ", inclusive os de burn rate dos SLOs.",
-		filter:      `{service=~` + strconv.Quote(strings.Join(processNames(longRunning(svc)), "|")) + `}`,
+		filter: `{service=~` + strconv.Quote(strings.Join(processNames(longRunning(svc)), "|")) + `, ` +
+			selectedEnvironmentOrNone + `}`,
 	}
 
 	if !declaresSLOs {
@@ -36,7 +37,7 @@ func topSection(svc *service.Service, declaresSLOs bool) section {
 	}
 
 	return section{title: "SLOs e alertas", panels: []panel{
-		slos{selector: `{sloth_service=` + strconv.Quote(svc.Name) + `}`},
+		slos{sloService: svc.Name},
 		alerts,
 	}}
 }
@@ -421,7 +422,8 @@ func databaseSection() section {
 }
 
 func logsSection() section {
-	stream := `{service_namespace=` + strconv.Quote(config.Namespace) + `, service_name=~"$` + processVariable + `"}`
+	stream := `{service_namespace=` + strconv.Quote(config.Namespace) + `, service_name=~"$` + processVariable + `", ` +
+		selectedEnvironment + `}`
 
 	return section{title: "Logs", panels: []panel{
 		&graph{

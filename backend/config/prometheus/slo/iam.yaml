@@ -2,7 +2,7 @@ groups:
   - name: sloth-slo-sli-recordings-iam-outbox-freshness
     rules:
       - record: slo:sli_error:ratio_rate5m
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[5m:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[5m:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -10,7 +10,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[30m:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[30m:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -18,7 +18,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[1h:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[1h:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -26,7 +26,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[2h:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[2h:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -34,7 +34,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[6h:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[6h:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -42,7 +42,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[1d:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[1d:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -50,7 +50,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[3d:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[3d:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
@@ -58,7 +58,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
-        expr: (avg_over_time((max(iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[30d:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (iam_outbox_oldest_pending_age_seconds{job="boilerplate/iam-worker"}) > bool 30)[30d:1m]))
         labels:
           service: iam-worker
           sloth_id: iam-outbox-freshness
