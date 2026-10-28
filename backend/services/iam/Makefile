@@ -9,6 +9,7 @@ PSQL := docker compose -f ../../docker-compose.yml exec -T postgres psql -q -v O
 KAFKA_TOPICS := docker compose -f ../../docker-compose.yml exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092
 
 DEBUG_GCFLAGS := all=-N -l
+WITH_SECRETS := ../../../scripts/with-secrets.sh
 
 .PHONY: build.worker
 build.worker:
@@ -16,7 +17,7 @@ build.worker:
 
 .PHONY: run.worker
 run.worker:
-	@OTEL_SERVICE_NAME=iam-worker HEALTH_PORT=$(WORKER_HEALTH_PORT) ./bin/iam_worker
+	@OTEL_SERVICE_NAME=iam-worker HEALTH_PORT=$(WORKER_HEALTH_PORT) $(WITH_SECRETS) ./bin/iam_worker
 
 .PHONY: db.setup
 db.setup:

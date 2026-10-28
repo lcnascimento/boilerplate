@@ -245,7 +245,7 @@ start_processes() {
 		vars+=("$port_var=${!key}")
 		spawn "$name" make -s -C "$root/$dir" "$run" "${vars[@]}"
 	done < <(backend_processes)
-	spawn web with_web_env pnpm exec next dev --port "$WEB_PORT"
+	spawn web with_web_env "$root/scripts/with-secrets.sh" pnpm exec next dev --port "$WEB_PORT"
 }
 
 pid_of() {

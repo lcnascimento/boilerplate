@@ -63,6 +63,12 @@ jobs:
           done
           test -z "$(find iac \( -name '*.tfstate*' -o -name .terraform -o -name terraform.tfvars \) -print)"
 
+      - name: .secrets.example holds only the token key, .secrets is not versioned
+        run: |
+          test "$(cat .secrets.example)" = 'DOPPLER_TOKEN='
+          test -z "$(git ls-files .secrets)"
+          git check-ignore -q .secrets
+
       - name: clean-example still runs after init
         run: make clean-example
 
@@ -99,7 +105,7 @@ jobs:
         run: |
           test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./services/audit\nuse./services/iam\nuse./services/iam/pkg\nuse./tools')"
           ! grep -qE '^(init|clean-example):' Makefile || exit 1
-          test "$(ls scripts | xargs)" = "env-check.sh env-check_test.sh env.sh"
+          test "$(ls scripts | xargs)" = "env-check.sh env-check_test.sh env.sh with-secrets.sh with-secrets_test.sh"
           test "$(ls .github/workflows | xargs)" = "$GENERATED_WORKFLOWS"
 
       - name: iac names the project, without state
@@ -108,6 +114,12 @@ jobs:
             grep -A2 '^variable "project" {' "iac/$root/variables.tf" | grep -Fqx '  default = "acme-app"'
           done
           test -z "$(find iac \( -name '*.tfstate*' -o -name .terraform -o -name terraform.tfvars \) -print)"
+
+      - name: .secrets.example holds only the token key, .secrets is not versioned
+        run: |
+          test "$(cat .secrets.example)" = 'DOPPLER_TOKEN='
+          test -z "$(git ls-files .secrets)"
+          git check-ignore -q .secrets
 
       - name: Identity stays, without a trace of Notes
         run: |

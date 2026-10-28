@@ -1,4 +1,5 @@
 .env
+.secrets
 .claude/worktrees/
 node_modules/
 .pnpm-store/
