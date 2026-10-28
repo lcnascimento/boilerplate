@@ -3,6 +3,7 @@
 ## Setup
 
 - `make setup`
+- Linear MCP, once per person: in Claude Code run `/mcp`, pick `linear`, authenticate in the browser and choose workspace `Boilerplate`. OAuth only: no Linear token in `.mcp.json` or `.env`.
 
 ## Start
 
@@ -44,7 +45,6 @@ A worktree runs the application isolated from `tilt up` and from other worktrees
 ## Variables
 
 - Copy `.env.example` to `.env`; `direnv` loads it.
-- `LINEAR_API_KEY`
 - `GRAFANA_SERVICE_ACCOUNT_TOKEN`: `make -C backend grafana.token` writes it (Viewer service account `MCP`), and `tilt up` runs it once Grafana is up; restart Claude Code after a new one.
 - `make -C backend env` creates `backend/.env` and each `backend/services/*/.env` from their examples; `tilt up` runs it.
 
