@@ -26,12 +26,16 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/go/bin
-        key: gobin-${{ runner.os }}-${{ runner.arch }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/Makefile') }}
+        key: gobin-${{ runner.os }}-${{ runner.arch }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('backend/Makefile', 'iac/Makefile') }}
         restore-keys: gobin-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install the backend tooling
       shell: bash
       run: make -C backend setup
+
+    - name: Install OpenTofu
+      shell: bash
+      run: make iac.tools
 
     - uses: pnpm/action-setup@v6
       with:
