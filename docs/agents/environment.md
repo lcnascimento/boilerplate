@@ -1,5 +1,9 @@
 # Environment
 
+## Setup
+
+- `make setup`
+
 ## Start
 
 - `tilt up`, or `TILT_STACK=minimal tilt up` without the observability stack and the Kafka console
@@ -26,13 +30,6 @@
 - `LINEAR_API_KEY`
 - `GRAFANA_SERVICE_ACCOUNT_TOKEN`: `make -C backend grafana.token` writes it (Viewer service account `MCP`), and `tilt up` runs it once Grafana is up; restart Claude Code after a new one.
 - `make -C backend env` creates `backend/.env` and each `backend/services/*/.env` from their examples; `tilt up` runs it.
-- `make setup` installs the root and `frontend/` Node dependencies and the Go tools, and creates the backend and frontend `.env` files.
-
-## Worktrees
-
-- Create: `make worktree name=<id> base=<base>`
-- Recreate: `make worktree name=<id> base=<base> reset=1`
-- Remove: `make worktree.remove name=<id>`
 
 ## Health check
 

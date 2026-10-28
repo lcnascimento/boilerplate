@@ -55,19 +55,6 @@ O `make setup` roda o `pnpm install` na raiz (commitlint e lefthook, que instala
 
 O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) quando eles ainda não existem e, quando já existem, acrescenta só as chaves novas do `.env.example`, sem mexer nos valores que você mudou nem nas chaves que você comentou. O `env` também roda sozinho, sem instalar as ferramentas, e o `tilt up` o chama a cada carga do Tiltfile.
 
-### Worktrees
-
-```sh
-make worktree name=boi-12                 # parte de origin/main (faz git fetch antes)
-make worktree name=boi-12 base=minha-branch
-make worktree name=boi-12 reset=1         # recria a branch boi-12 a partir da base
-make worktree.remove name=boi-12          # force=1 descarta mudanças e commits não mergeados
-```
-
-O `make worktree` cria `.claude/worktrees/<name>` numa branch nova `<name>`, copia do checkout principal os arquivos ignorados listados no `.worktreeinclude` (os `.env`) que ainda faltam na worktree, sem sobrescrever nenhum, e roda o `make setup` dentro dela. No fim imprime o caminho da worktree, já pronta para o `make test` e com os git hooks funcionando. Ele falha se a branch já existe, a menos que receba `reset=1`. Sobre uma worktree que já existe, não recria nada: só completa os arquivos e roda o setup de novo; com `reset=1`, também volta a branch dela para a base (`git switch -C`).
-
-O `make worktree.remove` remove a worktree e a branch, e recusa se houver mudanças não commitadas ou commits não mergeados. Ele pula o que já não existe, então pode rodar de novo.
-
 ### Subindo tudo
 
 ```sh
