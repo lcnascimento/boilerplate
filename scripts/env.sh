@@ -9,6 +9,9 @@ compose_files=(-f "$root/backend/docker-compose.yml" -f "$root/backend/docker-co
 
 health_timeout=180
 port_attempts=3
+port_conflict=2
+ephemeral_label=com.boilerplate.ephemeral=true
+command=${1:-}
 
 o11y_probes=(
 	"alloy http://localhost:12345/-/ready"
@@ -19,7 +22,7 @@ o11y_probes=(
 )
 
 fail() {
-	echo "env: $*" >&2
+	echo "make env.$command: $*" >&2
 	exit 1
 }
 
@@ -27,7 +30,7 @@ say() {
 	echo "==> $*"
 }
 
-env_name() {
+project_name() {
 	[[ $(git rev-parse --path-format=absolute --git-dir) != "$(git rev-parse --path-format=absolute --git-common-dir)" ]] ||
 		fail "run it from a worktree: the main checkout is the \`local\` environment, under \`tilt up\`"
 	local name
@@ -39,15 +42,23 @@ env_name() {
 }
 
 compose() {
-	docker compose -p "$env" "${compose_files[@]}" "$@"
+	docker compose -p "$project" "${compose_files[@]}" "$@"
+}
+
+remove_project() {
+	(cd / && docker compose -p "$1" down -v --remove-orphans)
 }
 
 free_port() {
 	python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'
 }
 
-ephemeral_var() {
-	[[ ! -f $env_file ]] || sed -n "s/^$1=//p" "$env_file"
+running_kafka_port() {
+	local id address
+	id=$(docker ps -q --filter "label=com.docker.compose.project=$project" --filter label=com.docker.compose.service=kafka)
+	[[ -n $id ]] || return 0
+	address=$(docker port "$id" 9092 | head -1)
+	echo "${address##*:}"
 }
 
 check_o11y() {
@@ -59,7 +70,6 @@ check_o11y() {
 		fail "the shared o11y stack is down (${down[*]}): run \`tilt up\` in the main checkout and wait for it to be ready"
 }
 
-# One line per process: <name> <service dir> <build target> <run target> <make variable holding its port>.
 backend_processes() {
 	local makefile service target suffix port_var
 	for makefile in "$root"/backend/services/*/Makefile; do
@@ -82,7 +92,7 @@ port_key() {
 service_vars() {
 	local service=$1
 	printf '%s\n' \
-		"COMPOSE_PROJECT_NAME=$env" \
+		"COMPOSE_PROJECT_NAME=$project" \
 		"OTEL_RESOURCE_ATTRIBUTES=$OTEL_RESOURCE_ATTRIBUTES" \
 		"DATABASE_URL=postgres://$service:$service@localhost:$POSTGRES_PORT/$service?sslmode=disable" \
 		"POSTGRES_ADMIN_URL=$POSTGRES_ADMIN_URL" \
@@ -103,7 +113,7 @@ service_make() {
 web_vars() {
 	printf '%s\n' \
 		"IAM_DATABASE_URL=$IAM_DATABASE_URL" \
-		"BETTER_AUTH_URL=$WEB_URL" \
+		"BETTER_AUTH_URL=$BETTER_AUTH_URL" \
 		"OTEL_SERVICE_NAME=web" \
 		"OTEL_RESOURCE_ATTRIBUTES=$OTEL_RESOURCE_ATTRIBUTES" \
 		"NEXT_OTEL_FETCH_DISABLED=1"
@@ -126,7 +136,7 @@ with_web_env() {
 
 start_containers() {
 	local attempt=1 out
-	EPHEMERAL_KAFKA_PORT=$(ephemeral_var KAFKA_PORT)
+	EPHEMERAL_KAFKA_PORT=$(running_kafka_port)
 	[[ -n $EPHEMERAL_KAFKA_PORT ]] || EPHEMERAL_KAFKA_PORT=$(free_port)
 	export EPHEMERAL_KAFKA_PORT
 	until out=$(compose up -d --wait postgres kafka schema-registry 2>&1); do
@@ -136,7 +146,7 @@ start_containers() {
 			continue
 		fi
 		echo "$out" >&2
-		fail "docker compose up failed for project $env"
+		fail "docker compose up failed for project $project"
 	done
 }
 
@@ -151,7 +161,7 @@ read_container_ports() {
 	KAFKA_PORT=$EPHEMERAL_KAFKA_PORT
 	SCHEMA_REGISTRY_PORT=$(container_port schema-registry 8081)
 	OTEL_RESOURCE_ATTRIBUTES=$(sed -n 's/^OTEL_RESOURCE_ATTRIBUTES=//p' "$root/backend/.env" |
-		sed "s/deployment\.environment=[^,]*/deployment.environment=$env/")
+		sed "s/deployment\.environment=[^,]*/deployment.environment=$project/")
 	POSTGRES_ADMIN_URL=postgres://postgres:postgres@localhost:$POSTGRES_PORT/postgres?sslmode=disable
 	IAM_DATABASE_URL=postgres://iam:iam@localhost:$POSTGRES_PORT/iam?sslmode=disable
 	KAFKA_BROKERS=localhost:$KAFKA_PORT
@@ -179,8 +189,8 @@ write_env_file() {
 	# example:begin
 	keys+=(NOTES_URL NOTES_API_URL)
 	# example:end
-	ENV_NAME=$env
-	COMPOSE_PROJECT_NAME=$env
+	ENV_NAME=$project
+	COMPOSE_PROJECT_NAME=$project
 	local key
 	for key in "${keys[@]}"; do echo "$key=${!key}"; done >"$env_file"
 }
@@ -210,7 +220,7 @@ build_processes() {
 	done < <(backend_processes)
 }
 
-# Each process leads its own process group, so stopping it also stops what `make` or `pnpm` started.
+# Leading its own process group tells this process apart from an unrelated one that reused its PID.
 spawn() {
 	local name=$1
 	shift
@@ -224,14 +234,14 @@ spawn() {
 }
 
 start_processes() {
-	local name dir _build run port_var service vars port_key
+	local name dir _build run port_var service vars key
 	mkdir -p "$state"
 	while read -r name dir _build run port_var; do
 		service=$(basename "$dir")
 		vars=()
 		while IFS= read -r var; do vars+=("$var"); done < <(service_vars "$service")
-		port_key=$(port_key "$name")
-		vars+=("$port_var=${!port_key}")
+		key=$(port_key "$name")
+		vars+=("$port_var=${!key}")
 		spawn "$name" make -s -C "$root/$dir" "$run" "${vars[@]}"
 	done < <(backend_processes)
 	spawn web with_web_env pnpm exec next dev --port "$WEB_PORT"
@@ -245,46 +255,75 @@ pid_of() {
 	echo "$pid"
 }
 
-stop_processes() {
-	local pidfile name pid _
-	[[ -d $state ]] || return 0
+spawned_processes() {
+	local pidfile
 	for pidfile in "$state"/*.pid; do
-		[[ -f $pidfile ]] || continue
-		name=$(basename "$pidfile" .pid)
-		if pid=$(pid_of "$name"); then
-			say "stop $name"
-			kill -TERM -- "-$pid" 2>/dev/null || true
-			for _ in $(seq 20); do
-				kill -0 -- "-$pid" 2>/dev/null || break
-				sleep 0.5
-			done
-			kill -KILL -- "-$pid" 2>/dev/null || true
-		fi
-		rm -f "$pidfile"
+		[[ ! -f $pidfile ]] || basename "$pidfile" .pid
 	done
 }
 
-health_url() {
-	case $1 in
-	web) echo "$WEB_URL/" ;;
-	*)
-		local port_key
-		port_key=$(port_key "$1")
-		echo "http://localhost:${!port_key}/health"
-		;;
-	esac
+descendants() {
+	local child
+	for child in $(ps -axo pid=,ppid= | awk -v parent="$1" '$2 == parent { print $1 }'); do
+		echo "$child"
+		descendants "$child"
+	done
+}
+
+any_alive() {
+	local pid
+	for pid in "$@"; do
+		! kill -0 "$pid" 2>/dev/null || return 0
+	done
+	return 1
+}
+
+# pnpm starts `next dev` in a process group of its own, so the whole tree is signalled, collected before it reparents.
+stop_processes() {
+	local name pid tree _
+	for name in $(spawned_processes); do
+		if pid=$(pid_of "$name"); then
+			say "stop $name"
+			tree=$(echo "$pid" && descendants "$pid")
+			kill -TERM $tree 2>/dev/null || true
+			for _ in $(seq 20); do
+				any_alive $tree || break
+				sleep 0.5
+			done
+			kill -KILL $tree 2>/dev/null || true
+		fi
+		rm -f "$state/$name.pid"
+	done
+}
+
+descends_from() {
+	local pid=$1
+	while [[ -n $pid && $pid -gt 1 ]]; do
+		[[ $pid != "$2" ]] || return 0
+		pid=$(ps -o ppid= -p "$pid" | tr -d ' ')
+	done
+	return 1
+}
+
+# The port may have gone to another environment's process between allocation and bind, and that one answers too.
+listens_on() {
+	local leader pid
+	leader=$(pid_of "$1") || return 1
+	for pid in $(lsof -nP -t -iTCP:"$2" -sTCP:LISTEN 2>/dev/null); do
+		! descends_from "$pid" "$leader" || return 0
+	done
+	return 1
 }
 
 healthy() {
-	local code
-	code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$(health_url "$1")" 2>/dev/null) || return 1
-	case $1 in
-	web) [[ $code -ge 200 && $code -lt 500 ]] ;;
-	*) [[ $code == 200 ]] ;;
-	esac
+	local key port path=/health
+	key=$(port_key "$1")
+	port=${!key}
+	[[ $1 != web ]] || path=/
+	listens_on "$1" "$port" &&
+		[[ $(curl -sL -o /dev/null -w '%{http_code}' --max-time 5 "http://localhost:$port$path" 2>/dev/null) == 200 ]]
 }
 
-# Returns 2 when a process lost its port to another one between allocation and bind.
 await_health() {
 	local names=(web) name _rest pending deadline=$((SECONDS + health_timeout))
 	while read -r name _rest; do names+=("$name"); done < <(backend_processes)
@@ -293,8 +332,8 @@ await_health() {
 		for name in "${names[@]}"; do
 			healthy "$name" && continue
 			if ! pid_of "$name" >/dev/null; then
-				if grep -qE 'address already in use|EADDRINUSE' "$state/$name.log"; then return 2; fi
-				echo "env: $name exited before it was healthy; the end of $state/$name.log:" >&2
+				if grep -qE 'address already in use|EADDRINUSE' "$state/$name.log"; then return "$port_conflict"; fi
+				echo "make env.$command: $name exited before it was healthy; the end of $state/$name.log:" >&2
 				tail -n 30 "$state/$name.log" >&2
 				return 1
 			fi
@@ -302,7 +341,7 @@ await_health() {
 		done
 		[[ ${#pending[@]} -gt 0 ]] || return 0
 		if [[ $SECONDS -ge $deadline ]]; then
-			echo "env: not healthy after ${health_timeout}s: ${pending[*]} (logs in $state)" >&2
+			echo "make env.$command: not healthy after ${health_timeout}s: ${pending[*]} (logs in $state)" >&2
 			return 1
 		fi
 		sleep 1
@@ -311,67 +350,67 @@ await_health() {
 
 up() {
 	check_o11y
+	make -s -C "$root/backend" env
+	make -s -C "$root/frontend" env
 	stop_processes
-	say "containers of project $env"
+	say "containers of project $project"
 	start_containers
+	rm -f "$env_file"
 	read_container_ports
 	allocate_process_ports
-	write_env_file
 	bootstrap
 	build_processes
-	local attempt status
+	local attempt outcome
 	for attempt in $(seq "$port_attempts"); do
 		say "start processes (attempt $attempt)"
 		start_processes
-		status=0
-		await_health || status=$?
-		[[ $status -eq 0 ]] && break
+		outcome=0
+		await_health || outcome=$?
+		[[ $outcome -ne 0 ]] || break
 		stop_processes
-		[[ $status -eq 2 && $attempt -lt $port_attempts ]] || fail "environment $env did not come up"
+		[[ $outcome -eq $port_conflict && $attempt -lt $port_attempts ]] || fail "environment $project did not come up"
 		allocate_process_ports
-		write_env_file
 	done
-	say "environment $env is up"
+	write_env_file
+	say "environment $project is up"
 	cat "$env_file"
 }
 
 down() {
 	stop_processes
-	say "remove project $env"
-	(cd / && docker compose -p "$env" down -v --remove-orphans)
+	say "remove project $project"
+	remove_project "$project"
 	rm -rf "$state" "$env_file"
 }
 
 status() {
 	if [[ -f $env_file ]]; then cat "$env_file"; else echo "no $env_file: run make env.up"; fi
 	echo
-	local pidfile name
-	for pidfile in "$state"/*.pid; do
-		[[ -f $pidfile ]] || continue
-		name=$(basename "$pidfile" .pid)
-		if pid_of "$name" >/dev/null; then echo "$name: running (pid $(cat "$pidfile"))"; else echo "$name: stopped"; fi
+	local name
+	for name in $(spawned_processes); do
+		if pid_of "$name" >/dev/null; then echo "$name: running (pid $(cat "$state/$name.pid"))"; else echo "$name: stopped"; fi
 	done
 	echo
-	docker compose -p "$env" ps -a
+	docker compose -p "$project" ps -a
 }
 
 prune() {
-	local project dir
-	docker ps -a --filter label=ephemeral=true \
+	local name dir
+	docker ps -a --filter "label=$ephemeral_label" \
 		--format '{{.Label "com.docker.compose.project"}} {{.Label "com.docker.compose.project.working_dir"}}' |
 		sort -u |
-		while read -r project dir; do
-			[[ -n $project && $project != backend ]] || continue
-			[[ -d $dir ]] && continue
-			say "remove project $project (its worktree $dir is gone)"
-			(cd / && docker compose -p "$project" down -v --remove-orphans)
+		while read -r name dir; do
+			[[ -n $name && $name != backend ]] || continue
+			[[ ! -d $dir ]] || continue
+			say "remove project $name (its worktree $dir is gone)"
+			remove_project "$name"
 		done
 }
 
-case ${1:-} in
-up) env=$(env_name) && up ;;
-down) env=$(env_name) && down ;;
-status) env=$(env_name) && status ;;
+case $command in
+up) project=$(project_name) && up ;;
+down) project=$(project_name) && down ;;
+status) project=$(project_name) && status ;;
 prune) prune ;;
-*) fail "usage: env.sh up | down | status | prune" ;;
+*) fail "usage: make env.up | env.down | env.status | env.prune" ;;
 esac
