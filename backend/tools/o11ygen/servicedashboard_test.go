@@ -221,6 +221,7 @@ func TestGenerate_ServiceDashboardFiltersProcessesWithoutAServiceVariable(t *tes
 	}
 
 	assert.Equal(t, []string{
+		"query environment",
 		"custom process",
 	}, variables)
 }
@@ -244,13 +245,14 @@ func TestGenerate_ServiceDashboardTopsWithTheSlothSLOsAndTheServiceAlerts(t *tes
 	}
 
 	bySLO := "max by (sloth_service, sloth_slo, service) "
+	inEnvironment := `{sloth_service="orders", deployment_environment="$environment"})`
 	assert.Equal(t, map[string][]string{"table SLOs": {
 		bySLO + `(slo:objective:ratio{sloth_service="orders"})`,
-		"1 - " + bySLO + `(slo:sli_error:ratio_rate30d{sloth_service="orders"})`,
-		bySLO + `(slo:period_error_budget_remaining:ratio{sloth_service="orders"})`,
-		bySLO + `(slo:current_burn_rate:ratio{sloth_service="orders"})`,
+		"1 - " + bySLO + `(slo:sli_error:ratio_rate30d` + inEnvironment,
+		bySLO + `(slo:period_error_budget_remaining:ratio` + inEnvironment,
+		bySLO + `(slo:current_burn_rate:ratio` + inEnvironment,
 	}}, queries)
-	assert.Equal(t, `{service=~"orders-api|orders-consumer|orders-worker"}`, filter)
+	assert.Equal(t, `{service=~"orders-api|orders-consumer|orders-worker", deployment_environment=~"$environment|"}`, filter)
 }
 
 func sloTableShape(t *testing.T, board map[string]any) map[string]any {
@@ -316,10 +318,10 @@ func TestGenerate_DashboardsAskForExemplarsOnlyOnTheGoLatencyHistograms(t *testi
 		}
 	}
 
-	api := `{job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"}[$__rate_interval])))`
+	api := `{job=~"boilerplate/(orders-api)", deployment_environment="$environment", http_route!~"/ping|/health"}[$__rate_interval])))`
 	byRoute := "le, http_response_status_code, http_request_method, http_route"
-	consumer := `{job=~"boilerplate/(orders-consumer)"}[$__rate_interval])))`
-	worker := `{job=~"boilerplate/(orders-worker)"}[$__rate_interval])))`
+	consumer := `{job=~"boilerplate/(orders-consumer)", deployment_environment="$environment"}[$__rate_interval])))`
+	worker := `{job=~"boilerplate/(orders-worker)", deployment_environment="$environment"}[$__rate_interval])))`
 
 	want := make([]string, 0, 12)
 
@@ -459,7 +461,7 @@ func legendsByTitle(panels []boardPanel, titles ...string) map[string][]string {
 func TestGenerate_ServiceDashboardGroupsEveryRoutePanelByStatusMethodAndRoute(t *testing.T) {
 	_, orders := generateOrders(t)
 
-	selector := `job=~"boilerplate/(orders-api)", http_route!~"/ping|/health"`
+	selector := `job=~"boilerplate/(orders-api)", deployment_environment="$environment", http_route!~"/ping|/health"`
 	byRoute := "http_response_status_code, http_request_method, http_route"
 	legend := "{{http_response_status_code}} {{http_request_method}} {{http_route}}"
 	quantile := func(q string) string {
@@ -505,8 +507,8 @@ func TestGenerate_ServiceDashboardReadsLogsOfTheSelectedProcesses(t *testing.T) 
 
 	assert.Equal(t, map[string]string{
 		"Volume por nível": `sum by (detected_level) (count_over_time({service_namespace="boilerplate", ` +
-			`service_name=~"$process"} [$__auto]))`,
-		"Logs de erro": `{service_namespace="boilerplate", service_name=~"$process"} | ` +
+			`service_name=~"$process", deployment_environment="$environment"} [$__auto]))`,
+		"Logs de erro": `{service_namespace="boilerplate", service_name=~"$process", deployment_environment="$environment"} | ` +
 			`detected_level=~"error|critical|fatal"`,
 	}, queries)
 }
@@ -528,7 +530,7 @@ func TestGenerate_ServiceDashboardShowsTheCPUAndRSSOfEachProcessInTheRuntimeSect
 
 	assert.Equal(t, []string{"CPU", "RSS", "Goroutines", "Memória Go", "GC"}, titles)
 	assert.Equal(t, []string{
-		`sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~"boilerplate/$process"}[$__rate_interval]))`,
+		`sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~"boilerplate/$process", deployment_environment="$environment"}[$__rate_interval]))`,
 	}, queries["CPU"])
-	assert.Equal(t, []string{`sum by (job) (process_memory_usage_bytes{job=~"boilerplate/$process"})`}, queries["RSS"])
+	assert.Equal(t, []string{`sum by (job) (process_memory_usage_bytes{job=~"boilerplate/$process", deployment_environment="$environment"})`}, queries["RSS"])
 }

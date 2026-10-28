@@ -45,12 +45,12 @@ func TestGenerate_IdentityChangesAndAuditLogAddTheirRowsAfterTheComponents(t *te
 func TestGenerate_IdentityChangesShowTheBacklogAgeAndTheTranslationsByEventType(t *testing.T) {
 	_, accounts := generateAccounts(t)
 
-	age := `iam_identity_change_oldest_pending_age_seconds{job=~"boilerplate/(accounts-worker)"}`
+	age := `iam_identity_change_oldest_pending_age_seconds{job=~"boilerplate/(accounts-worker)", deployment_environment="$environment"}`
 	assert.Equal(t, map[string][]string{
 		"Mudança pendente mais antiga":          {"max(" + age + ") => "},
 		"Idade da mudança pendente mais antiga": {"max by (job) (" + age + ") => {{job}}"},
 		"Traduzidas por tipo de evento": {
-			`sum by (cloudevents_event_type) (rate(iam_identity_change_translated_total{job=~"boilerplate/(accounts-worker)"}` +
+			`sum by (cloudevents_event_type) (rate(iam_identity_change_translated_total{job=~"boilerplate/(accounts-worker)", deployment_environment="$environment"}` +
 				`[$__rate_interval])) => {{cloudevents_event_type}}`,
 		},
 	}, legendsByTitle(accounts.section(t, identityChangesSection).panels,
@@ -62,7 +62,7 @@ func TestGenerate_AuditLogCountsTheEntriesByEventType(t *testing.T) {
 
 	assert.Equal(t, map[string][]string{
 		"Audit Entries por tipo de evento": {
-			`sum by (cloudevents_event_type) (increase(audit_entries_recorded_total{job=~"boilerplate/(accounts-audit)"}` +
+			`sum by (cloudevents_event_type) (increase(audit_entries_recorded_total{job=~"boilerplate/(accounts-audit)", deployment_environment="$environment"}` +
 				`[$__rate_interval])) => {{cloudevents_event_type}}`,
 		},
 	}, legendsByTitle(accounts.section(t, auditLogSection).panels, "Audit Entries por tipo de evento"))
@@ -89,7 +89,7 @@ func TestGenerate_AlertsWhenTheOldestIdentityChangeWaitsMoreThanFiveMinutes(t *t
 	}
 
 	assert.Equal(t, map[string]string{
-		"accounts-worker": `max(iam_identity_change_oldest_pending_age_seconds{job="boilerplate/accounts-worker"}) > 300`,
+		"accounts-worker": `max by (deployment_environment) (iam_identity_change_oldest_pending_age_seconds{job="boilerplate/accounts-worker"}) > 300`,
 	}, exprs)
 }
 

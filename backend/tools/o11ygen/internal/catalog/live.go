@@ -44,10 +44,12 @@ func outboxOf(serviceName string) Emitter {
 const liveWindow = "15m"
 
 var processSelectors = map[Source]func(process string) string{
-	OTLP:             jobSelector,
-	OTLPResource:     jobSelector,
-	RecordingRule:    jobSelector,
-	TempoSpanMetrics: func(process string) string { return fmt.Sprintf(`{service=%q}`, process) },
+	OTLP:          jobSelector,
+	OTLPResource:  jobSelector,
+	RecordingRule: jobSelector,
+	TempoSpanMetrics: func(process string) string {
+		return fmt.Sprintf(`{service=%q, %s=%q}`, process, config.EnvironmentLabel, config.DefaultEnvironment)
+	},
 }
 
 var prometheusSources = map[Source]bool{
@@ -56,7 +58,7 @@ var prometheusSources = map[Source]bool{
 }
 
 func jobSelector(process string) string {
-	return fmt.Sprintf(`{job=%q}`, config.Namespace+"/"+process)
+	return fmt.Sprintf(`{job=%q, %s=%q}`, config.Namespace+"/"+process, config.EnvironmentLabel, config.DefaultEnvironment)
 }
 
 func LiveProbes(services []service.Service) ([]artifact.Query, error) {

@@ -65,7 +65,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d{sloth_service=\"audit\"})",
+          "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d{sloth_service=\"audit\", deployment_environment=\"$environment\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -76,7 +76,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio{sloth_service=\"audit\"})",
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio{sloth_service=\"audit\", deployment_environment=\"$environment\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -87,7 +87,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio{sloth_service=\"audit\"})",
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio{sloth_service=\"audit\", deployment_environment=\"$environment\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -302,7 +302,7 @@
       },
       "repeatDirection": "h",
       "options": {
-        "alertInstanceLabelFilter": "{service=~\"audit-consumer\"}",
+        "alertInstanceLabelFilter": "{service=~\"audit-consumer\", deployment_environment=~\"$environment|\"}",
         "alertName": "",
         "dashboardAlerts": false,
         "groupBy": [],
@@ -343,7 +343,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (messaging_destination_name) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(audit-consumer)\", error_type=\"\"}[$__rate_interval]))",
+          "expr": "sum by (messaging_destination_name) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\", error_type=\"\"}[$__rate_interval]))",
           "legendFormat": "sucesso {{messaging_destination_name}}",
           "refId": "A"
         },
@@ -352,7 +352,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (error_type) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(audit-consumer)\", error_type!=\"\"}[$__rate_interval]))",
+          "expr": "sum by (error_type) (rate(messaging_client_consumed_messages_total{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "falha {{error_type}}",
           "refId": "B"
         }
@@ -407,7 +407,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
         }
@@ -479,7 +479,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.9, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.9, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\"}[$__rate_interval])))",
           "legendFormat": "p90",
           "refId": "A"
         }
@@ -551,7 +551,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(messaging_process_duration_seconds_bucket{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\"}[$__rate_interval])))",
           "legendFormat": "p99",
           "refId": "A"
         }
@@ -622,7 +622,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (error_type) (rate(messaging_process_duration_seconds_count{job=~\"boilerplate/(audit-consumer)\", error_type!=\"\"}[$__rate_interval]))",
+          "expr": "sum by (error_type) (rate(messaging_process_duration_seconds_count{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\", error_type!=\"\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}}",
           "refId": "A"
         }
@@ -730,7 +730,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (error_type) (increase(messaging_dlq_sent_messages_total{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval]))",
+          "expr": "sum by (error_type) (increase(messaging_dlq_sent_messages_total{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\"}[$__rate_interval]))",
           "legendFormat": "{{error_type}}",
           "refId": "A"
         }
@@ -797,7 +797,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (cloudevents_event_type) (increase(audit_entries_recorded_total{job=~\"boilerplate/(audit-consumer)\"}[$__rate_interval]))",
+          "expr": "sum by (cloudevents_event_type) (increase(audit_entries_recorded_total{job=~\"boilerplate/(audit-consumer)\", deployment_environment=\"$environment\"}[$__rate_interval]))",
           "legendFormat": "{{cloudevents_event_type}}",
           "refId": "A"
         }
@@ -863,7 +863,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
+              "expr": "sum by (job, cpu_mode) (rate(process_cpu_time_seconds_total{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"}[$__rate_interval]))",
               "legendFormat": "{{job}} {{cpu_mode}}",
               "refId": "A"
             }
@@ -917,7 +917,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job) (process_memory_usage_bytes{job=~\"boilerplate/$process\"})",
+              "expr": "sum by (job) (process_memory_usage_bytes{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"})",
               "legendFormat": "{{job}}",
               "refId": "A"
             }
@@ -971,7 +971,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\"})",
+              "expr": "sum by (job) (go_goroutine_count{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"})",
               "legendFormat": "{{job}}",
               "refId": "A"
             }
@@ -1025,7 +1025,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\"})",
+              "expr": "sum by (job, go_memory_type) (go_memory_used_bytes{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"})",
               "legendFormat": "{{job}} {{go_memory_type}}",
               "refId": "A"
             }
@@ -1079,7 +1079,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\"}[$__rate_interval]))",
+              "expr": "sum by (job) (rate(go_memory_allocated_bytes_total{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"}[$__rate_interval]))",
               "legendFormat": "alocação/s {{job}}",
               "refId": "A"
             },
@@ -1088,7 +1088,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job) (go_memory_gc_goal_bytes{job=~\"boilerplate/$process\"})",
+              "expr": "sum by (job) (go_memory_gc_goal_bytes{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"})",
               "legendFormat": "meta do GC {{job}}",
               "refId": "B"
             }
@@ -1156,7 +1156,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job) (pgxpool_acquired_connections{job=~\"boilerplate/$process\"})",
+              "expr": "sum by (job) (pgxpool_acquired_connections{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"})",
               "legendFormat": "em uso {{job}}",
               "refId": "A"
             },
@@ -1165,7 +1165,7 @@
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "sum by (job) (pgxpool_max_connections{job=~\"boilerplate/$process\"})",
+              "expr": "sum by (job) (pgxpool_max_connections{job=~\"boilerplate/$process\", deployment_environment=\"$environment\"})",
               "legendFormat": "máximo {{job}}",
               "refId": "B"
             }
@@ -1284,7 +1284,7 @@
       "id": 24,
       "targets": [
         {
-          "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\"} [$__auto]))",
+          "expr": "sum by (detected_level) (count_over_time({service_namespace=\"boilerplate\", service_name=~\"$process\", deployment_environment=\"$environment\"} [$__auto]))",
           "legendFormat": "{{detected_level}}",
           "refId": "A",
           "datasource": {
@@ -1338,7 +1338,7 @@
       "id": 25,
       "targets": [
         {
-          "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\"} | detected_level=~\"error|critical|fatal\"",
+          "expr": "{service_namespace=\"boilerplate\", service_name=~\"$process\", deployment_environment=\"$environment\"} | detected_level=~\"error|critical|fatal\"",
           "refId": "A",
           "datasource": {
             "type": "loki",
@@ -1375,6 +1375,34 @@
   ],
   "templating": {
     "list": [
+      {
+        "type": "query",
+        "name": "environment",
+        "label": "Ambiente",
+        "skipUrlSync": false,
+        "query": {
+          "query": "label_values(target_info{job=~\"boilerplate/.+\"}, deployment_environment)",
+          "refId": "environment-var"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "current": {
+          "selected": true,
+          "text": "local",
+          "value": "local"
+        },
+        "multi": false,
+        "allowCustomValue": true,
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": false,
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30,
+        "definition": "label_values(target_info{job=~\"boilerplate/.+\"}, deployment_environment)"
+      },
       {
         "type": "custom",
         "name": "process",

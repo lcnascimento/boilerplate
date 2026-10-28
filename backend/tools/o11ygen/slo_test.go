@@ -117,29 +117,32 @@ func TestGenerate_WritesASlothSpecWithTheDefaultSLOsOfEachComponent(t *testing.T
 	assert.Equal(t, map[string]slo{
 		"api-availability": {
 			service: "orders-api", objective: 99.9,
-			errorQuery: `sum(rate(http_server_request_total{` + api + `,http_response_status_code=~"5.."}[{{.window}}])) or vector(0)`,
-			totalQuery: `sum(rate(http_server_request_total{` + api + `}[{{.window}}]))`,
+			errorQuery: `sum by (deployment_environment) (rate(http_server_request_total{` + api + `,http_response_status_code=~"5.."}[{{.window}}]))` +
+				` or 0 * sum by (deployment_environment) (rate(http_server_request_total{` + api + `}[{{.window}}]))`,
+			totalQuery: `sum by (deployment_environment) (rate(http_server_request_total{` + api + `}[{{.window}}]))`,
 		},
 		"api-latency": {
 			service: "orders-api", objective: 99,
-			errorQuery: `sum(rate(http_server_request_duration_seconds_count{` + api + `}[{{.window}}]))` +
-				` - sum(rate(http_server_request_duration_seconds_bucket{` + api + `,le="0.25"}[{{.window}}]))`,
-			totalQuery: `sum(rate(http_server_request_duration_seconds_count{` + api + `}[{{.window}}]))`,
+			errorQuery: `sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{` + api + `}[{{.window}}]))` +
+				` - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{` + api + `,le="0.25"}[{{.window}}]))`,
+			totalQuery: `sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{` + api + `}[{{.window}}]))`,
 		},
 		"consumer-success": {
 			service: "orders-consumer", objective: 99.9,
-			errorQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `,error_type!=""}[{{.window}}])) or vector(0)`,
-			totalQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))`,
+			errorQuery: `sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{` + consumer + `,error_type!=""}[{{.window}}]))` +
+				` or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))`,
+			totalQuery: `sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))`,
 		},
 		"consumer-latency": {
 			service: "orders-consumer", objective: 99,
-			errorQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))` +
-				` - sum(rate(messaging_process_duration_seconds_bucket{` + consumer + `,le="1"}[{{.window}}]))`,
-			totalQuery: `sum(rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))`,
+			errorQuery: `sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))` +
+				` - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{` + consumer + `,le="1"}[{{.window}}]))`,
+			totalQuery: `sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{` + consumer + `}[{{.window}}]))`,
 		},
 		"outbox-freshness": {
 			service: "orders-worker", objective: 99,
-			errorRatioQuery: `avg_over_time((max(orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker"})` +
+			errorRatioQuery: `avg_over_time((max by (deployment_environment) ` +
+				`(orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker"})` +
 				` > bool 30)[{{.window}}:1m])`,
 		},
 	}, got)
@@ -260,23 +263,26 @@ func TestGenerate_EvaluatesTheSLIOverTheWhole30DayWindowWithoutOptimizing(t *tes
 	}
 
 	assert.Equal(t, map[string]string{
-		"api-availability": "(sum(rate(http_server_request_total{" +
-			`job="boilerplate/orders-api",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d])) or vector(0))` +
+		"api-availability": "(sum by (deployment_environment) (rate(http_server_request_total{" +
+			`job="boilerplate/orders-api",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d]))` +
+			` or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/orders-api",http_route!~"/ping|/health"}[30d])))` +
 			"\n/\n" +
-			`(sum(rate(http_server_request_total{job="boilerplate/orders-api",http_route!~"/ping|/health"}[30d])))` + "\n",
-		"api-latency": "(sum(rate(http_server_request_duration_seconds_count{" + `job="boilerplate/orders-api",` +
-			`http_route!~"/ping|/health"}[30d])) - sum(rate(http_server_request_duration_seconds_bucket{` +
+			`(sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/orders-api",http_route!~"/ping|/health"}[30d])))` + "\n",
+		"api-latency": "(sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{" + `job="boilerplate/orders-api",` +
+			`http_route!~"/ping|/health"}[30d])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{` +
 			`job="boilerplate/orders-api",http_route!~"/ping|/health",le="0.25"}[30d])))` + "\n/\n" +
-			"(sum(rate(http_server_request_duration_seconds_count{" +
+			"(sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{" +
 			`job="boilerplate/orders-api",http_route!~"/ping|/health"}[30d])))` + "\n",
-		"consumer-success": `(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer",` +
-			`error_type!=""}[30d])) or vector(0))` + "\n/\n" +
-			`(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d])))` + "\n",
-		"consumer-latency": `(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d]))` +
-			` - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/orders-consumer",le="1"}[30d])))` +
+		"consumer-success": `(sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer",` +
+			`error_type!=""}[30d]))` +
+			` or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d])))` +
 			"\n/\n" +
-			`(sum(rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d])))` + "\n",
-		"outbox-freshness": `(avg_over_time((max(orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker"})` +
+			`(sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d])))` + "\n",
+		"consumer-latency": `(sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d]))` +
+			` - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/orders-consumer",le="1"}[30d])))` +
+			"\n/\n" +
+			`(sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/orders-consumer"}[30d])))` + "\n",
+		"outbox-freshness": `(avg_over_time((max by (deployment_environment) (orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker"})` +
 			` > bool 30)[30d:1m]))`,
 	}, periods)
 }

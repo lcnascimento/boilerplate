@@ -37,4 +37,4 @@ groups:
   - name: cardinality
     rules:
       - record: job:series:count
-        expr: count by (job) ({__name__=~".+"})
+        expr: count by (job, deployment_environment) ({__name__=~".+"})

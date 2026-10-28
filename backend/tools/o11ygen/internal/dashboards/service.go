@@ -8,11 +8,17 @@ import (
 	"github.com/grafana/grafana-foundation-sdk/go/common"
 	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
 
+	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/catalog"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/config"
 	"github.com/lcnascimento/boilerplate/backend/tools/o11ygen/internal/service"
 )
 
-const processVariable = "process"
+const (
+	processVariable     = "process"
+	environmentVariable = "environment"
+
+	selectedEnvironment = config.EnvironmentLabel + `="$` + environmentVariable + `"`
+)
 
 type section struct {
 	title     string
@@ -75,7 +81,7 @@ func serviceDashboard(svc *service.Service, declaresSLOs bool) *dashboard.Dashbo
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
-		Variables([]cog.Builder[dashboard.VariableModel]{processVariableOf(svc)}).
+		Variables([]cog.Builder[dashboard.VariableModel]{environmentVariableOf(), processVariableOf(svc)}).
 		Annotations([]cog.Builder[dashboard.AnnotationQuery]{dashboard.NewAnnotationQueryBuilder().
 			Name("Annotations & Alerts").
 			Datasource(common.DataSourceRef{Type: cog.ToPtr("grafana"), Uid: cog.ToPtr("-- Grafana --")}).
@@ -153,6 +159,23 @@ func processVariableOf(svc *service.Service) *dashboard.CustomVariableBuilder {
 		IncludeAll(true)
 }
 
+func environmentVariableOf() *dashboard.QueryVariableBuilder {
+	query := "label_values(" + catalog.TargetInfo + `{job=~"` + config.Namespace + `/.+"}, ` + config.EnvironmentLabel + ")"
+
+	return dashboard.NewQueryVariableBuilder(environmentVariable).
+		Label("Ambiente").
+		Query(dashboard.StringOrMap{Map: map[string]any{"query": query, "refId": environmentVariable + "-var"}}).
+		Datasource(datasourceRef(prometheusDS)).
+		Current(dashboard.VariableOption{
+			Selected: cog.ToPtr(true),
+			Text:     dashboard.StringOrArrayOfString{String: cog.ToPtr(config.DefaultEnvironment)},
+			Value:    dashboard.StringOrArrayOfString{String: cog.ToPtr(config.DefaultEnvironment)},
+		}).
+		Refresh(2).
+		Sort(1).
+		Definition(query)
+}
+
 func processNames(processes []service.Process) []string {
 	names := make([]string, 0, len(processes))
 	for _, p := range processes {
@@ -175,7 +198,8 @@ func longRunning(svc *service.Service) []service.Process {
 }
 
 func job(processes []service.Process) string {
-	return `job=~` + strconv.Quote(config.Namespace+"/("+strings.Join(processNames(processes), "|")+")")
+	return `job=~` + strconv.Quote(config.Namespace+"/("+strings.Join(processNames(processes), "|")+")") +
+		", " + selectedEnvironment
 }
 
-const selectedJob = `job=~"` + config.Namespace + `/$` + processVariable + `"`
+const selectedJob = `job=~"` + config.Namespace + `/$` + processVariable + `", ` + selectedEnvironment

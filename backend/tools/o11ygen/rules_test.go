@@ -144,23 +144,26 @@ func TestGenerate_ScopesTheProcessAlertsToTheProcess(t *testing.T) {
 	}
 
 	assert.Equal(t, map[string]string{
-		"orders-consumer ServiceTelemetryAbsent": `absent_over_time(target_info{job="boilerplate/orders-consumer"}[5m])`,
-		"orders-consumer HealthCheckFailing": `sum by (job) (increase(http_server_request_total{job="boilerplate/orders-consumer",` +
-			` http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job)` +
+		"orders-consumer ServiceTelemetryAbsent": `group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m]))` +
+			` unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/orders-consumer"}[5m]))`,
+		"orders-consumer HealthCheckFailing": `sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/orders-consumer",` +
+			` http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment)` +
 			` (increase(http_server_request_total{job="boilerplate/orders-consumer", http_route="/health",` +
 			` http_response_status_code=~"2.."}[2m])) > 0`,
-		"orders-consumer DBPoolSaturated": `max(pgxpool_acquired_connections{job="boilerplate/orders-consumer"}` +
+		"orders-consumer DBPoolSaturated": `max by (deployment_environment) (pgxpool_acquired_connections{job="boilerplate/orders-consumer"}` +
 			` / pgxpool_max_connections{job="boilerplate/orders-consumer"}) > 0.9`,
 		"orders-consumer ConsumerLagHigh": `sum by (consumergroup)` +
 			` (kafka_consumergroup_uncommitted_offsets{consumergroup="orders.v2"}) > 100`,
 		"orders-consumer DLQMessageReceived": `sum by (topic)` +
 			` (increase(kafka_topic_partition_current_offset{topic=~".+\\.orders\\.v2\\.dlq"}[5m])) > 0`,
-		"orders-worker ServiceTelemetryAbsent": `absent_over_time(target_info{job="boilerplate/orders-worker"}[5m])`,
-		"orders-worker HealthCheckFailing": `sum by (job) (increase(http_server_request_total{job="boilerplate/orders-worker",` +
-			` http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job)` +
+		"orders-worker ServiceTelemetryAbsent": `group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m]))` +
+			` unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/orders-worker"}[5m]))`,
+		"orders-worker HealthCheckFailing": `sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/orders-worker",` +
+			` http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment)` +
 			` (increase(http_server_request_total{job="boilerplate/orders-worker", http_route="/health",` +
 			` http_response_status_code=~"2.."}[2m])) > 0`,
-		"orders-worker OutboxAgeAbsent": `absent(orders_outbox_oldest_pending_age_seconds` +
+		"orders-worker OutboxAgeAbsent": `group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m]))` +
+			` unless on (deployment_environment) group by (deployment_environment) (orders_outbox_oldest_pending_age_seconds` +
 			`{job="boilerplate/orders-worker"})`,
 		"orders-consumer SeriesBudgetExceeded": `job:series:count{job="boilerplate/orders-consumer"} > 2000`,
 		"orders-worker SeriesBudgetExceeded":   `job:series:count{job="boilerplate/orders-worker"} > 2000`,
@@ -226,7 +229,7 @@ func TestGenerate_CountsTheSeriesOfEveryJob(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, []string{`cardinality job:series:count = count by (job) ({__name__=~".+"})`}, records)
+	assert.Equal(t, []string{`cardinality job:series:count = count by (job, deployment_environment) ({__name__=~".+"})`}, records)
 }
 
 func TestGenerate_OverridesTheSeriesBudgetOfAService(t *testing.T) {

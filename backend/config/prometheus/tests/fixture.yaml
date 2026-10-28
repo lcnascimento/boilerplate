@@ -2,7 +2,7 @@ groups:
   - name: fixture-api
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/fixture-api"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/fixture-api"}[5m]))
         labels:
           service: fixture-api
           severity: critical
@@ -12,7 +12,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: fixture-api não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/fixture-api", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: fixture-api
           severity: critical
@@ -22,7 +22,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: fixture-api responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
-        expr: max(pgxpool_acquired_connections{job="boilerplate/fixture-api"} / pgxpool_max_connections{job="boilerplate/fixture-api"}) > 0.9
+        expr: max by (deployment_environment) (pgxpool_acquired_connections{job="boilerplate/fixture-api"} / pgxpool_max_connections{job="boilerplate/fixture-api"}) > 0.9
         for: 5m
         labels:
           service: fixture-api
@@ -33,7 +33,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
           summary: Pool do Postgres de fixture-api com {{ $value | humanizePercentage }} das conexões em uso
       - alert: AuthenticationFailuresHigh
-        expr: sum(rate(http_server_request_total{job="boilerplate/fixture-api", http_route!~"/ping|/health", http_response_status_code="401"}[5m])) / sum(rate(http_server_request_total{job="boilerplate/fixture-api", http_route!~"/ping|/health"}[5m])) > 0.1
+        expr: sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/fixture-api", http_route!~"/ping|/health", http_response_status_code="401"}[5m])) / sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/fixture-api", http_route!~"/ping|/health"}[5m])) > 0.1
         for: 5m
         labels:
           service: fixture-api
@@ -67,7 +67,7 @@ groups:
   - name: fixture-consumer
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/fixture-consumer"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/fixture-consumer"}[5m]))
         labels:
           service: fixture-consumer
           severity: critical
@@ -77,7 +77,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: fixture-consumer não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/fixture-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: fixture-consumer
           severity: critical
@@ -131,7 +131,7 @@ groups:
   - name: fixture-worker
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/fixture-worker"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/fixture-worker"}[5m]))
         labels:
           service: fixture-worker
           severity: critical
@@ -141,7 +141,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: fixture-worker não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/fixture-worker", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: fixture-worker
           severity: critical
@@ -151,7 +151,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: fixture-worker responde 5xx em todo /health há 2 minutos
       - alert: OutboxAgeAbsent
-        expr: absent(fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"})
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (fixture_outbox_oldest_pending_age_seconds{job="boilerplate/fixture-worker"})
         for: 5m
         labels:
           service: fixture-worker
@@ -162,7 +162,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/OutboxAgeAbsent.md
           summary: fixture-worker não reporta a idade do outbox há 5 minutos
       - alert: IdentityChangeBacklogHigh
-        expr: max(iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}) > 300
+        expr: max by (deployment_environment) (iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker"}) > 300
         labels:
           service: fixture-worker
           severity: critical
@@ -195,4 +195,4 @@ groups:
   - name: cardinality
     rules:
       - record: job:series:count
-        expr: count by (job) ({__name__=~".+"})
+        expr: count by (job, deployment_environment) ({__name__=~".+"})

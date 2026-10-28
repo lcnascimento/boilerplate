@@ -3,9 +3,9 @@ groups:
     rules:
       - record: slo:sli_error:ratio_rate5m
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[5m])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[5m])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -14,9 +14,9 @@ groups:
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30m])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30m])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -25,9 +25,9 @@ groups:
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[1h])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[1h])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -36,9 +36,9 @@ groups:
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[2h])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[2h])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -47,9 +47,9 @@ groups:
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[6h])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[6h])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -58,9 +58,9 @@ groups:
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[1d])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[1d])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -69,9 +69,9 @@ groups:
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[3d])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[3d])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -80,9 +80,9 @@ groups:
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
         expr: |
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d])) or vector(0))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",http_response_status_code=~"5.."}[30d])) or 0 * sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
           /
-          (sum(rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
+          (sum by (deployment_environment) (rate(http_server_request_total{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-availability
@@ -204,9 +204,9 @@ groups:
     rules:
       - record: slo:sli_error:ratio_rate5m
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[5m])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[5m])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[5m])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -215,9 +215,9 @@ groups:
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[30m])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[30m])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30m])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -226,9 +226,9 @@ groups:
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[1h])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[1h])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1h])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -237,9 +237,9 @@ groups:
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[2h])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[2h])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[2h])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -248,9 +248,9 @@ groups:
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[6h])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[6h])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[6h])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -259,9 +259,9 @@ groups:
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[1d])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[1d])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[1d])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -270,9 +270,9 @@ groups:
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[3d])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[3d])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[3d])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -281,9 +281,9 @@ groups:
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
         expr: |
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])) - sum(rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[30d])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])) - sum by (deployment_environment) (rate(http_server_request_duration_seconds_bucket{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health",le="0.25"}[30d])))
           /
-          (sum(rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
+          (sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{job="boilerplate/notes-api-frontend",http_route!~"/ping|/health"}[30d])))
         labels:
           service: notes-api-frontend
           sloth_id: notes-api-latency
@@ -404,7 +404,7 @@ groups:
   - name: sloth-slo-sli-recordings-notes-outbox-freshness
     rules:
       - record: slo:sli_error:ratio_rate5m
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[5m:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[5m:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -412,7 +412,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[30m:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[30m:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -420,7 +420,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[1h:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[1h:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -428,7 +428,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[2h:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[2h:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -436,7 +436,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[6h:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[6h:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -444,7 +444,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[1d:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[1d:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -452,7 +452,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[3d:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[3d:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -460,7 +460,7 @@ groups:
           sloth_slo: outbox-freshness
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
-        expr: (avg_over_time((max(notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[30d:1m]))
+        expr: (avg_over_time((max by (deployment_environment) (notes_outbox_oldest_pending_age_seconds{job="boilerplate/notes-worker-forwarder"}) > bool 30)[30d:1m]))
         labels:
           service: notes-worker-forwarder
           sloth_id: notes-outbox-freshness
@@ -582,9 +582,9 @@ groups:
     rules:
       - record: slo:sli_error:ratio_rate5m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[5m])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[5m])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -593,9 +593,9 @@ groups:
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[30m])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[30m])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -604,9 +604,9 @@ groups:
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[1h])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[1h])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -615,9 +615,9 @@ groups:
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[2h])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[2h])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -626,9 +626,9 @@ groups:
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[6h])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[6h])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -637,9 +637,9 @@ groups:
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[1d])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[1d])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -648,9 +648,9 @@ groups:
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[3d])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[3d])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -659,9 +659,9 @@ groups:
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[30d])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer",error_type!=""}[30d])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-success
@@ -783,9 +783,9 @@ groups:
     rules:
       - record: slo:sli_error:ratio_rate5m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[5m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[5m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[5m])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -794,9 +794,9 @@ groups:
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[30m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[30m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30m])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -805,9 +805,9 @@ groups:
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[1h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[1h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1h])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -816,9 +816,9 @@ groups:
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[2h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[2h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[2h])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -827,9 +827,9 @@ groups:
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[6h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[6h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[6h])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -838,9 +838,9 @@ groups:
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[1d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[1d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[1d])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -849,9 +849,9 @@ groups:
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[3d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[3d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[3d])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency
@@ -860,9 +860,9 @@ groups:
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[30d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/notes-consumer",le="1"}[30d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/notes-consumer"}[30d])))
         labels:
           service: notes-consumer
           sloth_id: notes-consumer-latency

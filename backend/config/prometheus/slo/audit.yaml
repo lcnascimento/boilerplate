@@ -3,9 +3,9 @@ groups:
     rules:
       - record: slo:sli_error:ratio_rate5m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[5m])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[5m])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -14,9 +14,9 @@ groups:
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[30m])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[30m])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -25,9 +25,9 @@ groups:
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[1h])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[1h])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -36,9 +36,9 @@ groups:
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[2h])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[2h])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -47,9 +47,9 @@ groups:
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[6h])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[6h])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -58,9 +58,9 @@ groups:
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[1d])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[1d])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -69,9 +69,9 @@ groups:
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[3d])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[3d])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -80,9 +80,9 @@ groups:
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[30d])) or vector(0))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[30d])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-success
@@ -204,9 +204,9 @@ groups:
     rules:
       - record: slo:sli_error:ratio_rate5m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[5m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[5m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[5m])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -215,9 +215,9 @@ groups:
           sloth_window: 5m
       - record: slo:sli_error:ratio_rate30m
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[30m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[30m])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30m])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -226,9 +226,9 @@ groups:
           sloth_window: 30m
       - record: slo:sli_error:ratio_rate1h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[1h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[1h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1h])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -237,9 +237,9 @@ groups:
           sloth_window: 1h
       - record: slo:sli_error:ratio_rate2h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[2h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[2h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[2h])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -248,9 +248,9 @@ groups:
           sloth_window: 2h
       - record: slo:sli_error:ratio_rate6h
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[6h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[6h])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[6h])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -259,9 +259,9 @@ groups:
           sloth_window: 6h
       - record: slo:sli_error:ratio_rate1d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[1d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[1d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[1d])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -270,9 +270,9 @@ groups:
           sloth_window: 1d
       - record: slo:sli_error:ratio_rate3d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[3d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[3d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[3d])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
@@ -281,9 +281,9 @@ groups:
           sloth_window: 3d
       - record: slo:sli_error:ratio_rate30d
         expr: |
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[30d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[30d])))
           /
-          (sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
+          (sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[30d])))
         labels:
           service: audit-consumer
           sloth_id: audit-consumer-latency
