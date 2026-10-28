@@ -48,10 +48,10 @@ openapi/               uma spec por serviço + Scalar
 ### Primeira vez
 
 ```sh
-pnpm install                 # raiz: commitlint + lefthook (instala os git hooks)
-pnpm -C frontend install     # workspace do frontend
-make -C backend setup        # cria os .env a partir dos .env.example e instala as ferramentas Go
+make setup
 ```
+
+O `make setup` roda o `pnpm install` na raiz (commitlint e lefthook, que instala os git hooks), o `make -C backend setup` (cria os `.env` a partir dos `.env.example` e instala as ferramentas Go) e o `make -C frontend setup` (cria o `frontend/apps/web/.env.local` e instala o workspace do frontend).
 
 O `make -C backend setup` chama o `make -C backend env`, que cria `backend/.env` e o `.env` de cada serviço (`backend/services/<name>/.env`) quando eles ainda não existem e, quando já existem, acrescenta só as chaves novas do `.env.example`, sem mexer nos valores que você mudou nem nas chaves que você comentou. O `env` também roda sozinho, sem instalar as ferramentas, e o `tilt up` o chama a cada carga do Tiltfile.
 
@@ -323,7 +323,7 @@ docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --detai
 
 O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
 
-O pre-push roda, na raiz, `make format.check` e depois `make lint`, os mesmos alvos dos jobs `format` e `lint` da CI. O `make format.check` recusa uma árvore suja (lista os arquivos; faça commit ou `git stash -u`), roda o `make format` e falha se ele mudar algum arquivo, imprimindo o diff e os arquivos novos: assim um código gerado desatualizado (sqlc, mocks, o11y, proto) ou um arquivo fora do formato não chega ao push. Ele precisa do setup da primeira vez (`pnpm install`, `pnpm -C frontend install` e `make -C backend setup`) e do Docker rodando. Para pular o hook num push, use `LEFTHOOK=0 git push` ou `git push --no-verify`.
+O pre-push roda, na raiz, `make format.check` e depois `make lint`, os mesmos alvos dos jobs `format` e `lint` da CI. O `make format.check` recusa uma árvore suja (lista os arquivos; faça commit ou `git stash -u`), roda o `make format` e falha se ele mudar algum arquivo, imprimindo o diff e os arquivos novos: assim um código gerado desatualizado (sqlc, mocks, o11y, proto) ou um arquivo fora do formato não chega ao push. Ele precisa do setup da primeira vez (`make setup`) e do Docker rodando. Para pular o hook num push, use `LEFTHOOK=0 git push` ou `git push --no-verify`.
 
 ### Explorando a API e depurando
 

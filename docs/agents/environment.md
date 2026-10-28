@@ -1,5 +1,9 @@
 # Environment
 
+## Setup
+
+- `make setup`
+
 ## Start
 
 - `tilt up`, or `TILT_STACK=minimal tilt up` without the observability stack and the Kafka console
