@@ -36,9 +36,6 @@ var (
 
 	ErrPermanent = errors.New("message cannot be processed and goes to the DLQ")
 
-	ErrHandlerPanicked = errors.New("observer panicked while processing the message").
-				WithCode("HANDLER_PANICKED")
-
 	ErrInvalidSubscriberConfig = errors.New("subscriber needs brokers, a consumer group, topics and a handler").
 					WithCode("INVALID_SUBSCRIBER_CONFIG").
 					WithKind(errors.KindInvalidInput)

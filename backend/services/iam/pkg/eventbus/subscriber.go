@@ -2,7 +2,9 @@ package eventbus
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/cenkalti/backoff/v5"
 
 	"github.com/lcnascimento/go-kit/errors"
+	"github.com/lcnascimento/go-kit/o11y/log"
 )
 
 const (
@@ -136,7 +139,7 @@ func (s *Subscriber) route(topic string) error {
 	h := topicHandler{s: s, topic: topic}
 
 	handler := s.router.AddConsumerHandler(topic, topic, s.subscriber, h.handle)
-	handler.AddMiddleware(h.trackDelivery, poisonQueue, retry.Middleware, h.attempt, middleware.Recoverer)
+	handler.AddMiddleware(h.trackDelivery, poisonQueue, retry.Middleware, h.attempt, recoverer)
 
 	return nil
 }
@@ -241,7 +244,6 @@ func (h topicHandler) attempt(next message.HandlerFunc) message.HandlerFunc {
 		msg.SetContext(ctx)
 
 		produced, err := next(msg)
-		err = classify(ctx, err)
 		end(err)
 
 		if isPermanent(err) {
@@ -255,13 +257,19 @@ func (h topicHandler) attempt(next message.HandlerFunc) message.HandlerFunc {
 	}
 }
 
-func classify(ctx context.Context, err error) error {
-	var panicked middleware.RecoveredPanicError
-	if errors.As(err, &panicked) {
-		return onUndeliverable(ctx, ErrPermanent.WithCause(ErrHandlerPanicked.WithCause(err)))
-	}
+func recoverer(next message.HandlerFunc) message.HandlerFunc {
+	return func(msg *message.Message) (produced []*message.Message, err error) {
+		defer func() {
+			if cause := recover(); cause != nil {
+				panicErr := errors.New("%s", fmt.Sprint(cause)).WithCode("PANIC").WithKind(errors.KindCritical)
+				logger.Critical(msg.Context(), panicErr, log.String("exception.stack", string(debug.Stack())))
 
-	return err
+				err = ErrPermanent.WithCause(panicErr)
+			}
+		}()
+
+		return next(msg)
+	}
 }
 
 type fullReasonError struct {
