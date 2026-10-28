@@ -9,6 +9,20 @@ init:
 clean-example:
 	@bash scripts/clean-example.sh
 
+.PHONY: setup
+setup:
+	pnpm install --frozen-lockfile
+	@$(MAKE) -C backend setup
+	@$(MAKE) -C frontend setup
+
+.PHONY: worktree
+worktree:
+	@bash scripts/worktree.sh add "$(name)" "$(base)" "$(reset)"
+
+.PHONY: worktree.remove
+worktree.remove:
+	@bash scripts/worktree.sh remove "$(name)" "$(force)"
+
 .PHONY: format
 format:
 	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate iam.generate tidy
