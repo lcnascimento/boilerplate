@@ -32,10 +32,10 @@ expect() {
 }
 
 expect 'a suspicious key without dev-only- fails' 1 \
-	"backend/.env.example: POSTHOG_PROJECT_KEY looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
-web/.env.example: AUTH_TOKEN looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
-web/.env.example: DB_PASSWORD looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
-web/.env.example: CLIENT_SECRET_VALUE looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)" \
+	"POSTHOG_PROJECT_KEY in backend/.env.example looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
+AUTH_TOKEN in web/.env.example looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
+DB_PASSWORD in web/.env.example looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
+CLIENT_SECRET_VALUE in web/.env.example looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)" \
 	"$(repo suspicious \
 		backend/.env.example 'POSTHOG_HOST=\nPOSTHOG_PROJECT_KEY=\n' \
 		web/.env.example 'AUTH_TOKEN=abc\nDB_PASSWORD=postgres\nCLIENT_SECRET_VALUE="real"\n')"
@@ -58,10 +58,10 @@ expect 'an unversioned .env.example is ignored' 0 '' \
 	"$(repo unversioned web/.env.example 'POSTHOG_HOST=\n'; printf 'API_KEY=\n' > "$work/unversioned/web/.env"; mkdir -p "$work/unversioned/new"; printf 'API_KEY=\n' > "$work/unversioned/new/.env.example")"
 
 expect 'a suspicious Tiltfile env key without dev-only- fails' 1 \
-	"Tiltfile: STRIPE_KEY looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
-frontend/Tiltfile: POSTHOG_PROJECT_KEY looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
-frontend/Tiltfile: AUTH_TOKEN looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
-frontend/Tiltfile: DB_PASSWORD looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)" \
+	"STRIPE_KEY in Tiltfile looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
+POSTHOG_PROJECT_KEY in frontend/Tiltfile looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
+AUTH_TOKEN in frontend/Tiltfile looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)
+DB_PASSWORD in frontend/Tiltfile looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)" \
 	"$(repo tilt-suspicious \
 		Tiltfile 'env = {\047OTEL_SERVICE_NAME\047: \047web\047, \047STRIPE_KEY\047: \047\047}\n' \
 		frontend/Tiltfile 'web_env = {\n    \047POSTHOG_PROJECT_KEY\047: \047\047,\n    "AUTH_TOKEN": "abc",\n}\nweb_env[\047DB_PASSWORD\047] = os.getenv(\047DB_PASSWORD\047)\n')"
