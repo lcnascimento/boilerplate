@@ -51,9 +51,16 @@ lint.breaking:
 	@$(MAKE) -C backend proto.breaking
 
 .PHONY: test
-test:
+test: hooks.test
 	@$(MAKE) -C backend test
 	@$(MAKE) -C frontend test
+
+HOOKS_TESTS := \
+	.claude/hooks/guard-secrets_test.sh
+
+.PHONY: hooks.test
+hooks.test:
+	@for t in $(HOOKS_TESTS); do bash "$$t" || exit 1; done
 
 .PHONY: test.unit
 test.unit: test.backend.unit test.frontend.unit
