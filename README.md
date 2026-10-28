@@ -346,6 +346,22 @@ O projeto separa config de secret. Config tem valor versionado nos `.env.example
 
 O dev local não depende do Doppler: depois do clone, `make setup` e `tilt up` sobem tudo offline, sem conta e sem credencial. O Doppler só entra quando o projeto ganha o primeiro secret de verdade.
 
+### Dev com `.secrets`
+
+Para receber os secrets de `dev` (como `POSTHOG_PROJECT_KEY`), instale a [CLI do Doppler](https://docs.doppler.com/docs/install-cli) e cole no `.secrets`, na raiz, o service token de dev que o administrador entregou:
+
+```sh
+DOPPLER_TOKEN=dp.st.dev.…
+```
+
+O `make env` (chamado pelo `make setup`) cria o `.secrets` a partir do `.secrets.example`, com o token vazio, e nunca sobrescreve um que já existe. Ele é gitignored, o `.worktreeinclude` o copia para cada worktree e o `.envrc` não o carrega, então o token nunca fica no ambiente do shell.
+
+O `scripts/with-secrets.sh` envolve só os processos de longa duração: os alvos `run.*` dos serviços, o recurso `web` do Tilt e os mesmos processos do `make env.up`. Testes, migrations, seed, registro de schemas e tooling não passam por ele.
+
+- Sem `.secrets`, ou com o token vazio, ele roda o comando direto, como antes.
+- Com o token e a CLI, ele roda `doppler run --no-fallback -- env -u DOPPLER_TOKEN <cmd>`. O token fica só no ambiente do processo `doppler`, fora do argv e do processo do serviço; o `--no-fallback` impede que uma cópia dos secrets vá para o disco. Por ser o ponto mais interno da cadeia, o valor do Doppler vence o `.env` e o `serve_env` do Tilt.
+- Com o token mas sem a CLI, ou com o Doppler fora do ar, ele avisa em stderr (o aviso aparece no log do recurso no Tilt) e sobe sem os secrets.
+
 ### A estrutura em `iac/`
 
 A estrutura do Doppler (o projeto, os ambientes e os service tokens) é declarada em OpenTofu, em `iac/`. Os valores dos secrets nunca passam por ali: eles entram só pelo dashboard do Doppler.
@@ -407,7 +423,7 @@ Feito uma vez por projeto, pelo administrador, quando o primeiro secret aparecer
    O apply do `ci` cria o sync: a partir dele, toda mudança na config `ci` chega sozinha aos secrets do repositório.
 
 7. Commite os states (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/*/terraform.tfstate`) num PR e faça o merge. Eles estão cifrados.
-8. Extraia o seu service token de dev:
+8. Extraia o seu service token de dev e cole-o no `.secrets` (veja [Dev com `.secrets`](#dev-com-secrets)):
 
    ```sh
    make iac.dev-token NAME=<pessoa>
@@ -433,7 +449,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Backend**
 
-1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `<NAME>_DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/authz/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`, que roda o binário pelo `$(WITH_SECRETS)`; veja [Doppler](#doppler)) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `<NAME>_DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/authz/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
    <!-- example:begin -->
    O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
    <!-- example:end -->

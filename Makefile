@@ -9,8 +9,12 @@ init:
 clean-example:
 	@bash scripts/clean-example.sh
 
+.PHONY: env
+env:
+	@[ -f .secrets ] || { echo "==> Creating .secrets"; cp .secrets.example .secrets; }
+
 .PHONY: setup
-setup:
+setup: env
 	pnpm install --frozen-lockfile
 	@$(MAKE) -C backend setup
 	@$(MAKE) -C frontend setup
@@ -62,7 +66,8 @@ test: hooks.test
 	@$(MAKE) -C frontend test
 
 HOOKS_TESTS := \
-	.claude/hooks/guard-secrets_test.sh
+	.claude/hooks/guard-secrets_test.sh \
+	scripts/with-secrets_test.sh
 
 .PHONY: hooks.test
 hooks.test:

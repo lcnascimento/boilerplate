@@ -1,4 +1,5 @@
 .env
+.secrets
 backend/.env
 backend/services/*/.env
 frontend/apps/web/.env.local
