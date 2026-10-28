@@ -1,15 +1,17 @@
 discovery.docker "containers" {
   host             = "unix:///var/run/docker.sock"
   refresh_interval = "5s"
-
-  filter {
-    name   = "label"
-    values = ["com.docker.compose.project=backend"]
-  }
 }
 
 discovery.relabel "containers" {
   targets = discovery.docker.containers.targets
+
+  // The dev project, and the ephemeral projects of `make env.up`.
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project", "__meta_docker_container_label_com_boilerplate_ephemeral"]
+    regex         = "backend;.*|.*;true"
+    action        = "keep"
+  }
 
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_project"]

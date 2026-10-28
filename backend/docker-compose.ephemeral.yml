@@ -1,0 +1,23 @@
+x-ephemeral: &ephemeral
+  com.boilerplate.ephemeral: "true"
+
+services:
+  postgres:
+    ports: !override ["5432"]
+    volumes: !reset []
+    labels: *ephemeral
+
+  kafka:
+    # A client reaches the broker at its advertised address, so the host port is chosen before the broker starts.
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://localhost:${EPHEMERAL_KAFKA_PORT:?}
+    ports: !override ["${EPHEMERAL_KAFKA_PORT:?}:9092"]
+    volumes: !reset []
+    labels: *ephemeral
+
+  schema-registry:
+    ports: !override ["8081"]
+    labels: *ephemeral
+
+  postgres-extensions:
+    labels: *ephemeral

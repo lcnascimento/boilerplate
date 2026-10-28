@@ -37,10 +37,10 @@ test.component:
 	pnpm turbo run test --filter=./packages/ui
 
 test.e2e:
-	set -a && . apps/web/.env.local && set +a && \
+	set -a && . apps/web/.env.local && { [ ! -f ../.env.ephemeral ] || . ../.env.ephemeral; } && set +a && \
 		pnpm --filter @boilerplate/web iam:check-schema && \
-		pnpm --filter @boilerplate/web exec vitest run shared/auth/accept-invitation.test.ts shared/auth/account-deletion.test.ts shared/auth/actor-token.test.ts shared/auth/audit-connection.test.ts shared/auth/organization-creation.test.ts shared/auth/organization-deletion.test.ts shared/auth/ownership.test.ts shared/auth/password-change.test.ts shared/auth/request-actor.test.ts
-	pnpm turbo run test:e2e
+		pnpm --filter @boilerplate/web exec vitest run shared/auth/accept-invitation.test.ts shared/auth/account-deletion.test.ts shared/auth/actor-token.test.ts shared/auth/audit-connection.test.ts shared/auth/organization-creation.test.ts shared/auth/organization-deletion.test.ts shared/auth/ownership.test.ts shared/auth/password-change.test.ts shared/auth/request-actor.test.ts && \
+		pnpm turbo run test:e2e
 
 build:
 	pnpm turbo run build

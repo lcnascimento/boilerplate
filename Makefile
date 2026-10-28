@@ -85,6 +85,10 @@ test.frontend.e2e:
 test.e2e: test.frontend.e2e
 	@$(MAKE) -C backend o11y.check-live
 
+.PHONY: env.up env.down env.status env.prune
+env.up env.down env.status env.prune:
+	@bash scripts/env.sh $(@:env.%=%)
+
 .PHONY: stack.up
 stack.up:
 	@tilt up --stream < /dev/null > "$(TILT_LOG)" 2>&1 &
