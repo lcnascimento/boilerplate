@@ -46,6 +46,10 @@ lint:
 			lint --details --no-banner --no-style --no-update-check $$specs; \
 	fi
 
+.PHONY: secrets.check
+secrets.check:
+	@"$(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)/gitleaks" git --no-banner --redact --verbose $(GITLEAKS_ARGS)
+
 .PHONY: lint.breaking
 lint.breaking:
 	@$(MAKE) -C backend proto.breaking
