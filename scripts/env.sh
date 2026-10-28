@@ -90,11 +90,12 @@ port_key() {
 }
 
 service_vars() {
-	local service=$1
+	local service=$1 database_key
+	database_key="$(echo "$service" | tr '[:lower:]' '[:upper:]')_DATABASE_URL"
 	printf '%s\n' \
 		"COMPOSE_PROJECT_NAME=$project" \
 		"OTEL_RESOURCE_ATTRIBUTES=$OTEL_RESOURCE_ATTRIBUTES" \
-		"DATABASE_URL=postgres://$service:$service@localhost:$POSTGRES_PORT/$service?sslmode=disable" \
+		"$database_key=postgres://$service:$service@localhost:$POSTGRES_PORT/$service?sslmode=disable" \
 		"POSTGRES_ADMIN_URL=$POSTGRES_ADMIN_URL" \
 		"KAFKA_BROKERS=$KAFKA_BROKERS" \
 		"SCHEMA_REGISTRY_URL=$SCHEMA_REGISTRY_URL" \
