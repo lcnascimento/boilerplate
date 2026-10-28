@@ -55,7 +55,7 @@ func TestActorAuth_MissingSaysWhichKeyToAdd(t *testing.T) {
 }
 
 func TestDatabaseURL_Set(t *testing.T) {
-	t.Setenv("DATABASE_URL", "postgres://user:pass@db:5432/notes")
+	t.Setenv("NOTES_DATABASE_URL", "postgres://user:pass@db:5432/notes")
 
 	url, err := config.DatabaseURL()
 
@@ -64,13 +64,13 @@ func TestDatabaseURL_Set(t *testing.T) {
 }
 
 func TestDatabaseURL_MissingSaysWhichKeyToAdd(t *testing.T) {
-	t.Setenv("DATABASE_URL", "")
+	t.Setenv("NOTES_DATABASE_URL", "")
 
 	_, err := config.DatabaseURL()
 
 	require.ErrorIs(t, err, config.ErrDatabaseURLMissing)
 	require.Equal(t,
-		"DATABASE_URL is not set: run `make -C backend env` to add the missing keys of "+
+		"NOTES_DATABASE_URL is not set: run `make -C backend env` to add the missing keys of "+
 			"backend/services/notes/.env.example to backend/services/notes/.env",
 		err.Error(),
 	)

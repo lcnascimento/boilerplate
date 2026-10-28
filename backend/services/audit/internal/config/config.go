@@ -11,7 +11,7 @@ import (
 const maxPort = 65535
 
 var (
-	ErrDatabaseURLMissing  = errMissing("DATABASE_URL").WithCode("DATABASE_URL_MISSING")
+	ErrDatabaseURLMissing  = errMissing("AUDIT_DATABASE_URL").WithCode("AUDIT_DATABASE_URL_MISSING")
 	ErrKafkaBrokersMissing = errMissing("KAFKA_BROKERS").WithCode("KAFKA_BROKERS_MISSING")
 	ErrHealthPortInvalid   = errors.New(
 		"HEALTH_PORT must be a TCP port: copy its line from backend/services/audit/.env.example to backend/services/audit/.env",
@@ -31,7 +31,7 @@ func errMissing(key string) errors.CustomError {
 }
 
 func DatabaseURL() (string, error) {
-	return required("DATABASE_URL", ErrDatabaseURLMissing)
+	return required("AUDIT_DATABASE_URL", ErrDatabaseURLMissing)
 }
 
 func ServiceName() (string, error) {
