@@ -51,7 +51,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d)",
+          "expr": "1 - max by (sloth_service, sloth_slo, service) (slo:sli_error:ratio_rate30d{deployment_environment=\"$environment\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -62,7 +62,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio)",
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:period_error_budget_remaining:ratio{deployment_environment=\"$environment\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -73,7 +73,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio)",
+          "expr": "max by (sloth_service, sloth_slo, service) (slo:current_burn_rate:ratio{deployment_environment=\"$environment\"})",
           "format": "table",
           "instant": true,
           "range": false,
@@ -338,7 +338,38 @@
       "options": {}
     }
   ],
-  "templating": {},
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "environment",
+        "label": "Ambiente",
+        "skipUrlSync": false,
+        "query": {
+          "query": "label_values(target_info{job=~\"boilerplate/.+\"}, deployment_environment)",
+          "refId": "environment-var"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "current": {
+          "selected": true,
+          "text": "local",
+          "value": "local"
+        },
+        "multi": false,
+        "allowCustomValue": true,
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": false,
+        "auto": false,
+        "auto_min": "10s",
+        "auto_count": 30,
+        "definition": "label_values(target_info{job=~\"boilerplate/.+\"}, deployment_environment)"
+      }
+    ]
+  },
   "annotations": {
     "list": [
       {

@@ -2,7 +2,7 @@ groups:
   - name: audit-consumer
     rules:
       - alert: ServiceTelemetryAbsent
-        expr: absent_over_time(target_info{job="boilerplate/audit-consumer"}[5m])
+        expr: group by (deployment_environment) (last_over_time(target_info{job=~"boilerplate/.+"}[2m])) unless on (deployment_environment) group by (deployment_environment) (last_over_time(target_info{job="boilerplate/audit-consumer"}[5m]))
         labels:
           service: audit-consumer
           severity: critical
@@ -12,7 +12,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/ServiceTelemetryAbsent.md
           summary: audit-consumer não envia telemetria há 5 minutos
       - alert: HealthCheckFailing
-        expr: sum by (job) (increase(http_server_request_total{job="boilerplate/audit-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job) (increase(http_server_request_total{job="boilerplate/audit-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
+        expr: sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/audit-consumer", http_route="/health", http_response_status_code=~"5.."}[2m])) > 0 unless sum by (job, deployment_environment) (increase(http_server_request_total{job="boilerplate/audit-consumer", http_route="/health", http_response_status_code=~"2.."}[2m])) > 0
         labels:
           service: audit-consumer
           severity: critical
@@ -22,7 +22,7 @@ groups:
           runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/HealthCheckFailing.md
           summary: audit-consumer responde 5xx em todo /health há 2 minutos
       - alert: DBPoolSaturated
-        expr: max(pgxpool_acquired_connections{job="boilerplate/audit-consumer"} / pgxpool_max_connections{job="boilerplate/audit-consumer"}) > 0.9
+        expr: max by (deployment_environment) (pgxpool_acquired_connections{job="boilerplate/audit-consumer"} / pgxpool_max_connections{job="boilerplate/audit-consumer"}) > 0.9
         for: 5m
         labels:
           service: audit-consumer

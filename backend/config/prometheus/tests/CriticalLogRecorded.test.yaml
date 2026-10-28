@@ -39,3 +39,22 @@ tests:
       - eval_time: 10m
         alertname: CriticalLogRecorded
         exp_alerts: []
+
+  - name: fires only in the environment that recorded the critical log
+    interval: 1m
+    input_series:
+      - series: service:log_records_critical:rate1m{service="fixture-api", deployment_environment="boi-137"}
+        values: _ _ _ 0.016666666666666666 _ _ _ _ _ _ _ _
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: CriticalLogRecorded
+        exp_alerts:
+          - exp_labels:
+              deployment_environment: boi-137
+              service: fixture-api
+              severity: critical
+            exp_annotations:
+              summary: "1 log(s) Critical ou Fatal de fixture-api nos últimos 5 minutos"
+              description: "fixture-api registrou um log com severidade Critical ou Fatal (severity_number >= 21), o que costuma ser um panic ou um bug que não queima budget de SLO. Veja primeiro esses logs na seção Logs do dashboard do serviço e o trace ligado a cada um."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/CriticalLogRecorded.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"

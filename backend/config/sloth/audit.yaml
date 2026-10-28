@@ -13,8 +13,8 @@ slos:
       service: audit-consumer
     sli:
       events:
-        error_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[{{.window}}])) or vector(0)
-        total_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}]))
+        error_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer",error_type!=""}[{{.window}}])) or 0 * sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}]))
+        total_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
       labels:
@@ -44,8 +44,8 @@ slos:
       service: audit-consumer
     sli:
       events:
-        error_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}])) - sum(rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[{{.window}}]))
-        total_query: sum(rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}]))
+        error_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}])) - sum by (deployment_environment) (rate(messaging_process_duration_seconds_bucket{job="boilerplate/audit-consumer",le="1"}[{{.window}}]))
+        total_query: sum by (deployment_environment) (rate(messaging_process_duration_seconds_count{job="boilerplate/audit-consumer"}[{{.window}}]))
     alerting:
       name: SLOBurnRate
       labels:

@@ -120,7 +120,8 @@ func (s *liveStack) checkSeriesBudgets(t *testing.T) {
 				}
 
 				job := config.Namespace + "/" + process.Name()
-				expr := fmt.Sprintf("%s{job=%q}", catalog.JobSeriesCount, job)
+				expr := fmt.Sprintf("%s{job=%q, %s=%q}", catalog.JobSeriesCount, job, config.EnvironmentLabel,
+					config.DefaultEnvironment)
 
 				result, err := s.query(expr)
 				if !assert.NoError(c, err, expr) || !assert.Len(c, result, 1, "%s has no series count", job) {

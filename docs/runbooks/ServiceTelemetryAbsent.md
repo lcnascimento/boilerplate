@@ -4,7 +4,7 @@ Severidade: `critical`. Herdado por todo processo de longa duração declarado n
 
 ## Sintoma
 
-Nenhuma série `target_info` com `job="<service.namespace>/<service.name>"` chegou ao Prometheus nos últimos 5 minutos. O label `service` do alerta diz qual processo sumiu.
+Nenhuma série `target_info` com `job="<service.namespace>/<service.name>"` chegou ao Prometheus nos últimos 5 minutos, num ambiente (`deployment_environment`) em que outro processo mandou `target_info` nos últimos 2 minutos. Os labels `service` e `deployment_environment` do alerta dizem qual processo sumiu e em qual ambiente. Um ambiente parado por inteiro não dispara o alerta.
 
 ## Impacto
 
@@ -14,8 +14,8 @@ O processo parou, travou antes de exportar, ou a telemetria dele não chega ao P
 
 1. Veja se o processo está no ar: no Tilt (`tilt up`), o recurso do processo; fora dele, o orquestrador que o roda.
 2. Leia os logs do processo no recurso do Tilt, ou no Loki com `{service_name="<service.name>"}` se ainda chegam.
-3. Confira no Prometheus se alguma série do processo chega: `count by (__name__) ({job="<service.namespace>/<service.name>"})`. Se só o `target_info` sumiu, o problema é no SDK; se tudo sumiu, é no processo ou no caminho até o Prometheus.
-4. Confira o caminho: o Alloy no ar (`http://localhost:12345`), o `OTEL_OTLP_ENDPOINT` do processo e se outros serviços também sumiram (um `ServiceTelemetryAbsent` em todos os processos aponta para o Alloy ou o Prometheus).
+3. Confira no Prometheus se alguma série do processo chega: `count by (__name__) ({job="<service.namespace>/<service.name>", deployment_environment="<ambiente>"})`. Se só o `target_info` sumiu, o problema é no SDK; se tudo sumiu, é no processo ou no caminho até o Prometheus.
+4. Confira o caminho: o Alloy no ar (`http://localhost:12345`) e o `OTEL_OTLP_ENDPOINT` do processo. Com o Alloy ou o Prometheus fora, nenhum ambiente manda telemetria e o alerta não dispara: o sintoma é o dashboard sem dados.
 
 ## Mitigação
 

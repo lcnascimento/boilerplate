@@ -83,10 +83,10 @@ func TestGenerate_RecordsTheLogMetricsOfEveryProcessOfAServiceInTheFakeTenant(t 
 	assert.Equal(t, []string{"orders.yaml"}, lokiRuleFiles(t, root))
 	assert.Equal(t, map[string]map[string]string{
 		"orders": {
-			"service:log_records:rate1m": `sum by (service,level)(rate({service_namespace="boilerplate", ` +
+			"service:log_records:rate1m": `sum by (service,level,deployment_environment)(rate({service_namespace="boilerplate", ` +
 				`service_name=~"orders-api|orders-worker|orders-migrate"} ` +
 				`| label_format service=service_name,level=detected_level[1m]))`,
-			"service:log_records_critical:rate1m": `sum by (service)(rate({service_namespace="boilerplate", ` +
+			"service:log_records_critical:rate1m": `sum by (service,deployment_environment)(rate({service_namespace="boilerplate", ` +
 				`service_name=~"orders-api|orders-worker|orders-migrate"} ` +
 				`| severity_number>=21 | label_format service=service_name[1m]))`,
 		},
@@ -162,7 +162,7 @@ func TestGenerate_RecordsAndAlertsOnTheLogAlertsAServiceDeclares(t *testing.T) {
 	require.NoError(t, generate(root, ordersWith(paymentDeclined)))
 
 	recorded := readLokiRules(t, root, "orders.yaml")["orders"]["service:log_alert_records:rate1m log_alert=PaymentDeclinedSpike"]
-	assert.Equal(t, `sum by (service)(rate({service_namespace="boilerplate", service_name="orders-api"} `+
+	assert.Equal(t, `sum by (service,deployment_environment)(rate({service_namespace="boilerplate", service_name="orders-api"} `+
 		`|= "payment declined" | detected_level="warn" | label_format service=service_name[1m]))`, recorded)
 	assert.NoError(t, catalog.Check(artifact.Query{Language: artifact.LogQL, Expr: recorded}))
 

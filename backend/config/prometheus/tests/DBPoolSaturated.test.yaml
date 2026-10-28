@@ -42,3 +42,28 @@ tests:
       - eval_time: 10m
         alertname: DBPoolSaturated
         exp_alerts: []
+
+  - name: fires only in the environment whose pool is saturated
+    interval: 1m
+    input_series:
+      - series: pgxpool_acquired_connections{job="boilerplate/fixture-api", deployment_environment="local", db_client_connection_pool_name="postgres:5432/fixture"}
+        values: 1x10
+      - series: pgxpool_max_connections{job="boilerplate/fixture-api", deployment_environment="local", db_client_connection_pool_name="postgres:5432/fixture"}
+        values: 10x10
+      - series: pgxpool_acquired_connections{job="boilerplate/fixture-api", deployment_environment="boi-137", db_client_connection_pool_name="postgres:5432/fixture"}
+        values: 10x10
+      - series: pgxpool_max_connections{job="boilerplate/fixture-api", deployment_environment="boi-137", db_client_connection_pool_name="postgres:5432/fixture"}
+        values: 10x10
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: DBPoolSaturated
+        exp_alerts:
+          - exp_labels:
+              deployment_environment: boi-137
+              service: fixture-api
+              severity: warning
+            exp_annotations:
+              summary: Pool do Postgres de fixture-api com 100% das conexões em uso
+              description: Mais de 90% das conexões do pool pgx de fixture-api estão em uso há 5 minutos, então as queries esperam por conexão. Veja primeiro as queries lentas e os locks no Postgres, depois o volume de requisições do processo.
+              runbook_url: https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/DBPoolSaturated.md
+              dashboard_url: http://localhost:3010/d/boilerplate-fixture

@@ -98,13 +98,13 @@ func serviceGroup(svc *service.Service) (ruleGroup, error) {
 	all := streams(processes...)
 
 	records, err := recording(catalog.ServiceLogRecords,
-		"sum by (service, level) (rate("+all+" | label_format service=service_name, level=detected_level [1m]))", nil)
+		"sum by (service, level, "+config.EnvironmentLabel+") (rate("+all+" | label_format service=service_name, level=detected_level [1m]))", nil)
 	if err != nil {
 		return ruleGroup{}, errors.New("log rules of %s", svc.Name).WithCause(err)
 	}
 
 	critical, err := recording(catalog.ServiceLogRecordsCritical,
-		"sum by (service) (rate("+all+" | severity_number >= "+strconv.Itoa(severityFatal)+
+		"sum by (service, "+config.EnvironmentLabel+") (rate("+all+" | severity_number >= "+strconv.Itoa(severityFatal)+
 			" | label_format service=service_name [1m]))", nil)
 	if err != nil {
 		return ruleGroup{}, errors.New("log rules of %s", svc.Name).WithCause(err)
@@ -115,7 +115,7 @@ func serviceGroup(svc *service.Service) (ruleGroup, error) {
 	for _, process := range svc.Processes {
 		for _, alert := range process.LogAlerts() {
 			rule, err := recording(catalog.ServiceLogAlertRecords,
-				"sum by (service) (rate("+streams(process.Name())+" "+alert.Pipeline+" | label_format service=service_name [1m]))",
+				"sum by (service, "+config.EnvironmentLabel+") (rate("+streams(process.Name())+" "+alert.Pipeline+" | label_format service=service_name [1m]))",
 				map[string]string{"log_alert": alert.Name})
 			if err != nil {
 				return ruleGroup{}, errors.New("log alert %s of %s", alert.Name, process.Name()).WithCause(err)

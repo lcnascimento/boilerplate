@@ -34,7 +34,8 @@ var goKitDefaults = []inheritedSLO{
 			Objective:   threeNines,
 			Description: "Requisições HTTP de " + p.Name() + " respondidas sem 5xx, fora as de health e readiness.",
 			SLI: service.EventsSLI{
-				ErrorQuery: orZero(rate(catalog.HTTPServerRequestTotal, apiSelector(p), `http_response_status_code=~"5.."`)),
+				ErrorQuery: orZero(rate(catalog.HTTPServerRequestTotal, apiSelector(p), `http_response_status_code=~"5.."`),
+					rate(catalog.HTTPServerRequestTotal, apiSelector(p))),
 				TotalQuery: rate(catalog.HTTPServerRequestTotal, apiSelector(p)),
 			},
 		}
@@ -53,7 +54,8 @@ var goKitDefaults = []inheritedSLO{
 			Objective:   threeNines,
 			Description: "Tentativas de processamento de mensagens de " + p.Name() + " que terminam sem erro.",
 			SLI: service.EventsSLI{
-				ErrorQuery: orZero(rate(catalog.MessagingProcessDuration+"_count", job(p), `error_type!=""`)),
+				ErrorQuery: orZero(rate(catalog.MessagingProcessDuration+"_count", job(p), `error_type!=""`),
+					rate(catalog.MessagingProcessDuration+"_count", job(p))),
 				TotalQuery: rate(catalog.MessagingProcessDuration+"_count", job(p)),
 			},
 		}
@@ -72,7 +74,7 @@ var goKitDefaults = []inheritedSLO{
 			Objective: twoNines,
 			Description: "Minutos em que a mensagem pendente mais antiga do outbox de " + svc +
 				" tem até 30s, segundo " + p.Name() + ".",
-			SLI: service.RawSLI{ErrorRatioQuery: "avg_over_time((max(" + catalog.OutboxOldestPendingAge(svc) + "{" + job(p) +
+			SLI: service.RawSLI{ErrorRatioQuery: "avg_over_time((max " + config.ByEnvironment + " (" + catalog.OutboxOldestPendingAge(svc) + "{" + job(p) +
 				"}) > bool " + number(OutboxFreshnessThresholdSeconds) + ")[" + window + ":1m])"},
 		}
 	}},
@@ -89,13 +91,13 @@ func apiSelector(p service.Process) string {
 }
 
 func rate(series string, matchers ...string) string {
-	return "sum(rate(" + series + "{" + strings.Join(matchers, ",") + "}[" + window + "]))"
+	return "sum " + config.ByEnvironment + " (rate(" + series + "{" + strings.Join(matchers, ",") + "}[" + window + "]))"
 }
 
-// orZero keeps the SLI at 0, instead of absent, while no bad event has happened yet: the series of a bad event only
-// exists after the first one.
-func orZero(query string) string {
-	return query + " or vector(0)"
+// orZero keeps the SLI of each environment at 0, instead of absent, while no bad event has happened in it yet: the
+// series of a bad event only exists after the first one.
+func orZero(query, total string) string {
+	return query + " or 0 * " + total
 }
 
 func slowerThan(histogram, selector string, seconds float64) service.SLI {

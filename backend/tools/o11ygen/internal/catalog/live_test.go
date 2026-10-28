@@ -61,11 +61,11 @@ func TestLiveProbes_ExpectWhatEachDeclaredProcessEmits(t *testing.T) {
 	got := exprs(t, declared)
 
 	for _, want := range []string{
-		`present_over_time(http_server_request_total{job="boilerplate/orders-worker"}[15m])`,
-		`present_over_time(target_info{job="boilerplate/orders-api"}[15m])`,
-		`present_over_time(http_server_request_total{job="boilerplate/orders-api"}[15m])`,
-		`present_over_time(http_server_request_duration_seconds_count{job="boilerplate/orders-api"}[15m])`,
-		`present_over_time(pgxpool_acquired_connections{job="boilerplate/orders-api"}[15m])`,
+		`present_over_time(http_server_request_total{job="boilerplate/orders-worker", deployment_environment="local"}[15m])`,
+		`present_over_time(target_info{job="boilerplate/orders-api", deployment_environment="local"}[15m])`,
+		`present_over_time(http_server_request_total{job="boilerplate/orders-api", deployment_environment="local"}[15m])`,
+		`present_over_time(http_server_request_duration_seconds_count{job="boilerplate/orders-api", deployment_environment="local"}[15m])`,
+		`present_over_time(pgxpool_acquired_connections{job="boilerplate/orders-api", deployment_environment="local"}[15m])`,
 		`present_over_time(service:log_records:rate1m[15m])`,
 		`present_over_time(pg_up[15m])`,
 	} {
@@ -73,8 +73,8 @@ func TestLiveProbes_ExpectWhatEachDeclaredProcessEmits(t *testing.T) {
 	}
 
 	for _, unwanted := range []string{
-		`present_over_time(target_info{job="boilerplate/orders-migrate"}[15m])`,
-		`present_over_time(messaging_client_sent_messages_total{job="boilerplate/orders-api"}[15m])`,
+		`present_over_time(target_info{job="boilerplate/orders-migrate", deployment_environment="local"}[15m])`,
+		`present_over_time(messaging_client_sent_messages_total{job="boilerplate/orders-api", deployment_environment="local"}[15m])`,
 		`present_over_time(kafka_consumergroup_current_offset[15m])`,
 		`present_over_time(service:log_records:rate1m{service="orders-api"}[15m])`,
 		`present_over_time(service:log_records_critical:rate1m[15m])`,
@@ -94,9 +94,9 @@ func TestLiveProbes_ExpectTheConsumerGroupSeriesOnceAConsumerIsDeclared(t *testi
 	got := exprs(t, declared)
 
 	assert.Contains(t, got, `present_over_time(kafka_consumergroup_uncommitted_offsets[15m])`)
-	assert.Contains(t, got, `present_over_time(messaging_process_duration_seconds_count{job="boilerplate/billing-consumer"}[15m])`)
-	assert.Contains(t, got, `present_over_time(http_server_request_total{job="boilerplate/billing-consumer"}[15m])`)
-	assert.NotContains(t, got, `present_over_time(http_server_request_duration_seconds_count{job="boilerplate/billing-consumer"}[15m])`)
+	assert.Contains(t, got, `present_over_time(messaging_process_duration_seconds_count{job="boilerplate/billing-consumer", deployment_environment="local"}[15m])`)
+	assert.Contains(t, got, `present_over_time(http_server_request_total{job="boilerplate/billing-consumer", deployment_environment="local"}[15m])`)
+	assert.NotContains(t, got, `present_over_time(http_server_request_duration_seconds_count{job="boilerplate/billing-consumer", deployment_environment="local"}[15m])`)
 }
 
 func TestLiveProbes_ExpectTheOutboxOfTheServiceAWorkerBelongsTo(t *testing.T) {
@@ -108,9 +108,9 @@ func TestLiveProbes_ExpectTheOutboxOfTheServiceAWorkerBelongsTo(t *testing.T) {
 	got := exprs(t, declared)
 
 	for _, want := range []string{
-		`present_over_time(orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker"}[15m])`,
-		`present_over_time(orders_outbox_purged_messages_total{job="boilerplate/orders-worker"}[15m])`,
-		`present_over_time(orders_outbox_purge_runs_total{job="boilerplate/orders-worker"}[15m])`,
+		`present_over_time(orders_outbox_oldest_pending_age_seconds{job="boilerplate/orders-worker", deployment_environment="local"}[15m])`,
+		`present_over_time(orders_outbox_purged_messages_total{job="boilerplate/orders-worker", deployment_environment="local"}[15m])`,
+		`present_over_time(orders_outbox_purge_runs_total{job="boilerplate/orders-worker", deployment_environment="local"}[15m])`,
 	} {
 		assert.Contains(t, got, want)
 	}
@@ -130,11 +130,11 @@ func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.
 	got := exprs(t, declared)
 
 	for _, want := range []string{
-		`present_over_time(target_info{job="boilerplate/web"}[15m])`,
-		`present_over_time(nodejs_eventloop_utilization_ratio{job="boilerplate/web"}[15m])`,
-		`present_over_time(v8js_gc_duration_seconds_count{job="boilerplate/web"}[15m])`,
-		`present_over_time(traces_spanmetrics_calls_total{service="web"}[15m])`,
-		`present_over_time(traces_spanmetrics_latency_count{service="web"}[15m])`,
+		`present_over_time(target_info{job="boilerplate/web", deployment_environment="local"}[15m])`,
+		`present_over_time(nodejs_eventloop_utilization_ratio{job="boilerplate/web", deployment_environment="local"}[15m])`,
+		`present_over_time(v8js_gc_duration_seconds_count{job="boilerplate/web", deployment_environment="local"}[15m])`,
+		`present_over_time(traces_spanmetrics_calls_total{service="web", deployment_environment="local"}[15m])`,
+		`present_over_time(traces_spanmetrics_latency_count{service="web", deployment_environment="local"}[15m])`,
 		`sum(count_over_time({service_namespace="boilerplate", service_name=~"web"} | kind="event" [15m]))`,
 		`sum(count_over_time({service_namespace="boilerplate", service_name=~"web"} | kind="measurement" [15m]))`,
 	} {
@@ -142,9 +142,9 @@ func TestLiveProbes_ExpectTheNodeRuntimeAndSpanMetricsOfANodeService(t *testing.
 	}
 
 	for _, unwanted := range []string{
-		`present_over_time(http_server_request_total{job="boilerplate/web"}[15m])`,
-		`present_over_time(go_goroutine_count{job="boilerplate/web"}[15m])`,
-		`present_over_time(process_memory_usage_bytes{job="boilerplate/web"}[15m])`,
+		`present_over_time(http_server_request_total{job="boilerplate/web", deployment_environment="local"}[15m])`,
+		`present_over_time(go_goroutine_count{job="boilerplate/web", deployment_environment="local"}[15m])`,
+		`present_over_time(process_memory_usage_bytes{job="boilerplate/web", deployment_environment="local"}[15m])`,
 		`sum(count_over_time({service_namespace="boilerplate", service_name=~"web"} | kind="exception" [15m]))`,
 	} {
 		assert.NotContains(t, got, unwanted)
@@ -170,17 +170,17 @@ func TestLiveProbes_ExpectTheAuthenticationCountersOfTheProcessesThatDeclareActo
 	got := exprs(t, declared)
 
 	for _, want := range []string{
-		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/payments-api"}[15m])`,
-		`present_over_time(iam_actor_authorization_denials_total{job="boilerplate/payments-api"}[15m])`,
-		`present_over_time(iam_login_failures_total{job="boilerplate/shop"}[15m])`,
+		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/payments-api", deployment_environment="local"}[15m])`,
+		`present_over_time(iam_actor_authorization_denials_total{job="boilerplate/payments-api", deployment_environment="local"}[15m])`,
+		`present_over_time(iam_login_failures_total{job="boilerplate/shop", deployment_environment="local"}[15m])`,
 	} {
 		assert.Contains(t, got, want)
 	}
 
 	for _, unwanted := range []string{
-		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/payments-internal"}[15m])`,
-		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/shop"}[15m])`,
-		`present_over_time(iam_login_failures_total{job="boilerplate/payments-api"}[15m])`,
+		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/payments-internal", deployment_environment="local"}[15m])`,
+		`present_over_time(iam_actor_authentication_failures_total{job="boilerplate/shop", deployment_environment="local"}[15m])`,
+		`present_over_time(iam_login_failures_total{job="boilerplate/payments-api", deployment_environment="local"}[15m])`,
 	} {
 		assert.NotContains(t, got, unwanted)
 	}

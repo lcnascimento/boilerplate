@@ -1,6 +1,9 @@
 package dashboards
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/grafana/grafana-foundation-sdk/go/cog"
 	"github.com/grafana/grafana-foundation-sdk/go/cog/variants"
 	"github.com/grafana/grafana-foundation-sdk/go/dashboard"
@@ -28,6 +31,7 @@ func overviewDashboard() *dashboard.DashboardBuilder {
 		Timepicker(dashboard.NewTimePickerBuilder()).
 		Refresh("30s").
 		Time("now-1h", "now").
+		Variables([]cog.Builder[dashboard.VariableModel]{environmentVariableOf()}).
 		Annotations(grafanaAnnotations()).
 		Links([]cog.Builder[dashboard.DashboardLink]{
 			dashboard.NewDashboardLinkBuilder("Dashboards").
@@ -54,9 +58,19 @@ func dashboardLink(title, name string) *dashboard.DashboardLinkBuilder {
 		KeepTime(true)
 }
 
-func sloTable(selector string) *table.PanelBuilder {
+// The objective is the same in every environment, so its series carries none.
+func sloTable(sloService string) *table.PanelBuilder {
 	percent := []dashboard.DynamicConfigValue{{Id: "unit", Value: "percentunit"}, {Id: "decimals", Value: 3}}
-	of := func(series string) string { return bySLO + "(" + series + selector + ")" }
+
+	var matchers []string
+	if sloService != "" {
+		matchers = append(matchers, `sloth_service=`+strconv.Quote(sloService))
+	}
+
+	objective := bySLO + "(" + catalog.SLOObjectiveRatio + selector(matchers) + ")"
+	of := func(series string) string {
+		return bySLO + "(" + series + selector(append(matchers, selectedEnvironment)) + ")"
+	}
 
 	return table.NewPanelBuilder().
 		Title("SLOs").
@@ -64,7 +78,7 @@ func sloTable(selector string) *table.PanelBuilder {
 			"(1 = queima o budget exatamente em 30 dias). O nome do serviço abre o dashboard dele.").
 		Datasource(datasourceRef(prometheusDS)).
 		Targets(promTargets(
-			promInstantTable("A", of(catalog.SLOObjectiveRatio)),
+			promInstantTable("A", objective),
 			promInstantTable("B", "1 - "+of(catalog.SLOErrorRatioRate30d)),
 			promInstantTable("C", of(catalog.SLOPeriodErrorBudgetRemainingRatio)),
 			promInstantTable("D", of(catalog.SLOCurrentBurnRateRatio)),
@@ -118,4 +132,12 @@ func serviceMap() cog.Builder[dashboard.Panel] {
 			QueryType("serviceMap").
 			Datasource(datasourceRef(tempoDS))}).
 		GridPos(dashboard.GridPos{H: 12, W: 12, X: 12, Y: 10})
+}
+
+func selector(matchers []string) string {
+	if len(matchers) == 0 {
+		return ""
+	}
+
+	return "{" + strings.Join(matchers, ", ") + "}"
 }

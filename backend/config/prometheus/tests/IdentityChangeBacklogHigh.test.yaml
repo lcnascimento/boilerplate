@@ -39,3 +39,24 @@ tests:
       - eval_time: 10m
         alertname: IdentityChangeBacklogHigh
         exp_alerts: []
+
+  - name: fires only in the environment whose oldest pending identity change is older than five minutes
+    interval: 1m
+    input_series:
+      - series: iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="local"}
+        values: 0x4
+      - series: iam_identity_change_oldest_pending_age_seconds{job="boilerplate/fixture-worker", deployment_environment="boi-137"}
+        values: 240+60x4
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: IdentityChangeBacklogHigh
+        exp_alerts:
+          - exp_labels:
+              deployment_environment: boi-137
+              service: fixture-worker
+              severity: critical
+            exp_annotations:
+              summary: "fixture-worker com a mudança de identidade mais antiga há 6m 0s sem tradução"
+              description: "A mudança de identidade pendente mais antiga de fixture-worker passou de 5 minutos sem virar Integration Event: a tradução parou, ou travou numa mudança que ela não sabe traduzir, e o Audit Log deixa de receber as mudanças de identidade. Veja primeiro os logs de fixture-worker (UNTRANSLATABLE_CHANGE) e a idade da mudança pendente mais antiga no dashboard do serviço."
+              runbook_url: "https://github.com/lcnascimento/boilerplate/blob/main/docs/runbooks/IdentityChangeBacklogHigh.md"
+              dashboard_url: "http://localhost:3010/d/boilerplate-fixture"

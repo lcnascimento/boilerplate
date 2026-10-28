@@ -43,7 +43,7 @@ func exprsByTitle(panels []boardPanel) map[string][]string {
 func TestGenerate_NodeServiceReadsItsAPIFromTheServerSpanMetrics(t *testing.T) {
 	_, storefront := generateStorefront(t)
 
-	server := `service=~"storefront", span_kind="SPAN_KIND_SERVER"`
+	server := `service=~"storefront", span_kind="SPAN_KIND_SERVER", deployment_environment="$environment"`
 	calls := func(extra, by string) string {
 		return "sum" + by + " (rate(traces_spanmetrics_calls_total{" + server + extra + "}[$__rate_interval]))"
 	}
@@ -122,7 +122,7 @@ func TestGenerate_NodeServiceShowsTheNodeRuntime(t *testing.T) {
 
 	assert.Equal(t, []string{"Alertas", "api", "browser", "Runtime", "Logs"}, rows)
 
-	job := `{job=~"boilerplate/$process"}`
+	job := `{job=~"boilerplate/$process", deployment_environment="$environment"}`
 
 	assert.Equal(t, map[string][]string{
 		"Event loop": {
@@ -180,7 +180,8 @@ func TestGenerate_ServiceWithoutSLOsTopsWithItsAlertsOnly(t *testing.T) {
 
 	require.Len(t, top.panels, 1)
 	assert.Equal(t, "alertlist", top.panels[0].Type)
-	assert.Equal(t, `{service=~"storefront"}`, top.panels[0].Options["alertInstanceLabelFilter"])
+	assert.Equal(t, `{service=~"storefront", deployment_environment=~"$environment|"}`,
+		top.panels[0].Options["alertInstanceLabelFilter"])
 }
 
 func TestGenerate_BrowserSectionReadsTheFaroWebVitalsErrorsAndPageLoadsFromLoki(t *testing.T) {
