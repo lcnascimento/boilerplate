@@ -30,6 +30,13 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      - name: The template's Doppler states exist
+        if: false
+        run: |
+          test -f iac/global/terraform.tfstate
+          for ws in dev ci prd; do test -f "iac/environments/terraform.tfstate.d/$ws/terraform.tfstate"; done
+          test -f iac/environments/terraform.tfvars
+
       - name: make init, commit
         run: bash -euo pipefail -c "$BOOTSTRAP"
 
@@ -48,6 +55,13 @@ jobs:
           test "$(grep '^## ' CLAUDE.md | xargs)" = "## Secrets ## Language"
           test "$(head -1 README.md)" = "# Acme App"
           grep -q 'APP_NAME = "Acme App"' frontend/apps/web/shared/components/organization-menu.tsx
+
+      - name: iac names the project, without state
+        run: |
+          for root in global environments; do
+            grep -A2 '^variable "project" {' "iac/$root/variables.tf" | grep -Fqx '  default = "acme-app"'
+          done
+          test -z "$(find iac \( -name '*.tfstate*' -o -name .terraform -o -name terraform.tfvars \) -print)"
 
       - name: clean-example still runs after init
         run: make clean-example
@@ -87,6 +101,13 @@ jobs:
           ! grep -qE '^(init|clean-example):' Makefile || exit 1
           test "$(ls scripts)" = env.sh
           test "$(ls .github/workflows | xargs)" = "$GENERATED_WORKFLOWS"
+
+      - name: iac names the project, without state
+        run: |
+          for root in global environments; do
+            grep -A2 '^variable "project" {' "iac/$root/variables.tf" | grep -Fqx '  default = "acme-app"'
+          done
+          test -z "$(find iac \( -name '*.tfstate*' -o -name .terraform -o -name terraform.tfvars \) -print)"
 
       - name: Identity stays, without a trace of Notes
         run: |
