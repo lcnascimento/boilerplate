@@ -9,14 +9,14 @@ block() {
 command=$(jq -er '.tool_input.command | strings' 2>/dev/null) ||
 	block 'cannot read tool_input.command from the PreToolUse input'
 
-word='(^|[^[:alnum:]_])'
-end='($|[^[:alnum:]_])'
+word_boundary_start='(^|[^[:alnum:]_])'
+word_boundary_end='($|[^[:alnum:]_])'
 
 [[ ${command//.secrets.example/} == *.secrets* ]] && block 'the command cites .secrets'
 [[ $command == *.doppler/* ]] && block 'the command cites ~/.doppler/'
-[[ $command =~ ${word}doppler${end} ]] && block 'the command calls doppler'
-[[ $command =~ ${word}tofu${end} ]] && block 'the command calls tofu'
-[[ $command =~ ${word}printenv${end} ]] && block 'printenv dumps the environment'
+[[ $command =~ ${word_boundary_start}doppler${word_boundary_end} ]] && block 'the command calls doppler'
+[[ $command =~ ${word_boundary_start}tofu${word_boundary_end} ]] && block 'the command calls tofu'
+[[ $command =~ ${word_boundary_start}printenv${word_boundary_end} ]] && block 'printenv dumps the environment'
 [[ $command =~ /proc/[^[:space:]]*/environ ]] && block '/proc/*/environ dumps the environment'
 
 only_options() {
@@ -65,8 +65,8 @@ check_segment() {
 			shift
 			local arg
 			for arg in "$@"; do
-				[[ $arg =~ ^-?[[:alpha:]]+$ && $arg == *[eE]* ]] &&
-					block 'ps with the e modifier shows process environments'
+				[[ ($arg =~ ^[[:alpha:]]+$ && $arg == *e*) || ($arg =~ ^-[[:alpha:]]+$ && $arg == *E*) ]] &&
+					block 'ps with the e modifier or -E shows process environments'
 			done
 			return
 			;;
