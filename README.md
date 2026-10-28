@@ -248,6 +248,7 @@ make test            # sobe o Postgres e roda os testes de unidade e de componen
 make stack.up        # sobe o stack completo do Tilt em background (log em TILT_LOG) e espera os recursos que iniciam sozinhos
 make test.e2e        # com o stack de pé: o e2e do Playwright e depois o make o11y.check-live
 make stack.down      # tilt down
+make secrets.check   # gitleaks no histórico inteiro do git, com as regras do .gitleaks.toml
 ```
 
 O job `format` é o `make format.check`, e o job `e2e` é `make stack.up && make test.e2e; make stack.down`.
@@ -323,7 +324,7 @@ Para depurar o e2e, o recurso `playwright` do Tilt abre o [UI Mode](https://play
 docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details openapi/*.yaml
 ```
 
-O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
+O pre-commit (lefthook) roda o gitleaks no que está no stage, `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
 
 O pre-push roda, na raiz, `make format.check` e depois `make lint`, os mesmos alvos dos jobs `format` e `lint` da CI. O `make format.check` recusa uma árvore suja (lista os arquivos; faça commit ou `git stash -u`), roda o `make format` e falha se ele mudar algum arquivo, imprimindo o diff e os arquivos novos: assim um código gerado desatualizado (sqlc, mocks, o11y, proto) ou um arquivo fora do formato não chega ao push. Ele precisa do setup da primeira vez (`make setup`) e do Docker rodando. Para pular o hook num push, use `LEFTHOOK=0 git push` ou `git push --no-verify`.
 
@@ -341,6 +342,12 @@ A coleção do `notes` fica em `backend/config/bruno/collections/Notes`, e o `Cr
 ## Doppler
 
 O projeto separa config de secret. Config tem valor versionado nos `.env.example`, inclusive as credenciais de dev; secret mora só no Doppler e chega a cada processo pelo ambiente. O modelo de ameaça, as barreiras do agente e o inventário das chaves do Doppler ficam em [`docs/secrets.md`](docs/secrets.md).
+
+### Scan de segredos
+
+O gitleaks roda no pre-commit, sobre o que está no stage, e no job `secrets` do `quality_gate`, sobre o histórico inteiro; `make secrets.check` repete o scan localmente. As camadas e o que fazer quando ele barra um commit estão em [`docs/secrets.md`](docs/secrets.md#scan-de-segredos).
+
+Ative também a [push protection](https://docs.github.com/en/code-security/secret-scanning/enabling-secret-scanning-features/enabling-push-protection-for-your-repository) do GitHub no repositório (Settings → Advanced Security → Push protection). Ela barra no próprio `git push` os formatos de token que o GitHub conhece, mesmo de quem não instalou os hooks.
 
 ## Como adicionar um serviço
 

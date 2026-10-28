@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "doppler-token"
+description = "Doppler service, CLI, service account, SCIM or audit token"
+regex = '''\b(dp\.(?:st(?:\.[a-z0-9_-]{2,35})?|ct|sa|scim|audit)\.[a-zA-Z0-9]{40,44})\b'''
+keywords = ["dp.st", "dp.ct", "dp.sa", "dp.scim", "dp.audit"]

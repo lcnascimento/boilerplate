@@ -6,6 +6,8 @@ commit-msg:
 pre-commit:
   parallel: true
   commands:
+    secrets:
+      run: make -s secrets.check GITLEAKS_ARGS="--pre-commit --staged"
     backend-lint:
       root: "backend/"
       glob: "backend/**/*.go"
