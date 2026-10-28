@@ -22,6 +22,20 @@
       "mcp__linear__list_comments",
       "mcp__linear__list_issue_labels",
       "mcp__linear__list_issues"
+    ],
+    "deny": [
+      "Read(.secrets)",
+      "Edit(.secrets)",
+      "Read(.env*)",
+      "Read(!.env.example)",
+      "Read(~/.doppler/**)",
+      "Bash(doppler *)",
+      "Bash(tofu *)",
+      "Bash(make iac.plan*)",
+      "Bash(make iac.apply*)",
+      "Bash(make iac.dev-token*)",
+      "Bash(git commit*--no-verify*)",
+      "Bash(*LEFTHOOK=0*)"
     ]
   },
   "hooks": {
@@ -31,6 +45,17 @@
           {
             "type": "command",
             "command": "echo '[ -n \"$ZSH_VERSION\" ] && setopt nonomatch noequals' >> \"$CLAUDE_ENV_FILE\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-secrets.sh"
           }
         ]
       }
