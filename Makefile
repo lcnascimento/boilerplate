@@ -14,11 +14,13 @@ setup:
 	pnpm install --frozen-lockfile
 	@$(MAKE) -C backend setup
 	@$(MAKE) -C frontend setup
+	@$(MAKE) iac.tools
 
 .PHONY: format
 format:
 	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate iam.generate tidy
 	@$(MAKE) -C frontend format
+	@$(MAKE) iac.format
 
 .PHONY: format.check
 format.check:
@@ -95,6 +97,10 @@ test.frontend.e2e:
 .PHONY: test.e2e
 test.e2e: test.frontend.e2e
 	@$(MAKE) -C backend o11y.check-live
+
+.PHONY: iac.tools iac.format iac.check iac.plan iac.apply iac.dev-token
+iac.tools iac.format iac.check iac.plan iac.apply iac.dev-token:
+	@$(MAKE) -s -C iac $(@:iac.%=%)
 
 .PHONY: env.up env.down env.status env.prune
 env.up env.down env.status env.prune:

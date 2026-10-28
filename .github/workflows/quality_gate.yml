@@ -48,6 +48,22 @@ jobs:
       - name: make env.check
         run: make env.check
 
+  iac:
+    name: iac.check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - uses: ./.github/actions/bootstrap
+        if: inputs.bootstrap
+        with:
+          command: ${{ inputs.bootstrap }}
+
+      - name: make iac.check
+        run: make iac.check
+
   test:
     runs-on: ubuntu-latest
     steps:
