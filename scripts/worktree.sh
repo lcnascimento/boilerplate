@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+target="make worktree"
+
 fail() {
-	echo "make worktree: $*" >&2
+	echo "$target: $*" >&2
 	exit 1
 }
 
@@ -13,9 +15,10 @@ usage() {
 root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
 include="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)/.worktreeinclude"
 
-valid_name() {
+worktree_dir() {
 	[[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] && git check-ref-format --branch "$1" >/dev/null 2>&1 ||
 		fail "name must be a branch name made of letters, digits, '.', '_' and '-' (e.g. name=boi-12), got '$1'"
+	echo "$root/.claude/worktrees/$1"
 }
 
 registered() {
@@ -28,8 +31,7 @@ branch_exists() {
 
 add() {
 	local name=$1 base=$2 reset=$3 dir
-	valid_name "$name"
-	dir="$root/.claude/worktrees/$name"
+	dir=$(worktree_dir "$name")
 
 	if [[ -z $base ]]; then
 		git -C "$root" fetch origin main || fail "git fetch origin main failed; pass base=<branch> to work offline"
@@ -39,11 +41,11 @@ add() {
 
 	if registered "$dir"; then
 		echo "==> Reusing $dir"
-		if [[ -n $reset ]]; then
+		if [[ $reset == 1 ]]; then
 			echo "==> Resetting branch $name to $base"
 			git -C "$dir" switch -C "$name" "$base"
 		fi
-	elif [[ -n $reset ]]; then
+	elif [[ $reset == 1 ]]; then
 		git -C "$root" worktree add -B "$name" "$dir" "$base"
 	else
 		branch_exists "$name" && fail "branch '$name' already exists; pass reset=1 to recreate it from $base"
@@ -64,17 +66,17 @@ add() {
 
 remove() {
 	local name=$1 force=$2 dir upstream
-	valid_name "$name"
-	dir="$root/.claude/worktrees/$name"
+	target="make worktree.remove"
+	dir=$(worktree_dir "$name")
 
-	if [[ -z $force ]] && branch_exists "$name"; then
+	if [[ $force != 1 ]] && branch_exists "$name"; then
 		upstream=$(git -C "$root" rev-parse --verify --quiet "$name@{upstream}" || git -C "$root" rev-parse HEAD)
 		git -C "$root" merge-base --is-ancestor "$name" "$upstream" ||
 			fail "branch '$name' has unmerged commits; pass force=1 to delete it anyway"
 	fi
 
 	if registered "$dir"; then
-		if [[ -n $force ]]; then
+		if [[ $force == 1 ]]; then
 			git -C "$root" worktree remove --force "$dir"
 		else
 			git -C "$root" worktree remove "$dir" ||
@@ -85,7 +87,7 @@ remove() {
 	fi
 
 	if branch_exists "$name"; then
-		git -C "$root" branch "$([[ -n $force ]] && echo -D || echo -d)" "$name"
+		git -C "$root" branch "$([[ $force == 1 ]] && echo -D || echo -d)" "$name"
 	else
 		echo "==> No branch $name"
 	fi
