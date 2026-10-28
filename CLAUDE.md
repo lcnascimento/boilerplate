@@ -25,6 +25,7 @@ How to start the Project's dependencies and where its logs, metrics and traces l
 Secrets live only in Doppler and reach each process through its environment. See `docs/secrets.md`.
 
 - Never read `.secrets` or `.env*` files; `.env.example` is the exception.
+- A secret never gets a key in a `.env*` file or in a Tiltfile `serve_env`; `make env.check` enforces it. A versioned dev credential starts with `dev-only-`. See `CODING_STANDARDS.md`.
 - Never run `doppler`, `tofu` or a `make iac.*` target that uses a credential (`iac.plan`, `iac.apply`, `iac.dev-token`): the human administrator runs them. `make iac.check` needs no credential.
 - A `permissions.deny` rule or a hook that blocks you is the rule itself, not an obstacle to work around with another command, script or path.
 - A real secret that reached your context must be rotated, even if it was never committed. Stop and tell the human; never rotate it yourself.

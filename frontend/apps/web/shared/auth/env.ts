@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-const DEV_ONLY_SECRET = "dev-only-secret-change-me-in-production";
-const DEV_ONLY_IP_HASH_KEY = "dev-only-ip-hash-key-change-me-in-production";
+const DEV_ONLY_PREFIX = "dev-only-";
+const DEV_CREDENTIALS = ["BETTER_AUTH_SECRET", "AUDIT_IP_HASH_KEY"] as const;
 
 const iamEnvSchema = z
   .object({
@@ -29,16 +29,18 @@ const iamEnvSchema = z
       .string({ error: "AUDIT_IP_HASH_KEY is required" })
       .min(32, "AUDIT_IP_HASH_KEY must have at least 32 characters"),
   })
-  .refine(
-    ({ NODE_ENV, BETTER_AUTH_SECRET }) =>
-      NODE_ENV !== "production" || BETTER_AUTH_SECRET !== DEV_ONLY_SECRET,
-    "BETTER_AUTH_SECRET is the dev-only secret; generate one for production (openssl rand -base64 32)"
-  )
-  .refine(
-    ({ NODE_ENV, AUDIT_IP_HASH_KEY }) =>
-      NODE_ENV !== "production" || AUDIT_IP_HASH_KEY !== DEV_ONLY_IP_HASH_KEY,
-    "AUDIT_IP_HASH_KEY is the dev-only key; generate one for production (openssl rand -base64 32)"
-  )
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV !== "production") return;
+    for (const key of DEV_CREDENTIALS) {
+      if (env[key].startsWith(DEV_ONLY_PREFIX)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message: `${key} is a dev-only value; generate one for production (openssl rand -base64 32)`,
+        });
+      }
+    }
+  })
   .transform(({ NODE_ENV: _, ...env }) => env);
 
 export type IamEnv = z.infer<typeof iamEnvSchema>;

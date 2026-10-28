@@ -85,7 +85,7 @@ jobs:
         run: |
           test "$(grep -E '^[[:space:]]*(use|\./)' backend/go.work | tr -d ' \t')" = "$(printf 'use./quality\nuse./services/audit\nuse./services/iam\nuse./services/iam/pkg\nuse./tools')"
           ! grep -qE '^(init|clean-example):' Makefile || exit 1
-          test "$(ls scripts)" = env.sh
+          test "$(ls scripts | xargs)" = "env-check.sh env-check_test.sh env.sh"
           test "$(ls .github/workflows | xargs)" = "$GENERATED_WORKFLOWS"
 
       - name: Identity stays, without a trace of Notes
