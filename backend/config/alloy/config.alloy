@@ -3,8 +3,8 @@ discovery.docker "containers" {
   refresh_interval = "5s"
 
   filter {
-    name   = "network"
-    values = ["boilerplate"]
+    name   = "label"
+    values = ["com.docker.compose.project=backend"]
   }
 }
 
@@ -12,14 +12,13 @@ discovery.relabel "containers" {
   targets = discovery.docker.containers.targets
 
   rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
   }
 
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    target_label  = "service"
+    target_label  = "compose_service"
   }
 
   rule {
@@ -46,11 +45,11 @@ otelcol.processor.transform "containers" {
   log_statements {
     context    = "log"
     statements = [
-      `set(resource.attributes["service.name"], log.attributes["service"])`,
-      `set(resource.attributes["service.name"], log.attributes["container"]) where log.attributes["service"] == nil`,
-      `set(resource.attributes["container.name"], log.attributes["container"])`,
+      `set(resource.attributes["service.name"], log.attributes["compose_service"])`,
+      `set(resource.attributes["compose.project"], log.attributes["compose_project"])`,
+      `set(resource.attributes["compose.service"], log.attributes["compose_service"])`,
       `set(resource.attributes["container.image.name"], log.attributes["image"])`,
-      `delete_matching_keys(log.attributes, "^(service|container|image|loki\\.attribute\\.labels)$")`,
+      `delete_matching_keys(log.attributes, "^(compose_project|compose_service|image|loki\\.attribute\\.labels)$")`,
       `merge_maps(log.cache, ParseJSON(log.body), "upsert") where IsMatch(log.body, "^\\{")`,
       `merge_maps(log.cache, ParseKeyValue(log.body), "upsert") where IsMatch(log.body, "^[A-Za-z_][A-Za-z0-9_.]*=")`,
       `merge_maps(log.cache, ExtractPatterns(log.body, "^\\[[^\\]]+\\] (?P<level>[A-Z]+) (?P<msg>.*?)(?: \\((?P<logger>[^()]+)\\))?$"), "upsert") where IsMatch(log.body, "^\\[\\d{4}-\\d{2}-\\d{2} [^\\]]+\\] [A-Z]+ ")`,

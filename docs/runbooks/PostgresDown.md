@@ -12,8 +12,8 @@ Com o Postgres fora, todo serviço com banco falha: a API devolve erro, os consu
 
 ## Diagnóstico
 
-1. Veja se o banco está no ar: `docker ps --filter name=postgres` e `docker exec postgres pg_isready -U postgres`; no Tilt, o recurso `postgres`.
-2. Leia os logs do banco (`docker logs postgres`) atrás de falta de disco, crash ou erro de configuração.
+1. Veja se o banco está no ar: `docker compose ps postgres` e `docker compose exec postgres pg_isready -U postgres` em `backend/`; no Tilt, o recurso `postgres`.
+2. Leia os logs do banco (`docker compose logs postgres` em `backend/`) atrás de falta de disco, crash ou erro de configuração.
 3. Se o banco está no ar, o problema é na coleta: veja o Alloy (`http://localhost:12345`), o componente `prometheus.exporter.postgres.local_postgres` e os logs do Alloy.
 
 ## Mitigação

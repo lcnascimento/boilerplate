@@ -40,5 +40,14 @@ ruler:
       prometheus:
         url: http://prometheus:9090/api/v1/write
 
+limits_config:
+  otlp_config:
+    resource_attributes:
+      attributes_config:
+        - action: index_label
+          attributes:
+            - compose.project
+            - compose.service
+
 analytics:
   reporting_enabled: false

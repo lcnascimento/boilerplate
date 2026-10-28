@@ -1,6 +1,5 @@
 services:
   postgres:
-    container_name: postgres
     image: postgres:18-alpine
     command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     environment:
@@ -16,11 +15,8 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
-    networks:
-      - boilerplate
 
   postgres-extensions:
-    container_name: postgres-extensions
     image: postgres:18-alpine
     # Tilt starts every compose service with `up --wait`, which fails once a one-shot exits, so it runs this one with `docker compose run`.
     profiles: [setup]
@@ -30,11 +26,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - boilerplate
 
   kafka:
-    container_name: kafka
     image: apache/kafka:4.3.1
     environment:
       KAFKA_NODE_ID: 1
@@ -62,11 +55,8 @@ services:
       retries: 30
       start_period: 60s
       start_interval: 1s
-    networks:
-      - boilerplate
 
   schema-registry:
-    container_name: schema-registry
     image: confluentinc/cp-schema-registry:8.3.2
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
@@ -85,11 +75,8 @@ services:
       retries: 30
       start_period: 60s
       start_interval: 1s
-    networks:
-      - boilerplate
 
   kafka-console:
-    container_name: kafka-console
     image: redpandadata/console:v3.12.0
     profiles: [console]
     environment:
@@ -101,14 +88,7 @@ services:
     depends_on:
       schema-registry:
         condition: service_healthy
-    networks:
-      - boilerplate
 
 volumes:
   postgres_data:
   kafka_data:
-
-networks:
-  boilerplate:
-    driver: bridge
-    name: boilerplate

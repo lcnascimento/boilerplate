@@ -345,7 +345,7 @@ var sourceLabels = map[Source][]string{
 var (
 	targetLabels = []string{"__name__", "job", "instance"}
 	logLabels    = []string{
-		"service_name", "service_namespace", config.EnvironmentLabel, "container_name", "detected_level", "severity_number",
+		"service_name", "service_namespace", config.EnvironmentLabel, "compose_project", "compose_service", "detected_level", "severity_number",
 	}
 )
 
