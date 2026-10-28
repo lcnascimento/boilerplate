@@ -10,7 +10,7 @@ while IFS= read -r file; do
 			sub(/^[[:space:]]+/, "", value)
 			sub("^[\"" q "]", "", value)
 			if ((key ~ /SECRET|TOKEN|PASSWORD/ || key ~ /_KEY$/) && value !~ /^dev-only-/) {
-				printf "%s: %s looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)\n", file, key
+				printf "%s in %s looks like a secret; a secret lives only in Doppler, and a versioned dev credential starts with dev-only- (docs/secrets.md)\n", key, file
 				found = 1
 			}
 		}
