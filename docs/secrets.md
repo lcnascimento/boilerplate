@@ -32,7 +32,7 @@ Esta tabela é a única fonte do inventário de secrets. Toda chave nova no Dopp
 | `AUDIT_DATABASE_URL` | | | sim |
 | `IAM_DATABASE_URL` | | | sim |
 
-A config `ci` nasce vazia. Em `dev`, `BETTER_AUTH_SECRET`, `AUDIT_IP_HASH_KEY` e as URLs de banco são config, com valor versionado nos `.env.example` (os segredos com o prefixo `dev-only-`, recusado em produção pelo parser de ambiente). Uma chave nunca está ao mesmo tempo num `.env.example` ou `serve_env` e na config `dev`; o `make env.check` falha quando uma chave de `.env.example` (fora o da raiz) casa com `*SECRET*`, `*TOKEN*`, `*_KEY` ou `*PASSWORD*` sem valor `dev-only-…`.
+A config `ci` nasce vazia. Em `dev`, `BETTER_AUTH_SECRET`, `AUDIT_IP_HASH_KEY` e as URLs de banco são config, com valor versionado nos `.env.example` (os segredos com o prefixo `dev-only-`, recusado em produção pelo parser de ambiente). Uma chave nunca está ao mesmo tempo num `.env.example` ou `serve_env` e na config `dev`; o `make env.check` falha quando uma chave de `.env.example` (fora o da raiz, que guarda só config local de ferramentas, como o `GRAFANA_SERVICE_ACCOUNT_TOKEN`) ou de um dict de Tiltfile casa com `*SECRET*`, `*TOKEN*`, `*_KEY` ou `*PASSWORD*` sem valor `dev-only-…`.
 
 ## Scan de segredos
 

@@ -97,7 +97,7 @@ ctx = baggage.ContextWithMembers(ctx, baggage.NewMember("user.id", user.ID.Strin
 
 A value that may be versioned with a dev value is config; one that may not is a secret. The classification is per (variable, environment) pair.
 
-- A secret lives only in Doppler and never has a key in a `.env*` file or in a Tiltfile `serve_env`, not even an empty one. `make env.check` fails on a `.env.example` key that matches `*SECRET*`, `*TOKEN*`, `*_KEY` or `*PASSWORD*` without a `dev-only-…` value.
+- A secret lives only in Doppler and never has a key in a `.env*` file or in a Tiltfile `serve_env`, not even an empty one. The root `.env.example` is the exception: it holds local-only tooling config that no process of the app reads, such as `GRAFANA_SERVICE_ACCOUNT_TOKEN`. `make env.check` fails on a key of any other `.env.example`, or of a Tiltfile dict, that matches `*SECRET*`, `*TOKEN*`, `*_KEY` or `*PASSWORD*` without a `dev-only-…` value.
 - A versioned dev credential starts with `dev-only-`, and every environment parser that reads one refuses that prefix in production.
 - `NEXT_PUBLIC_*` is always config: Next.js inlines it into the browser bundle.
 - A new Doppler key updates the key table of `docs/secrets.md` in the same PR.
