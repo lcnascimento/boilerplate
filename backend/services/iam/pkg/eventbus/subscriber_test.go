@@ -13,9 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/logtest"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -23,6 +25,7 @@ import (
 	kiterrors "github.com/lcnascimento/go-kit/errors"
 	otelbaggage "go.opentelemetry.io/otel/baggage"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 
 	"github.com/lcnascimento/go-kit/o11y/baggage"
 
@@ -277,7 +280,7 @@ func TestComponentSubscriber_PermanentErrorGoesToTheDLQ(t *testing.T) {
 		{
 			name:       "panic",
 			handle:     func() error { panic("handler bug") },
-			wantReason: "panic occurred",
+			wantReason: "handler bug",
 		},
 	}
 
@@ -393,7 +396,8 @@ func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
 	}
 
 	original := otel.GetTracerProvider()
-	provider := sdktrace.NewTracerProvider()
+	spans := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spans))
 	otel.SetTracerProvider(provider)
 
 	t.Cleanup(func() {
@@ -407,10 +411,11 @@ func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		publish  func(t *testing.T, env *eventbustest.Env) string
-		handle   func(attempt int32) error
-		wantLogs []logged
+		name           string
+		publish        func(t *testing.T, env *eventbustest.Env) string
+		handle         func(attempt int32) error
+		wantLogs       []logged
+		wantErrorTypes []string
 	}{
 		{
 			name:    "transient handler error",
@@ -422,19 +427,25 @@ func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
 
 				return nil
 			},
-			wantLogs: []logged{},
+			wantLogs:       []logged{},
+			wantErrorTypes: []string{"_OTHER", ""},
 		},
 		{
-			name:     "permanent handler error",
-			publish:  publishThing,
-			handle:   func(int32) error { return eventbus.ErrPermanent.WithCause(errors.New("payload is corrupt")) },
-			wantLogs: []logged{{log.SeverityWarn, dlqSent, false}},
+			name:           "permanent handler error",
+			publish:        publishThing,
+			handle:         func(int32) error { return eventbus.ErrPermanent.WithCause(errors.New("payload is corrupt")) },
+			wantLogs:       []logged{{severity: log.SeverityWarn, body: dlqSent, errorType: "_OTHER"}},
+			wantErrorTypes: []string{"_OTHER"},
 		},
 		{
-			name:     "handler panic",
-			publish:  publishThing,
-			handle:   func(int32) error { panic("handler bug") },
-			wantLogs: []logged{{log.SeverityError, undeliverable, true}, {log.SeverityWarn, dlqSent, false}},
+			name:    "handler panic",
+			publish: publishThing,
+			handle:  func(int32) error { panic("handler bug") },
+			wantLogs: []logged{
+				{severity: log.SeverityFatal, body: "handler bug", traced: true, code: "PANIC", kind: "CRITICAL", stack: true},
+				{severity: log.SeverityWarn, body: dlqSent, errorType: "PANIC"},
+			},
+			wantErrorTypes: []string{"PANIC"},
 		},
 		{
 			name: "malformed message",
@@ -446,7 +457,11 @@ func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
 
 				return headers["ce_id"]
 			},
-			wantLogs: []logged{{log.SeverityWarn, undeliverable, true}, {log.SeverityWarn, dlqSent, false}},
+			wantLogs: []logged{
+				{severity: log.SeverityWarn, body: undeliverable, traced: true, code: "INVALID_FRAMING", kind: "INVALID_INPUT"},
+				{severity: log.SeverityWarn, body: dlqSent, errorType: "INVALID_FRAMING"},
+			},
+			wantErrorTypes: []string{"INVALID_FRAMING"},
 		},
 	}
 
@@ -477,19 +492,67 @@ func TestComponentSubscriber_LogsOnlyTheErrorsItOriginates(t *testing.T) {
 			got := make([]logged, 0, len(records))
 
 			for _, record := range records {
-				traced := trace.SpanContextFromContext(record.Context).IsValid()
-				got = append(got, logged{record.Severity, record.Body.AsString(), traced})
+				got = append(got, loggedOf(&record))
 			}
 
 			require.Equal(t, tt.wantLogs, got)
+			require.Equal(t, tt.wantErrorTypes, processErrorTypes(spans.Ended(), poisoned))
 		})
 	}
 }
 
 type logged struct {
-	severity log.Severity
-	body     string
-	traced   bool
+	severity  log.Severity
+	body      string
+	traced    bool
+	code      string
+	kind      string
+	stack     bool
+	errorType string
+}
+
+func loggedOf(record *logtest.Record) logged {
+	got := logged{
+		severity: record.Severity,
+		body:     record.Body.AsString(),
+		traced:   trace.SpanContextFromContext(record.Context).IsValid(),
+	}
+
+	for _, attr := range record.Attributes {
+		switch attr.Key {
+		case "exception.stack":
+			got.stack = attr.Value.AsString() != ""
+		case "error.type":
+			got.errorType = attr.Value.AsString()
+		case "error":
+			for _, field := range attr.Value.AsMap() {
+				switch field.Key {
+				case "avn_code":
+					got.code = field.Value.AsString()
+				case "avn_kind":
+					got.kind = field.Value.AsString()
+				}
+			}
+		}
+	}
+
+	return got
+}
+
+func processErrorTypes(spans []sdktrace.ReadOnlySpan, messageID string) []string {
+	var got []string
+
+	for _, span := range spans {
+		attributes := attribute.NewSet(span.Attributes()...)
+		if id, _ := attributes.Value(semconv.MessagingMessageIDKey); id.AsString() != messageID {
+			continue
+		}
+
+		errorType, _ := attributes.Value(semconv.ErrorTypeKey)
+		got = append(got, errorType.AsString())
+	}
+
+	return got
 }
 
 func publishThing(t *testing.T, env *eventbustest.Env) string {
