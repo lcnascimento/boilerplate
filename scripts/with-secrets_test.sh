@@ -6,7 +6,6 @@ failures=0
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# A checkout of its own, so the wrapper finds the .secrets of each case at its root.
 setup_checkout() {
 	rm -rf "$work/repo" "$work/tools" "$work/cli" "$work/out"
 	mkdir -p "$work/repo/scripts" "$work/tools" "$work/cli" "$work/out"
@@ -36,8 +35,7 @@ EOF
 	chmod +x "$work/cli/doppler"
 }
 
-# run <case> <path>: runs the child through the wrapper with only the tools of <path> on PATH.
-run() {
+run_wrapper() {
 	local name=$1 path=$2
 	shift 2
 	env -i OUT="$work/out" PATH="$path" "$@" \
@@ -62,20 +60,20 @@ offline_child='argv=serve|argv=a b|secret=unset token=unset'
 warning='with-secrets: starting without the dev secrets of Doppler'
 
 setup_checkout
-run 'no .secrets' "$work/tools:$work/cli"
+run_wrapper 'no .secrets' "$work/tools:$work/cli"
 expect got_status 0
 expect got_child "$offline_child"
 expect got_doppler 'not called'
 expect got_stderr ''
 
 setup_checkout
-run 'inherited DOPPLER_TOKEN, no .secrets' "$work/tools:$work/cli" DOPPLER_TOKEN=dp.st.inherited
+run_wrapper 'inherited DOPPLER_TOKEN, no .secrets' "$work/tools:$work/cli" DOPPLER_TOKEN=dp.st.inherited
 expect got_child "$offline_child"
 expect got_doppler 'not called'
 
 setup_checkout
 printf 'DOPPLER_TOKEN=\n' >"$work/repo/.secrets"
-run 'empty token' "$work/tools:$work/cli"
+run_wrapper 'empty token' "$work/tools:$work/cli"
 expect got_status 0
 expect got_child "$offline_child"
 expect got_doppler 'not called'
@@ -83,7 +81,7 @@ expect got_stderr ''
 
 setup_checkout
 printf 'DOPPLER_TOKEN=dp.st.dev.fake\n' >"$work/repo/.secrets"
-run 'token and CLI' "$work/tools:$work/cli"
+run_wrapper 'token and CLI' "$work/tools:$work/cli"
 expect got_status 0
 expect got_child 'argv=serve|argv=a b|secret=from-doppler token=unset'
 expect got_doppler "token=dp.st.dev.fake argv=run --no-fallback -- true
@@ -92,7 +90,7 @@ expect got_stderr ''
 
 setup_checkout
 printf 'DOPPLER_TOKEN=dp.st.dev.fake\n' >"$work/repo/.secrets"
-run 'token and failing CLI' "$work/tools:$work/cli" FAKE_DOPPLER_FAIL=1
+run_wrapper 'token and failing CLI' "$work/tools:$work/cli" FAKE_DOPPLER_FAIL=1
 expect got_status 0
 expect got_child "argv=serve|argv=a b|secret=unset token=unset"
 expect got_doppler 'token=dp.st.dev.fake argv=run --no-fallback -- true'
@@ -101,7 +99,7 @@ $warning: doppler could not fetch them"
 
 setup_checkout
 printf 'DOPPLER_TOKEN=dp.st.dev.fake\n' >"$work/repo/.secrets"
-run 'token without CLI' "$work/tools"
+run_wrapper 'token without CLI' "$work/tools"
 expect got_status 0
 expect got_child "$offline_child"
 expect got_doppler 'not called'
