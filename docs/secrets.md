@@ -82,7 +82,42 @@ Esse token fica em `~/.doppler/` depois do `doppler login`, na mesma máquina do
 
 ## Contrato da CI
 
+A config `ci` do Doppler chega aos secrets de repositório do GitHub Actions pelo sync nativo do Doppler, declarado no workspace `ci` de `iac/environments/` (`doppler_secrets_sync_github_actions`). O GitHub não guarda nenhum token do Doppler: o Doppler empurra os valores pelo GitHub App dele, e cada mudança na config `ci` chega sozinha ao repositório. O sync usa `delete_behavior = "delete_from_target"`: uma chave tirada da config `ci`, ou o sync destruído, some também do GitHub.
+
+Hoje nenhum workflow lê secret. Quem escrever o primeiro job que precise de um segue estas regras:
+
+- `${{ secrets.X }}` aparece só no `env:` do passo que usa o valor, nunca no `env:` do job ou do workflow, nunca dentro de `run:` e nunca como argumento de linha de comando. O valor chega só ao processo daquele passo e não aparece no comando registrado no log.
+- A config `ci` guarda só credenciais descartáveis: contas de teste, sandboxes, chaves de modo teste. Nunca uma credencial que alcance dados ou dinheiro reais, e nunca um valor de `prd`.
+- O teste que precisa do secret se pula quando a variável está vazia. O GitHub não entrega secrets de repositório aos PRs de fork nem aos do Dependabot, e esses PRs continuam verdes.
+- No `release.yml`, que roda na `main`, `CI_SECRETS_REQUIRED=true` transforma o pulo em falha: na `main`, um secret que sumiu quebra o build em vez de pular em silêncio. Essa fiação entra no mesmo PR do primeiro consumidor, não antes.
+
+```yaml
+- name: Test the payments client
+  env:
+    STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }}
+  run: make test
+```
+
+```go
+key := os.Getenv("STRIPE_TEST_KEY")
+if key == "" {
+	if os.Getenv("CI_SECRETS_REQUIRED") == "true" {
+		t.Fatal("STRIPE_TEST_KEY is required on main")
+	}
+	t.Skip("STRIPE_TEST_KEY is not set")
+}
+```
+
+No `release.yml`, o `CI_SECRETS_REQUIRED: "true"` vai no `env:` do mesmo passo. Toda chave nova da config `ci` entra na [tabela de chaves](#chaves-do-doppler-por-ambiente) no mesmo PR.
+
 ## Contrato de `prd`
+
+Ainda não há pipeline de deploy nem nada que leia `prd`. Quando houver, ela segue estas regras:
+
+- O processo de produção lê os secrets só do próprio ambiente, como em dev. Ele não roda `doppler run`, não tem a CLI do Doppler e não sabe de onde os valores vieram.
+- A entrega preferencial é o sync nativo do Doppler para a plataforma que roda o processo, no mesmo molde do sync de `ci`: nenhum token do Doppler fica fora do Doppler. A alternativa, quando a plataforma não tem sync, é um service token read-only da config `prd`, guardado só na plataforma.
+- Um valor de `prd`, ou um token que leia `prd`, nunca vai para um secret de repositório do GitHub. Se um job precisar dele, ele fica num GitHub Environment protegido (revisores obrigatórios e só a `main`), e só o job de deploy declara esse environment.
+- O sync ou o token de `prd` é declarado no workspace `prd` de `iac/environments/`, condicionado ao workspace como os recursos de `dev` e de `ci`, e aplicado localmente pelo administrador, como todo apply.
 
 ## Rotação e vazamento
 
@@ -116,6 +151,19 @@ Os states antigos continuam no histórico do git, cifrados com a passphrase vaza
 4. Abra um segundo PR que tira o `key_provider` antigo, o `fallback` e a variável `previous_state_passphrase`.
 5. Recrie com `REPLACE` todo token que o state da passphrase vazada guardou (no workspace `dev`, um por holder) e entregue os tokens novos.
 
+### Rotacionar um secret da config `ci`
+
+Rotacione o valor na origem (no provedor da credencial) e grave o valor novo na config `ci` pelo dashboard do Doppler. O sync propaga o valor para os secrets do repositório; não há apply nem mudança no GitHub. Revogue o valor antigo no provedor depois que o próximo run da CI passar.
+
+### Trocar a integração GitHub do Doppler
+
+Quando o GitHub App for reinstalado, o repositório mudar de dono ou a integração for recriada:
+
+1. Crie a integração nova no dashboard do Doppler, como no bootstrap do README, sem criar um sync por ali.
+2. Abra um PR que troca o `github_integration` em `iac/environments/terraform.tfvars` pelo slug novo.
+3. Depois do merge, rode `make iac.apply WS=ci` e commite o state. Se o plano recriar o sync, o `delete_from_target` apaga os secrets do GitHub na destruição, e o sync novo os grava de novo em seguida; evite rodar a CI no meio.
+4. Apague a integração antiga no dashboard.
+
 ### Token pessoal do administrador vazado
 
 O token do `doppler login` lê todos os ambientes, `prd` incluído.
@@ -142,7 +190,7 @@ Um segredo real que entrou no contexto do agente (numa leitura, numa saída de c
 A estrutura do Doppler fica em `iac/`, em duas raízes. O roteiro de uso está na seção `## Doppler` do `README.md`.
 
 - `global` declara o projeto e os ambientes. O projeto é criado à mão (`doppler projects create`) e adotado por blocos `import`, junto com os ambientes que o Doppler cria com ele; o `stg` vira `ci` por update in-place. Cada ambiente leva `personal_configs = false`.
-- `environments` é um único código para os workspaces `dev`, `ci` e `prd`, com o ambiente vindo de `terraform.workspace`. O que é de um ambiente só usa `count`/`for_each` condicionado ao workspace, como os service tokens de `dev`.
+- `environments` é um único código para os workspaces `dev`, `ci` e `prd`, com o ambiente vindo de `terraform.workspace`. O que é de um ambiente só usa `count`/`for_each` condicionado ao workspace, como os service tokens de `dev` e o sync de `ci` para o GitHub Actions. O slug da integração GitHub (`github_integration`) só é obrigatório no workspace `ci`. Não há token de `ci`, nem o provider `integrations/github`, nem `gh auth token`.
 - O código nunca declara `doppler_secret` nem lê o data source `doppler_secrets`: os valores entrariam no state e no diff do plano. Os valores entram só pelo dashboard.
 - O state é `local`, cifrado (`pbkdf2` + `aes_gcm`, `enforced = true`) e versionado. Cada raiz e cada workspace tem a própria passphrase, guardada no gerenciador de senhas e fora do Doppler: um acesso ao Doppler não abre o state, e o apply não depende do Doppler para abrir o state.
 - O apply é sempre local, feito pelo administrador na `main`. A CI só roda o `make iac.check`, que não precisa de credencial.
