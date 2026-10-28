@@ -93,6 +93,24 @@ Fix:
 ctx = baggage.ContextWithMembers(ctx, baggage.NewMember("user.id", user.ID.String()))
 ```
 
+## Keep secrets out of versioned files
+
+A value that may be versioned with a dev value is config; one that may not is a secret. The classification is per (variable, environment) pair.
+
+- A secret lives only in Doppler and never has a key in a `.env*` file or in a Tiltfile `serve_env`, not even an empty one. `make env.check` fails on a `.env.example` key that matches `*SECRET*`, `*TOKEN*`, `*_KEY` or `*PASSWORD*` without a `dev-only-…` value.
+- A versioned dev credential starts with `dev-only-`, and every environment parser that reads one refuses that prefix in production.
+- `NEXT_PUBLIC_*` is always config: Next.js inlines it into the browser bundle.
+- A new Doppler key updates the key table of `docs/secrets.md` in the same PR.
+
+Violation:
+
+```sh
+POSTHOG_HOST=
+POSTHOG_PROJECT_KEY=
+```
+
+Fix: delete `POSTHOG_PROJECT_KEY` from the `.env.example`, add it to the Doppler `dev` and `prd` configs and to the table of `docs/secrets.md`; the process reads it from its environment.
+
 ## Hand a CI secret only to the step that uses it
 
 - `${{ secrets.X }}` appears only in the `env:` of the step that needs it: never in a job or workflow `env:`, inside `run:` or as a command-line argument.
