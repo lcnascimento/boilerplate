@@ -367,7 +367,7 @@ O `scripts/with-secrets.sh` envolve só os processos de longa duração: os alvo
 A estrutura do Doppler (o projeto, os ambientes e os service tokens) é declarada em OpenTofu, em `iac/`. Os valores dos secrets nunca passam por ali: eles entram só pelo dashboard do Doppler.
 
 - `iac/global/` declara o projeto e os ambientes `dev`, `ci` e `prd`.
-- `iac/environments/` é um único código aplicado em três workspaces, `dev`, `ci` e `prd`. Hoje ele emite, no workspace `dev`, um service token read-only da config `dev` para cada pessoa de `dev_token_holders` (em `iac/environments/terraform.tfvars`).
+- `iac/environments/` é um único código aplicado em três workspaces, `dev`, `ci` e `prd`. Hoje ele emite, no workspace `dev`, um service token read-only da config `dev` para cada pessoa de `dev_token_holders` e, no workspace `ci`, o sync nativo da config `ci` para os secrets do repositório no GitHub Actions, pela integração `github_integration`. As duas variáveis ficam em `iac/environments/terraform.tfvars`.
 - O nome do projeto no Doppler é a variável `project` das duas raízes, com o nome do projeto como padrão.
 - O state fica no próprio repositório, cifrado com uma passphrase por raiz e por workspace. O `.terraform.lock.hcl` também é versionado.
 
@@ -399,14 +399,19 @@ Feito uma vez por projeto, pelo administrador, quando o primeiro secret aparecer
    doppler projects create <name>
    ```
 
-3. Gere quatro passphrases, uma para cada workspace (`global`, `dev`, `ci` e `prd`), com pelo menos 16 caracteres, e guarde-as no gerenciador de senhas, fora do Doppler. Sem a passphrase, o state daquele workspace não abre.
-4. Abra um PR que cria o `iac/environments/terraform.tfvars` com o seu nome em `dev_token_holders`, e faça o merge:
+3. Ligue o Doppler ao GitHub, à mão. O sync da config `ci` usa o nome do repositório igual à variável `project`, então o repositório precisa existir no GitHub com esse nome. Nenhum token do GitHub é gerado nem guardado, e não é preciso `gh auth login`:
+   1. No dashboard do Doppler, em Integrations, adicione a integração GitHub Actions e instale o GitHub App do Doppler na sua conta ou organização, com acesso ao repositório.
+   2. Crie a integração e pare antes de criar um sync por ali: o sync é declarado em `iac/` e criado pelo apply do workspace `ci`.
+   3. Copie o slug da integração, um UUID que aparece na página dela no dashboard.
+4. Gere quatro passphrases, uma para cada workspace (`global`, `dev`, `ci` e `prd`), com pelo menos 16 caracteres, e guarde-as no gerenciador de senhas, fora do Doppler. Sem a passphrase, o state daquele workspace não abre.
+5. Abra um PR que cria o `iac/environments/terraform.tfvars` com o seu nome em `dev_token_holders` e o slug da integração em `github_integration`, e faça o merge. O slug não é segredo: sem a conta do Doppler, ele não abre nada.
 
    ```hcl
-   dev_token_holders = ["<pessoa>"]
+   dev_token_holders  = ["<pessoa>"]
+   github_integration = "<slug>"
    ```
 
-5. Na `main` atualizada, aplique os workspaces nesta ordem, cada um com a sua passphrase. O `global` adota o projeto e os ambientes por `import` e renomeia o `stg` para `ci`; confira o plano antes de confirmar:
+6. Na `main` atualizada, aplique os workspaces nesta ordem, cada um com a sua passphrase. O `global` adota o projeto e os ambientes por `import` e renomeia o `stg` para `ci`; confira o plano antes de confirmar:
 
    ```sh
    make iac.apply WS=global
@@ -415,8 +420,10 @@ Feito uma vez por projeto, pelo administrador, quando o primeiro secret aparecer
    make iac.apply WS=prd
    ```
 
-6. Commite os states (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/*/terraform.tfstate`) num PR e faça o merge. Eles estão cifrados.
-7. Extraia o seu service token de dev e cole-o no `.secrets` (veja [Dev com `.secrets`](#dev-com-secrets)):
+   O apply do `ci` cria o sync: a partir dele, toda mudança na config `ci` chega sozinha aos secrets do repositório.
+
+7. Commite os states (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/*/terraform.tfstate`) num PR e faça o merge. Eles estão cifrados.
+8. Extraia o seu service token de dev e cole-o no `.secrets` (veja [Dev com `.secrets`](#dev-com-secrets)):
 
    ```sh
    make iac.dev-token NAME=<pessoa>
