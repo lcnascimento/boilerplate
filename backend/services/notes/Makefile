@@ -8,8 +8,8 @@ CONSUMER_HEALTH_PORT ?= 8094
 SCHEMA_REGISTRY_URL ?= http://localhost:8081
 
 DB_NAME := notes
-PSQL := docker exec -i postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
-KAFKA_TOPICS := docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092
+PSQL := docker compose -f ../../docker-compose.yml exec -T postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
+KAFKA_TOPICS := docker compose -f ../../docker-compose.yml exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092
 
 DEBUG_GCFLAGS := all=-N -l
 

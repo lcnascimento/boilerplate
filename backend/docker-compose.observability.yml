@@ -1,6 +1,5 @@
 services:
   alloy:
-    container_name: alloy
     image: grafana/alloy:v1.20.1
     command:
       - run
@@ -27,11 +26,8 @@ services:
       # prometheus.exporter.kafka fails the whole config, and Alloy exits, when the broker is unreachable at start.
       kafka:
         condition: service_healthy
-    networks:
-      - boilerplate
 
   prometheus:
-    container_name: prometheus
     image: prom/prometheus:v3.15.0
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -45,11 +41,8 @@ services:
     volumes:
       - ./config/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
-    networks:
-      - boilerplate
 
   loki:
-    container_name: loki
     image: grafana/loki:3.7.8
     command: -config.file=/etc/loki/loki.yaml
     ports:
@@ -57,11 +50,8 @@ services:
     volumes:
       - ./config/loki:/etc/loki:ro
       - loki_data:/loki
-    networks:
-      - boilerplate
 
   tempo:
-    container_name: tempo
     # Tempo 3.x drops `ingester`, `local_blocks` and `traces_storage`, which config/tempo/tempo.yaml uses.
     image: grafana/tempo:2.10.8
     command: [ "-config.file=/etc/tempo.yaml" ]
@@ -70,22 +60,16 @@ services:
       - tempo_data:/var/tempo
     ports:
       - "3200:3200"
-    networks:
-      - boilerplate
 
   pyroscope:
-    container_name: pyroscope
     image: grafana/pyroscope:2.4.0
     ports:
       - "4040:4040"
     volumes:
       # The image runs from / with every store under ./data, which it declares as an anonymous volume.
       - pyroscope_data:/data
-    networks:
-      - boilerplate
 
   grafana:
-    container_name: grafana
     image: grafana/grafana:13.2.3
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -101,8 +85,6 @@ services:
       - tempo
       - loki
       - pyroscope
-    networks:
-      - boilerplate
 
 volumes:
   alloy_data:
@@ -111,8 +93,3 @@ volumes:
   tempo_data:
   grafana_data:
   pyroscope_data:
-
-networks:
-  boilerplate:
-    driver: bridge
-    name: boilerplate

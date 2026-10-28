@@ -14,8 +14,8 @@ Sem broker, nenhum Integration Event é publicado nem consumido: os outboxes acu
 
 ## Diagnóstico
 
-1. Veja se o broker está no ar e saudável: `docker ps --filter name=kafka` e o healthcheck do container; no Tilt, o recurso `kafka`.
-2. Leia os logs do broker (`docker logs kafka`) atrás de falta de disco ou erro de configuração.
+1. Veja se o broker está no ar e saudável: `docker compose ps kafka` em `backend/` e o healthcheck do container; no Tilt, o recurso `kafka`.
+2. Leia os logs do broker (`docker compose logs kafka` em `backend/`) atrás de falta de disco ou erro de configuração.
 3. Se o broker está no ar, o problema é na coleta: veja o Alloy (`http://localhost:12345`), o componente `prometheus.exporter.kafka.local_kafka` e os logs do Alloy. O exporter derruba a config do Alloy se o broker estava fora quando ele subiu.
 4. Confira se a coleta do exporter funciona (`up{job="integrations/kafka"}` e `scrape_duration_seconds{job="integrations/kafka"}`: perto de 10s é o timeout).
 

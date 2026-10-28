@@ -47,7 +47,7 @@ Query them through the `grafana` MCP server (`mcp__grafana__*`, needs `GRAFANA_S
 
 401 from `mcp__grafana__*` means `GRAFANA_SERVICE_ACCOUNT_TOKEN` is invalid: run `make -C backend grafana.token`, then restart Claude Code.
 
-Loki stream labels are `service_namespace` (`boilerplate`), `service_name` and `deployment_environment` for the services and the web app, and `service_name` and `container_name` for the infrastructure containers; `trace_id`, `scope_name`, `severity_number` and log attributes are structured metadata, filtered after the selector: `{service_namespace="boilerplate", service_name="<service>"} | trace_id="<trace_id>"`.
+Loki stream labels are `service_namespace` (`boilerplate`), `service_name` and `deployment_environment` for the services and the web app, and `service_name`, `compose_project` (`backend`) and `compose_service` for the infrastructure containers; `trace_id`, `scope_name`, `severity_number` and log attributes are structured metadata, filtered after the selector: `{service_namespace="boilerplate", service_name="<service>"} | trace_id="<trace_id>"`.
 
 Without the MCP server, query the backends over HTTP:
 
