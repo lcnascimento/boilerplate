@@ -7,13 +7,14 @@ GOBIN := $(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)
 TOFU := $(GOBIN)/tofu
 
 ROOTS := global environments
-root_of = $(if $(filter global,$(1)),global,$(if $(filter dev ci prd,$(1)),environments))
+ENVIRONMENTS := $(shell sed -n '/^  environments = {/,/^  }/s/^    \([a-z]*\) *= {.*/\1/p' global/main.tf)
+root_of = $(if $(filter global,$(1)),global,$(if $(filter $(ENVIRONMENTS),$(1)),environments))
 
 # make 3.81 (macOS) ignores .SHELLFLAGS, so recipes that prompt set their own flags.
 define open_workspace
 	set -euo pipefail; \
 	root="$(call root_of,$(1))"; \
-	[ -n "$$root" ] || { echo "WS must be global, dev, ci or prd, got '$(1)'" >&2; exit 1; }; \
+	[ -n "$$root" ] || { echo "WS must be one of global $(ENVIRONMENTS), got '$(1)'" >&2; exit 1; }; \
 	read -rsp "State passphrase for $(1): " passphrase; echo >&2; \
 	previous=; \
 	if grep -q '^variable "previous_state_passphrase"' "$$root"/*.tf; then read -rsp "Previous state passphrase for $(1): " previous; echo >&2; fi; \
@@ -32,6 +33,10 @@ tools:
 		curl -fsSL "https://github.com/opentofu/opentofu/releases/download/$(TOFU_VERSION)/tofu_$(TOFU_VERSION:v%=%)_$${os}_$${arch}.tar.gz" \
 			| tar -xzO tofu > "$(TOFU)" && chmod +x "$(TOFU)"; \
 	fi
+
+.PHONY: environments
+environments:
+	@echo $(ENVIRONMENTS)
 
 .PHONY: format
 format: tools

@@ -34,7 +34,7 @@ jobs:
         if: false
         run: |
           test -f iac/global/terraform.tfstate
-          for ws in dev ci prd; do test -f "iac/environments/terraform.tfstate.d/$ws/terraform.tfstate"; done
+          for ws in $(make -s iac.environments); do test -f "iac/environments/terraform.tfstate.d/$ws/terraform.tfstate"; done
           test -f iac/environments/terraform.tfvars
 
       - name: make init, commit
