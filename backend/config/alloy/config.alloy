@@ -8,7 +8,7 @@ discovery.relabel "containers" {
 
   // The dev project, and the ephemeral projects of `make env.up`.
   rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_project", "__meta_docker_container_label_com_boilerplate_ephemeral"]
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project", "__meta_docker_container_label_ephemeral"]
     regex         = "backend;.*|.*;true"
     action        = "keep"
   }

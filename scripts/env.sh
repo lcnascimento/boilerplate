@@ -357,7 +357,7 @@ status() {
 
 prune() {
 	local project dir
-	docker ps -a --filter label=com.boilerplate.ephemeral=true \
+	docker ps -a --filter label=ephemeral=true \
 		--format '{{.Label "com.docker.compose.project"}} {{.Label "com.docker.compose.project.working_dir"}}' |
 		sort -u |
 		while read -r project dir; do

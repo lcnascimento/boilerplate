@@ -1,5 +1,5 @@
 x-ephemeral: &ephemeral
-  com.boilerplate.ephemeral: "true"
+  ephemeral: "true"
 
 services:
   postgres:
