@@ -4,7 +4,7 @@ Severidade: `critical`. Herdado por todo processo com o componente `worker` (o f
 
 ## Sintoma
 
-O processo não reporta o gauge `<serviço>_outbox_oldest_pending_age_seconds` (a idade da mensagem pendente mais antiga do outbox) há mais de 5 minutos.
+O processo não reporta o gauge `<serviço>_outbox_oldest_pending_age_seconds` (a idade da mensagem pendente mais antiga do outbox) há mais de 5 minutos, num ambiente (`deployment_environment`) em que algum processo mandou `target_info` nos últimos 2 minutos. O label `deployment_environment` do alerta diz em qual ambiente.
 
 ## Impacto
 
