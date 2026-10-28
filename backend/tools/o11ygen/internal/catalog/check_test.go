@@ -119,7 +119,7 @@ func TestCheck_RejectsQueriesOutsideTheCatalog(t *testing.T) {
 			query: artifact.Query{Language: artifact.LogQL, Expr: `{container="kafka"}`},
 			err:   `label "container" is not a log label in the catalog`,
 		},
-		"the container_name label Alloy no longer writes": {
+		"the container name as a log label": {
 			query: artifact.Query{Language: artifact.LogQL, Expr: `{container_name="kafka"}`},
 			err:   `label "container_name" is not a log label in the catalog`,
 		},
