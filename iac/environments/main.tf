@@ -45,3 +45,21 @@ resource "doppler_service_token" "dev" {
   name    = each.key
   access  = "read"
 }
+
+resource "doppler_secrets_sync_github_actions" "ci" {
+  count = local.environment == "ci" ? 1 : 0
+
+  integration     = var.github_integration
+  project         = var.project
+  config          = local.environment
+  sync_target     = "repo"
+  repo_name       = var.project
+  delete_behavior = "delete_from_target"
+
+  lifecycle {
+    precondition {
+      condition     = var.github_integration != null
+      error_message = "github_integration (the Doppler GitHub integration slug) must be set in terraform.tfvars for the ci workspace."
+    }
+  }
+}
