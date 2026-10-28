@@ -17,7 +17,6 @@ import (
 	"github.com/cenkalti/backoff/v5"
 
 	"github.com/lcnascimento/go-kit/errors"
-	"github.com/lcnascimento/go-kit/o11y/log"
 )
 
 const (
@@ -262,7 +261,7 @@ func recoverer(next message.HandlerFunc) message.HandlerFunc {
 		defer func() {
 			if cause := recover(); cause != nil {
 				panicErr := errors.New("%s", fmt.Sprint(cause)).WithCode("PANIC").WithKind(errors.KindCritical)
-				logger.Critical(msg.Context(), panicErr, log.String("exception.stack", string(debug.Stack())))
+				onPanicked(msg.Context(), panicErr, debug.Stack())
 
 				err = ErrPermanent.WithCause(panicErr)
 			}

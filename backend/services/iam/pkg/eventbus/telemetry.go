@@ -129,6 +129,10 @@ func onUndeliverable(ctx context.Context, err error) error {
 	return err
 }
 
+func onPanicked(ctx context.Context, err error, stack []byte) {
+	logger.Critical(ctx, err, log.String("exception.stack", string(stack)))
+}
+
 func onRouterStopped(ctx context.Context, err error) {
 	logger.Error(ctx, err)
 }
