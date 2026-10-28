@@ -17,7 +17,8 @@ const (
 	processVariable     = "process"
 	environmentVariable = "environment"
 
-	selectedEnvironment = config.EnvironmentLabel + `="$` + environmentVariable + `"`
+	selectedEnvironment       = config.EnvironmentLabel + `="$` + environmentVariable + `"`
+	selectedEnvironmentOrNone = config.EnvironmentLabel + `=~"$` + environmentVariable + `|"`
 )
 
 type section struct {

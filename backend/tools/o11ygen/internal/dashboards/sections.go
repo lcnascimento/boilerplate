@@ -29,7 +29,7 @@ func topSection(svc *service.Service, declaresSLOs bool) section {
 		title:       "Alertas do serviço",
 		description: "Alertas de cada processo de " + svc.Name + ", inclusive os de burn rate dos SLOs.",
 		filter: `{service=~` + strconv.Quote(strings.Join(processNames(longRunning(svc)), "|")) + `, ` +
-			config.EnvironmentLabel + `=~"$` + environmentVariable + `|"}`,
+			selectedEnvironmentOrNone + `}`,
 	}
 
 	if !declaresSLOs {

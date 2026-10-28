@@ -58,8 +58,7 @@ func dashboardLink(title, name string) *dashboard.DashboardLinkBuilder {
 		KeepTime(true)
 }
 
-// sloTable lists the SLOs of sloService, or of every service when it is empty, in the selected environment. The
-// objective is the same in every environment, so its series carries none.
+// The objective is the same in every environment, so its series carries none.
 func sloTable(sloService string) *table.PanelBuilder {
 	percent := []dashboard.DynamicConfigValue{{Id: "unit", Value: "percentunit"}, {Id: "decimals", Value: 3}}
 

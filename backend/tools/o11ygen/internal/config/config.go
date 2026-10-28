@@ -7,4 +7,5 @@ const (
 
 	EnvironmentLabel   = "deployment_environment"
 	DefaultEnvironment = "local"
+	ByEnvironment      = "by (" + EnvironmentLabel + ")"
 )

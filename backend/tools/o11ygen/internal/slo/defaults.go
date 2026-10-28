@@ -74,16 +74,13 @@ var goKitDefaults = []inheritedSLO{
 			Objective: twoNines,
 			Description: "Minutos em que a mensagem pendente mais antiga do outbox de " + svc +
 				" tem até 30s, segundo " + p.Name() + ".",
-			SLI: service.RawSLI{ErrorRatioQuery: "avg_over_time((max " + byEnvironment + " (" + catalog.OutboxOldestPendingAge(svc) + "{" + job(p) +
+			SLI: service.RawSLI{ErrorRatioQuery: "avg_over_time((max " + config.ByEnvironment + " (" + catalog.OutboxOldestPendingAge(svc) + "{" + job(p) +
 				"}) > bool " + number(OutboxFreshnessThresholdSeconds) + ")[" + window + ":1m])"},
 		}
 	}},
 }
 
-const (
-	window        = service.SLOWindow
-	byEnvironment = "by (" + config.EnvironmentLabel + ")"
-)
+const window = service.SLOWindow
 
 func job(p service.Process) string {
 	return "job=" + strconv.Quote(config.Namespace+"/"+p.Name())
@@ -94,7 +91,7 @@ func apiSelector(p service.Process) string {
 }
 
 func rate(series string, matchers ...string) string {
-	return "sum " + byEnvironment + " (rate(" + series + "{" + strings.Join(matchers, ",") + "}[" + window + "]))"
+	return "sum " + config.ByEnvironment + " (rate(" + series + "{" + strings.Join(matchers, ",") + "}[" + window + "]))"
 }
 
 // orZero keeps the SLI of each environment at 0, instead of absent, while no bad event has happened in it yet: the

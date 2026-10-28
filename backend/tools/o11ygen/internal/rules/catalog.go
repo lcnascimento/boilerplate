@@ -42,15 +42,12 @@ func (p *process) job() string {
 	return `{job=` + strconv.Quote(config.Namespace+"/"+p.Name()) + `}`
 }
 
-const byEnvironment = "by (" + config.EnvironmentLabel + ")"
-
-// absentInLiveEnvironments fires in each environment where some process sent target_info in the last 2 minutes but
-// present is empty. The 2 minutes are shorter than the absence windows, so an environment torn down whole fires nothing.
+// The 2 minutes are shorter than the absence windows, so an environment torn down whole fires nothing.
 func absentInLiveEnvironments(present string) string {
 	live := fmt.Sprintf("group %s (last_over_time(%s{job=~%s}[2m]))",
-		byEnvironment, catalog.TargetInfo, strconv.Quote(config.Namespace+"/.+"))
+		config.ByEnvironment, catalog.TargetInfo, strconv.Quote(config.Namespace+"/.+"))
 
-	return fmt.Sprintf("%s unless on (%s) group %s (%s)", live, config.EnvironmentLabel, byEnvironment, present)
+	return fmt.Sprintf("%s unless on (%s) group %s (%s)", live, config.EnvironmentLabel, config.ByEnvironment, present)
 }
 
 type healthDependency struct {
@@ -87,7 +84,7 @@ func (p *process) unauthenticatedRatio() string {
 	q := slo.Unauthenticated(p.service.Runtime, []service.Process{p.Process})
 
 	return fmt.Sprintf("sum %s (rate(%s{%s, %s}[5m])) / sum %s (rate(%s{%s}[5m]))",
-		byEnvironment, q.Series, q.Selector, q.Matcher, byEnvironment, q.Series, q.Selector)
+		config.ByEnvironment, q.Series, q.Selector, q.Matcher, config.ByEnvironment, q.Series, q.Selector)
 }
 
 func enumerated(items []string) string {
@@ -150,7 +147,7 @@ var processAlerts = []inheritedAlert{
 			return alert{
 				name: "DBPoolSaturated",
 				expr: fmt.Sprintf("max %s (%s%s / %s%s) > 0.9",
-					byEnvironment, catalog.PgxpoolAcquiredConnections, p.job(), catalog.PgxpoolMaxConnections, p.job()),
+					config.ByEnvironment, catalog.PgxpoolAcquiredConnections, p.job(), catalog.PgxpoolMaxConnections, p.job()),
 				forDuration: sustainedFor,
 				severity:    warning,
 				summary:     "Pool do Postgres de " + p.Name() + " com {{ $value | humanizePercentage }} das conexões em uso",
@@ -236,7 +233,7 @@ var processAlerts = []inheritedAlert{
 			return alert{
 				name: "IdentityChangeBacklogHigh",
 				expr: fmt.Sprintf("max %s (%s%s) > %d",
-					byEnvironment, catalog.IAMIdentityChangeOldestPendingAge, p.job(), int(IdentityChangeBacklogThreshold.Seconds())),
+					config.ByEnvironment, catalog.IAMIdentityChangeOldestPendingAge, p.job(), int(IdentityChangeBacklogThreshold.Seconds())),
 				severity: critical,
 				summary:  p.Name() + " com a mudança de identidade mais antiga há {{ $value | humanizeDuration }} sem tradução",
 				description: "A mudança de identidade pendente mais antiga de " + p.Name() + " passou de " +
