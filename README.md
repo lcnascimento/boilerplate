@@ -148,7 +148,7 @@ No diretório do serviço (`backend/services/<name>/`), com o `postgres` no ar:
 
 ```sh
 make db.setup      # cria o role e o database, só se não existirem
-make db.migrate    # aplica as migrations pendentes (binário cmd/migrate, mesmo DATABASE_URL da API)
+make db.migrate    # aplica as migrations pendentes (binário cmd/migrate, mesmo <NAME>_DATABASE_URL da API)
 make db.rollback   # desfaz só a última migration aplicada (a seção Down dela)
 make db.reset      # apaga o database, recria e migra de novo
 ```
@@ -249,6 +249,7 @@ make test            # sobe o Postgres e roda os testes de unidade e de componen
 make stack.up        # sobe o stack completo do Tilt em background (log em TILT_LOG) e espera os recursos que iniciam sozinhos
 make test.e2e        # com o stack de pé: o e2e do Playwright e depois o make o11y.check-live
 make stack.down      # tilt down
+make secrets.check   # gitleaks no histórico inteiro do git, com as regras do .gitleaks.toml
 ```
 
 O job `format` é o `make format.check`, e o job `e2e` é `make stack.up && make test.e2e; make stack.down`.
@@ -324,7 +325,7 @@ Para depurar o e2e, o recurso `playwright` do Tilt abre o [UI Mode](https://play
 docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details openapi/*.yaml
 ```
 
-O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
+O pre-commit (lefthook) roda o gitleaks no que está no stage, `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
 
 O pre-push roda, na raiz, `make format.check` e depois `make lint`, os mesmos alvos dos jobs `format` e `lint` da CI. O `make format.check` recusa uma árvore suja (lista os arquivos; faça commit ou `git stash -u`), roda o `make format` e falha se ele mudar algum arquivo, imprimindo o diff e os arquivos novos: assim um código gerado desatualizado (sqlc, mocks, o11y, proto) ou um arquivo fora do formato não chega ao push. Ele precisa do setup da primeira vez (`make setup`) e do Docker rodando. Para pular o hook num push, use `LEFTHOOK=0 git push` ou `git push --no-verify`.
 
@@ -407,6 +408,12 @@ Feito uma vez por projeto, pelo administrador, quando o primeiro secret aparecer
 
 Para dar um token a outra pessoa, ponha o nome dela em `dev_token_holders` num PR, rode `make iac.apply WS=dev` depois do merge, commite o state e entregue a saída de `make iac.dev-token NAME=<pessoa>` por um canal seguro. Tirar o nome e aplicar destrói o token: é assim que se revoga. Rotação, rekey de passphrase e vazamentos estão em [`docs/secrets.md`](docs/secrets.md#rotação-e-vazamento).
 
+### Scan de segredos
+
+O gitleaks roda no pre-commit, sobre o que está no stage, e no job `secrets` do `quality_gate`, sobre o histórico inteiro; `make secrets.check` repete o scan localmente. As camadas e o que fazer quando ele barra um commit estão em [`docs/secrets.md`](docs/secrets.md#scan-de-segredos).
+
+Ative também a [push protection](https://docs.github.com/en/code-security/secret-scanning/enabling-secret-scanning-features/enabling-push-protection-for-your-repository) do GitHub no repositório (Settings → Advanced Security → Push protection). Ela barra no próprio `git push` os formatos de token que o GitHub conhece, mesmo de quem não instalou os hooks.
+
 ## Como adicionar um serviço
 
 Nos passos abaixo, `<name>` é o nome do serviço em kebab-case (ex.: `billing`) e `<NAME>` é o mesmo nome em maiúsculas com `_` (ex.: `BILLING`).
@@ -419,7 +426,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Backend**
 
-1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/authz/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `<NAME>_DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/authz/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
    <!-- example:begin -->
    O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
    <!-- example:end -->

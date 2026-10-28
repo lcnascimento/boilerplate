@@ -25,7 +25,7 @@ const (
 	databasePingTimeout = 5 * time.Second
 )
 
-var ErrConnectDatabase = errors.New("failed to connect to the database: is Postgres up and DATABASE_URL right?")
+var ErrConnectDatabase = errors.New("failed to connect to the database: is Postgres up and AUDIT_DATABASE_URL right?")
 
 func Logger(logger *slog.Logger) fx.Option {
 	return fx.Module(

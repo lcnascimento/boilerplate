@@ -48,14 +48,25 @@ lint:
 			lint --details --no-banner --no-style --no-update-check $$specs; \
 	fi
 
+.PHONY: secrets.check
+secrets.check:
+	@"$(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)/gitleaks" git --no-banner --redact --verbose $(GITLEAKS_ARGS)
+
 .PHONY: lint.breaking
 lint.breaking:
 	@$(MAKE) -C backend proto.breaking
 
 .PHONY: test
-test:
+test: hooks.test
 	@$(MAKE) -C backend test
 	@$(MAKE) -C frontend test
+
+HOOKS_TESTS := \
+	.claude/hooks/guard-secrets_test.sh
+
+.PHONY: hooks.test
+hooks.test:
+	@for t in $(HOOKS_TESTS); do bash "$$t" || exit 1; done
 
 .PHONY: test.unit
 test.unit: test.backend.unit test.frontend.unit

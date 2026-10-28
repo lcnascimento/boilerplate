@@ -28,6 +28,11 @@ Secrets live only in Doppler and reach each process through its environment. See
 - Never run `doppler`, `tofu` or a `make iac.*` target that uses a credential (`iac.plan`, `iac.apply`, `iac.dev-token`): the human administrator runs them. `make iac.check` needs no credential.
 - A `permissions.deny` rule or a hook that blocks you is the rule itself, not an obstacle to work around with another command, script or path.
 - A real secret that reached your context must be rotated, even if it was never committed. Stop and tell the human; never rotate it yourself.
+- When gitleaks blocks a commit:
+  - never bypass it with `--no-verify`, `LEFTHOOK=0` or a `gitleaks:allow` comment, and never edit `.gitleaksignore`;
+  - take the value out of the stage;
+  - if the value may be real, treat it as leaked: stop and tell the human;
+  - if it is a false positive, ask the human to record its fingerprint in `.gitleaksignore`.
 
 ## Language
 

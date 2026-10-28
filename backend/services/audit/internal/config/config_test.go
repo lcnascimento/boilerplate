@@ -9,7 +9,7 @@ import (
 )
 
 func TestDatabaseURL_Set(t *testing.T) {
-	t.Setenv("DATABASE_URL", "postgres://user:pass@db:5432/audit")
+	t.Setenv("AUDIT_DATABASE_URL", "postgres://user:pass@db:5432/audit")
 
 	url, err := config.DatabaseURL()
 
@@ -18,13 +18,13 @@ func TestDatabaseURL_Set(t *testing.T) {
 }
 
 func TestDatabaseURL_MissingSaysWhichKeyToAdd(t *testing.T) {
-	t.Setenv("DATABASE_URL", "")
+	t.Setenv("AUDIT_DATABASE_URL", "")
 
 	_, err := config.DatabaseURL()
 
 	require.ErrorIs(t, err, config.ErrDatabaseURLMissing)
 	require.Equal(t,
-		"DATABASE_URL is not set: run `make -C backend env` to add the missing keys of "+
+		"AUDIT_DATABASE_URL is not set: run `make -C backend env` to add the missing keys of "+
 			"backend/services/audit/.env.example to backend/services/audit/.env",
 		err.Error(),
 	)
