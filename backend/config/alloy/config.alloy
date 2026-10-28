@@ -8,8 +8,18 @@ discovery.docker "containers" {
   }
 }
 
+discovery.docker "ephemeral_containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+
+  filter {
+    name   = "label"
+    values = ["com.boilerplate.ephemeral=true"]
+  }
+}
+
 discovery.relabel "containers" {
-  targets = discovery.docker.containers.targets
+  targets = array.concat(discovery.docker.containers.targets, discovery.docker.ephemeral_containers.targets)
 
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
