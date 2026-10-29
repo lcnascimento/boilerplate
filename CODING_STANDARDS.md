@@ -146,7 +146,7 @@ Source: `boundary-discipline`.
 - A production process reads its secrets from its environment only: no `doppler run`, no Doppler CLI, no secrets file.
 - Delivery is a Doppler native sync to the runtime platform; a read-only `prd` service token stored only in that platform is the fallback.
 - A `prd` value, or a token that reads `prd`, never goes into a GitHub repository secret, only into a protected GitHub Environment that only the deploy job declares.
-- The `prd` sync or token is declared in the `prd` workspace of `iac/environments/` and applied locally, never in CI.
+- The `prd` sync or token is declared in the `doppler` module of `iac/` and applied locally, never in CI.
 
 Violation:
 
@@ -156,6 +156,6 @@ Violation:
     DOPPLER_TOKEN: ${{ secrets.DOPPLER_PRD_TOKEN }}
 ```
 
-Fix: declare the `prd` sync to the platform in `iac/environments/` and let the deployed process read its environment.
+Fix: declare the `prd` sync to the platform in the `doppler` module of `iac/` and let the deployed process read its environment.
 
 Source: `boundary-discipline`.

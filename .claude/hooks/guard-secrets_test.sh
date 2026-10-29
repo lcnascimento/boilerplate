@@ -83,7 +83,7 @@ deny "sh -c 'doppler configure get token --plain'"
 deny "python -c 'import subprocess; subprocess.run([\"doppler\", \"me\"])'"
 deny 'which doppler'
 deny 'tofu plan'
-deny 'tofu -chdir=iac/global init'
+deny 'tofu -chdir=iac init'
 deny "sh -c 'tofu apply'"
 deny '/usr/local/bin/tofu version'
 

@@ -30,12 +30,11 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: The template's Doppler states exist
+      - name: The template's Doppler state exists
         if: false
         run: |
-          test -f iac/global/terraform.tfstate
-          for ws in $(make -s iac.environments); do test -f "iac/environments/terraform.tfstate.d/$ws/terraform.tfstate"; done
-          test -f iac/environments/terraform.tfvars
+          test -f iac/terraform.tfstate
+          test -f iac/terraform.tfvars
 
       - name: make init, commit
         run: bash -euo pipefail -c "$BOOTSTRAP"
@@ -58,9 +57,7 @@ jobs:
 
       - name: iac names the project, without state
         run: |
-          for root in global environments; do
-            grep -A2 '^variable "project" {' "iac/$root/variables.tf" | grep -Fqx '  default = "acme-app"'
-          done
+          grep -A2 '^variable "project" {' iac/variables.tf | grep -Fqx '  default = "acme-app"'
           test -z "$(find iac \( -name '*.tfstate*' -o -name .terraform -o -name terraform.tfvars \) -print)"
 
       - name: .secrets.example holds only the token key, .secrets is not versioned
@@ -110,9 +107,7 @@ jobs:
 
       - name: iac names the project, without state
         run: |
-          for root in global environments; do
-            grep -A2 '^variable "project" {' "iac/$root/variables.tf" | grep -Fqx '  default = "acme-app"'
-          done
+          grep -A2 '^variable "project" {' iac/variables.tf | grep -Fqx '  default = "acme-app"'
           test -z "$(find iac \( -name '*.tfstate*' -o -name .terraform -o -name terraform.tfvars \) -print)"
 
       - name: .secrets.example holds only the token key, .secrets is not versioned
