@@ -244,7 +244,7 @@ make format          # formata backend, frontend e iac/ e regenera o código ger
 make format.check    # com a árvore limpa: roda o make format e falha se ele mudar algum arquivo
 make lint            # os linters, o typecheck e o build, no backend, no frontend e no OpenAPI
 make lint.breaking   # buf breaking dos .proto contra AGAINST (padrão: origin/main); no CI, contra a base do PR
-make iac.check       # tofu fmt -check e validate das raízes de iac/, sem credencial
+make iac.check       # tofu fmt -check e validate de iac/, sem credencial
 make test            # sobe o Postgres e roda os testes de unidade e de componente do backend e do frontend
 make stack.up        # sobe o stack completo do Tilt em background (log em TILT_LOG) e espera os recursos que iniciam sozinhos
 make test.e2e        # com o stack de pé: o e2e do Playwright e depois o make o11y.check-live
@@ -366,19 +366,30 @@ O `scripts/with-secrets.sh` envolve só os processos de longa duração: os alvo
 
 A estrutura do Doppler (o projeto, os ambientes e os service tokens) é declarada em OpenTofu, em `iac/`. Os valores dos secrets nunca passam por ali: eles entram só pelo dashboard do Doppler.
 
-- `iac/global/` declara o projeto e os ambientes `dev`, `ci` e `prd`.
-- `iac/environments/` é um único código aplicado em três workspaces, `dev`, `ci` e `prd`. Hoje ele emite, no workspace `dev`, um service token read-only da config `dev` para cada pessoa de `dev_token_holders` e, no workspace `ci`, o sync nativo da config `ci` para os secrets do repositório no GitHub Actions, pela integração `github_integration`. As duas variáveis ficam em `iac/environments/terraform.tfvars`.
-- O nome do projeto no Doppler é a variável `project` das duas raízes, com o nome do projeto como padrão.
-- O state fica no próprio repositório, cifrado com uma passphrase por raiz e por workspace. O `.terraform.lock.hcl` também é versionado.
+`iac/` é uma raiz só, com um state, que chama um módulo por provider:
+
+```text
+iac/
+├── main.tf               # backend, cifra do state, ambientes, imports, module "doppler"
+├── variables.tf          # project, state_passphrase, dev_token_holders, github_integration
+├── terraform.tfvars      # dev_token_holders e github_integration deste projeto
+├── terraform.tfstate     # cifrado e versionado
+└── modules/doppler/      # projeto, ambientes, service tokens de dev, sync de ci
+```
+
+- Os ambientes `dev`, `ci` e `prd` são um mapa nos `locals` do `main.tf`.
+- O módulo `doppler` emite um service token read-only da config `dev` para cada pessoa de `dev_token_holders` e, quando `github_integration` está definido, o sync nativo da config `ci` para os secrets do repositório no GitHub Actions.
+- O nome do projeto no Doppler é a variável `project`, com o nome do projeto como padrão.
+- O state fica no próprio repositório, cifrado com uma passphrase. O `.terraform.lock.hcl` também é versionado.
 
 O `make setup` e a CI instalam o OpenTofu na versão fixa do `iac/Makefile` (`make iac.tools`). Os alvos, na raiz:
 
 ```sh
-make iac.check                                   # tofu fmt -check e, em cada raiz, init -backend=false + validate; sem credencial, roda na CI
-make iac.format                                  # tofu fmt -recursive (o make format já chama)
-make iac.plan WS=<global|dev|ci|prd>             # plano do workspace; pede a passphrase e usa o token do doppler login
-make iac.apply WS=<global|dev|ci|prd>            # aplica o workspace; aceita REPLACE=<endereço> para recriar um recurso
-make iac.dev-token NAME=<pessoa>                 # imprime o service token de dev da pessoa
+make iac.check                    # tofu fmt -check, init -backend=false e validate; sem credencial, roda na CI
+make iac.format                   # tofu fmt -recursive (o make format já chama)
+make iac.plan                     # plano; pede a passphrase e usa o token do doppler login
+make iac.apply                    # aplica; aceita REPLACE=<endereço> para recriar um recurso
+make iac.dev-token NAME=<pessoa>  # imprime o service token de dev da pessoa
 ```
 
 O `iac.plan`, o `iac.apply` e o `iac.dev-token` são só do administrador, sempre locais e na `main` atualizada. A passphrase é lida com `read -s` e o token pessoal vem de `doppler configure get token --plain`; os dois chegam só ao processo `tofu`. A CI nunca aplica, e o agente nunca roda esses alvos: ele escreve o HCL, o PR é revisado e mergeado, e o administrador aplica e commita o state.
@@ -401,35 +412,32 @@ Feito uma vez por projeto, pelo administrador, quando o primeiro secret aparecer
 
 3. Ligue o Doppler ao GitHub, à mão. O sync da config `ci` usa o nome do repositório igual à variável `project`, então o repositório precisa existir no GitHub com esse nome. Nenhum token do GitHub é gerado nem guardado, e não é preciso `gh auth login`:
    1. No dashboard do Doppler, em Integrations, adicione a integração GitHub Actions e instale o GitHub App do Doppler na sua conta ou organização, com acesso ao repositório.
-   2. Crie a integração e pare antes de criar um sync por ali: o sync é declarado em `iac/` e criado pelo apply do workspace `ci`.
+   2. Crie a integração e pare antes de criar um sync por ali: o sync é declarado em `iac/` e criado pelo apply.
    3. Copie o slug da integração, um UUID que aparece na página dela no dashboard.
-4. Gere quatro passphrases, uma para cada workspace (`global`, `dev`, `ci` e `prd`), com pelo menos 16 caracteres, e guarde-as no gerenciador de senhas, fora do Doppler. Sem a passphrase, o state daquele workspace não abre.
-5. Abra um PR que cria o `iac/environments/terraform.tfvars` com o seu nome em `dev_token_holders` e o slug da integração em `github_integration`, e faça o merge. O slug não é segredo: sem a conta do Doppler, ele não abre nada.
+4. Gere uma passphrase com pelo menos 16 caracteres e guarde-a no gerenciador de senhas, fora do Doppler. Sem ela, o state não abre.
+5. Abra um PR que cria o `iac/terraform.tfvars` com o seu nome em `dev_token_holders` e o slug da integração em `github_integration`, e faça o merge. O slug não é segredo: sem a conta do Doppler, ele não abre nada.
 
    ```hcl
    dev_token_holders  = ["<pessoa>"]
    github_integration = "<slug>"
    ```
 
-6. Na `main` atualizada, aplique os workspaces nesta ordem, cada um com a sua passphrase. O `global` adota o projeto e os ambientes por `import` e renomeia o `stg` para `ci`; confira o plano antes de confirmar:
+6. Na `main` atualizada, aplique. O plano adota o projeto e os ambientes por `import`, renomeia o `stg` para `ci`, cria o seu service token de dev e o sync da config `ci`; confira-o antes de confirmar:
 
    ```sh
-   make iac.apply WS=global
-   make iac.apply WS=dev
-   make iac.apply WS=ci
-   make iac.apply WS=prd
+   make iac.apply
    ```
 
-   O apply do `ci` cria o sync: a partir dele, toda mudança na config `ci` chega sozinha aos secrets do repositório.
+   A partir do apply, toda mudança na config `ci` chega sozinha aos secrets do repositório.
 
-7. Commite os states (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/*/terraform.tfstate`) num PR e faça o merge. Eles estão cifrados.
+7. Commite o state (`iac/terraform.tfstate`) num PR e faça o merge. Ele está cifrado.
 8. Extraia o seu service token de dev e cole-o no `.secrets` (veja [Dev com `.secrets`](#dev-com-secrets)):
 
    ```sh
    make iac.dev-token NAME=<pessoa>
    ```
 
-Para dar um token a outra pessoa, ponha o nome dela em `dev_token_holders` num PR, rode `make iac.apply WS=dev` depois do merge, commite o state e entregue a saída de `make iac.dev-token NAME=<pessoa>` por um canal seguro. Tirar o nome e aplicar destrói o token: é assim que se revoga. Rotação, rekey de passphrase e vazamentos estão em [`docs/secrets.md`](docs/secrets.md#rotação-e-vazamento).
+Para dar um token a outra pessoa, ponha o nome dela em `dev_token_holders` num PR, rode `make iac.apply` depois do merge, commite o state e entregue a saída de `make iac.dev-token NAME=<pessoa>` por um canal seguro. Tirar o nome e aplicar destrói o token: é assim que se revoga. Rotação, rekey de passphrase e vazamentos estão em [`docs/secrets.md`](docs/secrets.md#rotação-e-vazamento).
 
 ### Scan de segredos
 
@@ -516,7 +524,7 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
    - `NAME` precisa casar com `^[a-z][a-z0-9-]*$` (ex.: `my-app`). Um nome inválido é rejeitado antes de qualquer arquivo ser tocado.
    - `boilerplate` vira `<name>` em todo arquivo versionado (módulos Go, escopo `@<name>/*`, rede docker, dashboards, `service.namespace`, cookie de idioma, servidor MCP) e `Boilerplate` vira o título derivado (`my-app` → `My App`). O pacote Protobuf e os nomes completos das mensagens (`boilerplate.iam.v1.UserCreated`, o `ce_type`) usam `_` no lugar de `-` (`my_app.iam.v1.UserCreated`), nos `.proto` e em todo arquivo que os cita.
    - Sai do `CLAUDE.md` a seção "Agent skills" e sai a pasta `docs/agents/` inteira.
-   - Saem os states do Doppler do template (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/`) e o `iac/environments/terraform.tfvars`, antes da troca do nome: o projeto novo faz o próprio [bootstrap do Doppler](#bootstrap-do-doppler).
+   - Saem o state do Doppler do template (`iac/terraform.tfstate`) e o `iac/terraform.tfvars`, antes da troca do nome: o projeto novo faz o próprio [bootstrap do Doppler](#bootstrap-do-doppler).
    - O script exige a árvore git limpa e o pnpm/Node instalados, e não faz commit. Depois de trocar o nome, ele se apaga junto com o alvo `init`, o workflow `template` e esta seção do README, roda o `pnpm install` (na raiz e em `frontend/`) e o `pnpm -C frontend format` (o nome novo muda o comprimento de algumas linhas, e o prettier quebra ou junta imports de novo), então a árvore já sai formatada.
    - Se algo der errado, `git checkout . && git clean -fd` volta ao estado anterior.
    - Os `.env` não são versionados, então um `backend/.env` criado antes do `make init` (por um `make -C backend setup`, por exemplo) continua com o nome do template. Rode o `make init` antes do setup ou apague o `backend/.env` e rode `make -C backend setup` de novo.

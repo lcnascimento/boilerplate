@@ -103,8 +103,8 @@ test.frontend.e2e:
 test.e2e: test.frontend.e2e
 	@$(MAKE) -C backend o11y.check-live
 
-.PHONY: iac.tools iac.environments iac.format iac.check iac.plan iac.apply iac.dev-token
-iac.tools iac.environments iac.format iac.check iac.plan iac.apply iac.dev-token:
+.PHONY: iac.tools iac.format iac.check iac.plan iac.apply iac.dev-token
+iac.tools iac.format iac.check iac.plan iac.apply iac.dev-token:
 	@$(MAKE) -s -C iac $(@:iac.%=%)
 
 .PHONY: env.up env.down env.status env.prune

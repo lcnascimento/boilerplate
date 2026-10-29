@@ -37,7 +37,7 @@ rm -f .github/workflows/template.yml
 drop_section README.md "## Como instanciar"
 perl -0pi -e 's/^\.PHONY: init\ninit:\n(?:\t.*\n)*\n?//m' Makefile
 
-git rm -rq --ignore-unmatch -- iac/global/terraform.tfstate iac/environments/terraform.tfstate.d iac/environments/terraform.tfvars
+git rm -rq --ignore-unmatch -- iac/terraform.tfstate iac/terraform.tfvars
 
 proto_name=${name//-/_}
 while IFS= read -r dir; do

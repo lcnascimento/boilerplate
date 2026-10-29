@@ -42,25 +42,20 @@ locals {
 }
 
 import {
-  to = doppler_project.this
+  to = module.doppler.doppler_project.this
   id = var.project
-}
-
-resource "doppler_project" "this" {
-  name = var.project
 }
 
 import {
   for_each = local.environments
-  to       = doppler_environment.this[each.key]
+  to       = module.doppler.doppler_environment.this[each.key]
   id       = "${var.project}.${each.value.created_as}"
 }
 
-resource "doppler_environment" "this" {
-  for_each = local.environments
-
-  project          = doppler_project.this.name
-  slug             = each.key
-  name             = each.value.name
-  personal_configs = false
+module "doppler" {
+  source             = "./modules/doppler"
+  project            = var.project
+  environments       = { for slug, environment in local.environments : slug => environment.name }
+  dev_token_holders  = var.dev_token_holders
+  github_integration = var.github_integration
 }
