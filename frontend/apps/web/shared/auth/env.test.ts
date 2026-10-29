@@ -64,7 +64,7 @@ describe("parseIamEnv", () => {
         NODE_ENV: "production",
         BETTER_AUTH_SECRET: "dev-only-secret-change-me-in-production",
       },
-      "Invalid environment: BETTER_AUTH_SECRET is the dev-only secret; generate one for production (openssl rand -base64 32)",
+      "Invalid environment: BETTER_AUTH_SECRET is a dev-only value; generate one for production (openssl rand -base64 32)",
     ],
     [
       { ...valid, AUDIT_IP_HASH_KEY: "short" },
@@ -76,7 +76,16 @@ describe("parseIamEnv", () => {
         NODE_ENV: "production",
         AUDIT_IP_HASH_KEY: "dev-only-ip-hash-key-change-me-in-production",
       },
-      "Invalid environment: AUDIT_IP_HASH_KEY is the dev-only key; generate one for production (openssl rand -base64 32)",
+      "Invalid environment: AUDIT_IP_HASH_KEY is a dev-only value; generate one for production (openssl rand -base64 32)",
+    ],
+    [
+      {
+        ...valid,
+        NODE_ENV: "production",
+        BETTER_AUTH_SECRET: "dev-only-any-other-secret-long-enough",
+        AUDIT_IP_HASH_KEY: "dev-only-any-other-ip-hash-key-long-enough",
+      },
+      "Invalid environment: BETTER_AUTH_SECRET is a dev-only value; generate one for production (openssl rand -base64 32); AUDIT_IP_HASH_KEY is a dev-only value; generate one for production (openssl rand -base64 32)",
     ],
     [
       { ...valid, BETTER_AUTH_URL: "" },

@@ -37,6 +37,8 @@ rm -f .github/workflows/template.yml
 drop_section README.md "## Como instanciar"
 perl -0pi -e 's/^\.PHONY: init\ninit:\n(?:\t.*\n)*\n?//m' Makefile
 
+git rm -rq --ignore-unmatch -- iac/global/terraform.tfstate iac/environments/terraform.tfstate.d iac/environments/terraform.tfvars
+
 proto_name=${name//-/_}
 while IFS= read -r dir; do
 	git mv "$dir/$marker" "$dir/$proto_name"
@@ -69,4 +71,5 @@ Initialized "$title" ($name). Next steps:
   1. Review the diff: git status && git diff
   2. Run the ai-foundation setup for this project (Linear, Notion, forge).
   3. Commit: git add -A && git commit -m "chore: initialize $name from the template"
+  4. When the project needs its first secret, bootstrap Doppler: README.md, section "## Doppler".
 EOF

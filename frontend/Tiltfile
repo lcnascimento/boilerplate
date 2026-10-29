@@ -47,7 +47,7 @@ if not MINIMAL_STACK:
 
 local_resource(
     'web',
-    serve_cmd='pnpm --filter @boilerplate/web dev',
+    serve_cmd='../scripts/with-secrets.sh pnpm --filter @boilerplate/web dev',
     serve_env=web_env,
     resource_deps=web_deps,
     # TCP, not HTTP: an HTTP probe logs the whole page on every success.

@@ -19,7 +19,7 @@ func TestComponentNewPool_ConnectionsCarryTheServiceName(t *testing.T) {
 	adminURL := env.Get[string]("POSTGRES_ADMIN_URL")
 	require.NotEmpty(t, adminURL, "POSTGRES_ADMIN_URL is unset: run make test, which loads backend/.env")
 
-	t.Setenv("DATABASE_URL", adminURL)
+	t.Setenv("NOTES_DATABASE_URL", adminURL)
 	t.Setenv("OTEL_SERVICE_NAME", "notes-api-frontend")
 
 	lifecycle := fxtest.NewLifecycle(t)

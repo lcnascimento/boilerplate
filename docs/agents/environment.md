@@ -3,6 +3,7 @@
 ## Setup
 
 - `make setup`
+- Linear MCP, once per person: in Claude Code run `/mcp`, pick `linear`, authenticate in the browser and choose workspace `Boilerplate`. OAuth only: no Linear token in `.mcp.json` or `.env`.
 
 ## Start
 
@@ -44,9 +45,9 @@ A worktree runs the application isolated from `tilt up` and from other worktrees
 ## Variables
 
 - Copy `.env.example` to `.env`; `direnv` loads it.
-- `LINEAR_API_KEY`
 - `GRAFANA_SERVICE_ACCOUNT_TOKEN`: `make -C backend grafana.token` writes it (Viewer service account `MCP`), and `tilt up` runs it once Grafana is up; restart Claude Code after a new one.
 - `make -C backend env` creates `backend/.env` and each `backend/services/*/.env` from their examples; `tilt up` runs it.
+- `.secrets` is optional: `make env` creates it from `.secrets.example` with an empty `DOPPLER_TOKEN`, and `.worktreeinclude` copies it into each worktree. `scripts/with-secrets.sh` wraps the long-running processes only (the services' `run.*` targets, the `web` resource, the same processes under `make env.up`); with a token it adds the Doppler `dev` secrets to their environment, and without one, without the CLI, or with Doppler down it runs them offline with a warning. Tests, migrations, seeds and schema registration never go through it. Never read `.secrets`: see `## Secrets` in `CLAUDE.md`.
 
 ## Health check
 

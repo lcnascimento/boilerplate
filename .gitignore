@@ -1,7 +1,10 @@
 .env
+.secrets
 .claude/worktrees/
 node_modules/
 .pnpm-store/
 .turbo/
 .env.ephemeral
 .ephemeral/
+.terraform/
+*.tfstate.backup

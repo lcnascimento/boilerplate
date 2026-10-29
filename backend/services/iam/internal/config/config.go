@@ -10,7 +10,7 @@ import (
 const maxPort = 65535
 
 var (
-	ErrDatabaseURLMissing       = errMissing("DATABASE_URL").WithCode("DATABASE_URL_MISSING")
+	ErrDatabaseURLMissing       = errMissing("IAM_DATABASE_URL").WithCode("IAM_DATABASE_URL_MISSING")
 	ErrSchemaRegistryURLMissing = errMissing("SCHEMA_REGISTRY_URL").WithCode("SCHEMA_REGISTRY_URL_MISSING")
 	ErrKafkaBrokersMissing      = errMissing("KAFKA_BROKERS").WithCode("KAFKA_BROKERS_MISSING")
 
@@ -34,7 +34,7 @@ func errMissing(key string) errors.CustomError {
 }
 
 func DatabaseURL() (string, error) {
-	return required("DATABASE_URL", ErrDatabaseURLMissing)
+	return required("IAM_DATABASE_URL", ErrDatabaseURLMissing)
 }
 
 func ServiceName() (string, error) {

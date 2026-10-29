@@ -9,16 +9,22 @@ init:
 clean-example:
 	@bash scripts/clean-example.sh
 
+.PHONY: env
+env:
+	@[ -f .secrets ] || { echo "==> Creating .secrets"; cp .secrets.example .secrets; }
+
 .PHONY: setup
-setup:
+setup: env
 	pnpm install --frozen-lockfile
 	@$(MAKE) -C backend setup
 	@$(MAKE) -C frontend setup
+	@$(MAKE) iac.tools
 
 .PHONY: format
 format:
 	@$(MAKE) -C backend format sqlc mocks o11y.generate proto.generate iam.generate tidy
 	@$(MAKE) -C frontend format
+	@$(MAKE) iac.format
 
 .PHONY: format.check
 format.check:
@@ -46,14 +52,26 @@ lint:
 			lint --details --no-banner --no-style --no-update-check $$specs; \
 	fi
 
+.PHONY: secrets.check
+secrets.check:
+	@"$(or $(shell go env GOBIN),$(shell go env GOPATH)/bin)/gitleaks" git --no-banner --redact --verbose $(GITLEAKS_ARGS)
+
 .PHONY: lint.breaking
 lint.breaking:
 	@$(MAKE) -C backend proto.breaking
 
 .PHONY: test
-test:
+test: hooks.test
 	@$(MAKE) -C backend test
 	@$(MAKE) -C frontend test
+
+HOOKS_TESTS := \
+	.claude/hooks/guard-secrets_test.sh \
+	scripts/with-secrets_test.sh
+
+.PHONY: hooks.test
+hooks.test:
+	@for t in $(HOOKS_TESTS); do bash "$$t" || exit 1; done
 
 .PHONY: test.unit
 test.unit: test.backend.unit test.frontend.unit
@@ -85,9 +103,21 @@ test.frontend.e2e:
 test.e2e: test.frontend.e2e
 	@$(MAKE) -C backend o11y.check-live
 
+.PHONY: iac.tools iac.environments iac.format iac.check iac.plan iac.apply iac.dev-token
+iac.tools iac.environments iac.format iac.check iac.plan iac.apply iac.dev-token:
+	@$(MAKE) -s -C iac $(@:iac.%=%)
+
 .PHONY: env.up env.down env.status env.prune
 env.up env.down env.status env.prune:
 	@bash scripts/env.sh $(@:env.%=%)
+
+.PHONY: env.check
+env.check:
+	@bash scripts/env-check.sh
+
+.PHONY: env.check.test
+env.check.test:
+	@bash scripts/env-check_test.sh
 
 .PHONY: stack.up
 stack.up:

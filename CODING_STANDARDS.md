@@ -92,3 +92,70 @@ Fix:
 ```go
 ctx = baggage.ContextWithMembers(ctx, baggage.NewMember("user.id", user.ID.String()))
 ```
+
+## Keep secrets out of versioned files
+
+A value that may be versioned with a dev value is config; one that may not is a secret. The classification is per (variable, environment) pair.
+
+- A secret lives only in Doppler and never has a key in a `.env*` file or in a Tiltfile `serve_env`, not even an empty one. The root `.env.example` is the exception: it holds local-only tooling config that no process of the app reads, such as `GRAFANA_SERVICE_ACCOUNT_TOKEN`. `make env.check` fails on a key of any other `.env.example`, or of a Tiltfile dict, that matches `*SECRET*`, `*TOKEN*`, `*_KEY` or `*PASSWORD*` without a `dev-only-…` value.
+- A versioned dev credential starts with `dev-only-`, and every environment parser that reads one refuses that prefix in production.
+- `NEXT_PUBLIC_*` is always config: Next.js inlines it into the browser bundle.
+- A new Doppler key updates the key table of `docs/secrets.md` in the same PR.
+
+Violation:
+
+```sh
+POSTHOG_HOST=
+POSTHOG_PROJECT_KEY=
+```
+
+Fix: delete `POSTHOG_PROJECT_KEY` from the `.env.example`, add it to the Doppler `dev` and `prd` configs and to the table of `docs/secrets.md`; the process reads it from its environment.
+
+## Hand a CI secret only to the step that uses it
+
+- `${{ secrets.X }}` appears only in the `env:` of the step that needs it: never in a job or workflow `env:`, inside `run:` or as a command-line argument.
+- The Doppler `ci` config holds only disposable credentials (test accounts, sandboxes, test-mode keys), never a `prd` value.
+- A test that needs a secret skips when the variable is empty, so fork and Dependabot PRs, which get no repository secrets, stay green; under `CI_SECRETS_REQUIRED=true`, which `release.yml` sets on `main`, it fails instead. The first consumer wires `CI_SECRETS_REQUIRED` in the same PR.
+
+Violation:
+
+```yaml
+jobs:
+  test:
+    env:
+      STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }}
+    steps:
+      - run: make test
+```
+
+Fix:
+
+```yaml
+- name: Test the payments client
+  env:
+    STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }}
+  run: make test
+```
+
+and the test calls `t.Skip` when `STRIPE_TEST_KEY` is empty, unless `CI_SECRETS_REQUIRED` is `true`.
+
+Source: `boundary-discipline`.
+
+## Deliver `prd` secrets through the environment only
+
+- A production process reads its secrets from its environment only: no `doppler run`, no Doppler CLI, no secrets file.
+- Delivery is a Doppler native sync to the runtime platform; a read-only `prd` service token stored only in that platform is the fallback.
+- A `prd` value, or a token that reads `prd`, never goes into a GitHub repository secret, only into a protected GitHub Environment that only the deploy job declares.
+- The `prd` sync or token is declared in the `prd` workspace of `iac/environments/` and applied locally, never in CI.
+
+Violation:
+
+```yaml
+- run: doppler run --config prd -- ./deploy.sh
+  env:
+    DOPPLER_TOKEN: ${{ secrets.DOPPLER_PRD_TOKEN }}
+```
+
+Fix: declare the `prd` sync to the platform in `iac/environments/` and let the deployed process read its environment.
+
+Source: `boundary-discipline`.

@@ -148,7 +148,7 @@ No diretório do serviço (`backend/services/<name>/`), com o `postgres` no ar:
 
 ```sh
 make db.setup      # cria o role e o database, só se não existirem
-make db.migrate    # aplica as migrations pendentes (binário cmd/migrate, mesmo DATABASE_URL da API)
+make db.migrate    # aplica as migrations pendentes (binário cmd/migrate, mesmo <NAME>_DATABASE_URL da API)
 make db.rollback   # desfaz só a última migration aplicada (a seção Down dela)
 make db.reset      # apaga o database, recria e migra de novo
 ```
@@ -240,14 +240,16 @@ O hash do IP depende da `AUDIT_IP_HASH_KEY` (ver as variáveis em [Autenticaçã
 **Tudo** (na raiz; cada job do CI roda o alvo de mesmo nome, então uma falha se reproduz com o mesmo comando):
 
 ```sh
-make format          # formata backend e frontend e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
+make format          # formata backend, frontend e iac/ e regenera o código gerado (sqlc, mocks, o11y, proto); commite o que mudar
 make format.check    # com a árvore limpa: roda o make format e falha se ele mudar algum arquivo
 make lint            # os linters, o typecheck e o build, no backend, no frontend e no OpenAPI
 make lint.breaking   # buf breaking dos .proto contra AGAINST (padrão: origin/main); no CI, contra a base do PR
+make iac.check       # tofu fmt -check e validate das raízes de iac/, sem credencial
 make test            # sobe o Postgres e roda os testes de unidade e de componente do backend e do frontend
 make stack.up        # sobe o stack completo do Tilt em background (log em TILT_LOG) e espera os recursos que iniciam sozinhos
 make test.e2e        # com o stack de pé: o e2e do Playwright e depois o make o11y.check-live
 make stack.down      # tilt down
+make secrets.check   # gitleaks no histórico inteiro do git, com as regras do .gitleaks.toml
 ```
 
 O job `format` é o `make format.check`, e o job `e2e` é `make stack.up && make test.e2e; make stack.down`.
@@ -323,7 +325,7 @@ Para depurar o e2e, o recurso `playwright` do Tilt abre o [UI Mode](https://play
 docker run --rm -v "$PWD:/work:ro" -w /work dshanley/vacuum:v0.33.0 lint --details openapi/*.yaml
 ```
 
-O pre-commit (lefthook) roda `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
+O pre-commit (lefthook) roda o gitleaks no que está no stage, `make lint` quando o commit tem `.go` e `pnpm lint` quando tem TS/JS. O commit-msg exige [Conventional Commits](https://www.conventionalcommits.org/).
 
 O pre-push roda, na raiz, `make format.check` e depois `make lint`, os mesmos alvos dos jobs `format` e `lint` da CI. O `make format.check` recusa uma árvore suja (lista os arquivos; faça commit ou `git stash -u`), roda o `make format` e falha se ele mudar algum arquivo, imprimindo o diff e os arquivos novos: assim um código gerado desatualizado (sqlc, mocks, o11y, proto) ou um arquivo fora do formato não chega ao push. Ele precisa do setup da primeira vez (`make setup`) e do Docker rodando. Para pular o hook num push, use `LEFTHOOK=0 git push` ou `git push --no-verify`.
 
@@ -338,6 +340,103 @@ A coleção do `notes` fica em `backend/config/bruno/collections/Notes`, e o `Cr
 
 <!-- example:end -->
 
+## Doppler
+
+O projeto separa config de secret. Config tem valor versionado nos `.env.example`, inclusive as credenciais de dev; secret mora só no Doppler e chega a cada processo pelo ambiente. O modelo de ameaça, as barreiras do agente e o inventário das chaves do Doppler ficam em [`docs/secrets.md`](docs/secrets.md).
+
+O dev local não depende do Doppler: depois do clone, `make setup` e `tilt up` sobem tudo offline, sem conta e sem credencial. O Doppler só entra quando o projeto ganha o primeiro secret de verdade.
+
+### Dev com `.secrets`
+
+Para receber os secrets de `dev` (como `POSTHOG_PROJECT_KEY`), instale a [CLI do Doppler](https://docs.doppler.com/docs/install-cli) e cole no `.secrets`, na raiz, o service token de dev que o administrador entregou:
+
+```sh
+DOPPLER_TOKEN=dp.st.dev.…
+```
+
+O `make env` (chamado pelo `make setup`) cria o `.secrets` a partir do `.secrets.example`, com o token vazio, e nunca sobrescreve um que já existe. Ele é gitignored, o `.worktreeinclude` o copia para cada worktree e o `.envrc` não o carrega, então o token nunca fica no ambiente do shell.
+
+O `scripts/with-secrets.sh` envolve só os processos de longa duração: os alvos `run.*` dos serviços, o recurso `web` do Tilt e os mesmos processos do `make env.up`. Testes, migrations, seed, registro de schemas e tooling não passam por ele.
+
+- Sem `.secrets`, ou com o token vazio, ele roda o comando direto, como antes.
+- Com o token e a CLI, ele roda `doppler run --no-fallback -- env -u DOPPLER_TOKEN <cmd>`. O token fica só no ambiente do processo `doppler`, fora do argv e do processo do serviço; o `--no-fallback` impede que uma cópia dos secrets vá para o disco. Por ser o ponto mais interno da cadeia, o valor do Doppler vence o `.env` e o `serve_env` do Tilt.
+- Com o token mas sem a CLI, ou com o Doppler fora do ar, ele avisa em stderr (o aviso aparece no log do recurso no Tilt) e sobe sem os secrets.
+
+### A estrutura em `iac/`
+
+A estrutura do Doppler (o projeto, os ambientes e os service tokens) é declarada em OpenTofu, em `iac/`. Os valores dos secrets nunca passam por ali: eles entram só pelo dashboard do Doppler.
+
+- `iac/global/` declara o projeto e os ambientes `dev`, `ci` e `prd`.
+- `iac/environments/` é um único código aplicado em três workspaces, `dev`, `ci` e `prd`. Hoje ele emite, no workspace `dev`, um service token read-only da config `dev` para cada pessoa de `dev_token_holders` e, no workspace `ci`, o sync nativo da config `ci` para os secrets do repositório no GitHub Actions, pela integração `github_integration`. As duas variáveis ficam em `iac/environments/terraform.tfvars`.
+- O nome do projeto no Doppler é a variável `project` das duas raízes, com o nome do projeto como padrão.
+- O state fica no próprio repositório, cifrado com uma passphrase por raiz e por workspace. O `.terraform.lock.hcl` também é versionado.
+
+O `make setup` e a CI instalam o OpenTofu na versão fixa do `iac/Makefile` (`make iac.tools`). Os alvos, na raiz:
+
+```sh
+make iac.check                                   # tofu fmt -check e, em cada raiz, init -backend=false + validate; sem credencial, roda na CI
+make iac.format                                  # tofu fmt -recursive (o make format já chama)
+make iac.plan WS=<global|dev|ci|prd>             # plano do workspace; pede a passphrase e usa o token do doppler login
+make iac.apply WS=<global|dev|ci|prd>            # aplica o workspace; aceita REPLACE=<endereço> para recriar um recurso
+make iac.dev-token NAME=<pessoa>                 # imprime o service token de dev da pessoa
+```
+
+O `iac.plan`, o `iac.apply` e o `iac.dev-token` são só do administrador, sempre locais e na `main` atualizada. A passphrase é lida com `read -s` e o token pessoal vem de `doppler configure get token --plain`; os dois chegam só ao processo `tofu`. A CI nunca aplica, e o agente nunca roda esses alvos: ele escreve o HCL, o PR é revisado e mergeado, e o administrador aplica e commita o state.
+
+### Bootstrap do Doppler
+
+Feito uma vez por projeto, pelo administrador, quando o primeiro secret aparecer. Precisa da [CLI do Doppler](https://docs.doppler.com/docs/install-cli), que o `make setup` não instala, e de uma conta no plano gratuito.
+
+1. Entre no Doppler. O token pessoal fica em `~/.doppler/` e lê todos os ambientes, `prd` incluído:
+
+   ```sh
+   doppler login
+   ```
+
+2. Crie o projeto à mão, com o nome da variável `project` de `iac/` (o nome do projeto). O Doppler cria junto os ambientes `dev`, `stg` e `prd`:
+
+   ```sh
+   doppler projects create <name>
+   ```
+
+3. Ligue o Doppler ao GitHub, à mão. O sync da config `ci` usa o nome do repositório igual à variável `project`, então o repositório precisa existir no GitHub com esse nome. Nenhum token do GitHub é gerado nem guardado, e não é preciso `gh auth login`:
+   1. No dashboard do Doppler, em Integrations, adicione a integração GitHub Actions e instale o GitHub App do Doppler na sua conta ou organização, com acesso ao repositório.
+   2. Crie a integração e pare antes de criar um sync por ali: o sync é declarado em `iac/` e criado pelo apply do workspace `ci`.
+   3. Copie o slug da integração, um UUID que aparece na página dela no dashboard.
+4. Gere quatro passphrases, uma para cada workspace (`global`, `dev`, `ci` e `prd`), com pelo menos 16 caracteres, e guarde-as no gerenciador de senhas, fora do Doppler. Sem a passphrase, o state daquele workspace não abre.
+5. Abra um PR que cria o `iac/environments/terraform.tfvars` com o seu nome em `dev_token_holders` e o slug da integração em `github_integration`, e faça o merge. O slug não é segredo: sem a conta do Doppler, ele não abre nada.
+
+   ```hcl
+   dev_token_holders  = ["<pessoa>"]
+   github_integration = "<slug>"
+   ```
+
+6. Na `main` atualizada, aplique os workspaces nesta ordem, cada um com a sua passphrase. O `global` adota o projeto e os ambientes por `import` e renomeia o `stg` para `ci`; confira o plano antes de confirmar:
+
+   ```sh
+   make iac.apply WS=global
+   make iac.apply WS=dev
+   make iac.apply WS=ci
+   make iac.apply WS=prd
+   ```
+
+   O apply do `ci` cria o sync: a partir dele, toda mudança na config `ci` chega sozinha aos secrets do repositório.
+
+7. Commite os states (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/*/terraform.tfstate`) num PR e faça o merge. Eles estão cifrados.
+8. Extraia o seu service token de dev e cole-o no `.secrets` (veja [Dev com `.secrets`](#dev-com-secrets)):
+
+   ```sh
+   make iac.dev-token NAME=<pessoa>
+   ```
+
+Para dar um token a outra pessoa, ponha o nome dela em `dev_token_holders` num PR, rode `make iac.apply WS=dev` depois do merge, commite o state e entregue a saída de `make iac.dev-token NAME=<pessoa>` por um canal seguro. Tirar o nome e aplicar destrói o token: é assim que se revoga. Rotação, rekey de passphrase e vazamentos estão em [`docs/secrets.md`](docs/secrets.md#rotação-e-vazamento).
+
+### Scan de segredos
+
+O gitleaks roda no pre-commit, sobre o que está no stage, e no job `secrets` do `quality_gate`, sobre o histórico inteiro; `make secrets.check` repete o scan localmente. As camadas e o que fazer quando ele barra um commit estão em [`docs/secrets.md`](docs/secrets.md#scan-de-segredos).
+
+Ative também a [push protection](https://docs.github.com/en/code-security/secret-scanning/enabling-secret-scanning-features/enabling-push-protection-for-your-repository) do GitHub no repositório (Settings → Advanced Security → Push protection). Ela barra no próprio `git push` os formatos de token que o GitHub conhece, mesmo de quem não instalou os hooks.
+
 ## Como adicionar um serviço
 
 Nos passos abaixo, `<name>` é o nome do serviço em kebab-case (ex.: `billing`) e `<NAME>` é o mesmo nome em maiúsculas com `_` (ex.: `BILLING`).
@@ -350,7 +449,7 @@ O `notes` é o molde. Em arquivos compartilhados, tudo o que é dele está entre
 
 **Backend**
 
-1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/authz/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
+1. Crie `backend/services/<name>/` com dois módulos Go: `go.mod` (`github.com/lcnascimento/boilerplate/backend/services/<name>`) e `pkg/go.mod` (`.../<name>/pkg`, com o `replace` para ele no primeiro). O domínio vive em `pkg/domain`, `pkg/models`, `internal/application`, `internal/repository` e `internal/transport`, e cada construtor é registrado no fx uma vez em `bundle/`. O `Makefile` do serviço define o `OTEL_SERVICE_NAME`, o binário (`build.api.frontend` / `run.api.frontend`, que roda o binário pelo `$(WITH_SECRETS)`; veja [Doppler](#doppler)) e o `FRONTEND_PORT`; o `Tiltfile` dele, os recursos do Tilt. O banco vem junto: `db.setup`/`db.migrate`/`db.rollback`/`db.reset` no `Makefile` (database e role com o nome do serviço), os recursos `<name>-db` e `<name>-migrate` no `Tiltfile`, as migrations em `internal/repository/migrations/` com o `cmd/migrate`, o `sqlc.yaml` com as `queries.sql` dos repositórios, e o `<NAME>_DATABASE_URL` no `.env.example`. A identidade também: `AUTH_JWKS_URL`, `AUTH_ISSUER` e `AUTH_AUDIENCE` no `.env.example`, o `actor.NewMiddleware` no subrouter das rotas de User (fora dele, só as de health), o Actor passado explicitamente do handler ao service, e as Permissions do serviço declaradas em `backend/services/iam/pkg/authz/matrix.go`, seguidas de `make iam.generate`. Os testes fabricam tokens e Actors com `actortest`, sem subir o web.
    <!-- example:begin -->
    O caminho mais curto é copiar `backend/services/notes/` e trocar `notes` pelo novo nome nesses lugares e nos imports.
    <!-- example:end -->
@@ -417,6 +516,7 @@ Nenhum JSON compartilhado (`package.json`, `turbo.json`, `tsconfig`) muda para a
    - `NAME` precisa casar com `^[a-z][a-z0-9-]*$` (ex.: `my-app`). Um nome inválido é rejeitado antes de qualquer arquivo ser tocado.
    - `boilerplate` vira `<name>` em todo arquivo versionado (módulos Go, escopo `@<name>/*`, rede docker, dashboards, `service.namespace`, cookie de idioma, servidor MCP) e `Boilerplate` vira o título derivado (`my-app` → `My App`). O pacote Protobuf e os nomes completos das mensagens (`boilerplate.iam.v1.UserCreated`, o `ce_type`) usam `_` no lugar de `-` (`my_app.iam.v1.UserCreated`), nos `.proto` e em todo arquivo que os cita.
    - Sai do `CLAUDE.md` a seção "Agent skills" e sai a pasta `docs/agents/` inteira.
+   - Saem os states do Doppler do template (`iac/global/terraform.tfstate` e `iac/environments/terraform.tfstate.d/`) e o `iac/environments/terraform.tfvars`, antes da troca do nome: o projeto novo faz o próprio [bootstrap do Doppler](#bootstrap-do-doppler).
    - O script exige a árvore git limpa e o pnpm/Node instalados, e não faz commit. Depois de trocar o nome, ele se apaga junto com o alvo `init`, o workflow `template` e esta seção do README, roda o `pnpm install` (na raiz e em `frontend/`) e o `pnpm -C frontend format` (o nome novo muda o comprimento de algumas linhas, e o prettier quebra ou junta imports de novo), então a árvore já sai formatada.
    - Se algo der errado, `git checkout . && git clean -fd` volta ao estado anterior.
    - Os `.env` não são versionados, então um `backend/.env` criado antes do `make init` (por um `make -C backend setup`, por exemplo) continua com o nome do template. Rode o `make init` antes do setup ou apague o `backend/.env` e rode `make -C backend setup` de novo.
